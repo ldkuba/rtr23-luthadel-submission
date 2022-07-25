@@ -4,14 +4,13 @@
 
 #include "platform.hpp"
 
-class Logger {
-private:
-    static const bool warning_enabled;
-    static const bool info_enabled;
-    static const bool debug_enabled;
+#define LOG_WARNING_ENABLED 1
+#define LOG_INFO_ENABLED 1
+#define LOG_DEBUG_ENABLED 1
 
+class Logger {
 public:
-    Logger(/* args */);
+    Logger();
     ~Logger();
 
     static void fatal(std::string message);

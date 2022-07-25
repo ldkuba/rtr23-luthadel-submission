@@ -16,7 +16,7 @@ typedef __int128_t int128;
 
 // Floats
 typedef float float32;
-typedef double float62;
+typedef double float64;
 typedef __float128 float128;
 
 // Check if sizes are correct
@@ -33,7 +33,7 @@ static_assert(sizeof(int64) == 8, "Expected a 8 byte long int64.");
 static_assert(sizeof(int128) == 16, "Expected a 16 byte long int128.");
 
 static_assert(sizeof(float32) == 4, "Expected a 4 byte long float32.");
-static_assert(sizeof(float62) == 8, "Expected a 8 byte long float64.");
+static_assert(sizeof(float64) == 8, "Expected a 8 byte long float64.");
 static_assert(sizeof(float128) == 16, "Expected a 16 byte long float128.");
 
 // List of supported platforms
