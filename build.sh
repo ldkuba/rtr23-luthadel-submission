@@ -1,5 +1,7 @@
-#!bin/bash
+#!/bin/bash
 
+mkdir build
 cd ./build
+
 cmake -S .. -B .
-ninja
+ninja -v

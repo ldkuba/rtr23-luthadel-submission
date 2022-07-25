@@ -1,5 +1,60 @@
 cmake_minimum_required(VERSION 3.16.3)
+set(CMAKE_CXX_STANDARD 17)
 
 project(VulkanEngine)
 
-add_executable(${PROJECT_NAME} main.cpp)
+# add sources
+file(GLOB_RECURSE SOURCES 
+    ${PROJECT_SOURCE_DIR}/src/*.cpp
+    ${PROJECT_SOURCE_DIR}/src/**/*.cpp
+    ${PROJECT_SOURCE_DIR}/include/*.h
+    ${PROJECT_SOURCE_DIR}/include/**/*.h
+    ${PROJECT_SOURCE_DIR}/include/*.hpp
+    ${PROJECT_SOURCE_DIR}/include/**/*.hpp)
+add_executable(${PROJECT_NAME}
+    ${SOURCES})
+
+# DOWNLOAD ALL SUBMODULES
+find_package(Git QUIET)
+if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
+
+    message(STATUS "Submodule update")
+    execute_process(
+        COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        RESULT_VARIABLE GIT_SUBMOD_RESULT
+    )
+    if(NOT GIT_SUBMOD_RESULT EQUAL "0")
+        message(FATAL_ERROR "git submodule update --init failed with ${GIT_SUBMOD_RESULT}.")
+    endif()
+
+endif()
+
+# CHECK ALL SUBMODULES
+if(NOT EXISTS "${PROJECT_SOURCE_DIR}/external/glfw/CMakeLists.txt")
+    message(FATAL_ERROR "GLFW not downloaded.")
+endif()
+
+# include subdirectories
+add_subdirectory(external/glfw)
+
+# include directories
+target_include_directories(${PROJECT_NAME}
+    PUBLIC
+    external/glfw/include
+    include
+    include/utils
+)
+
+# link
+target_link_directories(${PROJECT_NAME}
+    PRIVATE
+    external/glfw/src
+    src
+)
+
+target_link_libraries(${PROJECT_NAME}
+    glfw
+)
+
+# file(GLOB_RECURSE sources ${PROJECT_SOURCE_DIR}/**/*.c)
