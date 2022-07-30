@@ -1,5 +1,8 @@
 #pragma once
 
+// byte
+typedef char byte;
+
 // Unsigned integer
 typedef unsigned char uint8;
 typedef unsigned short uint16;
@@ -20,6 +23,8 @@ typedef double float64;
 typedef __float128 float128;
 
 // Check if sizes are correct
+static_assert(sizeof(byte) == 1, "Expected a 1 byte long byte.");
+
 static_assert(sizeof(uint8) == 1, "Expected a 1 byte long uint8.");
 static_assert(sizeof(uint16) == 2, "Expected a 2 byte long uint16.");
 static_assert(sizeof(uint32) == 4, "Expected a 4 byte long uint32.");

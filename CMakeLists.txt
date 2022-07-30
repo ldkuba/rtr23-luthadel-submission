@@ -35,26 +35,36 @@ if(NOT EXISTS "${PROJECT_SOURCE_DIR}/external/glfw/CMakeLists.txt")
     message(FATAL_ERROR "GLFW not downloaded.")
 endif()
 
+# Find packages
+find_package(Vulkan REQUIRED FATAL_ERROR)
+
 # include subdirectories
-add_subdirectory(external/glfw)
+add_subdirectory(external/vulkan)
+add_subdirectory(external/vulkan/glfw)
+add_subdirectory(external/vulkan/glm)
 
 # include directories
 target_include_directories(${PROJECT_NAME}
     PUBLIC
-    external/glfw/include
     include
     include/utils
+    external/vulkan/glfw/include
+    external/vulkan/glm
+    external/vulkan/vulkan
 )
 
 # link
 target_link_directories(${PROJECT_NAME}
     PRIVATE
-    external/glfw/src
     src
+    external/vulkan/glfw/src
+    external/vulkan/glm
 )
 
 target_link_libraries(${PROJECT_NAME}
     glfw
+    glm
+    vulkan
 )
 
 # file(GLOB_RECURSE sources ${PROJECT_SOURCE_DIR}/**/*.c)

@@ -1,4 +1,4 @@
-#include "platform.hpp"
+#include "platform/platform.hpp"
 #if PLATFORM == WINDOWS32
 
 Platform::Platform() {

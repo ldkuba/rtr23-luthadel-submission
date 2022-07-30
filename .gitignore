@@ -49,6 +49,11 @@ compile_commands.json
 CTestTestfile.cmake
 _deps
 
+############
+# VS CODDE #
+############
+.vscode/
+
 #########
 # Other #
 #########

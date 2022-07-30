@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "platform.hpp"
+#include "platform/platform.hpp"
 
 #define LOG_WARNING_ENABLED 1
 #define LOG_INFO_ENABLED 1

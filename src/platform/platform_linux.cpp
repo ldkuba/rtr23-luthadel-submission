@@ -1,4 +1,4 @@
-#include "platform.hpp"
+#include "platform/platform.hpp"
 #if PLATFORM == LINUX
 
 #if _POSIX_C_SOURCE >= 199309L
