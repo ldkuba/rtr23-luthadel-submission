@@ -1,6 +1,6 @@
 #pragma once
 
-#include "utils/defines.hpp"
+#include "defines.hpp"
 
 #include <string>
 #include <vector>

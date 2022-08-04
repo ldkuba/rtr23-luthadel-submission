@@ -1,9 +1,5 @@
 #pragma once
 
-#include <vector>
-#include <vulkan/vulkan.hpp>
-
-#include "platform/platform.hpp"
 #include "renderer/renderer_backend.hpp"
 #include "vulkan_device.hpp"
 
@@ -18,11 +14,6 @@ private:
 
     VulkanDevice* _device;
 
-#ifdef NDEBUG
-    const bool _enable_validation_layers = false;
-#else
-    const bool _enable_validation_layers = true;
-#endif
     const std::vector<const char*> _validation_layers = {
         "VK_LAYER_KHRONOS_validation"
     };

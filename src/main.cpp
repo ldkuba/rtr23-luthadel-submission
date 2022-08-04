@@ -3,10 +3,7 @@
 #include <vulkan/vulkan.hpp>
 #include <GLFW/glfw3.h>
 
-#include "logger.hpp"
 #include "test_app.hpp"
-
-#include "renderer/renderer.hpp"
 
 int main(int, char**) {
 

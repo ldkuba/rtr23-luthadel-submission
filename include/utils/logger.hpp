@@ -1,7 +1,5 @@
 #pragma once
 
-#include <string>
-
 #include "platform/platform.hpp"
 
 #define LOG_WARNING_ENABLED 1

@@ -23,5 +23,6 @@ mkdir shaders
 glslc ../../src/shaders/simple_vertex_shader.vert -o shaders/simple_vertex_shader.vert.spv
 glslc ../../src/shaders/simple_fragment_shader.frag -o shaders/simple_fragment_shader.frag.spv
 
-cmake -G Ninja -DCMAKE_BUILD_TYPE=$MODE -S ../.. -B .
+cmake -S ../.. -B . -GNinja \
+    -DCMAKE_BUILD_TYPE=$MODE
 ninja && ./VulkanEngine

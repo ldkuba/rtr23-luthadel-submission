@@ -1,15 +1,15 @@
 #include "platform/platform.hpp"
 #if PLATFORM == LINUX
 
+#include <iostream>
+
 #if _POSIX_C_SOURCE >= 199309L
 #include <time.h>
 #else
 #include <unistd.h>
 #endif
 
-Platform::Platform() {
-    std::cout << "PLATFORM IS LINUX" << std::endl;
-}
+Platform::Platform() {}
 
 Platform::~Platform() {}
 

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "defines.hpp"
 #include "platform/platform.hpp"
 
 class RendererBackend {

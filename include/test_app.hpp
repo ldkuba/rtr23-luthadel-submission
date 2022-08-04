@@ -1,8 +1,7 @@
 #pragma once
 
-#include "platform/platform.hpp"
-#include "pipeline.hpp"
 #include "logger.hpp"
+#include "pipeline.hpp"
 
 #include "renderer/renderer.hpp"
 

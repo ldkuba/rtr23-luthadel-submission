@@ -3,7 +3,6 @@
 #include "platform/platform.hpp"
 #if PLATFORM == WINDOWS32 || PLATFORM == LINUX
 
-#include <vulkan/vulkan.hpp>
 #include <GLFW/glfw3.h>
 
 class Window : public Platform::Surface {

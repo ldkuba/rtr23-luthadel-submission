@@ -1,11 +1,11 @@
 #pragma once
 
-#include "defines.hpp"
-#include <iostream>
 #include <vector>
 #include <string>
 
 #include <vulkan/vulkan.hpp>
+
+#include "defines.hpp"
 
 class Platform {
 private:

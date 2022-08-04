@@ -1,6 +1,7 @@
 #pragma once
 
 // Global settings
+#define ENGINE_NAME "Vulkan Engine"
 #define APP_NAME "Vulkan Engine"
 
 // byte

@@ -1,8 +1,5 @@
 #pragma once
 
-#include "defines.hpp"
-#include "platform/platform.hpp"
-#include "renderer/renderer_backend.hpp"
 #include "renderer/vulkan/vulkan_backend.hpp"
 
 enum RendererBackendType {
