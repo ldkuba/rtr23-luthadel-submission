@@ -31,6 +31,10 @@ void Platform::sleep(uint64 ms) {
 #endif
 }
 
+// /////// //
+// Console //
+// /////// //
+
 Platform::Console::Console() {}
 Platform::Console::~Console() {}
 

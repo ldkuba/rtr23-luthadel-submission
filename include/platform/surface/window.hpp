@@ -1,13 +1,12 @@
 #pragma once
 
-#include <iostream>
+#include "platform/platform.hpp"
+#if PLATFORM == WINDOWS32 || PLATFORM == LINUX
 
 #include <vulkan/vulkan.hpp>
 #include <GLFW/glfw3.h>
 
-#include "utils/defines.hpp"
-
-class Window {
+class Window : public Platform::Surface {
 private:
     GLFWwindow* _window;
 
@@ -22,5 +21,9 @@ public:
     Window(const Window&) = delete;
     Window& operator=(const Window&) = delete;
 
+    vk::SurfaceKHR get_vulkan_surface(vk::Instance& vulkan_instance, vk::AllocationCallbacks* allocator);
+    void process_events();
     bool should_close() { return glfwWindowShouldClose(_window); }
 };
+
+#endif

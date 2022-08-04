@@ -2,6 +2,10 @@
 
 #include "defines.hpp"
 #include <iostream>
+#include <vector>
+#include <string>
+
+#include <vulkan/vulkan.hpp>
 
 class Platform {
 private:
@@ -9,8 +13,11 @@ public:
     Platform();
     ~Platform();
 
-    float64 get_absolute_time();
-    void sleep(uint64 ms);
+    static float64 get_absolute_time();
+    static void sleep(uint64 ms);
+
+    // TODO: Separate platform code from knowing about renderers
+    static const std::vector<const char*> get_required_vulkan_extensions();
 
     class Console {
     private:
@@ -20,6 +27,23 @@ public:
 
         static void write(std::string message, int kind = 0);
         static std::string read();
+    };
+
+    class Surface {
+    private:
+    protected:
+        Surface() {}
+    public:
+        ~Surface() {}
+        static Surface* get_instance(uint32 width, uint32 height, std::string name);
+
+        // Vulkan functions
+        virtual vk::SurfaceKHR get_vulkan_surface(vk::Instance& vulkan_instance, vk::AllocationCallbacks* allocator) {
+            return vk::SurfaceKHR();
+        }
+
+        virtual void process_events() {}
+        virtual bool should_close() { return false; }
     };
 
 };

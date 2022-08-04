@@ -1,4 +1,5 @@
 #include "pipeline.hpp"
+#include "logger.hpp"
 
 #include <fstream>
 
@@ -18,16 +19,13 @@ std::vector<byte> Pipeline::read_file(const std::string& filepath) {
     return buffer;
 }
 
-#include <iostream>
-
 void Pipeline::create_graphics_pipeline(const std::string& vertex_shader_path, const std::string& fragment_shader_path) {
     try {
         auto vertex_code = read_file(vertex_shader_path);
         auto fragment_code = read_file(fragment_shader_path);
     } catch (const std::exception& e) {
-        std::cerr << e.what() << '\n';
+        Logger::error(e.what());
     }
-
 }
 
 Pipeline::Pipeline(const std::string& vertex_shader_path, const std::string& fragment_shader_path) {

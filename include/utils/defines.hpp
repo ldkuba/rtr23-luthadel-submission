@@ -1,5 +1,8 @@
 #pragma once
 
+// Global settings
+#define APP_NAME "Vulkan Engine"
+
 // byte
 typedef char byte;
 

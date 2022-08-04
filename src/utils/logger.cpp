@@ -13,19 +13,25 @@ void Logger::error(std::string message) {
 }
 
 void Logger::warning(std::string message) {
-#ifdef LOG_WARNING_ENABLED
+#if LOG_WARNING_ENABLED
     Platform::Console::write("WAR :: " + message, 3);
 #endif
 }
 
 void Logger::log(std::string message) {
-#ifdef LOG_INFO_ENABLED
+#if LOG_INFO_ENABLED
     Platform::Console::write("INF :: " + message, 4);
 #endif
 }
 
 void Logger::debug(std::string message) {
-#ifdef LOG_DEBUG_ENABLED
+#if LOG_DEBUG_ENABLED
     Platform::Console::write("DEB :: " + message, 5);
+#endif
+}
+
+void Logger::verbose(std::string message) {
+#if LOG_VERBOSE_ENABLED
+    Platform::Console::write("VER :: " + message, 0);
 #endif
 }
