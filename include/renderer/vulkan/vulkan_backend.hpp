@@ -10,7 +10,6 @@ private:
 
     vk::Instance _vulkan_instance;
     vk::DebugUtilsMessengerEXT _debug_messenger;
-    vk::SurfaceKHR _vulkan_surface;
 
     VulkanDevice* _device;
 

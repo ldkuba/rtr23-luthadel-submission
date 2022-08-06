@@ -21,6 +21,10 @@ public:
     Window& operator=(const Window&) = delete;
 
     vk::SurfaceKHR get_vulkan_surface(vk::Instance& vulkan_instance, vk::AllocationCallbacks* allocator);
+
+    uint32 get_width_in_pixels();
+    uint32 get_height_in_pixels();
+
     void process_events();
     bool should_close() { return glfwWindowShouldClose(_window); }
 };

@@ -42,6 +42,9 @@ public:
             return vk::SurfaceKHR();
         }
 
+        virtual uint32 get_width_in_pixels() { return 0; }
+        virtual uint32 get_height_in_pixels() { return 0; }
+
         virtual void process_events() {}
         virtual bool should_close() { return false; }
     };

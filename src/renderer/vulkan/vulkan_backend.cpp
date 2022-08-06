@@ -14,13 +14,16 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback_function(
 VulkanBackend::VulkanBackend(Platform::Surface* surface) : RendererBackend(surface) {
     create_vulkan_instance();
     setup_debug_messenger();
-    _vulkan_surface = _surface->get_vulkan_surface(_vulkan_instance, _allocator);
-    _device = new VulkanDevice(&_vulkan_instance, _vulkan_surface);
+    _device = new VulkanDevice(
+        &_vulkan_instance,
+        _surface->get_vulkan_surface(_vulkan_instance, _allocator),
+        _surface->get_width_in_pixels(),
+        _surface->get_height_in_pixels()
+    );
 }
 
 VulkanBackend::~VulkanBackend() {
     delete _device;
-    _vulkan_instance.destroySurfaceKHR(_vulkan_surface, nullptr);
     if (VulkanSettings::enable_validation_layers)
         _vulkan_instance.destroyDebugUtilsMessengerEXT(_debug_messenger, nullptr,
             vk::DispatchLoaderDynamic{ _vulkan_instance, vkGetInstanceProcAddr });

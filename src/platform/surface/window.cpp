@@ -38,6 +38,17 @@ vk::SurfaceKHR Window::get_vulkan_surface(vk::Instance& vulkan_instance, vk::All
     return vulkan_surface;
 }
 
+uint32 Window::get_width_in_pixels() {
+    int32 width;
+    glfwGetFramebufferSize(_window, &width, nullptr);
+    return static_cast<uint32>(width);
+}
+uint32 Window::get_height_in_pixels() {
+    int32 height;
+    glfwGetFramebufferSize(_window, nullptr, &height);
+    return static_cast<uint32>(height);
+}
+
 void Window::process_events() {
     glfwPollEvents();
     if (glfwGetKey(_window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
