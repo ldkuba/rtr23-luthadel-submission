@@ -25,7 +25,7 @@ public:
         Console();
         ~Console();
 
-        static void write(std::string message, int kind = 0);
+        static void write(std::string message, uint32 kind = 0, bool new_line = true);
         static std::string read();
     };
 

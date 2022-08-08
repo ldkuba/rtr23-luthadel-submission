@@ -147,22 +147,21 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback_function(
     const VkDebugUtilsMessengerCallbackDataEXT* callback_data,
     void* user_data
 ) {
-    std::string message = "VULKAN :: " + std::string(callback_data->pMessage);
     switch (message_severity) {
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-        Logger::log(message);
+        Logger::log("VULKAN :: ", callback_data->pMessage);
         break;
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-        Logger::verbose(message);
+        Logger::verbose("VULKAN :: ", callback_data->pMessage);
         break;
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-        Logger::warning(message);
+        Logger::warning("VULKAN :: ", callback_data->pMessage);
         break;
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
         if (message_type == VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT)
-            Logger::fatal(message);
+            Logger::fatal("VULKAN :: ", callback_data->pMessage);
         else
-            Logger::error(message);
+            Logger::error("VULKAN :: ", callback_data->pMessage);
         break;
     default:
         break;

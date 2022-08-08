@@ -53,15 +53,15 @@ void VulkanDevice::pick_physical_device() {
 
     // Best device selected, log results
     Logger::log("Suitable vulkan device found.");
-    Logger::log("Device selected : " + best_device_info.name);
-    Logger::log("GPU type : " + best_device_info.type);
-    Logger::log("GPU driver version : " + best_device_info.driver_version);
-    Logger::log("Vulkan api version : " + best_device_info.api_version);
+    Logger::log("Device selected : ", best_device_info.name);
+    Logger::log("GPU type : ", best_device_info.type);
+    Logger::log("GPU driver version : ", best_device_info.driver_version);
+    Logger::log("Vulkan api version : ", best_device_info.api_version);
     for (uint32 i = 0; i < best_device_info.memory_size_in_gb.size(); i++) {
         if (best_device_info.memory_is_local[i])
-            Logger::log("Local GPU memory : " + std::to_string(best_device_info.memory_size_in_gb[i]) + " GiB.");
+            Logger::log("Local GPU memory : ", best_device_info.memory_size_in_gb[i], " GiB.");
         else
-            Logger::log("Shared GPU memory : " + std::to_string(best_device_info.memory_size_in_gb[i]) + " GiB.");
+            Logger::log("Shared GPU memory : ", best_device_info.memory_size_in_gb[i], " GiB.");
     }
 }
 
