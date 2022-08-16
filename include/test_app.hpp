@@ -8,7 +8,7 @@
 class TestApplication {
 private:
     Platform::Surface* _app_surface = Platform::Surface::get_instance(800, 600, std::string(APP_NAME));
-    Pipeline _app_pipeline{ "build/debug/shaders/simple_vertex_shader.vert.spv", "build/debug/shaders/simple_fragment_shader.frag.spv" };
+    Pipeline _app_pipeline{ "shaders/simple_vertex_shader.vert.spv", "shaders/simple_fragment_shader.frag.spv" };
     Renderer _app_renderer{ RendererBackendType::Vulkan, _app_surface };
 
 public:

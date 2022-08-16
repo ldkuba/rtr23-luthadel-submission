@@ -16,10 +16,14 @@ VulkanBackend::VulkanBackend(Platform::Surface* surface) : RendererBackend(surfa
     setup_debug_messenger();
     _device = new VulkanDevice(
         &_vulkan_instance,
+        _allocator,
         _surface->get_vulkan_surface(_vulkan_instance, _allocator),
         _surface->get_width_in_pixels(),
         _surface->get_height_in_pixels()
     );
+
+    // TODO: Better code organization
+    create_graphics_pipeline();
 }
 
 VulkanBackend::~VulkanBackend() {
@@ -94,6 +98,10 @@ void VulkanBackend::setup_debug_messenger() {
     vk::Result result = _vulkan_instance.createDebugUtilsMessengerEXT(&create_info, _allocator, &_debug_messenger, dispatcher);
     if (result != vk::Result::eSuccess)
         throw std::runtime_error("Failed to set up debug messenger!");
+}
+
+void VulkanBackend::create_graphics_pipeline() {
+
 }
 
 

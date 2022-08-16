@@ -20,6 +20,8 @@ private:
     void create_vulkan_instance();
     void setup_debug_messenger();
 
+    void create_graphics_pipeline();
+
     bool all_validation_layers_are_available();
     vk::DebugUtilsMessengerCreateInfoEXT debug_messenger_create_info();
 

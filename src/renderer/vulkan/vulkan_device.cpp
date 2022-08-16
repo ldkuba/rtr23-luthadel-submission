@@ -10,21 +10,32 @@ bool device_supports_required_features(const vk::PhysicalDeviceFeatures& feature
 // Constructor & destructor
 VulkanDevice::VulkanDevice(
     vk::Instance* instance,
+    vk::AllocationCallbacks* allocator,
     const vk::SurfaceKHR surface,
     const uint32 width,
     const uint32 height
-) : _vulkan_instance(instance), _vulkan_surface(surface) {
+) : _vulkan_instance(instance), _vulkan_allocator(allocator), _vulkan_surface(surface) {
     pick_physical_device();
     create_logical_device();
     create_swapchain(width, height);
     create_image_views();
+
+    // TODO: TEMP PIPELINE CODE
+    create_render_pass();
+    create_pipeline();
 }
 VulkanDevice::~VulkanDevice() {
+    // TODO: TEMP PIPELINE CODE
+    _logical_device.destroyPipeline(_graphics_pipeline, _vulkan_allocator);
+    _logical_device.destroyPipelineLayout(_pipeline_layout, _vulkan_allocator);
+    _logical_device.destroyRenderPass(_render_pass, _vulkan_allocator);
+
+
     for (auto image_view : _swapchain_image_views)
-        _logical_device.destroyImageView(image_view, nullptr);
-    _logical_device.destroySwapchainKHR(_swapchain, nullptr);
-    _logical_device.destroy(nullptr);
-    _vulkan_instance->destroySurfaceKHR(_vulkan_surface, nullptr);
+        _logical_device.destroyImageView(image_view, _vulkan_allocator);
+    _logical_device.destroySwapchainKHR(_swapchain, _vulkan_allocator);
+    _logical_device.destroy(_vulkan_allocator);
+    _vulkan_instance->destroySurfaceKHR(_vulkan_surface, _vulkan_allocator);
 }
 
 // /////////////////////////////// //
@@ -53,15 +64,15 @@ void VulkanDevice::pick_physical_device() {
 
     // Best device selected, log results
     Logger::log("Suitable vulkan device found.");
-    Logger::log("Device selected : ", best_device_info.name);
-    Logger::log("GPU type : ", best_device_info.type);
-    Logger::log("GPU driver version : ", best_device_info.driver_version);
-    Logger::log("Vulkan api version : ", best_device_info.api_version);
+    Logger::log("Device selected\t\t: ", best_device_info.name);
+    Logger::log("GPU type\t\t\t: ", best_device_info.type);
+    Logger::log("GPU driver version\t: ", best_device_info.driver_version);
+    Logger::log("Vulkan api version\t: ", best_device_info.api_version);
     for (uint32 i = 0; i < best_device_info.memory_size_in_gb.size(); i++) {
         if (best_device_info.memory_is_local[i])
-            Logger::log("Local GPU memory : ", best_device_info.memory_size_in_gb[i], " GiB.");
+            Logger::log("Local GPU memory\t\t: ", best_device_info.memory_size_in_gb[i], " GiB.");
         else
-            Logger::log("Shared GPU memory : ", best_device_info.memory_size_in_gb[i], " GiB.");
+            Logger::log("Shared GPU memory\t: ", best_device_info.memory_size_in_gb[i], " GiB.");
     }
 }
 
@@ -76,16 +87,18 @@ void VulkanDevice::create_logical_device() {
     std::vector<vk::DeviceQueueCreateInfo> queue_create_infos{};
     for (auto queue_index : unique_indices) {
         vk::DeviceQueueCreateInfo queue_create_info;
-        queue_create_info.setQueueFamilyIndex(queue_index);
-        queue_create_info.setQueueCount(1);
-        queue_create_info.setPQueuePriorities(&queue_priority);
+        // TODO: more flexible queue count setting
+        // TODO: non-flat queue priority
+        queue_create_info.setQueueFamilyIndex(queue_index);     // Queue family index
+        queue_create_info.setQueueCount(1);                     // Number of queues for given family. 
+        queue_create_info.setPQueuePriorities(&queue_priority); // Scheduling priority
         queue_create_infos.push_back(queue_create_info);
     }
 
-    // Used features
-    vk::PhysicalDeviceFeatures device_features{};
+    // Used features (automatically use required)
+    auto device_features = vk::PhysicalDeviceFeatures(VulkanSettings::required_device_features);
 
-    // Creating the device
+    // Creating the logical device
     vk::DeviceCreateInfo create_info{};
     create_info.setQueueCreateInfoCount(static_cast<uint32>(queue_create_infos.size()));
     create_info.setPQueueCreateInfos(queue_create_infos.data());
@@ -93,7 +106,7 @@ void VulkanDevice::create_logical_device() {
     create_info.setEnabledExtensionCount(static_cast<uint32>(VulkanSettings::device_required_extensions.size()));
     create_info.setPpEnabledExtensionNames(VulkanSettings::device_required_extensions.data());
 
-    vk::Result result = _physical_device.createDevice(&create_info, nullptr, &_logical_device);
+    vk::Result result = _physical_device.createDevice(&create_info, _vulkan_allocator, &_logical_device);
     if (result != vk::Result::eSuccess)
         throw std::runtime_error("Failed to create logical device.");
 
@@ -102,6 +115,10 @@ void VulkanDevice::create_logical_device() {
         _graphics_queue = _logical_device.getQueue(indices.graphics_family.value(), 0);
     if (VulkanSettings::present__family_required)
         _presentation_queue = _logical_device.getQueue(indices.present_family.value(), 0);
+    if (VulkanSettings::transfer_family_required)
+        _transfer_queue = _logical_device.getQueue(indices.transfer_family.value(), 0);
+    if (VulkanSettings::compute__family_required)
+        _compute_queue = _logical_device.getQueue(indices.compute_family.value(), 0);
 }
 
 void VulkanDevice::create_swapchain(const uint32 width, const uint32 height) {
@@ -117,37 +134,33 @@ void VulkanDevice::create_swapchain(const uint32 width, const uint32 height) {
         min_image_count = max_image_count;
 
     vk::SwapchainCreateInfoKHR create_info{};
-    create_info.setSurface(_vulkan_surface);
-    create_info.setMinImageCount(min_image_count);
-    create_info.setImageExtent(extent);
-    create_info.setImageFormat(surface_format.format);
-    create_info.setImageColorSpace(surface_format.colorSpace);
-    create_info.setPresentMode(presentation_mode);
-    create_info.setImageArrayLayers(1);
-    create_info.setImageUsage(vk::ImageUsageFlagBits::eColorAttachment); // TODO: postprocessing
-    create_info.setPreTransform(swapchain_support.capabilities.currentTransform);
-    create_info.setCompositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque);
-    create_info.setClipped(true);
-    create_info.setOldSwapchain(VK_NULL_HANDLE);
+    create_info.setSurface(_vulkan_surface);                                //
+    create_info.setMinImageCount(min_image_count);                          //
+    create_info.setImageExtent(extent);                                     //
+    create_info.setImageFormat(surface_format.format);                      //
+    create_info.setImageColorSpace(surface_format.colorSpace);              //
+    create_info.setPresentMode(presentation_mode);                          //
+    create_info.setImageArrayLayers(1);                                     //
+    create_info.setImageUsage(vk::ImageUsageFlagBits::eColorAttachment);    // TODO: postprocessing
+    create_info.setPreTransform(swapchain_support.capabilities.currentTransform); //
+    create_info.setCompositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque);  //
+    create_info.setClipped(true);                                           //
+    create_info.setOldSwapchain(VK_NULL_HANDLE);                            //
 
     // indices
     auto indices = find_queue_families(_physical_device);
-    auto unique_indices = indices.get_unique_indices();
-
-    uint32 unique_indices_array[unique_indices.size()];
-    std::copy(unique_indices.begin(), unique_indices.end(), unique_indices_array);
-
-    if (unique_indices.size() > 1) {
+    const uint32 queue_family_indices[] = { indices.graphics_family.value(), indices.present_family.value() };
+    if (indices.graphics_family.value() != indices.present_family.value()) {
         create_info.setImageSharingMode(vk::SharingMode::eConcurrent);
-        create_info.setQueueFamilyIndexCount(static_cast<uint32>(unique_indices.size()));
-        create_info.setPQueueFamilyIndices(unique_indices_array);
+        create_info.setQueueFamilyIndexCount(2);
+        create_info.setPQueueFamilyIndices(queue_family_indices);
     } else {
         create_info.setImageSharingMode(vk::SharingMode::eExclusive);
         create_info.setQueueFamilyIndexCount(0);
         create_info.setPQueueFamilyIndices(nullptr);
     }
 
-    auto result = _logical_device.createSwapchainKHR(&create_info, nullptr, &_swapchain);
+    auto result = _logical_device.createSwapchainKHR(&create_info, _vulkan_allocator, &_swapchain);
     if (result != vk::Result::eSuccess)
         throw std::runtime_error("Failed to create swapchain.");
 
@@ -161,22 +174,23 @@ void VulkanDevice::create_image_views() {
 
     for (uint32 i = 0; i < _swapchain_images.size(); i++) {
         vk::ImageViewCreateInfo create_info{};
-        create_info.setImage(_swapchain_images[i]);
-        create_info.setViewType(vk::ImageViewType::e2D);
-        create_info.setFormat(_swapchain_format);
+        create_info.setImage(_swapchain_images[i]);      //
+        create_info.setViewType(vk::ImageViewType::e2D); //
+        create_info.setFormat(_swapchain_format);        //
 
+        // 
         create_info.components.setR(vk::ComponentSwizzle::eIdentity);
         create_info.components.setG(vk::ComponentSwizzle::eIdentity);
         create_info.components.setB(vk::ComponentSwizzle::eIdentity);
         create_info.components.setA(vk::ComponentSwizzle::eIdentity);
 
-        create_info.subresourceRange.setAspectMask(vk::ImageAspectFlagBits::eColor);
-        create_info.subresourceRange.setBaseMipLevel(0);
-        create_info.subresourceRange.setLevelCount(1);
-        create_info.subresourceRange.setBaseArrayLayer(0);
-        create_info.subresourceRange.setLayerCount(1);
+        create_info.subresourceRange.setAspectMask(vk::ImageAspectFlagBits::eColor); //
+        create_info.subresourceRange.setBaseMipLevel(0);                             //
+        create_info.subresourceRange.setLevelCount(1);                               //
+        create_info.subresourceRange.setBaseArrayLayer(0);                           //
+        create_info.subresourceRange.setLayerCount(1);                               //
 
-        auto result = _logical_device.createImageView(&create_info, nullptr, &_swapchain_image_views[i]);
+        auto result = _logical_device.createImageView(&create_info, _vulkan_allocator, &_swapchain_image_views[i]);
         if (result != vk::Result::eSuccess)
             throw std::runtime_error("Failed to create image views.");
     }
@@ -387,6 +401,7 @@ std::set<uint32> QueueFamilyIndices::get_unique_indices() {
 }
 
 vk::Extent2D SwapchainSupportDetails::get_extent(uint32 width, uint32 height) {
+    // Return required width and height if supported
     if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
         return capabilities.currentExtent;
 
@@ -396,6 +411,7 @@ vk::Extent2D SwapchainSupportDetails::get_extent(uint32 width, uint32 height) {
     };
 }
 vk::SurfaceFormatKHR SwapchainSupportDetails::get_surface_format() {
+    // Return preferred format if supported, otherwise return first supported format
     for (auto format : formats) {
         if (format.format == VulkanSettings::preferred_swapchain_format &&
             format.colorSpace == VulkanSettings::preferred_swapchain_color_space)
@@ -404,9 +420,212 @@ vk::SurfaceFormatKHR SwapchainSupportDetails::get_surface_format() {
     return formats[0];
 }
 vk::PresentModeKHR SwapchainSupportDetails::get_presentation_mode() {
+    // Return preferred presentation mode if supported, otherwise return FIFO
     for (const auto& presentation_mode : presentation_modes) {
         if (presentation_mode == VulkanSettings::preferred_swapchain_presentation_mode)
             return presentation_mode;
     }
     return vk::PresentModeKHR::eFifo;
+}
+
+/// TODO: TEMPO
+// PIPELINE CREATION
+#include <fstream>
+
+std::vector<byte> read_file(const std::string& filepath);
+
+void VulkanDevice::create_render_pass() {
+    vk::AttachmentDescription color_attachment{};
+    color_attachment.setFormat(_swapchain_format);
+    color_attachment.setSamples(vk::SampleCountFlagBits::e1);
+    color_attachment.setLoadOp(vk::AttachmentLoadOp::eClear);
+    color_attachment.setStoreOp(vk::AttachmentStoreOp::eStore);
+    color_attachment.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+    color_attachment.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
+    color_attachment.setInitialLayout(vk::ImageLayout::eUndefined);
+    color_attachment.setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
+
+    vk::AttachmentReference color_attachment_ref{};
+    color_attachment_ref.setLayout(vk::ImageLayout::eColorAttachmentOptimal);
+    color_attachment_ref.setAttachment(0);
+
+    vk::SubpassDescription subpass{};
+    subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
+    subpass.setColorAttachmentCount(1);
+    subpass.setPColorAttachments(&color_attachment_ref);
+
+    vk::RenderPassCreateInfo create_info{};
+    create_info.setAttachmentCount(1);
+    create_info.setPAttachments(&color_attachment);
+    create_info.setSubpassCount(1);
+    create_info.setPSubpasses(&subpass);
+
+    auto result = _logical_device.createRenderPass(&create_info, _vulkan_allocator, &_render_pass);
+    if (result != vk::Result::eSuccess)
+        throw std::runtime_error("Failed to create a render pass.");
+}
+
+void VulkanDevice::create_pipeline() {
+    auto vertex_code = read_file("shaders/simple_vertex_shader.vert.spv");
+    auto fragment_code = read_file("shaders/simple_fragment_shader.frag.spv");
+
+    // Vertex and fragment shaders
+    auto vertex_shader_module = create_shader_module(vertex_code);
+    auto fragment_shader_module = create_shader_module(fragment_code);
+
+    vk::PipelineShaderStageCreateInfo vertex_shader_stage_info;
+    vertex_shader_stage_info.setStage(vk::ShaderStageFlagBits::eVertex);
+    vertex_shader_stage_info.setModule(vertex_shader_module);
+    vertex_shader_stage_info.setPName("main");
+    vertex_shader_stage_info.setPSpecializationInfo(nullptr);           // Set initial shader constants
+
+    vk::PipelineShaderStageCreateInfo fragment_shader_stage_info;
+    fragment_shader_stage_info.setStage(vk::ShaderStageFlagBits::eFragment);
+    fragment_shader_stage_info.setModule(fragment_shader_module);
+    fragment_shader_stage_info.setPName("main");
+    fragment_shader_stage_info.setPSpecializationInfo(nullptr);
+
+
+    vk::PipelineShaderStageCreateInfo shader_stages[] = { vertex_shader_stage_info, fragment_shader_stage_info };
+
+    // Vertex input; TODO: Hardcoded vertex values (TEMP)
+    vk::PipelineVertexInputStateCreateInfo vertex_input_info{};
+    vertex_input_info.setVertexBindingDescriptionCount(0);
+    vertex_input_info.setPVertexBindingDescriptions(nullptr);
+    vertex_input_info.setVertexAttributeDescriptionCount(0);
+    vertex_input_info.setPVertexAttributeDescriptions(nullptr);
+
+    // Input assembly
+    vk::PipelineInputAssemblyStateCreateInfo input_assembly_info{};
+    input_assembly_info.setTopology(vk::PrimitiveTopology::eTriangleList);
+    input_assembly_info.setPrimitiveRestartEnable(false);
+
+    // Viewport and scissors
+    vk::PipelineViewportStateCreateInfo viewport_state_info{};
+    viewport_state_info.setViewportCount(1);
+    viewport_state_info.setScissorCount(1);
+
+    // Rasterizer
+    vk::PipelineRasterizationStateCreateInfo rasterization_info{};
+    rasterization_info.setDepthClampEnable(false);               // Clamp values beyond far/near planes instead of discarding them (feature required for enabling)
+    rasterization_info.setRasterizerDiscardEnable(false);        // Disable output to framebuffer (feature required for enabling)
+    rasterization_info.setPolygonMode(vk::PolygonMode::eFill);   // Determines how fragments are generated for geometry (feature required for changing)
+    rasterization_info.setLineWidth(1.0f);                       // Line thickness (feature required for values above 1)
+    rasterization_info.setCullMode(vk::CullModeFlagBits::eBack); // Triangle face to cull
+    rasterization_info.setFrontFace(vk::FrontFace::eClockwise);  // Set vertex order of front-facing triangles
+    // Change depth information in some manner
+    rasterization_info.setDepthBiasEnable(false);
+    rasterization_info.setDepthBiasConstantFactor(0.0f);
+    rasterization_info.setDepthBiasClamp(0.0f);
+    rasterization_info.setDepthBiasSlopeFactor(0.0f);
+
+    // Multisampling; TODO: Enable
+    vk::PipelineMultisampleStateCreateInfo multisampling_info{};
+    multisampling_info.setSampleShadingEnable(false);
+    multisampling_info.setRasterizationSamples(vk::SampleCountFlagBits::e1);
+    multisampling_info.setMinSampleShading(1.0f);
+    multisampling_info.setPSampleMask(nullptr);
+    multisampling_info.setAlphaToCoverageEnable(false);
+    multisampling_info.setAlphaToOneEnable(false);
+
+    // Depth and stencil testing; TODO: implement
+
+    // Color blending
+    vk::PipelineColorBlendAttachmentState color_blend_attachment{};
+    // Since blend is disabled, no blend will be preformed
+    color_blend_attachment.setBlendEnable(false);
+    color_blend_attachment.setColorWriteMask(
+        vk::ColorComponentFlagBits::eR |
+        vk::ColorComponentFlagBits::eG |
+        vk::ColorComponentFlagBits::eB |
+        vk::ColorComponentFlagBits::eA
+    );
+    // Color blend
+    color_blend_attachment.setSrcColorBlendFactor(vk::BlendFactor::eOne);
+    color_blend_attachment.setDstColorBlendFactor(vk::BlendFactor::eZero);
+    color_blend_attachment.setColorBlendOp(vk::BlendOp::eAdd);
+    // Alpha blend
+    color_blend_attachment.setSrcAlphaBlendFactor(vk::BlendFactor::eOne);
+    color_blend_attachment.setDstAlphaBlendFactor(vk::BlendFactor::eZero);
+    color_blend_attachment.setAlphaBlendOp(vk::BlendOp::eAdd);
+
+    vk::PipelineColorBlendStateCreateInfo color_blend_state_info{};
+    color_blend_state_info.setLogicOpEnable(false);
+    color_blend_state_info.setLogicOp(vk::LogicOp::eOr);
+    color_blend_state_info.setAttachmentCount(1);
+    color_blend_state_info.setPAttachments(&color_blend_attachment);
+
+    // Pipeline layout fo UNIFORM values
+    vk::PipelineLayoutCreateInfo layout_info{};
+    layout_info.setSetLayoutCount(0);
+    layout_info.setPSetLayouts(nullptr);
+    layout_info.setPushConstantRangeCount(0);
+    layout_info.setPPushConstantRanges(nullptr);
+
+    _pipeline_layout = _logical_device.createPipelineLayout(layout_info, _vulkan_allocator);
+
+    // Dynamic state
+    std::vector<vk::DynamicState> dynamic_states = {
+        vk::DynamicState::eViewport,
+        vk::DynamicState::eScissor
+    };
+
+    vk::PipelineDynamicStateCreateInfo dynamic_state_info{};
+    dynamic_state_info.setDynamicStateCount(static_cast<uint32>(dynamic_states.size()));
+    dynamic_state_info.setPDynamicStates(dynamic_states.data());
+
+    // Create pipeline object
+    vk::GraphicsPipelineCreateInfo create_info{};
+    // Programable pipeline stages
+    create_info.setStageCount(2);
+    create_info.setPStages(shader_stages);
+    // Fixed-function stages
+    create_info.setPVertexInputState(&vertex_input_info);
+    create_info.setPInputAssemblyState(&input_assembly_info);
+    create_info.setPViewportState(&viewport_state_info);
+    create_info.setPRasterizationState(&rasterization_info);
+    create_info.setPMultisampleState(&multisampling_info);
+    create_info.setPDepthStencilState(nullptr); // TODO: implement
+    create_info.setPColorBlendState(&color_blend_state_info);
+    create_info.setPDynamicState(&dynamic_state_info);
+    // Pipeline layout handle
+    create_info.setLayout(_pipeline_layout);
+    // Render passes
+    create_info.setRenderPass(_render_pass);
+    create_info.setSubpass(0);
+    // Other
+    create_info.setBasePipelineHandle(VK_NULL_HANDLE);
+    create_info.setBasePipelineIndex(-1);
+
+    auto result = _logical_device.createGraphicsPipeline(VK_NULL_HANDLE, create_info, _vulkan_allocator);
+    if (result.result != vk::Result::eSuccess)
+        throw std::runtime_error("Failed to create graphics pipeline.");
+    _graphics_pipeline = result.value;
+
+    // Free unused objects
+    _logical_device.destroyShaderModule(vertex_shader_module, _vulkan_allocator);
+    _logical_device.destroyShaderModule(fragment_shader_module, _vulkan_allocator);
+}
+
+std::vector<byte> read_file(const std::string& filepath) {
+    std::ifstream file{ filepath, std::ios::ate | std::ios::binary };
+
+    if (!file.is_open()) throw std::runtime_error("Failed to open file: " + filepath);
+
+    size_t file_size = static_cast<size_t>(file.tellg());
+    std::vector<byte> buffer(file_size);
+
+    file.seekg(0);
+    file.read(buffer.data(), file_size);
+
+    file.close();
+
+    return buffer;
+}
+
+vk::ShaderModule VulkanDevice::create_shader_module(const std::vector<byte>& code) {
+    vk::ShaderModuleCreateInfo create_info{};
+    create_info.setCodeSize(code.size());
+    create_info.setPCode(reinterpret_cast<const uint32*> (code.data()));
+    return _logical_device.createShaderModule(create_info, _vulkan_allocator);
 }

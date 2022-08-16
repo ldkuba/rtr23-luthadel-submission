@@ -39,6 +39,7 @@ struct SwapchainSupportDetails {
 class VulkanDevice {
 private:
     vk::Instance* _vulkan_instance;
+    vk::AllocationCallbacks* _vulkan_allocator;
     vk::SurfaceKHR _vulkan_surface;
 
     vk::PhysicalDevice _physical_device = VK_NULL_HANDLE;
@@ -47,6 +48,8 @@ private:
     // Queues
     vk::Queue _graphics_queue;
     vk::Queue _presentation_queue;
+    vk::Queue _transfer_queue;
+    vk::Queue _compute_queue;
 
     // Swapchain
     vk::SwapchainKHR _swapchain;
@@ -57,14 +60,33 @@ private:
 
     void pick_physical_device();
     void create_logical_device();
+
     void create_swapchain(const uint32 width, const uint32 height);
+    void recreate_swapchain(const uint32 width, const uint32 height);
     void create_image_views();
 
     QueueFamilyIndices find_queue_families(const vk::PhysicalDevice& device);
     PhysicalDeviceInfo rate_device_suitability(const vk::PhysicalDevice& device);
     SwapchainSupportDetails query_swapchain_support_details(const vk::PhysicalDevice& device);
 
+    // TODO: TEMP PIPELINE CODE
+    vk::RenderPass _render_pass;
+    vk::DescriptorSetLayout _descriptor_set_layout;
+    vk::PipelineLayout _pipeline_layout;
+    vk::Pipeline _graphics_pipeline;
+
+    void create_render_pass();
+    void create_pipeline();
+
+    vk::ShaderModule create_shader_module(const std::vector<byte>& code);
+
 public:
-    VulkanDevice(vk::Instance* instance, const vk::SurfaceKHR surface, const uint32 width, const uint32 height);
+    VulkanDevice(
+        vk::Instance* instance,
+        vk::AllocationCallbacks* allocator,
+        const vk::SurfaceKHR surface,
+        const uint32 width,
+        const uint32 height
+    );
     ~VulkanDevice();
 };
