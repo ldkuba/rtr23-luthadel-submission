@@ -25,3 +25,7 @@ bool Renderer::draw_frame(float32 delta_time) {
 
     return true;
 }
+
+void Renderer::wait_for_shutdown() {
+    _backend->wait_for_shutdown();
+}

@@ -25,5 +25,8 @@ TestApplication::~TestApplication() {}
 void TestApplication::run() {
     while (!_app_surface->should_close()) {
         _app_surface->process_events();
+        _app_renderer.draw_frame(0);
     }
+
+    _app_renderer.wait_for_shutdown();
 }

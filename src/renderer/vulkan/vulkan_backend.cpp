@@ -139,6 +139,7 @@ vk::DebugUtilsMessengerCreateInfoEXT VulkanBackend::debug_messenger_create_info(
 
 void VulkanBackend::resized(uint32 width, uint32 height) {}
 bool VulkanBackend::begin_frame(float32 delta_time) {
+    _device->draw_frame();
     return true;
 }
 bool VulkanBackend::end_frame(float32 delta_time) {

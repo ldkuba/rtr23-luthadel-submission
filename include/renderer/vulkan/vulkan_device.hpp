@@ -80,6 +80,27 @@ private:
 
     vk::ShaderModule create_shader_module(const std::vector<byte>& code);
 
+    // TODO: TEMP FRAMEBUFFER CODE
+    std::vector<vk::Framebuffer> _swapchain_framebuffers;
+
+    void create_framebuffers();
+
+    // TODO: TEMP COMMAND CODE
+    vk::CommandPool _command_pool;
+    vk::CommandBuffer _command_buffer;
+
+    void create_command_pool();
+    void create_command_buffer();
+
+    void record_command_buffer(vk::CommandBuffer command_buffer, uint32 image_index);
+
+    // TODO: TEMP SYNCHRONIZATION
+    vk::Semaphore _semaphore_image_available;
+    vk::Semaphore _semaphore_render_finished;
+    vk::Fence _fence_in_flight;
+
+    void create_sync_objects();
+
 public:
     VulkanDevice(
         vk::Instance* instance,
@@ -89,4 +110,12 @@ public:
         const uint32 height
     );
     ~VulkanDevice();
+
+    // TODO: TEMP DRAW CODE
+    void draw_frame();
+
+    // TODO: TEMP WAIT IDLE
+    void wait_idle() {
+        _logical_device.waitIdle();
+    }
 };

@@ -17,4 +17,5 @@ public:
     virtual void resized(uint32 width, uint32 height) {}
     virtual bool begin_frame(float32 delta_time) { return false; }
     virtual bool end_frame(float32 delta_time) { return false; }
+    virtual void wait_for_shutdown() {}
 };
