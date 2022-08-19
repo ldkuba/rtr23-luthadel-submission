@@ -103,4 +103,7 @@ public:
     constexpr static vk::Format preferred_swapchain_format = vk::Format::eB8G8R8A8Srgb;
     constexpr static vk::ColorSpaceKHR preferred_swapchain_color_space = vk::ColorSpaceKHR::eSrgbNonlinear;
     constexpr static vk::PresentModeKHR preferred_swapchain_presentation_mode = vk::PresentModeKHR::eMailbox;
+
+    // Framebuffer
+    constexpr static uint32 max_frames_in_flight = 2;
 };

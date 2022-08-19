@@ -29,16 +29,18 @@ VulkanDevice::VulkanDevice(
 
     // TODO: TEMP COMMAND CODE
     create_command_pool();
-    create_command_buffer();
+    create_command_buffers();
 
     // TODO: TEMP SYNC CODE
     create_sync_objects();
 }
 VulkanDevice::~VulkanDevice() {
     // TODO: TEMP SYNC CODE
-    _logical_device.destroySemaphore(_semaphore_image_available, _vulkan_allocator);
-    _logical_device.destroySemaphore(_semaphore_render_finished, _vulkan_allocator);
-    _logical_device.destroyFence(_fence_in_flight, _vulkan_allocator);
+    for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++) {
+        _logical_device.destroySemaphore(_semaphores_image_available[i], _vulkan_allocator);
+        _logical_device.destroySemaphore(_semaphores_render_finished[i], _vulkan_allocator);
+        _logical_device.destroyFence(_fences_in_flight[i], _vulkan_allocator);
+    }
 
 
     // TODO: TEMP COMMAND CODE
@@ -703,15 +705,17 @@ void VulkanDevice::create_command_pool() {
         throw std::runtime_error("Failed to create command pool.");
 }
 
-void VulkanDevice::create_command_buffer() {
+void VulkanDevice::create_command_buffers() {
+    _command_buffers.resize(VulkanSettings::max_frames_in_flight);
+
     vk::CommandBufferAllocateInfo alloc_info{};
     alloc_info.setCommandPool(_command_pool);
     alloc_info.setLevel(vk::CommandBufferLevel::ePrimary);
-    alloc_info.setCommandBufferCount(1);
+    alloc_info.setCommandBufferCount((uint32) _command_buffers.size());
 
-    auto result = _logical_device.allocateCommandBuffers(&alloc_info, &_command_buffer);
+    auto result = _logical_device.allocateCommandBuffers(&alloc_info, _command_buffers.data());
     if (result != vk::Result::eSuccess)
-        throw std::runtime_error("Failed to allocate command buffer.");
+        throw std::runtime_error("Failed to allocate command buffers.");
 }
 
 
@@ -770,52 +774,58 @@ void VulkanDevice::record_command_buffer(vk::CommandBuffer command_buffer, uint3
 
 // SYNC CODE
 void VulkanDevice::create_sync_objects() {
+    _semaphores_image_available.resize(VulkanSettings::max_frames_in_flight);
+    _semaphores_render_finished.resize(VulkanSettings::max_frames_in_flight);
+    _fences_in_flight.resize(VulkanSettings::max_frames_in_flight);
+
     vk::SemaphoreCreateInfo semaphore_info{};
     vk::FenceCreateInfo fence_info{};
     fence_info.setFlags(vk::FenceCreateFlagBits::eSignaled); // Fence becomes signaled on initialization
 
     vk::Result result;
-    result = _logical_device.createSemaphore(&semaphore_info, _vulkan_allocator, &_semaphore_image_available);
-    if (result != vk::Result::eSuccess) throw std::runtime_error("Failed to create semaphores.");
-    result = _logical_device.createSemaphore(&semaphore_info, _vulkan_allocator, &_semaphore_render_finished);
-    if (result != vk::Result::eSuccess) throw std::runtime_error("Failed to create semaphores.");
-    result = _logical_device.createFence(&fence_info, _vulkan_allocator, &_fence_in_flight);
-    if (result != vk::Result::eSuccess) throw std::runtime_error("Failed to create fences.");
+    for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++) {
+        result = _logical_device.createSemaphore(&semaphore_info, _vulkan_allocator, &_semaphores_image_available[i]);
+        if (result != vk::Result::eSuccess) throw std::runtime_error("Failed to create semaphores.");
+        result = _logical_device.createSemaphore(&semaphore_info, _vulkan_allocator, &_semaphores_render_finished[i]);
+        if (result != vk::Result::eSuccess) throw std::runtime_error("Failed to create semaphores.");
+        result = _logical_device.createFence(&fence_info, _vulkan_allocator, &_fences_in_flight[i]);
+        if (result != vk::Result::eSuccess) throw std::runtime_error("Failed to create fences.");
+    }
 }
 
 // DRAW CODE
 void VulkanDevice::draw_frame() {
     // Wait for previous frame to finish drawing
-    auto result = _logical_device.waitForFences(1, &_fence_in_flight, true, UINT64_MAX);
+    auto result = _logical_device.waitForFences(1, &_fences_in_flight[current_frame], true, UINT64_MAX);
     if (result != vk::Result::eSuccess) throw std::runtime_error("Failed to draw frame.");
-    result = _logical_device.resetFences(1, &_fence_in_flight);
+    result = _logical_device.resetFences(1, &_fences_in_flight[current_frame]);
     if (result != vk::Result::eSuccess) throw std::runtime_error("Failed to draw frame.");
 
     // Obtain a swapchain image
-    auto obtained = _logical_device.acquireNextImageKHR(_swapchain, UINT64_MAX, _semaphore_image_available);
+    auto obtained = _logical_device.acquireNextImageKHR(_swapchain, UINT64_MAX, _semaphores_image_available[current_frame]);
     if (obtained.result != vk::Result::eSuccess)
         throw std::runtime_error("Failed to obtain a swapchain image.");
     auto image_index = obtained.value;
 
     // Record commands
-    _command_buffer.reset();
-    record_command_buffer(_command_buffer, image_index);
+    _command_buffers[current_frame].reset();
+    record_command_buffer(_command_buffers[current_frame], image_index);
 
     // Submit command buffer
-    vk::Semaphore wait_semaphores[] = { _semaphore_image_available };
+    vk::Semaphore wait_semaphores[] = { _semaphores_image_available[current_frame] };
     vk::PipelineStageFlags wait_stages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
-    vk::Semaphore signal_semaphores[] = { _semaphore_render_finished };
+    vk::Semaphore signal_semaphores[] = { _semaphores_render_finished[current_frame] };
 
     vk::SubmitInfo submit_info{};
     submit_info.setWaitSemaphoreCount(1);
     submit_info.setPWaitSemaphores(wait_semaphores);
     submit_info.setPWaitDstStageMask(wait_stages);
     submit_info.setCommandBufferCount(1);
-    submit_info.setPCommandBuffers(&_command_buffer);
+    submit_info.setPCommandBuffers(&_command_buffers[current_frame]);
     submit_info.setSignalSemaphoreCount(1);
     submit_info.setPSignalSemaphores(signal_semaphores);
 
-    result = _graphics_queue.submit(1, &submit_info, _fence_in_flight);
+    result = _graphics_queue.submit(1, &submit_info, _fences_in_flight[current_frame]);
     if (result != vk::Result::eSuccess)
         throw std::runtime_error("Failed to submit draw command buffer.");
 
@@ -832,4 +842,7 @@ void VulkanDevice::draw_frame() {
     result = _presentation_queue.presentKHR(present_info);
     if (result != vk::Result::eSuccess)
         throw std::runtime_error("Failed to present rendered image.");
+
+    // Advance current frame
+    current_frame = (current_frame + 1) % VulkanSettings::max_frames_in_flight;
 }

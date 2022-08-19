@@ -87,19 +87,21 @@ private:
 
     // TODO: TEMP COMMAND CODE
     vk::CommandPool _command_pool;
-    vk::CommandBuffer _command_buffer;
+    std::vector<vk::CommandBuffer> _command_buffers;
 
     void create_command_pool();
-    void create_command_buffer();
+    void create_command_buffers();
 
     void record_command_buffer(vk::CommandBuffer command_buffer, uint32 image_index);
 
     // TODO: TEMP SYNCHRONIZATION
-    vk::Semaphore _semaphore_image_available;
-    vk::Semaphore _semaphore_render_finished;
-    vk::Fence _fence_in_flight;
+    std::vector<vk::Semaphore> _semaphores_image_available;
+    std::vector<vk::Semaphore> _semaphores_render_finished;
+    std::vector<vk::Fence> _fences_in_flight;
 
     void create_sync_objects();
+
+    uint32 current_frame = 0;
 
 public:
     VulkanDevice(
