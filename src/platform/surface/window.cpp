@@ -18,15 +18,23 @@ Window::Window(int32 width, int32 height, std::string name) : _width(width), _he
     // initialize GLFW with parameters
     glfwInit();                                     // Initialize GLFW
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);   // We dont want a OpenGL context
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);     // Window resize disabled TODO: enable
 
     // Create window :: width, height, window name, monitor, share (OpenGL only)
     _window = glfwCreateWindow(_width, _height, _name.c_str(), nullptr, nullptr);
+
+    // Setup resize callback
+    glfwSetWindowUserPointer(_window, this);
+    glfwSetFramebufferSizeCallback(_window, framebuffer_resize_callback);
 }
 
 Window::~Window() {
     glfwDestroyWindow(_window);
     glfwTerminate();
+}
+
+void Window::framebuffer_resize_callback(GLFWwindow* window, int width, int height) {
+    auto surface = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
+    surface->resized = true;
 }
 
 vk::SurfaceKHR Window::get_vulkan_surface(vk::Instance& vulkan_instance, vk::AllocationCallbacks* allocator) {

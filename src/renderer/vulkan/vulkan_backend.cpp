@@ -17,21 +17,16 @@ VulkanBackend::VulkanBackend(Platform::Surface* surface) : RendererBackend(surfa
     _device = new VulkanDevice(
         &_vulkan_instance,
         _allocator,
-        _surface->get_vulkan_surface(_vulkan_instance, _allocator),
-        _surface->get_width_in_pixels(),
-        _surface->get_height_in_pixels()
+        _surface
     );
-
-    // TODO: Better code organization
-    create_graphics_pipeline();
 }
 
 VulkanBackend::~VulkanBackend() {
     delete _device;
     if (VulkanSettings::enable_validation_layers)
-        _vulkan_instance.destroyDebugUtilsMessengerEXT(_debug_messenger, nullptr,
+        _vulkan_instance.destroyDebugUtilsMessengerEXT(_debug_messenger, _allocator,
             vk::DispatchLoaderDynamic{ _vulkan_instance, vkGetInstanceProcAddr });
-    _vulkan_instance.destroy(nullptr);
+    _vulkan_instance.destroy(_allocator);
 }
 
 // ///////////////////////////////// //
@@ -46,7 +41,7 @@ void VulkanBackend::create_vulkan_instance() {
     vk::ApplicationInfo app_info{};
     app_info.pApplicationName = APP_NAME;                   // Application name
     app_info.applicationVersion = 1;                        // Application version
-    app_info.pEngineName = ENGINE_NAME;                        // Engine name
+    app_info.pEngineName = ENGINE_NAME;                     // Engine name
     app_info.engineVersion = 1;                             // Engine version
     app_info.apiVersion = VulkanSettings::vulkan_version;   // Set vulkan version
 
@@ -99,11 +94,6 @@ void VulkanBackend::setup_debug_messenger() {
     if (result != vk::Result::eSuccess)
         throw std::runtime_error("Failed to set up debug messenger!");
 }
-
-void VulkanBackend::create_graphics_pipeline() {
-
-}
-
 
 bool VulkanBackend::all_validation_layers_are_available() {
     auto available_layers = vk::enumerateInstanceLayerProperties();

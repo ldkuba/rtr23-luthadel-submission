@@ -11,13 +11,13 @@ bool device_supports_required_features(const vk::PhysicalDeviceFeatures& feature
 VulkanDevice::VulkanDevice(
     vk::Instance* instance,
     vk::AllocationCallbacks* allocator,
-    const vk::SurfaceKHR surface,
-    const uint32 width,
-    const uint32 height
-) : _vulkan_instance(instance), _vulkan_allocator(allocator), _vulkan_surface(surface) {
+    Platform::Surface* surface
+) : _vulkan_instance(instance), _vulkan_allocator(allocator), _surface(surface) {
+    _vulkan_surface = surface->get_vulkan_surface(*_vulkan_instance, _vulkan_allocator);
+
     pick_physical_device();
     create_logical_device();
-    create_swapchain(width, height);
+    create_swapchain();
     create_image_views();
 
     // TODO: TEMP PIPELINE CODE
@@ -35,6 +35,15 @@ VulkanDevice::VulkanDevice(
     create_sync_objects();
 }
 VulkanDevice::~VulkanDevice() {
+    cleanup_swapchain();
+
+
+    // TODO: TEMP PIPELINE CODE
+    _logical_device.destroyPipeline(_graphics_pipeline, _vulkan_allocator);
+    _logical_device.destroyPipelineLayout(_pipeline_layout, _vulkan_allocator);
+    _logical_device.destroyRenderPass(_render_pass, _vulkan_allocator);
+
+
     // TODO: TEMP SYNC CODE
     for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++) {
         _logical_device.destroySemaphore(_semaphores_image_available[i], _vulkan_allocator);
@@ -47,20 +56,6 @@ VulkanDevice::~VulkanDevice() {
     _logical_device.destroyCommandPool(_command_pool, _vulkan_allocator);
 
 
-    // TODO: TEMP FRAMEBUFFER CODE
-    for (auto framebuffer : _swapchain_framebuffers)
-        _logical_device.destroyFramebuffer(framebuffer, _vulkan_allocator);
-
-
-    // TODO: TEMP PIPELINE CODE
-    _logical_device.destroyPipeline(_graphics_pipeline, _vulkan_allocator);
-    _logical_device.destroyPipelineLayout(_pipeline_layout, _vulkan_allocator);
-    _logical_device.destroyRenderPass(_render_pass, _vulkan_allocator);
-
-
-    for (auto image_view : _swapchain_image_views)
-        _logical_device.destroyImageView(image_view, _vulkan_allocator);
-    _logical_device.destroySwapchainKHR(_swapchain, _vulkan_allocator);
     _logical_device.destroy(_vulkan_allocator);
     _vulkan_instance->destroySurfaceKHR(_vulkan_surface, _vulkan_allocator);
 }
@@ -148,10 +143,10 @@ void VulkanDevice::create_logical_device() {
         _compute_queue = _logical_device.getQueue(indices.compute_family.value(), 0);
 }
 
-void VulkanDevice::create_swapchain(const uint32 width, const uint32 height) {
+void VulkanDevice::create_swapchain() {
     SwapchainSupportDetails swapchain_support = query_swapchain_support_details(_physical_device);
 
-    vk::Extent2D extent = swapchain_support.get_extent(width, height);
+    vk::Extent2D extent = swapchain_support.get_extent(_surface->get_width_in_pixels(), _surface->get_height_in_pixels());
     vk::SurfaceFormatKHR surface_format = swapchain_support.get_surface_format();
     vk::PresentModeKHR presentation_mode = swapchain_support.get_presentation_mode();
 
@@ -194,6 +189,28 @@ void VulkanDevice::create_swapchain(const uint32 width, const uint32 height) {
     _swapchain_images = _logical_device.getSwapchainImagesKHR(_swapchain);
     _swapchain_format = surface_format.format;
     _swapchain_extent = extent;
+}
+
+void VulkanDevice::recreate_swapchain() {
+    _logical_device.waitIdle();
+
+    cleanup_swapchain();
+
+    create_swapchain();
+    create_image_views();
+    create_framebuffers();
+}
+
+void VulkanDevice::cleanup_swapchain() {
+    // TODO: TEMP FRAMEBUFFER CODE
+    for (auto framebuffer : _swapchain_framebuffers)
+        _logical_device.destroyFramebuffer(framebuffer, _vulkan_allocator);
+
+
+    for (auto image_view : _swapchain_image_views)
+        _logical_device.destroyImageView(image_view, _vulkan_allocator);
+
+    _logical_device.destroySwapchainKHR(_swapchain, _vulkan_allocator);
 }
 
 void VulkanDevice::create_image_views() {
@@ -798,14 +815,19 @@ void VulkanDevice::draw_frame() {
     // Wait for previous frame to finish drawing
     auto result = _logical_device.waitForFences(1, &_fences_in_flight[current_frame], true, UINT64_MAX);
     if (result != vk::Result::eSuccess) throw std::runtime_error("Failed to draw frame.");
-    result = _logical_device.resetFences(1, &_fences_in_flight[current_frame]);
-    if (result != vk::Result::eSuccess) throw std::runtime_error("Failed to draw frame.");
 
     // Obtain a swapchain image
     auto obtained = _logical_device.acquireNextImageKHR(_swapchain, UINT64_MAX, _semaphores_image_available[current_frame]);
-    if (obtained.result != vk::Result::eSuccess)
+    if (obtained.result == vk::Result::eErrorOutOfDateKHR) {
+        recreate_swapchain();
+        return;
+    } else if (obtained.result != vk::Result::eSuccess && obtained.result != vk::Result::eSuboptimalKHR)
         throw std::runtime_error("Failed to obtain a swapchain image.");
     auto image_index = obtained.value;
+
+    // Reset fence
+    result = _logical_device.resetFences(1, &_fences_in_flight[current_frame]);
+    if (result != vk::Result::eSuccess) throw std::runtime_error("Failed to draw frame.");
 
     // Record commands
     _command_buffers[current_frame].reset();
@@ -840,7 +862,10 @@ void VulkanDevice::draw_frame() {
     present_info.setPImageIndices(&image_index);
 
     result = _presentation_queue.presentKHR(present_info);
-    if (result != vk::Result::eSuccess)
+    if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR || _surface->resized) {
+        recreate_swapchain();
+        _surface->resized = false;
+    } else if (result != vk::Result::eSuccess)
         throw std::runtime_error("Failed to present rendered image.");
 
     // Advance current frame

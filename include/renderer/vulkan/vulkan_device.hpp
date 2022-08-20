@@ -5,6 +5,7 @@
 #include <set>
 
 #include "defines.hpp"
+#include "platform/platform.hpp"
 
 struct PhysicalDeviceInfo {
     uint32 suitability;
@@ -38,6 +39,9 @@ struct SwapchainSupportDetails {
 
 class VulkanDevice {
 private:
+    // Surface
+    Platform::Surface* _surface;
+
     vk::Instance* _vulkan_instance;
     vk::AllocationCallbacks* _vulkan_allocator;
     vk::SurfaceKHR _vulkan_surface;
@@ -61,8 +65,10 @@ private:
     void pick_physical_device();
     void create_logical_device();
 
-    void create_swapchain(const uint32 width, const uint32 height);
-    void recreate_swapchain(const uint32 width, const uint32 height);
+    void create_swapchain();
+    void recreate_swapchain();
+    void cleanup_swapchain();
+
     void create_image_views();
 
     QueueFamilyIndices find_queue_families(const vk::PhysicalDevice& device);
@@ -107,9 +113,7 @@ public:
     VulkanDevice(
         vk::Instance* instance,
         vk::AllocationCallbacks* allocator,
-        const vk::SurfaceKHR surface,
-        const uint32 width,
-        const uint32 height
+        Platform::Surface* surface
     );
     ~VulkanDevice();
 

@@ -35,6 +35,9 @@ public:
         Surface() {}
     public:
         ~Surface() {}
+
+        bool resized = false;
+
         static Surface* get_instance(uint32 width, uint32 height, std::string name);
 
         // Vulkan functions
