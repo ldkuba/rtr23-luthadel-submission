@@ -27,11 +27,13 @@ VulkanDevice::VulkanDevice(
     // TODO: TEMP FRAMEBUFFER CODE
     create_framebuffers();
 
+    // TODO: TEMP COMMAND CODE
+    create_command_pool();
+
     // TODO: TEMP VERTEX BUFFER CODE
     create_vertex_buffer();
 
     // TODO: TEMP COMMAND CODE
-    create_command_pool();
     create_command_buffers();
 
     // TODO: TEMP SYNC CODE
@@ -890,40 +892,74 @@ void VulkanDevice::draw_frame() {
 
 
 // VERTEX BUFFER
-void VulkanDevice::create_vertex_buffer() {
+void VulkanDevice::create_buffer(
+    vk::DeviceSize size,
+    vk::BufferUsageFlags usage,
+    vk::MemoryPropertyFlags properties,
+    vk::Buffer& buffer,
+    vk::DeviceMemory& buffer_memory
+) {
     // Create buffer
     vk::BufferCreateInfo buffer_info{};
-    buffer_info.setSize(sizeof(vertices[0]) * vertices.size());
-    buffer_info.setUsage(vk::BufferUsageFlagBits::eVertexBuffer);
+    buffer_info.setSize(size);
+    buffer_info.setUsage(usage);
     buffer_info.setSharingMode(vk::SharingMode::eExclusive);
 
-    auto result = _logical_device.createBuffer(&buffer_info, _vulkan_allocator, &_vertex_buffer);
+    auto result = _logical_device.createBuffer(&buffer_info, _vulkan_allocator, &buffer);
     if (result != vk::Result::eSuccess)
         throw std::runtime_error("Failed to create vertex buffer.");
 
     // Allocate memory to the buffer
-    auto memory_requirements = _logical_device.getBufferMemoryRequirements(_vertex_buffer);
+    auto memory_requirements = _logical_device.getBufferMemoryRequirements(buffer);
 
     vk::MemoryAllocateInfo allocation_info{};
     allocation_info.setAllocationSize(memory_requirements.size);
-    allocation_info.setMemoryTypeIndex(find_memory_type(
-        memory_requirements.memoryTypeBits,
-        vk::MemoryPropertyFlagBits::eHostVisible |
-        vk::MemoryPropertyFlagBits::eHostCoherent
-    ));
+    allocation_info.setMemoryTypeIndex(find_memory_type(memory_requirements.memoryTypeBits, properties));
 
-    result = _logical_device.allocateMemory(&allocation_info, _vulkan_allocator, &_vertex_buffer_memory);
+    result = _logical_device.allocateMemory(&allocation_info, _vulkan_allocator, &buffer_memory);
     if (result != vk::Result::eSuccess)
         throw std::runtime_error("Failed to allocate vertex buffer memory.");
 
     // Bind allocated memory to buffer
-    _logical_device.bindBufferMemory(_vertex_buffer, _vertex_buffer_memory, 0);
+    _logical_device.bindBufferMemory(buffer, buffer_memory, 0);
+}
+
+void VulkanDevice::create_vertex_buffer() {
+    vk::DeviceSize buffer_size = sizeof(vertices[0]) * vertices.size();
+
+    // Create staging buffer
+    vk::Buffer staging_buffer;
+    vk::DeviceMemory staging_buffer_memory;
+
+    create_buffer(
+        buffer_size,
+        vk::BufferUsageFlagBits::eTransferSrc,
+        vk::MemoryPropertyFlagBits::eHostVisible |
+        vk::MemoryPropertyFlagBits::eHostCoherent,
+        staging_buffer, staging_buffer_memory
+    );
 
     // Fill created memory with data
-    auto data = _logical_device.mapMemory(_vertex_buffer_memory, 0, buffer_info.size);
-    memcpy(data, vertices.data(), buffer_info.size);
-    _logical_device.unmapMemory(_vertex_buffer_memory);
+    auto data = _logical_device.mapMemory(staging_buffer_memory, 0, buffer_size);
+    memcpy(data, vertices.data(), (size_t) buffer_size);
+    _logical_device.unmapMemory(staging_buffer_memory);
+
+    // Create vertex buffer
+    create_buffer(
+        buffer_size,
+        vk::BufferUsageFlagBits::eTransferDst |
+        vk::BufferUsageFlagBits::eVertexBuffer,
+        vk::MemoryPropertyFlagBits::eDeviceLocal,
+        _vertex_buffer, _vertex_buffer_memory
+    );
+
+    copy_buffer(staging_buffer, _vertex_buffer, buffer_size);
+
+    // Cleanup
+    _logical_device.destroyBuffer(staging_buffer, _vulkan_allocator);
+    _logical_device.freeMemory(staging_buffer_memory, _vulkan_allocator);
 }
+
 
 uint32 VulkanDevice::find_memory_type(uint32 type_filter, vk::MemoryPropertyFlags properties) {
     auto memory_properties = _physical_device.getMemoryProperties();
@@ -935,4 +971,40 @@ uint32 VulkanDevice::find_memory_type(uint32 type_filter, vk::MemoryPropertyFlag
     }
 
     throw std::runtime_error("Failed to find suitable memory type.");
+}
+
+void VulkanDevice::copy_buffer(vk::Buffer source_buffer, vk::Buffer destination_buffer, vk::DeviceSize size) {
+    vk::CommandBufferAllocateInfo allocation_info{};
+    allocation_info.setLevel(vk::CommandBufferLevel::ePrimary);
+    allocation_info.setCommandBufferCount(1);
+    allocation_info.setCommandPool(_command_pool);
+
+    vk::CommandBuffer command_buffer;
+    command_buffer = _logical_device.allocateCommandBuffers(allocation_info)[0];
+
+    // Begin recording commands
+    vk::CommandBufferBeginInfo begin_info{};
+    begin_info.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+    command_buffer.begin(begin_info);
+
+    // Issue transfer
+    vk::BufferCopy copy_region{};
+    copy_region.setSrcOffset(0);
+    copy_region.setDstOffset(0);
+    copy_region.setSize(size);
+    command_buffer.copyBuffer(source_buffer, destination_buffer, 1, &copy_region);
+
+    // Finish recording
+    command_buffer.end();
+
+    // Execute command buffer
+    vk::SubmitInfo submit_info{};
+    submit_info.setCommandBufferCount(1);
+    submit_info.setPCommandBuffers(&command_buffer);
+
+    _graphics_queue.submit(submit_info);
+    _graphics_queue.waitIdle();
+
+    // Free temp command buffer
+    _logical_device.freeCommandBuffers(_command_pool, 1, &command_buffer);
 }

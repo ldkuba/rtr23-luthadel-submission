@@ -113,9 +113,12 @@ private:
     vk::Buffer _vertex_buffer;
     vk::DeviceMemory _vertex_buffer_memory;
 
+    void create_buffer(vk::DeviceSize size, vk::BufferUsageFlags usage, vk::MemoryPropertyFlags properties,
+        vk::Buffer& buffer, vk::DeviceMemory& buffer_memory);
     void create_vertex_buffer();
 
     uint32 find_memory_type(uint32 type_filter, vk::MemoryPropertyFlags properties);
+    void copy_buffer(vk::Buffer source_buffer, vk::Buffer destination_buffer, vk::DeviceSize size);
 
 public:
     VulkanDevice(
