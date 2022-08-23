@@ -27,6 +27,9 @@ VulkanDevice::VulkanDevice(
     // TODO: TEMP FRAMEBUFFER CODE
     create_framebuffers();
 
+    // TODO: TEMP VERTEX BUFFER CODE
+    create_vertex_buffer();
+
     // TODO: TEMP COMMAND CODE
     create_command_pool();
     create_command_buffers();
@@ -36,6 +39,11 @@ VulkanDevice::VulkanDevice(
 }
 VulkanDevice::~VulkanDevice() {
     cleanup_swapchain();
+
+
+    // TODO: TEMP VERTEX BUFFER CODE
+    _logical_device.destroyBuffer(_vertex_buffer, _vulkan_allocator);
+    _logical_device.freeMemory(_vertex_buffer_memory, _vulkan_allocator);
 
 
     // TODO: TEMP PIPELINE CODE
@@ -543,12 +551,15 @@ void VulkanDevice::create_pipeline() {
 
     vk::PipelineShaderStageCreateInfo shader_stages[] = { vertex_shader_stage_info, fragment_shader_stage_info };
 
-    // Vertex input; TODO: Hardcoded vertex values (TEMP)
+    // Vertex input
+    auto binding_description = Vertex::get_binding_description();
+    auto attribute_description = Vertex::get_attribute_descriptions();
+
     vk::PipelineVertexInputStateCreateInfo vertex_input_info{};
-    vertex_input_info.setVertexBindingDescriptionCount(0);
-    vertex_input_info.setPVertexBindingDescriptions(nullptr);
-    vertex_input_info.setVertexAttributeDescriptionCount(0);
-    vertex_input_info.setPVertexAttributeDescriptions(nullptr);
+    vertex_input_info.setVertexBindingDescriptionCount(1);
+    vertex_input_info.setPVertexBindingDescriptions(&binding_description);
+    vertex_input_info.setVertexAttributeDescriptionCount(static_cast<uint32>(attribute_description.size()));
+    vertex_input_info.setVertexAttributeDescriptions(attribute_description);
 
     // Input assembly
     vk::PipelineInputAssemblyStateCreateInfo input_assembly_info{};
@@ -761,6 +772,11 @@ void VulkanDevice::record_command_buffer(vk::CommandBuffer command_buffer, uint3
     // Bind graphics pipeline
     command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, _graphics_pipeline);
 
+    // Bind vertex buffer
+    std::vector<vk::Buffer>vertex_buffers = { _vertex_buffer };
+    std::vector<vk::DeviceSize> offsets = { 0 };
+    command_buffer.bindVertexBuffers(0, vertex_buffers, offsets);
+
     // Dynamic states
     vk::Viewport viewport{};
     viewport.setX(0.0f);
@@ -779,7 +795,7 @@ void VulkanDevice::record_command_buffer(vk::CommandBuffer command_buffer, uint3
     command_buffer.setScissor(0, 1, &scissor);
 
     // Triangle draw command
-    command_buffer.draw(3, 1, 0, 0);
+    command_buffer.draw(static_cast<uint32>(vertices.size()), 1, 0, 0);
 
     // End render pass
     command_buffer.endRenderPass();
@@ -870,4 +886,53 @@ void VulkanDevice::draw_frame() {
 
     // Advance current frame
     current_frame = (current_frame + 1) % VulkanSettings::max_frames_in_flight;
+}
+
+
+// VERTEX BUFFER
+void VulkanDevice::create_vertex_buffer() {
+    // Create buffer
+    vk::BufferCreateInfo buffer_info{};
+    buffer_info.setSize(sizeof(vertices[0]) * vertices.size());
+    buffer_info.setUsage(vk::BufferUsageFlagBits::eVertexBuffer);
+    buffer_info.setSharingMode(vk::SharingMode::eExclusive);
+
+    auto result = _logical_device.createBuffer(&buffer_info, _vulkan_allocator, &_vertex_buffer);
+    if (result != vk::Result::eSuccess)
+        throw std::runtime_error("Failed to create vertex buffer.");
+
+    // Allocate memory to the buffer
+    auto memory_requirements = _logical_device.getBufferMemoryRequirements(_vertex_buffer);
+
+    vk::MemoryAllocateInfo allocation_info{};
+    allocation_info.setAllocationSize(memory_requirements.size);
+    allocation_info.setMemoryTypeIndex(find_memory_type(
+        memory_requirements.memoryTypeBits,
+        vk::MemoryPropertyFlagBits::eHostVisible |
+        vk::MemoryPropertyFlagBits::eHostCoherent
+    ));
+
+    result = _logical_device.allocateMemory(&allocation_info, _vulkan_allocator, &_vertex_buffer_memory);
+    if (result != vk::Result::eSuccess)
+        throw std::runtime_error("Failed to allocate vertex buffer memory.");
+
+    // Bind allocated memory to buffer
+    _logical_device.bindBufferMemory(_vertex_buffer, _vertex_buffer_memory, 0);
+
+    // Fill created memory with data
+    auto data = _logical_device.mapMemory(_vertex_buffer_memory, 0, buffer_info.size);
+    memcpy(data, vertices.data(), buffer_info.size);
+    _logical_device.unmapMemory(_vertex_buffer_memory);
+}
+
+uint32 VulkanDevice::find_memory_type(uint32 type_filter, vk::MemoryPropertyFlags properties) {
+    auto memory_properties = _physical_device.getMemoryProperties();
+
+    for (uint32 i = 0; i < memory_properties.memoryTypeCount; i++) {
+        if ((type_filter & (1 << i)) &&
+            (memory_properties.memoryTypes[i].propertyFlags & properties) == properties)
+            return i;
+    }
+
+    throw std::runtime_error("Failed to find suitable memory type.");
 }

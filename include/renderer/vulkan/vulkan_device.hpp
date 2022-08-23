@@ -100,7 +100,7 @@ private:
 
     void record_command_buffer(vk::CommandBuffer command_buffer, uint32 image_index);
 
-    // TODO: TEMP SYNCHRONIZATION
+    // TODO: TEMP SYNCHRONIZATION CODE
     std::vector<vk::Semaphore> _semaphores_image_available;
     std::vector<vk::Semaphore> _semaphores_render_finished;
     std::vector<vk::Fence> _fences_in_flight;
@@ -108,6 +108,14 @@ private:
     void create_sync_objects();
 
     uint32 current_frame = 0;
+
+    // TODO: TEMP VERTEX BUFFER CODE
+    vk::Buffer _vertex_buffer;
+    vk::DeviceMemory _vertex_buffer_memory;
+
+    void create_vertex_buffer();
+
+    uint32 find_memory_type(uint32 type_filter, vk::MemoryPropertyFlags properties);
 
 public:
     VulkanDevice(

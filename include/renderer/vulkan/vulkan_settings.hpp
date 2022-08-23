@@ -107,3 +107,42 @@ public:
     // Framebuffer
     constexpr static uint32 max_frames_in_flight = 2;
 };
+
+#include <glm/glm.hpp>
+
+// TODO: TEMP VERTEX CODE
+struct Vertex {
+    glm::vec2 position;
+    glm::vec3 color;
+
+    static vk::VertexInputBindingDescription get_binding_description() {
+        vk::VertexInputBindingDescription binding_description{};
+        binding_description.setBinding(0);
+        binding_description.setStride(sizeof(Vertex));
+        binding_description.setInputRate(vk::VertexInputRate::eVertex);
+
+        return binding_description;
+    }
+
+    static std::array<vk::VertexInputAttributeDescription, 2> get_attribute_descriptions() {
+        std::array<vk::VertexInputAttributeDescription, 2> attribute_descriptions;
+        // Position
+        attribute_descriptions[0].setBinding(0);
+        attribute_descriptions[0].setLocation(0);
+        attribute_descriptions[0].setFormat(vk::Format::eR32G32Sfloat);
+        attribute_descriptions[0].setOffset(offsetof(Vertex, position));
+        // Color
+        attribute_descriptions[1].setBinding(0);
+        attribute_descriptions[1].setLocation(1);
+        attribute_descriptions[1].setFormat(vk::Format::eR32G32B32Sfloat);
+        attribute_descriptions[1].setOffset(offsetof(Vertex, color));
+
+        return attribute_descriptions;
+    }
+};
+
+const std::vector<Vertex> vertices{
+    {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+    {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+    {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+};
