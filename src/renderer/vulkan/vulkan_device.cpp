@@ -33,6 +33,9 @@ VulkanDevice::VulkanDevice(
     // TODO: TEMP VERTEX BUFFER CODE
     create_vertex_buffer();
 
+    // TODO: TEMP INDEX BUFFER CODE
+    create_index_buffer();
+
     // TODO: TEMP COMMAND CODE
     create_command_buffers();
 
@@ -42,6 +45,9 @@ VulkanDevice::VulkanDevice(
 VulkanDevice::~VulkanDevice() {
     cleanup_swapchain();
 
+    // TODO: TEMP INDEX BUFFER CODE
+    _logical_device.destroyBuffer(_index_buffer, _vulkan_allocator);
+    _logical_device.freeMemory(_vertex_buffer_memory, _vulkan_allocator);
 
     // TODO: TEMP VERTEX BUFFER CODE
     _logical_device.destroyBuffer(_vertex_buffer, _vulkan_allocator);
@@ -779,6 +785,9 @@ void VulkanDevice::record_command_buffer(vk::CommandBuffer command_buffer, uint3
     std::vector<vk::DeviceSize> offsets = { 0 };
     command_buffer.bindVertexBuffers(0, vertex_buffers, offsets);
 
+    // Bind index buffer
+    command_buffer.bindIndexBuffer(_index_buffer, 0, vk::IndexType::eUint16);
+
     // Dynamic states
     vk::Viewport viewport{};
     viewport.setX(0.0f);
@@ -797,7 +806,7 @@ void VulkanDevice::record_command_buffer(vk::CommandBuffer command_buffer, uint3
     command_buffer.setScissor(0, 1, &scissor);
 
     // Triangle draw command
-    command_buffer.draw(static_cast<uint32>(vertices.size()), 1, 0, 0);
+    command_buffer.drawIndexed(static_cast<uint32>(indices.size()), 1, 0, 0, 0);
 
     // End render pass
     command_buffer.endRenderPass();
@@ -1007,4 +1016,42 @@ void VulkanDevice::copy_buffer(vk::Buffer source_buffer, vk::Buffer destination_
 
     // Free temp command buffer
     _logical_device.freeCommandBuffers(_command_pool, 1, &command_buffer);
+}
+
+// INDEX BUFFER
+
+void VulkanDevice::create_index_buffer() {
+    vk::DeviceSize buffer_size = sizeof(indices[0]) * indices.size();
+
+    // Create staging buffer
+    vk::Buffer staging_buffer;
+    vk::DeviceMemory staging_buffer_memory;
+
+    create_buffer(
+        buffer_size,
+        vk::BufferUsageFlagBits::eTransferSrc,
+        vk::MemoryPropertyFlagBits::eHostVisible |
+        vk::MemoryPropertyFlagBits::eHostCoherent,
+        staging_buffer, staging_buffer_memory
+    );
+
+    // Fill created memory with data
+    auto data = _logical_device.mapMemory(staging_buffer_memory, 0, buffer_size);
+    memcpy(data, indices.data(), (size_t) buffer_size);
+    _logical_device.unmapMemory(staging_buffer_memory);
+
+    // Create vertex buffer
+    create_buffer(
+        buffer_size,
+        vk::BufferUsageFlagBits::eTransferDst |
+        vk::BufferUsageFlagBits::eIndexBuffer,
+        vk::MemoryPropertyFlagBits::eDeviceLocal,
+        _index_buffer, _index_buffer_memory
+    );
+
+    copy_buffer(staging_buffer, _index_buffer, buffer_size);
+
+    // Cleanup
+    _logical_device.destroyBuffer(staging_buffer, _vulkan_allocator);
+    _logical_device.freeMemory(staging_buffer_memory, _vulkan_allocator);
 }

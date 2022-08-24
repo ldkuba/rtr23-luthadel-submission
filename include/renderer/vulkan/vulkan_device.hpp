@@ -120,6 +120,12 @@ private:
     uint32 find_memory_type(uint32 type_filter, vk::MemoryPropertyFlags properties);
     void copy_buffer(vk::Buffer source_buffer, vk::Buffer destination_buffer, vk::DeviceSize size);
 
+    // TODO: TEMP INDEX BUFFER CODE
+    vk::Buffer _index_buffer;
+    vk::DeviceMemory _index_buffer_memory;
+
+    void create_index_buffer();
+
 public:
     VulkanDevice(
         vk::Instance* instance,
