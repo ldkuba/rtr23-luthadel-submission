@@ -20,6 +20,9 @@ VulkanDevice::VulkanDevice(
     create_swapchain();
     create_image_views();
 
+    // TODO: TEMP UNIFORM CODE
+    create_descriptor_set_layout();
+
     // TODO: TEMP PIPELINE CODE
     create_render_pass();
     create_pipeline();
@@ -36,6 +39,11 @@ VulkanDevice::VulkanDevice(
     // TODO: TEMP INDEX BUFFER CODE
     create_index_buffer();
 
+    // TODO: TEMP UNIFORM CODE
+    create_uniform_buffers();
+    create_descriptor_pool();
+    create_descriptor_sets();
+
     // TODO: TEMP COMMAND CODE
     create_command_buffers();
 
@@ -45,9 +53,20 @@ VulkanDevice::VulkanDevice(
 VulkanDevice::~VulkanDevice() {
     cleanup_swapchain();
 
+
+    // TODO: TEMP UNIFORM CODE
+    for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++) {
+        _logical_device.destroyBuffer(_uniform_buffers[i]);
+        _logical_device.freeMemory(_uniform_buffers_memory[i]);
+    }
+    _logical_device.destroyDescriptorPool(_descriptor_pool, _vulkan_allocator);
+    _logical_device.destroyDescriptorSetLayout(_descriptor_set_layout, _vulkan_allocator);
+
+
     // TODO: TEMP INDEX BUFFER CODE
     _logical_device.destroyBuffer(_index_buffer, _vulkan_allocator);
     _logical_device.freeMemory(_vertex_buffer_memory, _vulkan_allocator);
+
 
     // TODO: TEMP VERTEX BUFFER CODE
     _logical_device.destroyBuffer(_vertex_buffer, _vulkan_allocator);
@@ -586,7 +605,7 @@ void VulkanDevice::create_pipeline() {
     rasterization_info.setPolygonMode(vk::PolygonMode::eFill);   // Determines how fragments are generated for geometry (feature required for changing)
     rasterization_info.setLineWidth(1.0f);                       // Line thickness (feature required for values above 1)
     rasterization_info.setCullMode(vk::CullModeFlagBits::eBack); // Triangle face to cull
-    rasterization_info.setFrontFace(vk::FrontFace::eClockwise);  // Set vertex order of front-facing triangles
+    rasterization_info.setFrontFace(vk::FrontFace::eCounterClockwise); // Set vertex order of front-facing triangles
     // Change depth information in some manner
     rasterization_info.setDepthBiasEnable(false);
     rasterization_info.setDepthBiasConstantFactor(0.0f);
@@ -631,8 +650,8 @@ void VulkanDevice::create_pipeline() {
 
     // Pipeline layout fo UNIFORM values
     vk::PipelineLayoutCreateInfo layout_info{};
-    layout_info.setSetLayoutCount(0);
-    layout_info.setPSetLayouts(nullptr);
+    layout_info.setSetLayoutCount(1);
+    layout_info.setPSetLayouts(&_descriptor_set_layout);
     layout_info.setPushConstantRangeCount(0);
     layout_info.setPPushConstantRanges(nullptr);
 
@@ -805,7 +824,15 @@ void VulkanDevice::record_command_buffer(vk::CommandBuffer command_buffer, uint3
 
     command_buffer.setScissor(0, 1, &scissor);
 
-    // Triangle draw command
+    // Bind description sets
+    command_buffer.bindDescriptorSets(
+        vk::PipelineBindPoint::eGraphics,
+        _pipeline_layout, 0,
+        1, &_descriptor_sets[current_frame],
+        0, nullptr
+    );
+
+    // Draw command
     command_buffer.drawIndexed(static_cast<uint32>(indices.size()), 1, 0, 0, 0);
 
     // End render pass
@@ -859,6 +886,9 @@ void VulkanDevice::draw_frame() {
     // Record commands
     _command_buffers[current_frame].reset();
     record_command_buffer(_command_buffers[current_frame], image_index);
+
+    // Update uniform buffer data
+    update_uniform_buffer(current_frame);
 
     // Submit command buffer
     vk::Semaphore wait_semaphores[] = { _semaphores_image_available[current_frame] };
@@ -1054,4 +1084,112 @@ void VulkanDevice::create_index_buffer() {
     // Cleanup
     _logical_device.destroyBuffer(staging_buffer, _vulkan_allocator);
     _logical_device.freeMemory(staging_buffer_memory, _vulkan_allocator);
+}
+
+// UNIFORM CODE
+#include <glm/gtc/matrix_transform.hpp>
+#include <chrono>
+
+void VulkanDevice::create_descriptor_set_layout() {
+    vk::DescriptorSetLayoutBinding ubo_layout_binding{};
+    ubo_layout_binding.setBinding(0);
+    ubo_layout_binding.setDescriptorType(vk::DescriptorType::eUniformBuffer);
+    ubo_layout_binding.setDescriptorCount(1);
+    ubo_layout_binding.setStageFlags(vk::ShaderStageFlagBits::eVertex);
+    ubo_layout_binding.setPImmutableSamplers(nullptr);
+
+    vk::DescriptorSetLayoutCreateInfo layout_info{};
+    layout_info.setBindingCount(1);
+    layout_info.setPBindings(&ubo_layout_binding);
+
+    auto result = _logical_device.createDescriptorSetLayout(&layout_info, _vulkan_allocator, &_descriptor_set_layout);
+    if (result != vk::Result::eSuccess)
+        throw std::runtime_error("Failed to create descriptor set layout.");
+}
+
+void VulkanDevice::create_uniform_buffers() {
+    vk::DeviceSize buffer_size = sizeof(UniformBufferObject);
+
+    _uniform_buffers.resize(VulkanSettings::max_frames_in_flight);
+    _uniform_buffers_memory.resize(VulkanSettings::max_frames_in_flight);
+
+    for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++) {
+        create_buffer(
+            buffer_size,
+            vk::BufferUsageFlagBits::eUniformBuffer,
+            vk::MemoryPropertyFlagBits::eHostVisible |
+            vk::MemoryPropertyFlagBits::eHostCoherent,
+            _uniform_buffers[i], _uniform_buffers_memory[i]
+        );
+    }
+}
+
+void VulkanDevice::update_uniform_buffer(uint32 current_image) {
+    static auto start_time = std::chrono::high_resolution_clock::now();
+
+    // Calculate delta time
+    auto current_time = std::chrono::high_resolution_clock::now();
+    float32 delta_time = std::chrono::duration<float32, std::chrono::seconds::period>(current_time - start_time).count();
+
+    // Define ubo transformations
+    float32 screen_ratio = _swapchain_extent.width / (float32) _swapchain_extent.height;
+    UniformBufferObject ubo{};
+    ubo.model = glm::rotate(glm::mat4(1.0f), delta_time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.project = glm::perspective(glm::radians(45.0f), screen_ratio, 0.1f, 100.0f);
+    ubo.project[1][1] *= -1; // Flip Y axis
+
+    // Copy ubo data to the buffer
+    auto data = _logical_device.mapMemory(_uniform_buffers_memory[current_image], 0, sizeof(ubo));
+    memcpy(data, &ubo, sizeof(ubo));
+    _logical_device.unmapMemory(_uniform_buffers_memory[current_image]);
+}
+
+void VulkanDevice::create_descriptor_pool() {
+    vk::DescriptorPoolSize pool_size{};
+    pool_size.setType(vk::DescriptorType::eUniformBuffer);
+    pool_size.setDescriptorCount(VulkanSettings::max_frames_in_flight);
+
+    vk::DescriptorPoolCreateInfo create_info{};
+    create_info.setPoolSizeCount(1);
+    create_info.setPPoolSizes(&pool_size);
+    create_info.setMaxSets(VulkanSettings::max_frames_in_flight);
+
+    auto result = _logical_device.createDescriptorPool(&create_info, _vulkan_allocator, &_descriptor_pool);
+    if (result != vk::Result::eSuccess)
+        throw std::runtime_error("Failed to create descriptor pool.");
+}
+
+void VulkanDevice::create_descriptor_sets() {
+    std::vector<vk::DescriptorSetLayout> layouts(VulkanSettings::max_frames_in_flight, _descriptor_set_layout);
+    vk::DescriptorSetAllocateInfo allocation_info{};
+    allocation_info.setDescriptorPool(_descriptor_pool);
+    allocation_info.setDescriptorSetCount(VulkanSettings::max_frames_in_flight);
+    allocation_info.setPSetLayouts(layouts.data());
+
+    _descriptor_sets.resize(VulkanSettings::max_frames_in_flight);
+
+    auto result = _logical_device.allocateDescriptorSets(&allocation_info, _descriptor_sets.data());
+    if (result != vk::Result::eSuccess)
+        throw std::runtime_error("Failed to allocate descriptor set.");
+
+    for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++) {
+        vk::DescriptorBufferInfo buffer_info{};
+        buffer_info.setBuffer(_uniform_buffers[i]);
+        buffer_info.setOffset(0);
+        buffer_info.setRange(sizeof(UniformBufferObject));
+
+        vk::WriteDescriptorSet descriptor_write{};
+        descriptor_write.setDstSet(_descriptor_sets[i]);
+        descriptor_write.setDstBinding(0);
+        descriptor_write.setDstArrayElement(0);
+        descriptor_write.setDescriptorType(vk::DescriptorType::eUniformBuffer);
+        descriptor_write.setDescriptorCount(1);
+        descriptor_write.setPBufferInfo(&buffer_info);
+        descriptor_write.setPImageInfo(nullptr);
+        descriptor_write.setPTexelBufferView(nullptr);
+
+        _logical_device.updateDescriptorSets(1, &descriptor_write, 0, nullptr);
+    }
+
 }

@@ -77,7 +77,6 @@ private:
 
     // TODO: TEMP PIPELINE CODE
     vk::RenderPass _render_pass;
-    vk::DescriptorSetLayout _descriptor_set_layout;
     vk::PipelineLayout _pipeline_layout;
     vk::Pipeline _graphics_pipeline;
 
@@ -125,6 +124,20 @@ private:
     vk::DeviceMemory _index_buffer_memory;
 
     void create_index_buffer();
+
+    // TODO: TEMP UNIFORM CODE
+    vk::DescriptorSetLayout _descriptor_set_layout;
+    vk::DescriptorPool _descriptor_pool;
+    std::vector<vk::DescriptorSet> _descriptor_sets;
+
+    std::vector<vk::Buffer> _uniform_buffers;
+    std::vector<vk::DeviceMemory> _uniform_buffers_memory;
+
+    void create_descriptor_set_layout();
+    void create_uniform_buffers();
+    void update_uniform_buffer(uint32 current_image);
+    void create_descriptor_pool();
+    void create_descriptor_sets();
 
 public:
     VulkanDevice(

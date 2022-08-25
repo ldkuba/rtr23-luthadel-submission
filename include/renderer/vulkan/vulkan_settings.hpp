@@ -108,6 +108,8 @@ public:
     constexpr static uint32 max_frames_in_flight = 2;
 };
 
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 #include <glm/glm.hpp>
 
 // TODO: TEMP VERTEX CODE
@@ -150,4 +152,10 @@ const std::vector<Vertex> vertices{
 
 const std::vector<uint16> indices = {
     0, 1, 2, 2, 3, 0
+};
+
+struct UniformBufferObject {
+    alignas(16) glm::mat4 model;
+    alignas(16) glm::mat4 view;
+    alignas(16) glm::mat4 project;
 };
