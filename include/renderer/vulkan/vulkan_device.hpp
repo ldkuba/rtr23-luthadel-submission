@@ -69,7 +69,7 @@ private:
     void recreate_swapchain();
     void cleanup_swapchain();
 
-    vk::ImageView create_image_view(vk::Image image, vk::Format format);
+    vk::ImageView create_image_view(vk::Image image, vk::Format format, vk::ImageAspectFlags aspect_flags);
     void create_image_views();
 
     QueueFamilyIndices find_queue_families(const vk::PhysicalDevice& device);
@@ -169,6 +169,19 @@ private:
     void create_texture_image();
     void create_texture_image_view();
     void create_texture_sampler();
+
+    // TODO: TEMP DEPTH BUFFER CODE
+    vk::Image _depth_image;
+    vk::DeviceMemory _depth_image_memory;
+    vk::ImageView _depth_image_view;
+
+    void create_depth_resources();
+    vk::Format find_depth_format();
+    vk::Format find_supported_formats(
+        const std::vector<vk::Format>& candidates,
+        vk::ImageTiling tiling,
+        vk::FormatFeatureFlags features
+    );
 
 public:
     VulkanDevice(
