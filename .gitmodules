@@ -10,3 +10,6 @@
 [submodule "external/stb"]
 	path = external/stb
 	url = https://github.com/fqhd/stb-cmake.git
+[submodule "external/tinyobjloader"]
+	path = external/tinyobjloader
+	url = https://github.com/tinyobjloader/tinyobjloader.git

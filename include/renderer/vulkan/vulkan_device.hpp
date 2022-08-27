@@ -37,6 +37,8 @@ struct SwapchainSupportDetails {
     vk::PresentModeKHR get_presentation_mode();
 };
 
+struct Vertex;
+
 class VulkanDevice {
 private:
     // Surface
@@ -182,6 +184,12 @@ private:
         vk::ImageTiling tiling,
         vk::FormatFeatureFlags features
     );
+
+    // TODO: TEMP MODEL LOADING CODE
+    std::vector<Vertex> vertices;
+    std::vector<uint32> indices;
+
+    void load_model();
 
 public:
     VulkanDevice(

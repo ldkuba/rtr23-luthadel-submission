@@ -49,6 +49,7 @@ add_subdirectory(external/vulkan)
 add_subdirectory(external/vulkan/glfw)
 add_subdirectory(external/vulkan/glm)
 add_subdirectory(external/stb)
+add_subdirectory(external/tinyobjloader)
 
 # include directories
 target_include_directories(${PROJECT_NAME}
@@ -59,6 +60,7 @@ target_include_directories(${PROJECT_NAME}
     external/vulkan/glm
     external/vulkan/vulkan
     external/stb
+    external/tinyobjloader
 )
 
 # link
@@ -68,6 +70,7 @@ target_link_directories(${PROJECT_NAME}
     external/vulkan/glfw/src
     external/vulkan/glm
     external/stb
+    external/tinyobjloader
 )
 
 target_link_libraries(${PROJECT_NAME}
@@ -75,6 +78,7 @@ target_link_libraries(${PROJECT_NAME}
     glm
     vulkan
     # stb
+    tinyobjloader
 )
 
 # file(GLOB_RECURSE sources ${PROJECT_SOURCE_DIR}/**/*.c)

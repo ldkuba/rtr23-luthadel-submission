@@ -4,6 +4,11 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
+// TODO: TEMP MODEL LOADING LIBS
+#define TINYOBJLOADER_IMPLEMENTATION
+#include <tiny_obj_loader.h>
+#include <unordered_map>
+
 #include "logger.hpp"
 #include "renderer/vulkan/vulkan_settings.hpp"
 
@@ -44,6 +49,9 @@ VulkanDevice::VulkanDevice(
     create_texture_image();
     create_texture_image_view();
     create_texture_sampler();
+
+    // TODO: TEMP MODEL LOADING CODE
+    load_model();
 
     // TODO: TEMP VERTEX BUFFER CODE
     create_vertex_buffer();
@@ -873,7 +881,7 @@ void VulkanDevice::record_command_buffer(vk::CommandBuffer command_buffer, uint3
     command_buffer.bindVertexBuffers(0, vertex_buffers, offsets);
 
     // Bind index buffer
-    command_buffer.bindIndexBuffer(_index_buffer, 0, vk::IndexType::eUint16);
+    command_buffer.bindIndexBuffer(_index_buffer, 0, vk::IndexType::eUint32);
 
     // Dynamic states
     vk::Viewport viewport{};
@@ -1349,7 +1357,7 @@ void VulkanDevice::create_image(
 void VulkanDevice::create_texture_image() {
     // Load image
     int32 width, height, channels;
-    stbi_uc* pixels = stbi_load("../textures/texture.jpg", &width, &height, &channels, STBI_rgb_alpha);
+    stbi_uc* pixels = stbi_load(texture_path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
     vk::DeviceSize image_size = width * height * 4;
 
     if (!pixels)
@@ -1552,4 +1560,47 @@ vk::Format VulkanDevice::find_depth_format() {
         vk::ImageTiling::eOptimal,
         vk::FormatFeatureFlagBits::eDepthStencilAttachment
     );
+}
+
+// MODEL LOADING
+void VulkanDevice::load_model() {
+    // Load model
+    tinyobj::ObjReader reader;
+    if (!reader.ParseFromFile(model_path))
+        throw std::runtime_error("");
+
+    if (!reader.Warning().empty())
+        Logger::warning("TinyObjReader :: ", reader.Warning());
+
+    auto& attributes = reader.GetAttrib();
+    auto& shapes = reader.GetShapes();
+    auto& materials = reader.GetMaterials();
+
+    // Loop over shapes
+    std::unordered_map<Vertex, uint32> unique_vertices = {};
+    for (const auto& shape : shapes) {
+        for (const auto& index : shape.mesh.indices) {
+            Vertex vertex{};
+
+            vertex.position = {
+                attributes.vertices[3 * index.vertex_index + 0],
+                attributes.vertices[3 * index.vertex_index + 1],
+                attributes.vertices[3 * index.vertex_index + 2]
+            };
+
+            vertex.texture_coord = {
+                attributes.texcoords[2 * index.texcoord_index + 0],
+                1.0f - attributes.texcoords[2 * index.texcoord_index + 1]
+            };
+
+            vertex.color = { 1.0f,1.0f,1.0f };
+
+            if (unique_vertices.count(vertex) == 0) {
+                unique_vertices[vertex] = static_cast<uint32>(vertices.size());
+                vertices.push_back(vertex);
+            }
+
+            indices.push_back(unique_vertices[vertex]);
+        }
+    }
 }
