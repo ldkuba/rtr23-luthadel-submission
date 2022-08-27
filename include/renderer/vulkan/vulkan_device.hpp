@@ -69,6 +69,7 @@ private:
     void recreate_swapchain();
     void cleanup_swapchain();
 
+    vk::ImageView create_image_view(vk::Image image, vk::Format format);
     void create_image_views();
 
     QueueFamilyIndices find_queue_families(const vk::PhysicalDevice& device);
@@ -117,6 +118,10 @@ private:
     void create_vertex_buffer();
 
     uint32 find_memory_type(uint32 type_filter, vk::MemoryPropertyFlags properties);
+
+    vk::CommandBuffer begin_single_time_commands();
+    void end_single_time_commands(vk::CommandBuffer command_buffer);
+
     void copy_buffer(vk::Buffer source_buffer, vk::Buffer destination_buffer, vk::DeviceSize size);
 
     // TODO: TEMP INDEX BUFFER CODE
@@ -138,6 +143,32 @@ private:
     void update_uniform_buffer(uint32 current_image);
     void create_descriptor_pool();
     void create_descriptor_sets();
+
+    // TODO: TEMP IMAGE CODE
+    vk::Image _texture_image;
+    vk::DeviceMemory _texture_image_memory;
+    vk::ImageView _texture_image_view;
+    vk::Sampler _texture_sampler;
+
+    void create_image(
+        uint32 width,
+        uint32 height,
+        vk::Format format,
+        vk::ImageTiling tiling,
+        vk::ImageUsageFlags usage,
+        vk::MemoryPropertyFlags properties,
+        vk::Image& image, vk::DeviceMemory& image_memory
+    );
+    void transition_image_layout(
+        vk::Image image,
+        vk::Format format,
+        vk::ImageLayout old_layout,
+        vk::ImageLayout new_layout
+    );
+    void copy_buffer_to_image(vk::Buffer buffer, vk::Image image, uint32 width, uint32 height);
+    void create_texture_image();
+    void create_texture_image_view();
+    void create_texture_sampler();
 
 public:
     VulkanDevice(

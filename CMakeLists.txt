@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16.3)
+cmake_minimum_required(VERSION 3.23.2)
 set(CMAKE_CXX_STANDARD 17)
 
 project(VulkanEngine)
@@ -33,6 +33,12 @@ endif()
 # CHECK ALL SUBMODULES
 if(NOT EXISTS "${PROJECT_SOURCE_DIR}/external/glfw/CMakeLists.txt")
     message(FATAL_ERROR "GLFW not downloaded.")
+elseif(NOT EXISTS "${PROJECT_SOURCE_DIR}/external/glm/CMakeLists.txt")
+    message(FATAL_ERROR "GLM not downloaded.")
+elseif(NOT EXISTS "${PROJECT_SOURCE_DIR}/external/stb/CMakeLists.txt")
+    message(FATAL_ERROR "STB not downloaded.")
+elseif(NOT EXISTS "${PROJECT_SOURCE_DIR}/external/vulkan/CMakeLists.txt")
+    message(FATAL_ERROR "VULKAN not downloaded.")
 endif()
 
 # Find packages
@@ -42,6 +48,7 @@ find_package(Vulkan REQUIRED FATAL_ERROR)
 add_subdirectory(external/vulkan)
 add_subdirectory(external/vulkan/glfw)
 add_subdirectory(external/vulkan/glm)
+add_subdirectory(external/stb)
 
 # include directories
 target_include_directories(${PROJECT_NAME}
@@ -51,6 +58,7 @@ target_include_directories(${PROJECT_NAME}
     external/vulkan/glfw/include
     external/vulkan/glm
     external/vulkan/vulkan
+    external/stb
 )
 
 # link
@@ -59,12 +67,14 @@ target_link_directories(${PROJECT_NAME}
     src
     external/vulkan/glfw/src
     external/vulkan/glm
+    external/stb
 )
 
 target_link_libraries(${PROJECT_NAME}
     glfw
     glm
     vulkan
+    # stb
 )
 
 # file(GLOB_RECURSE sources ${PROJECT_SOURCE_DIR}/**/*.c)

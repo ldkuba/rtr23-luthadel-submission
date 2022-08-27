@@ -7,3 +7,6 @@
 [submodule "external/vulkan"]
 	path = external/vulkan
 	url = https://github.com/KhronosGroup/Vulkan-Hpp.git
+[submodule "external/stb"]
+	path = external/stb
+	url = https://github.com/fqhd/stb-cmake.git
