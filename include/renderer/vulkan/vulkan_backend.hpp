@@ -1,7 +1,8 @@
 #pragma once
 
 #include "renderer/renderer_backend.hpp"
-#include "vulkan_device.hpp"
+#include "renderer/vulkan/vulkan_structures.hpp"
+#include "vulkan_settings.hpp"
 
 class VulkanBackend : public RendererBackend {
 private:
@@ -175,6 +176,7 @@ private:
 
     void create_depth_resources();
     vk::Format find_depth_format();
+
     vk::Format find_supported_formats(
         const std::vector<vk::Format>& candidates,
         vk::ImageTiling tiling,
@@ -198,7 +200,6 @@ private:
     vk::DeviceMemory _color_image_memory;
     vk::ImageView _color_image_view;
 
-    vk::SampleCountFlagBits get_maximum_usable_sample_count();
     void create_color_resource();
 
 public:

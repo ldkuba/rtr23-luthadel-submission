@@ -6,8 +6,6 @@
 #include <functional>
 
 #include "defines.hpp"
-#include "platform/platform.hpp"
-
 
 struct QueueFamilyIndices {
     std::optional<uint32> graphics_family;
@@ -47,21 +45,4 @@ struct PhysicalDeviceInfo {
 
     // Format properties
     std::function<vk::FormatProperties(vk::Format)> get_format_properties;
-};
-
-struct Vertex;
-
-class VulkanDevice {
-private:
-
-
-public:
-    VulkanDevice(
-        vk::Instance* instance,
-        vk::AllocationCallbacks* allocator,
-        Platform::Surface* surface
-    );
-    ~VulkanDevice();
-
-
 };

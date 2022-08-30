@@ -1,5 +1,4 @@
 #include "renderer/vulkan/vulkan_backend.hpp"
-#include "renderer/vulkan/vulkan_device.hpp"
 
 #include "logger.hpp"
 #include "renderer/vulkan/vulkan_settings.hpp"
@@ -40,8 +39,18 @@ vk::PhysicalDevice VulkanBackend::pick_physical_device() {
     // Get other physical device info
     _physical_device_info = get_physical_device_info(best_device);
 
-    // Set device settings
-    _msaa_samples = get_maximum_usable_sample_count();
+    // Set maximum MSAA samples
+    auto count = _physical_device_info.framebuffer_color_sample_counts &
+        _physical_device_info.framebuffer_depth_sample_counts;
+
+    _msaa_samples = vk::SampleCountFlagBits::e1;
+    if (count & vk::SampleCountFlagBits::e64) _msaa_samples = vk::SampleCountFlagBits::e64;
+    else if (count & vk::SampleCountFlagBits::e32) _msaa_samples = vk::SampleCountFlagBits::e32;
+    else if (count & vk::SampleCountFlagBits::e16) _msaa_samples = vk::SampleCountFlagBits::e16;
+    else if (count & vk::SampleCountFlagBits::e8) _msaa_samples = vk::SampleCountFlagBits::e8;
+    else if (count & vk::SampleCountFlagBits::e4) _msaa_samples = vk::SampleCountFlagBits::e4;
+    else if (count & vk::SampleCountFlagBits::e2) _msaa_samples = vk::SampleCountFlagBits::e2;
+
     if (_msaa_samples > VulkanSettings::max_msaa_samples)
         _msaa_samples = VulkanSettings::max_msaa_samples;
 
@@ -309,54 +318,4 @@ bool device_supports_required_features(const vk::PhysicalDeviceFeatures& feature
         (!required_features.sparseResidencyAliased || features.sparseResidencyAliased) &&
         (!required_features.variableMultisampleRate || features.variableMultisampleRate) &&
         (!required_features.inheritedQueries || features.inheritedQueries);
-}
-
-// ////////////////////////////// //
-// Structure function definitions //
-// ////////////////////////////// //
-
-bool QueueFamilyIndices::is_complete() {
-    return
-        (!VulkanSettings::graphics_family_required || graphics_family.has_value()) &&
-        (!VulkanSettings::compute__family_required || compute_family.has_value()) &&
-        (!VulkanSettings::transfer_family_required || transfer_family.has_value()) &&
-        (!VulkanSettings::present__family_required || present_family.has_value());
-}
-std::set<uint32> QueueFamilyIndices::get_unique_indices() {
-    std::set<uint32> unique_indices = {
-        graphics_family.value_or(-1),
-        compute_family.value_or(-1),
-        transfer_family.value_or(-1),
-        present_family.value_or(-1)
-    };
-    unique_indices.erase(-1);
-    return unique_indices;
-}
-
-vk::Extent2D SwapchainSupportDetails::get_extent(uint32 width, uint32 height) {
-    // Return required width and height if supported
-    if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
-        return capabilities.currentExtent;
-
-    return {
-        std::clamp(width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width),
-        std::clamp(height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height)
-    };
-}
-vk::SurfaceFormatKHR SwapchainSupportDetails::get_surface_format() {
-    // Return preferred format if supported, otherwise return first supported format
-    for (auto format : formats) {
-        if (format.format == VulkanSettings::preferred_swapchain_format &&
-            format.colorSpace == VulkanSettings::preferred_swapchain_color_space)
-            return format;
-    }
-    return formats[0];
-}
-vk::PresentModeKHR SwapchainSupportDetails::get_presentation_mode() {
-    // Return preferred presentation mode if supported, otherwise return FIFO
-    for (const auto& presentation_mode : presentation_modes) {
-        if (presentation_mode == VulkanSettings::preferred_swapchain_presentation_mode)
-            return presentation_mode;
-    }
-    return vk::PresentModeKHR::eFifo;
 }

@@ -1062,20 +1062,6 @@ void VulkanBackend::generate_mipmaps(vk::Image image, vk::Format format, uint32 
 }
 
 // MSAA CODE
-vk::SampleCountFlagBits VulkanBackend::get_maximum_usable_sample_count() {
-    auto count = _physical_device_info.framebuffer_color_sample_counts &
-        _physical_device_info.framebuffer_depth_sample_counts;
-
-    if (count & vk::SampleCountFlagBits::e64) return vk::SampleCountFlagBits::e64;
-    if (count & vk::SampleCountFlagBits::e32) return vk::SampleCountFlagBits::e32;
-    if (count & vk::SampleCountFlagBits::e16) return vk::SampleCountFlagBits::e16;
-    if (count & vk::SampleCountFlagBits::e8) return vk::SampleCountFlagBits::e8;
-    if (count & vk::SampleCountFlagBits::e4) return vk::SampleCountFlagBits::e4;
-    if (count & vk::SampleCountFlagBits::e2) return vk::SampleCountFlagBits::e2;
-
-    return vk::SampleCountFlagBits::e1;
-}
-
 void VulkanBackend::create_color_resource() {
     vk::Format color_format = _swapchain_format;
 
