@@ -40,7 +40,7 @@ public:
         false,  // independentBlend
         false,  // geometryShader
         false,  // tessellationShader
-        false,  // sampleRateShading
+        true,   // sampleRateShading
         false,  // dualSrcBlend
         false,  // logicOp
         false,  // multiDrawIndirect
@@ -100,12 +100,15 @@ public:
     static const std::vector<const char*> device_required_extensions;
 
     // Swapchain
-    constexpr static vk::Format preferred_swapchain_format = vk::Format::eB8G8R8A8Srgb;
-    constexpr static vk::ColorSpaceKHR preferred_swapchain_color_space = vk::ColorSpaceKHR::eSrgbNonlinear;
-    constexpr static vk::PresentModeKHR preferred_swapchain_presentation_mode = vk::PresentModeKHR::eMailbox;
+    constexpr static auto preferred_swapchain_format = vk::Format::eB8G8R8A8Srgb;
+    constexpr static auto preferred_swapchain_color_space = vk::ColorSpaceKHR::eSrgbNonlinear;
+    constexpr static auto preferred_swapchain_presentation_mode = vk::PresentModeKHR::eMailbox;
 
     // Framebuffer
     constexpr static uint32 max_frames_in_flight = 2;
+
+    // Anti-aliasing
+    constexpr static auto max_msaa_samples = vk::SampleCountFlagBits::e16;
 };
 
 #define GLM_FORCE_RADIANS
