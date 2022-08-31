@@ -40,6 +40,7 @@ public:
     template<typename... Args>
     static void fatal(Args... message) {
         logger_output(std::string("FATAL ERROR"), 1, message...);
+        exit(EXIT_FAILURE);
     }
     /**
      * @brief Logs given errors message.

@@ -20,7 +20,6 @@ int main(int, char**) {
         app.run();
     } catch (const std::exception& e) {
         Logger::fatal(e.what());
-        return EXIT_FAILURE;
     }
 
     return EXIT_SUCCESS;
