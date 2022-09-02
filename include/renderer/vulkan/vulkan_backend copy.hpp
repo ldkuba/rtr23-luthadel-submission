@@ -1,3 +1,4 @@
+/*
 #pragma once
 
 #include "renderer/renderer_backend.hpp"
@@ -51,15 +52,6 @@ private:
     VulkanDevice _device;
 
     void create_device();
-
-    vk::PhysicalDevice pick_physical_device();
-
-    PhysicalDeviceInfo get_physical_device_info(vk::PhysicalDevice physical_device);
-
-    int32 rate_device_suitability(const vk::PhysicalDevice& device);
-    QueueFamilyIndices find_queue_families(const vk::PhysicalDevice& device);
-    SwapchainSupportDetails query_swapchain_support_details(const vk::PhysicalDevice& device);
-    uint32 find_memory_type(uint32 type_filter, vk::MemoryPropertyFlags properties);
 
     // SWAPCHAIN CODE
     vk::SwapchainKHR _swapchain;
@@ -169,3 +161,4 @@ public:
     // TODO: TEMP DRAW CODE
     void draw_frame();
 };
+*/

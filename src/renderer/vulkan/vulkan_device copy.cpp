@@ -1,4 +1,4 @@
-#include "renderer/vulkan/vulkan_backend.hpp"
+/*
 #include "renderer/vulkan/vulkan_device.hpp"
 #include "renderer/vulkan/vulkan_settings.hpp"
 
@@ -9,13 +9,68 @@ bool check_device_extension_support(const vk::PhysicalDevice& device);
 bool device_supports_required_features(const vk::PhysicalDeviceFeatures& features);
 
 
+// Constructor and destructor
 VulkanDevice::VulkanDevice(
-    vk::PhysicalDevice physical_device,
-    PhysicalDeviceInfo info,
-    QueueFamilyIndices queue_family_indices,
+    const vk::Instance& instance,
+    const vk::SurfaceKHR& surface,
     vk::AllocationCallbacks* allocator
-) : info(info), _allocator(allocator), queue_family_indices(queue_family_indices) {
+) : _vulkan_surface(surface), _allocator(allocator) {
+    // Pick physical device
+    auto physical_device = pick_physical_device(instance);
+
+    // Remember device queue family indices
+    queue_family_indices = find_queue_families(physical_device);
+
+    // Get other physical device info
+    info = get_physical_device_info(physical_device);
+
+    // Best device selected, log results
+    Logger::log("Suitable vulkan device found.");
+    Logger::log("Device selected\t\t: ", info.name);
+    Logger::log("GPU type\t\t\t: ", info.type);
+    Logger::log("GPU driver version\t: ", info.driver_version);
+    Logger::log("Vulkan api version\t: ", info.api_version);
+    for (uint32 i = 0; i < info.memory_size_in_gb.size(); i++) {
+        if (info.memory_is_local[i])
+            Logger::log("Local GPU memory\t\t: ", info.memory_size_in_gb[i], " GiB.");
+        else
+            Logger::log("Shared GPU memory\t: ", info.memory_size_in_gb[i], " GiB.");
+    }
+
+    // Create logical device
     create_logical_device(physical_device);
+}
+
+VulkanDevice::~VulkanDevice() {
+    handle.destroy(_allocator);
+}
+
+// /////////////////////////////// //
+// Vulkan device private functions //
+// /////////////////////////////// //
+
+vk::PhysicalDevice VulkanDevice::pick_physical_device(const vk::Instance& instance) {
+    // Get list of physical devices with vulkan support
+    auto devices = instance.enumeratePhysicalDevices();
+
+    if (devices.size() == 0)
+        throw std::runtime_error("Failed to find GPUs with Vulkan support.");
+
+    // Find the most suitable physical device
+    vk::PhysicalDevice best_device;
+    int32 best_device_suitability = 0;
+    for (const auto& device : devices) {
+        auto device_suitability = rate_device_suitability(device);
+        if (device_suitability > best_device_suitability) {
+            best_device_suitability = device_suitability;
+            best_device = device;
+        }
+    }
+
+    if (best_device_suitability == 0)
+        throw std::runtime_error("Failed to find a suitable GPU.");
+
+    return best_device;
 }
 
 void VulkanDevice::create_logical_device(vk::PhysicalDevice physical_device) {
@@ -31,7 +86,7 @@ void VulkanDevice::create_logical_device(vk::PhysicalDevice physical_device) {
         // TODO: more flexible queue count setting
         // TODO: non-flat queue priority
         queue_create_info.setQueueFamilyIndex(queue_index);     // Queue family index
-        queue_create_info.setQueueCount(1);                     // Number of queues for given family. 
+        queue_create_info.setQueueCount(1);                     // Number of queues for given family.
         queue_create_info.setPQueuePriorities(&queue_priority); // Scheduling priority
         queue_create_infos.push_back(queue_create_info);
     }
@@ -60,88 +115,7 @@ void VulkanDevice::create_logical_device(vk::PhysicalDevice physical_device) {
         compute_queue = handle.getQueue(queue_family_indices.compute_family.value(), 0);
 }
 
-VulkanDevice::~VulkanDevice() {}
-
-uint32 VulkanDevice::find_memory_type(uint32 type_filter, vk::MemoryPropertyFlags properties) {
-    for (uint32 i = 0; i < info.memory_types.size(); i++) {
-        if ((type_filter & (1 << i)) &&
-            (info.memory_types[i].propertyFlags & properties) == properties)
-            return i;
-    }
-
-    throw std::runtime_error("Failed to find suitable memory type.");
-}
-
-// /////////////////////////////// //
-// Vulkan device private functions //
-// /////////////////////////////// //
-
-void VulkanBackend::create_device() {
-    auto best_device = pick_physical_device();
-
-    // Remember device queue family indices
-    auto queue_family_indices = find_queue_families(best_device);
-
-    // Get other physical device info
-    auto physical_device_info = get_physical_device_info(best_device);
-
-    // Best device selected, log results
-    Logger::log("Suitable vulkan device found.");
-    Logger::log("Device selected\t\t: ", physical_device_info.name);
-    Logger::log("GPU type\t\t\t: ", physical_device_info.type);
-    Logger::log("GPU driver version\t: ", physical_device_info.driver_version);
-    Logger::log("Vulkan api version\t: ", physical_device_info.api_version);
-    for (uint32 i = 0; i < physical_device_info.memory_size_in_gb.size(); i++) {
-        if (physical_device_info.memory_is_local[i])
-            Logger::log("Local GPU memory\t\t: ", physical_device_info.memory_size_in_gb[i], " GiB.");
-        else
-            Logger::log("Shared GPU memory\t: ", physical_device_info.memory_size_in_gb[i], " GiB.");
-    }
-
-    // Create logical device
-    _device = VulkanDevice(best_device, physical_device_info, queue_family_indices, _allocator);
-
-    // Set maximum MSAA samples
-    auto count = physical_device_info.framebuffer_color_sample_counts &
-        physical_device_info.framebuffer_depth_sample_counts;
-
-    _msaa_samples = vk::SampleCountFlagBits::e1;
-    if (count & vk::SampleCountFlagBits::e64) _msaa_samples = vk::SampleCountFlagBits::e64;
-    else if (count & vk::SampleCountFlagBits::e32) _msaa_samples = vk::SampleCountFlagBits::e32;
-    else if (count & vk::SampleCountFlagBits::e16) _msaa_samples = vk::SampleCountFlagBits::e16;
-    else if (count & vk::SampleCountFlagBits::e8) _msaa_samples = vk::SampleCountFlagBits::e8;
-    else if (count & vk::SampleCountFlagBits::e4) _msaa_samples = vk::SampleCountFlagBits::e4;
-    else if (count & vk::SampleCountFlagBits::e2) _msaa_samples = vk::SampleCountFlagBits::e2;
-
-    if (_msaa_samples > VulkanSettings::max_msaa_samples)
-        _msaa_samples = VulkanSettings::max_msaa_samples;
-}
-
-vk::PhysicalDevice VulkanBackend::pick_physical_device() {
-    // Get list of physical devices with vulkan support
-    auto devices = _vulkan_instance.enumeratePhysicalDevices();
-
-    if (devices.size() == 0)
-        throw std::runtime_error("Failed to find GPUs with Vulkan support.");
-
-    // Find the most suitable physical device
-    vk::PhysicalDevice best_device;
-    int32 best_device_suitability = 0;
-    for (const auto& device : devices) {
-        auto device_suitability = rate_device_suitability(device);
-        if (device_suitability > best_device_suitability) {
-            best_device_suitability = device_suitability;
-            best_device = device;
-        }
-    }
-
-    if (best_device_suitability == 0)
-        throw std::runtime_error("Failed to find a suitable GPU.");
-
-    return best_device;
-}
-
-PhysicalDeviceInfo VulkanBackend::get_physical_device_info(vk::PhysicalDevice physical_device) {
+PhysicalDeviceInfo VulkanDevice::get_physical_device_info(vk::PhysicalDevice physical_device) {
     vk::PhysicalDeviceProperties device_properties = physical_device.getProperties();
     vk::PhysicalDeviceMemoryProperties device_memory = physical_device.getMemoryProperties();
 
@@ -188,7 +162,7 @@ PhysicalDeviceInfo VulkanBackend::get_physical_device_info(vk::PhysicalDevice ph
     return device_info;
 }
 
-QueueFamilyIndices VulkanBackend::find_queue_families(const vk::PhysicalDevice& device) {
+QueueFamilyIndices VulkanDevice::find_queue_families(const vk::PhysicalDevice& device) {
     QueueFamilyIndices indices;
 
     // Get available device queue families
@@ -223,7 +197,7 @@ QueueFamilyIndices VulkanBackend::find_queue_families(const vk::PhysicalDevice& 
     return indices;
 }
 
-int32 VulkanBackend::rate_device_suitability(const vk::PhysicalDevice& device) {
+int32 VulkanDevice::rate_device_suitability(const vk::PhysicalDevice& device) {
     vk::PhysicalDeviceProperties device_properties = device.getProperties();
     vk::PhysicalDeviceFeatures device_features = device.getFeatures();
 
@@ -251,7 +225,7 @@ int32 VulkanBackend::rate_device_suitability(const vk::PhysicalDevice& device) {
     return suitability_score;
 }
 
-SwapchainSupportDetails VulkanBackend::query_swapchain_support_details(const vk::PhysicalDevice& device) {
+SwapchainSupportDetails VulkanDevice::query_swapchain_support_details(const vk::PhysicalDevice& device) {
     SwapchainSupportDetails support_details;
 
     support_details.capabilities = device.getSurfaceCapabilitiesKHR(_vulkan_surface);       // Get surface capabilities
@@ -265,6 +239,15 @@ SwapchainSupportDetails VulkanBackend::query_swapchain_support_details(const vk:
 // Vulkan device public functions //
 // ////////////////////////////// //
 
+uint32 VulkanDevice::find_memory_type(uint32 type_filter, vk::MemoryPropertyFlags properties) {
+    for (uint32 i = 0; i < info.memory_types.size(); i++) {
+        if ((type_filter & (1 << i)) &&
+            (info.memory_types[i].propertyFlags & properties) == properties)
+            return i;
+    }
+
+    throw std::runtime_error("Failed to find suitable memory type.");
+}
 
 // ////////////////////////////// //
 // Vulkan device helper functions //
@@ -345,3 +328,4 @@ bool device_supports_required_features(const vk::PhysicalDeviceFeatures& feature
         (!required_features.variableMultisampleRate || features.variableMultisampleRate) &&
         (!required_features.inheritedQueries || features.inheritedQueries);
 }
+*/
