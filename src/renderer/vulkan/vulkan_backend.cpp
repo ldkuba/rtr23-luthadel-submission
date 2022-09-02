@@ -131,6 +131,7 @@ VulkanBackend::~VulkanBackend() {
 
 
     _device.handle.destroy(_allocator);
+    _device.~VulkanDevice();
     _vulkan_instance.destroySurfaceKHR(_vulkan_surface, _allocator);
 
 
@@ -354,6 +355,26 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback_function(
 }
 
 /// TODO: TEMP
+void VulkanBackend::create_device() {
+    // Create logical device
+    _device = VulkanDevice(_vulkan_instance, _vulkan_surface, _allocator);
+
+    // Set maximum MSAA samples
+    auto count = _device.info.framebuffer_color_sample_counts &
+        _device.info.framebuffer_depth_sample_counts;
+
+    _msaa_samples = vk::SampleCountFlagBits::e1;
+    if (count & vk::SampleCountFlagBits::e64) _msaa_samples = vk::SampleCountFlagBits::e64;
+    else if (count & vk::SampleCountFlagBits::e32) _msaa_samples = vk::SampleCountFlagBits::e32;
+    else if (count & vk::SampleCountFlagBits::e16) _msaa_samples = vk::SampleCountFlagBits::e16;
+    else if (count & vk::SampleCountFlagBits::e8) _msaa_samples = vk::SampleCountFlagBits::e8;
+    else if (count & vk::SampleCountFlagBits::e4) _msaa_samples = vk::SampleCountFlagBits::e4;
+    else if (count & vk::SampleCountFlagBits::e2) _msaa_samples = vk::SampleCountFlagBits::e2;
+
+    if (_msaa_samples > VulkanSettings::max_msaa_samples)
+        _msaa_samples = VulkanSettings::max_msaa_samples;
+}
+
 // COMMAND BUFFER CODE
 void VulkanBackend::record_command_buffer(vk::CommandBuffer command_buffer, uint32 image_index) {
     // Begin recoding
