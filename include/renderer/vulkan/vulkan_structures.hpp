@@ -41,7 +41,7 @@ struct PhysicalDeviceInfo {
     std::vector<bool> memory_is_local;
 
     // Swapchain
-    std::function<SwapchainSupportDetails()>get_swapchain_support_details;
+    std::function<SwapchainSupportDetails(vk::SurfaceKHR)>get_swapchain_support_details;
 
     // Format properties
     std::function<vk::FormatProperties(vk::Format)> get_format_properties;

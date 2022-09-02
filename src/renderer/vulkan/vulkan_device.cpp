@@ -10,12 +10,34 @@ bool device_supports_required_features(const vk::PhysicalDeviceFeatures& feature
 
 
 VulkanDevice::VulkanDevice(
-    vk::PhysicalDevice physical_device,
-    PhysicalDeviceInfo info,
-    QueueFamilyIndices queue_family_indices,
+    const vk::Instance& vulkan_instance,
+    const vk::SurfaceKHR& vulkan_surface,
     vk::AllocationCallbacks* allocator
-) : info(info), _allocator(allocator), queue_family_indices(queue_family_indices) {
-    create_logical_device(physical_device);
+) : _allocator(allocator) {
+    // Pick physical device
+    auto best_device = pick_physical_device(vulkan_instance, vulkan_surface);
+
+    // Remember device queue family indices
+    queue_family_indices = find_queue_families(best_device, vulkan_surface);
+
+    // Get other physical device info
+    info = get_physical_device_info(best_device);
+
+    // Best device selected, log results
+    Logger::log("Suitable vulkan device found.");
+    Logger::log("Device selected\t\t: ", info.name);
+    Logger::log("GPU type\t\t\t: ", info.type);
+    Logger::log("GPU driver version\t: ", info.driver_version);
+    Logger::log("Vulkan api version\t: ", info.api_version);
+    for (uint32 i = 0; i < info.memory_size_in_gb.size(); i++) {
+        if (info.memory_is_local[i])
+            Logger::log("Local GPU memory\t\t: ", info.memory_size_in_gb[i], " GiB.");
+        else
+            Logger::log("Shared GPU memory\t: ", info.memory_size_in_gb[i], " GiB.");
+    }
+
+    // Create logical device
+    create_logical_device(best_device);
 }
 
 void VulkanDevice::create_logical_device(vk::PhysicalDevice physical_device) {
@@ -77,33 +99,12 @@ uint32 VulkanDevice::find_memory_type(uint32 type_filter, vk::MemoryPropertyFlag
 // /////////////////////////////// //
 
 void VulkanBackend::create_device() {
-    auto best_device = pick_physical_device();
-
-    // Remember device queue family indices
-    auto queue_family_indices = find_queue_families(best_device);
-
-    // Get other physical device info
-    auto physical_device_info = get_physical_device_info(best_device);
-
-    // Best device selected, log results
-    Logger::log("Suitable vulkan device found.");
-    Logger::log("Device selected\t\t: ", physical_device_info.name);
-    Logger::log("GPU type\t\t\t: ", physical_device_info.type);
-    Logger::log("GPU driver version\t: ", physical_device_info.driver_version);
-    Logger::log("Vulkan api version\t: ", physical_device_info.api_version);
-    for (uint32 i = 0; i < physical_device_info.memory_size_in_gb.size(); i++) {
-        if (physical_device_info.memory_is_local[i])
-            Logger::log("Local GPU memory\t\t: ", physical_device_info.memory_size_in_gb[i], " GiB.");
-        else
-            Logger::log("Shared GPU memory\t: ", physical_device_info.memory_size_in_gb[i], " GiB.");
-    }
-
     // Create logical device
-    _device = VulkanDevice(best_device, physical_device_info, queue_family_indices, _allocator);
+    _device = VulkanDevice(_vulkan_instance, _vulkan_surface, _allocator);
 
     // Set maximum MSAA samples
-    auto count = physical_device_info.framebuffer_color_sample_counts &
-        physical_device_info.framebuffer_depth_sample_counts;
+    auto count = _device.info.framebuffer_color_sample_counts &
+        _device.info.framebuffer_depth_sample_counts;
 
     _msaa_samples = vk::SampleCountFlagBits::e1;
     if (count & vk::SampleCountFlagBits::e64) _msaa_samples = vk::SampleCountFlagBits::e64;
@@ -117,9 +118,12 @@ void VulkanBackend::create_device() {
         _msaa_samples = VulkanSettings::max_msaa_samples;
 }
 
-vk::PhysicalDevice VulkanBackend::pick_physical_device() {
+vk::PhysicalDevice VulkanDevice::pick_physical_device(
+    const vk::Instance& vulkan_instance,
+    const vk::SurfaceKHR& vulkan_surface
+) {
     // Get list of physical devices with vulkan support
-    auto devices = _vulkan_instance.enumeratePhysicalDevices();
+    auto devices = vulkan_instance.enumeratePhysicalDevices();
 
     if (devices.size() == 0)
         throw std::runtime_error("Failed to find GPUs with Vulkan support.");
@@ -128,7 +132,7 @@ vk::PhysicalDevice VulkanBackend::pick_physical_device() {
     vk::PhysicalDevice best_device;
     int32 best_device_suitability = 0;
     for (const auto& device : devices) {
-        auto device_suitability = rate_device_suitability(device);
+        auto device_suitability = rate_device_suitability(device, vulkan_surface);
         if (device_suitability > best_device_suitability) {
             best_device_suitability = device_suitability;
             best_device = device;
@@ -141,7 +145,7 @@ vk::PhysicalDevice VulkanBackend::pick_physical_device() {
     return best_device;
 }
 
-PhysicalDeviceInfo VulkanBackend::get_physical_device_info(vk::PhysicalDevice physical_device) {
+PhysicalDeviceInfo VulkanDevice::get_physical_device_info(vk::PhysicalDevice physical_device) {
     vk::PhysicalDeviceProperties device_properties = physical_device.getProperties();
     vk::PhysicalDeviceMemoryProperties device_memory = physical_device.getMemoryProperties();
 
@@ -176,8 +180,8 @@ PhysicalDeviceInfo VulkanBackend::get_physical_device_info(vk::PhysicalDevice ph
         device_info.memory_types[i] = device_memory.memoryTypes[i];
 
     // Queue swapchain support details
-    device_info.get_swapchain_support_details = [=]()->SwapchainSupportDetails {
-        return query_swapchain_support_details(physical_device);
+    device_info.get_swapchain_support_details = [=](vk::SurfaceKHR surface)->SwapchainSupportDetails {
+        return query_swapchain_support_details(physical_device, surface);
     };
 
     // Format properties callback
@@ -188,7 +192,10 @@ PhysicalDeviceInfo VulkanBackend::get_physical_device_info(vk::PhysicalDevice ph
     return device_info;
 }
 
-QueueFamilyIndices VulkanBackend::find_queue_families(const vk::PhysicalDevice& device) {
+QueueFamilyIndices VulkanDevice::find_queue_families(
+    const vk::PhysicalDevice& device,
+    const vk::SurfaceKHR& vulkan_surface
+) {
     QueueFamilyIndices indices;
 
     // Get available device queue families
@@ -214,7 +221,7 @@ QueueFamilyIndices VulkanBackend::find_queue_families(const vk::PhysicalDevice& 
                 indices.transfer_family = i;
             }
         }
-        if (device.getSurfaceSupportKHR(i, _vulkan_surface) == true) {
+        if (device.getSurfaceSupportKHR(i, vulkan_surface) == true) {
             indices.present_family = i;
         }
         i++;
@@ -223,17 +230,20 @@ QueueFamilyIndices VulkanBackend::find_queue_families(const vk::PhysicalDevice& 
     return indices;
 }
 
-int32 VulkanBackend::rate_device_suitability(const vk::PhysicalDevice& device) {
+int32 VulkanDevice::rate_device_suitability(
+    const vk::PhysicalDevice& device,
+    const vk::SurfaceKHR& vulkan_surface
+) {
     vk::PhysicalDeviceProperties device_properties = device.getProperties();
     vk::PhysicalDeviceFeatures device_features = device.getFeatures();
 
     // Is device suitable at all
-    auto queue_family_indices = find_queue_families(device);
+    auto queue_family_indices = find_queue_families(device, vulkan_surface);
     if (!queue_family_indices.is_complete() ||              // Device must posses all required queue families
         !check_device_extension_support(device) ||          // Device must support all required extensions
         !device_supports_required_features(device_features) // Device must posses all required features
         ) return {};
-    auto swapchain_support = query_swapchain_support_details(device);
+    auto swapchain_support = query_swapchain_support_details(device, vulkan_surface);
     if (swapchain_support.formats.empty() ||                // Device support at least one format
         swapchain_support.presentation_modes.empty()        // Device support at least one presentation mode
         ) return {};
@@ -251,12 +261,15 @@ int32 VulkanBackend::rate_device_suitability(const vk::PhysicalDevice& device) {
     return suitability_score;
 }
 
-SwapchainSupportDetails VulkanBackend::query_swapchain_support_details(const vk::PhysicalDevice& device) {
+SwapchainSupportDetails VulkanDevice::query_swapchain_support_details(
+    const vk::PhysicalDevice& device,
+    const vk::SurfaceKHR& surface
+) {
     SwapchainSupportDetails support_details;
 
-    support_details.capabilities = device.getSurfaceCapabilitiesKHR(_vulkan_surface);       // Get surface capabilities
-    support_details.formats = device.getSurfaceFormatsKHR(_vulkan_surface);                 // Get surface formats
-    support_details.presentation_modes = device.getSurfacePresentModesKHR(_vulkan_surface); // Get present modes
+    support_details.capabilities = device.getSurfaceCapabilitiesKHR(surface);       // Get surface capabilities
+    support_details.formats = device.getSurfaceFormatsKHR(surface);                 // Get surface formats
+    support_details.presentation_modes = device.getSurfacePresentModesKHR(surface); // Get present modes
 
     return support_details;
 }

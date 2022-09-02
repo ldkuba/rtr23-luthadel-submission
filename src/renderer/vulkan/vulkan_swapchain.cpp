@@ -4,7 +4,7 @@
 
 void VulkanBackend::create_swapchain() {
     // Get swapchain details
-    SwapchainSupportDetails swapchain_support = _device.info.get_swapchain_support_details();
+    SwapchainSupportDetails swapchain_support = _device.info.get_swapchain_support_details(_vulkan_surface);
 
     vk::Extent2D extent = swapchain_support.get_extent(_surface->get_width_in_pixels(), _surface->get_height_in_pixels());
     vk::SurfaceFormatKHR surface_format = swapchain_support.get_surface_format();
