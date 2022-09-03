@@ -10,7 +10,7 @@ private:
         const vk::Instance& vulkan_instance,
         const vk::SurfaceKHR& vulkan_surface
     );
-    void create_logical_device(vk::PhysicalDevice physical_device);
+    vk::Device create_logical_device(vk::PhysicalDevice physical_device);
 
     PhysicalDeviceInfo get_physical_device_info(vk::PhysicalDevice physical_device);
     int32 rate_device_suitability(
@@ -27,7 +27,9 @@ private:
     );
 
 public:
+    /// @brief Vulkan handle to a logical device.
     vk::Device handle;
+    /// @brief Vulkan physical device info.
     PhysicalDeviceInfo info;
 
     VulkanDevice() {}
@@ -38,6 +40,11 @@ public:
     );
     ~VulkanDevice();
 
+    /// @brief Searches through the list of available memory types. 
+    /// @param type_filter Memory types to filter by.
+    /// @param properties Memory properties that need to be satisfied.
+    /// @return Index of a memory type satisfying above specified conditions.
+    /// @throws runtime_error If no suitable memory type is found.
     uint32 find_memory_type(uint32 type_filter, vk::MemoryPropertyFlags properties);
 
     // Queue families

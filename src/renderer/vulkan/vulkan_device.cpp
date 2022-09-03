@@ -14,15 +14,15 @@ VulkanDevice::VulkanDevice(
     vk::AllocationCallbacks* allocator
 ) : _allocator(allocator) {
     // Pick physical device
-    auto best_device = pick_physical_device(vulkan_instance, vulkan_surface);
+    auto physical_device = pick_physical_device(vulkan_instance, vulkan_surface);
 
     // Remember device queue family indices
-    queue_family_indices = find_queue_families(best_device, vulkan_surface);
+    queue_family_indices = find_queue_families(physical_device, vulkan_surface);
 
     // Get other physical device info
-    info = get_physical_device_info(best_device);
+    info = get_physical_device_info(physical_device);
 
-    // Best device selected, log results
+    // Log basic device info
     Logger::log("Suitable vulkan device found.");
     Logger::log("Device selected\t\t: ", info.name);
     Logger::log("GPU type\t\t\t: ", info.type);
@@ -36,7 +36,17 @@ VulkanDevice::VulkanDevice(
     }
 
     // Create logical device
-    create_logical_device(best_device);
+    handle = create_logical_device(physical_device);
+
+    // Retrieving queue handles
+    if (VulkanSettings::graphics_family_required)
+        graphics_queue = handle.getQueue(queue_family_indices.graphics_family.value(), 0);
+    if (VulkanSettings::present__family_required)
+        presentation_queue = handle.getQueue(queue_family_indices.present_family.value(), 0);
+    if (VulkanSettings::transfer_family_required)
+        transfer_queue = handle.getQueue(queue_family_indices.transfer_family.value(), 0);
+    if (VulkanSettings::compute__family_required)
+        compute_queue = handle.getQueue(queue_family_indices.compute_family.value(), 0);
 }
 
 VulkanDevice::~VulkanDevice() {
@@ -55,7 +65,7 @@ vk::PhysicalDevice VulkanDevice::pick_physical_device(
     auto devices = vulkan_instance.enumeratePhysicalDevices();
 
     if (devices.size() == 0)
-        throw std::runtime_error("Failed to find GPUs with Vulkan support.");
+        Logger::fatal("Failed to find GPUs with Vulkan support.");
 
     // Find the most suitable physical device
     vk::PhysicalDevice best_device;
@@ -69,13 +79,13 @@ vk::PhysicalDevice VulkanDevice::pick_physical_device(
     }
 
     if (best_device_suitability == 0)
-        throw std::runtime_error("Failed to find a suitable GPU.");
+        Logger::fatal("Failed to find a suitable GPU.");
 
     return best_device;
 }
 
-void VulkanDevice::create_logical_device(vk::PhysicalDevice physical_device) {
-    // Queues used
+vk::Device VulkanDevice::create_logical_device(vk::PhysicalDevice physical_device) {
+    // Queue indices used
     auto unique_indices = queue_family_indices.get_unique_indices();
 
     float32 queue_priority = 1.0f;
@@ -102,18 +112,9 @@ void VulkanDevice::create_logical_device(vk::PhysicalDevice physical_device) {
     create_info.setPEnabledExtensionNames(VulkanSettings::device_required_extensions);
 
     try {
-        handle = physical_device.createDevice(create_info, _allocator);
+        return physical_device.createDevice(create_info, _allocator);
     } catch (const vk::SystemError& e) { Logger::fatal(e.what()); }
-
-    // Retrieving queue handles
-    if (VulkanSettings::graphics_family_required)
-        graphics_queue = handle.getQueue(queue_family_indices.graphics_family.value(), 0);
-    if (VulkanSettings::present__family_required)
-        presentation_queue = handle.getQueue(queue_family_indices.present_family.value(), 0);
-    if (VulkanSettings::transfer_family_required)
-        transfer_queue = handle.getQueue(queue_family_indices.transfer_family.value(), 0);
-    if (VulkanSettings::compute__family_required)
-        compute_queue = handle.getQueue(queue_family_indices.compute_family.value(), 0);
+    return vk::Device();
 }
 
 PhysicalDeviceInfo VulkanDevice::get_physical_device_info(vk::PhysicalDevice physical_device) {
@@ -124,17 +125,19 @@ PhysicalDeviceInfo VulkanDevice::get_physical_device_info(vk::PhysicalDevice phy
     PhysicalDeviceInfo device_info{};
 
     // Info from properties
-    device_info.name = std::string(device_properties.deviceName);
-    device_info.type = vk::to_string(device_properties.deviceType);
-    device_info.driver_version =
+    device_info.name = std::string(device_properties.deviceName);   // Device name
+    device_info.type = vk::to_string(device_properties.deviceType); // Integrated or Dedicated GPU
+    device_info.driver_version =                                    // Driver version number
         std::to_string(VK_VERSION_MAJOR(device_properties.driverVersion)) + "." +
         std::to_string(VK_VERSION_MINOR(device_properties.driverVersion)) + "." +
         std::to_string(VK_VERSION_PATCH(device_properties.driverVersion));
-    device_info.api_version =
+    device_info.api_version =                                       // Vulkan API version number
         std::to_string(VK_VERSION_MAJOR(device_properties.apiVersion)) + "." +
         std::to_string(VK_VERSION_MINOR(device_properties.apiVersion)) + "." +
         std::to_string(VK_VERSION_PATCH(device_properties.apiVersion));
+    // Maximum number of samples used for anisotropic filtering (for textures)
     device_info.max_sampler_anisotropy = device_properties.limits.maxSamplerAnisotropy;
+    // Maximum number of samples used for Multisample Anti-aliasing (max of the two)
     device_info.framebuffer_color_sample_counts = device_properties.limits.framebufferColorSampleCounts;
     device_info.framebuffer_depth_sample_counts = device_properties.limits.framebufferDepthSampleCounts;
 
@@ -236,6 +239,7 @@ SwapchainSupportDetails VulkanDevice::query_swapchain_support_details(
     const vk::PhysicalDevice& device,
     const vk::SurfaceKHR& surface
 ) {
+    // Get basic swapchain info
     SwapchainSupportDetails support_details;
 
     support_details.capabilities = device.getSurfaceCapabilitiesKHR(surface);       // Get surface capabilities
@@ -271,6 +275,7 @@ bool check_device_extension_support(const vk::PhysicalDevice& device) {
         VulkanSettings::device_required_extensions.end()
     };
 
+    // Check if all required extensions are available
     for (const auto& extension : available_extensions) {
         required_extensions.erase(extension.extensionName);
         if (required_extensions.empty()) return true;

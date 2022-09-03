@@ -112,8 +112,10 @@ void VulkanBackend::create_pipeline() {
     fragment_shader_stage_info.setPName("main");
     fragment_shader_stage_info.setPSpecializationInfo(nullptr);
 
-
-    vk::PipelineShaderStageCreateInfo shader_stages[] = { vertex_shader_stage_info, fragment_shader_stage_info };
+    std::array<vk::PipelineShaderStageCreateInfo, 2> shader_stages{
+        vertex_shader_stage_info,
+        fragment_shader_stage_info
+    };
 
     // Vertex input
     auto binding_description = Vertex::get_binding_description();
@@ -122,7 +124,6 @@ void VulkanBackend::create_pipeline() {
     vk::PipelineVertexInputStateCreateInfo vertex_input_info{};
     vertex_input_info.setVertexBindingDescriptionCount(1);
     vertex_input_info.setPVertexBindingDescriptions(&binding_description);
-    vertex_input_info.setVertexAttributeDescriptionCount(static_cast<uint32>(attribute_description.size()));
     vertex_input_info.setVertexAttributeDescriptions(attribute_description);
 
     // Input assembly
@@ -195,7 +196,7 @@ void VulkanBackend::create_pipeline() {
     color_blend_state_info.setAttachmentCount(1);
     color_blend_state_info.setPAttachments(&color_blend_attachment);
 
-    // Pipeline layout fo UNIFORM values
+    // Pipeline layout for UNIFORM values
     vk::PipelineLayoutCreateInfo layout_info{};
     layout_info.setSetLayoutCount(1);
     layout_info.setPSetLayouts(&_descriptor_set_layout);
@@ -205,20 +206,18 @@ void VulkanBackend::create_pipeline() {
     _pipeline_layout = _device->handle.createPipelineLayout(layout_info, _allocator);
 
     // Dynamic state
-    std::vector<vk::DynamicState> dynamic_states = {
+    std::array<vk::DynamicState, 2> dynamic_states = {
         vk::DynamicState::eViewport,
         vk::DynamicState::eScissor
     };
 
     vk::PipelineDynamicStateCreateInfo dynamic_state_info{};
-    dynamic_state_info.setDynamicStateCount(static_cast<uint32>(dynamic_states.size()));
-    dynamic_state_info.setPDynamicStates(dynamic_states.data());
+    dynamic_state_info.setDynamicStates(dynamic_states);
 
     // Create pipeline object
     vk::GraphicsPipelineCreateInfo create_info{};
     // Programable pipeline stages
-    create_info.setStageCount(2);
-    create_info.setPStages(shader_stages);
+    create_info.setStages(shader_stages);
     // Fixed-function stages
     create_info.setPVertexInputState(&vertex_input_info);
     create_info.setPInputAssemblyState(&input_assembly_info);
