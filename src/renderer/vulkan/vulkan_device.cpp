@@ -39,10 +39,8 @@ VulkanDevice::VulkanDevice(
     create_logical_device(best_device);
 }
 
-uint aaa = 0;
 VulkanDevice::~VulkanDevice() {
-    Logger::debug("SCORE :: ", aaa);
-    aaa++;
+    handle.destroy(_allocator);
 }
 
 // /////////////////////////////// //

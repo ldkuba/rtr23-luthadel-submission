@@ -30,12 +30,6 @@ public:
     vk::Device handle;
     PhysicalDeviceInfo info;
 
-    QueueFamilyIndices queue_family_indices;
-    vk::Queue graphics_queue;
-    vk::Queue presentation_queue;
-    vk::Queue transfer_queue;
-    vk::Queue compute_queue;
-
     VulkanDevice() {}
     VulkanDevice(
         const vk::Instance& vulkan_instance,
@@ -45,4 +39,11 @@ public:
     ~VulkanDevice();
 
     uint32 find_memory_type(uint32 type_filter, vk::MemoryPropertyFlags properties);
+
+    // Queue families
+    QueueFamilyIndices queue_family_indices;
+    vk::Queue graphics_queue;
+    vk::Queue presentation_queue;
+    vk::Queue transfer_queue;
+    vk::Queue compute_queue;
 };

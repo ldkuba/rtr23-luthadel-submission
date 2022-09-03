@@ -48,11 +48,9 @@ private:
     );
 
     // DEVICE CODE
-    VulkanDevice _device;
+    VulkanDevice* _device;
 
     void create_device();
-
-
 
     // SWAPCHAIN CODE
     vk::SwapchainKHR _swapchain;
@@ -118,14 +116,14 @@ private:
     void update_uniform_buffer(uint32 current_image);
 
     // TODO: TEMP IMAGE CODE
-    VulkanImage _texture_image = { &_device, _allocator };
+    VulkanImage* _texture_image;
     vk::Sampler _texture_sampler;
 
     void create_texture_image();
     void create_texture_sampler();
 
     // TODO: TEMP DEPTH BUFFER CODE
-    VulkanImage _depth_image = { &_device, _allocator };
+    VulkanImage* _depth_image;
 
     void create_depth_resources();
     vk::Format find_depth_format();
@@ -143,7 +141,7 @@ private:
 
     // TODO: TEMP MSAA CODE
     vk::SampleCountFlagBits _msaa_samples = vk::SampleCountFlagBits::e1;
-    VulkanImage _color_image = { &_device, _allocator };
+    VulkanImage* _color_image;
 
     void create_color_resource();
 
@@ -156,7 +154,7 @@ public:
     bool end_frame(float32 delta_time);
 
     void wait_for_shutdown() {
-        _device.handle.waitIdle();
+        _device->handle.waitIdle();
     }
 
     // TODO: TEMP DRAW CODE

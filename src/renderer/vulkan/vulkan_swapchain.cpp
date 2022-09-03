@@ -4,7 +4,7 @@
 
 void VulkanBackend::create_swapchain() {
     // Get swapchain details
-    SwapchainSupportDetails swapchain_support = _device.info.get_swapchain_support_details(_vulkan_surface);
+    SwapchainSupportDetails swapchain_support = _device->info.get_swapchain_support_details(_vulkan_surface);
 
     vk::Extent2D extent = swapchain_support.get_extent(_surface->get_width_in_pixels(), _surface->get_height_in_pixels());
     vk::SurfaceFormatKHR surface_format = swapchain_support.get_surface_format();
@@ -32,10 +32,10 @@ void VulkanBackend::create_swapchain() {
 
     // Setup queue family indices
     std::array<uint32, 2> queue_family_indices{
-        _device.queue_family_indices.graphics_family.value(),
-        _device.queue_family_indices.present_family.value()
+        _device->queue_family_indices.graphics_family.value(),
+        _device->queue_family_indices.present_family.value()
     };
-    if (_device.queue_family_indices.graphics_family.value() != _device.queue_family_indices.present_family.value()) {
+    if (_device->queue_family_indices.graphics_family.value() != _device->queue_family_indices.present_family.value()) {
         create_info.setImageSharingMode(vk::SharingMode::eConcurrent);
         create_info.setQueueFamilyIndices(queue_family_indices);
     } else {
@@ -45,11 +45,11 @@ void VulkanBackend::create_swapchain() {
     }
 
     try {
-        _swapchain = _device.handle.createSwapchainKHR(create_info, _allocator);
+        _swapchain = _device->handle.createSwapchainKHR(create_info, _allocator);
     } catch (const vk::SystemError& e) { Logger::fatal(e.what()); }
 
     // Create swapchain images
-    auto swapchain_images = _device.handle.getSwapchainImagesKHR(_swapchain);
+    auto swapchain_images = _device->handle.getSwapchainImagesKHR(_swapchain);
     _swapchain_format = surface_format.format;
     _swapchain_extent = extent;
 
@@ -60,14 +60,14 @@ void VulkanBackend::create_swapchain() {
             _swapchain_format,
             vk::ImageAspectFlagBits::eColor,
             swapchain_images[i],
-            _device.handle,
+            _device->handle,
             _allocator
         );
     }
 }
 
 void VulkanBackend::recreate_swapchain() {
-    _device.handle.waitIdle();
+    _device->handle.waitIdle();
 
     cleanup_swapchain();
 
@@ -79,22 +79,22 @@ void VulkanBackend::recreate_swapchain() {
 
 void VulkanBackend::cleanup_swapchain() {
     // TODO: TEMP MSAA CODE
-    _color_image.~VulkanImage();
+    _color_image->~VulkanImage();
 
 
     // TODO: TEMP DEPTH BUFFER CODE
-    _depth_image.~VulkanImage();
+    _depth_image->~VulkanImage();
 
 
     // TODO: TEMP FRAMEBUFFER CODE
     for (auto framebuffer : _swapchain_framebuffers)
-        _device.handle.destroyFramebuffer(framebuffer, _allocator);
+        _device->handle.destroyFramebuffer(framebuffer, _allocator);
 
 
     for (auto image_view : _swapchain_image_views)
-        _device.handle.destroyImageView(image_view, _allocator);
+        _device->handle.destroyImageView(image_view, _allocator);
 
-    _device.handle.destroySwapchainKHR(_swapchain, _allocator);
+    _device->handle.destroySwapchainKHR(_swapchain, _allocator);
 }
 
 // FRAMEBUFFER
@@ -103,8 +103,8 @@ void VulkanBackend::create_framebuffers() {
 
     for (uint32 i = 0; i < _swapchain_framebuffers.size(); i++) {
         std::array<vk::ImageView, 3> attachments = {
-            _color_image.view,
-            _depth_image.view,
+            _color_image->view,
+            _depth_image->view,
             _swapchain_image_views[i]
         };
 
@@ -116,7 +116,7 @@ void VulkanBackend::create_framebuffers() {
         framebuffer_info.setHeight(_swapchain_extent.height);
         framebuffer_info.setLayers(1);
 
-        auto result = _device.handle.createFramebuffer(&framebuffer_info, _allocator, &_swapchain_framebuffers[i]);
+        auto result = _device->handle.createFramebuffer(&framebuffer_info, _allocator, &_swapchain_framebuffers[i]);
         if (result != vk::Result::eSuccess)
             throw std::runtime_error("Failed to create framebuffer.");
     }
@@ -124,11 +124,11 @@ void VulkanBackend::create_framebuffers() {
 
 void VulkanBackend::present_swapchain() {
     // Wait for previous frame to finish drawing
-    auto result = _device.handle.waitForFences(1, &_fences_in_flight[current_frame], true, UINT64_MAX);
+    auto result = _device->handle.waitForFences(1, &_fences_in_flight[current_frame], true, UINT64_MAX);
     if (result != vk::Result::eSuccess) throw std::runtime_error("Failed to draw frame.");
 
     // Obtain a swapchain image (next in queue for drawing)
-    auto obtained = _device.handle.acquireNextImageKHR(_swapchain, UINT64_MAX, _semaphores_image_available[current_frame]);
+    auto obtained = _device->handle.acquireNextImageKHR(_swapchain, UINT64_MAX, _semaphores_image_available[current_frame]);
     if (obtained.result == vk::Result::eErrorOutOfDateKHR) {
         recreate_swapchain();
         return;
@@ -138,7 +138,7 @@ void VulkanBackend::present_swapchain() {
     auto image_index = obtained.value;
 
     // Reset fence
-    result = _device.handle.resetFences(1, &_fences_in_flight[current_frame]);
+    result = _device->handle.resetFences(1, &_fences_in_flight[current_frame]);
     if (result != vk::Result::eSuccess) throw std::runtime_error("Failed to draw frame.");
 
     // Record commands
@@ -162,7 +162,7 @@ void VulkanBackend::present_swapchain() {
     submit_info.setSignalSemaphoreCount(1);
     submit_info.setPSignalSemaphores(signal_semaphores);
 
-    result = _device.graphics_queue.submit(1, &submit_info, _fences_in_flight[current_frame]);
+    result = _device->graphics_queue.submit(1, &submit_info, _fences_in_flight[current_frame]);
     if (result != vk::Result::eSuccess)
         throw std::runtime_error("Failed to submit draw command buffer.");
 
@@ -176,7 +176,7 @@ void VulkanBackend::present_swapchain() {
     present_info.setPImageIndices(&image_index);        // Index of presenting image for each swapchain
     present_info.setPResults(nullptr);                  // Check if presentation is successful for each swapchain (not needed)
 
-    result = _device.presentation_queue.presentKHR(present_info);
+    result = _device->presentation_queue.presentKHR(present_info);
     if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR || _surface->resized) {
         recreate_swapchain();
         _surface->resized = false;

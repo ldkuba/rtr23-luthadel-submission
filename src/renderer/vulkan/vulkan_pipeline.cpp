@@ -87,7 +87,7 @@ void VulkanBackend::create_render_pass() {
     create_info.setDependencyCount(1);
     create_info.setPDependencies(&dependency);
 
-    auto result = _device.handle.createRenderPass(&create_info, _allocator, &_render_pass);
+    auto result = _device->handle.createRenderPass(&create_info, _allocator, &_render_pass);
     if (result != vk::Result::eSuccess)
         throw std::runtime_error("Failed to create a render pass.");
 }
@@ -202,7 +202,7 @@ void VulkanBackend::create_pipeline() {
     layout_info.setPushConstantRangeCount(0);
     layout_info.setPPushConstantRanges(nullptr);
 
-    _pipeline_layout = _device.handle.createPipelineLayout(layout_info, _allocator);
+    _pipeline_layout = _device->handle.createPipelineLayout(layout_info, _allocator);
 
     // Dynamic state
     std::vector<vk::DynamicState> dynamic_states = {
@@ -237,14 +237,14 @@ void VulkanBackend::create_pipeline() {
     create_info.setBasePipelineHandle(VK_NULL_HANDLE);
     create_info.setBasePipelineIndex(-1);
 
-    auto result = _device.handle.createGraphicsPipeline(VK_NULL_HANDLE, create_info, _allocator);
+    auto result = _device->handle.createGraphicsPipeline(VK_NULL_HANDLE, create_info, _allocator);
     if (result.result != vk::Result::eSuccess)
         throw std::runtime_error("Failed to create graphics pipeline.");
     _graphics_pipeline = result.value;
 
     // Free unused objects
-    _device.handle.destroyShaderModule(vertex_shader_module, _allocator);
-    _device.handle.destroyShaderModule(fragment_shader_module, _allocator);
+    _device->handle.destroyShaderModule(vertex_shader_module, _allocator);
+    _device->handle.destroyShaderModule(fragment_shader_module, _allocator);
 }
 
 std::vector<byte> read_file(const std::string& filepath) {
@@ -267,5 +267,5 @@ vk::ShaderModule VulkanBackend::create_shader_module(const std::vector<byte>& co
     vk::ShaderModuleCreateInfo create_info{};
     create_info.setCodeSize(code.size());
     create_info.setPCode(reinterpret_cast<const uint32*> (code.data()));
-    return _device.handle.createShaderModule(create_info, _allocator);
+    return _device->handle.createShaderModule(create_info, _allocator);
 }
