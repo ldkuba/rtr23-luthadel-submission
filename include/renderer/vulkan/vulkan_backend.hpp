@@ -5,6 +5,7 @@
 #include "vulkan_command_pool.hpp"
 #include "vulkan_settings.hpp"
 #include "vulkan_image.hpp"
+#include "vulkan_swapchain.hpp"
 
 class VulkanBackend : public RendererBackend {
 private:
@@ -53,18 +54,8 @@ private:
     void create_device();
 
     // SWAPCHAIN CODE
-    vk::SwapchainKHR _swapchain;
-    vk::Format _swapchain_format;
-    vk::Extent2D _swapchain_extent;
-    std::vector<vk::ImageView> _swapchain_image_views;
-    std::vector<vk::Framebuffer> _swapchain_framebuffers;
+    VulkanSwapchain* _swapchain;
     uint32 current_frame = 0;
-
-    void create_swapchain();
-    void recreate_swapchain();
-    void cleanup_swapchain();
-    void create_framebuffers();
-    void present_swapchain();
 
     // TODO: TEMP PIPELINE CODE
     vk::RenderPass _render_pass;
@@ -81,13 +72,6 @@ private:
     std::vector<vk::CommandBuffer> _command_buffers;
 
     void record_command_buffer(vk::CommandBuffer command_buffer, uint32 image_index);
-
-    // TODO: TEMP SYNCHRONIZATION CODE
-    std::vector<vk::Semaphore> _semaphores_image_available;
-    std::vector<vk::Semaphore> _semaphores_render_finished;
-    std::vector<vk::Fence> _fences_in_flight;
-
-    void create_sync_objects();
 
     // TODO: TEMP VERTEX BUFFER CODE
     vk::Buffer _vertex_buffer;
@@ -122,12 +106,6 @@ private:
     void create_texture_image();
     void create_texture_sampler();
 
-    // TODO: TEMP DEPTH BUFFER CODE
-    VulkanImage* _depth_image;
-
-    void create_depth_resources();
-    vk::Format find_depth_format();
-
     // TODO: TEMP MODEL LOADING CODE
     std::vector<Vertex> vertices;
     std::vector<uint32> indices;
@@ -140,10 +118,6 @@ private:
     void generate_mipmaps(vk::Image image, vk::Format format, uint32 width, uint32 height, uint32 mip_levels);
 
     // TODO: TEMP MSAA CODE
-    vk::SampleCountFlagBits _msaa_samples = vk::SampleCountFlagBits::e1;
-    VulkanImage* _color_image;
-
-    void create_color_resource();
 
 public:
     VulkanBackend(Platform::Surface* surface);

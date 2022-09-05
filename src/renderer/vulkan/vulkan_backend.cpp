@@ -33,7 +33,7 @@ VulkanBackend::VulkanBackend(Platform::Surface* surface) : RendererBackend(surfa
     create_device();
 
     // SWAPCHAIN
-    create_swapchain();
+    _swapchain = new VulkanSwapchain(_vulkan_surface, _surface, _device, _allocator);
 
     // TODO: TEMP UNIFORM CODE
     create_descriptor_set_layout();
@@ -50,14 +50,8 @@ VulkanBackend::VulkanBackend(Platform::Surface* surface) : RendererBackend(surfa
         _device->queue_family_indices.graphics_family.value()
     );
 
-    // TODO: TEMP MSAA CODE
-    create_color_resource();
-
-    // TODO: TEMP DEPTH BUFFER CODE
-    create_depth_resources();
-
     // TODO: TEMP FRAMEBUFFER CODE
-    create_framebuffers();
+    _swapchain->initialize_framebuffer(&_render_pass);
 
     // TODO: TEMP IMAGE TEXTURE CODE
     create_texture_image();
@@ -79,13 +73,10 @@ VulkanBackend::VulkanBackend(Platform::Surface* surface) : RendererBackend(surfa
 
     // TODO: TEMP COMMAND CODE
     _command_buffers = _command_pool->allocate_command_buffers(VulkanSettings::max_frames_in_flight);
-
-    // TODO: TEMP SYNC CODE
-    create_sync_objects();
 }
 
 VulkanBackend::~VulkanBackend() {
-    cleanup_swapchain();
+    delete _swapchain;
 
 
     // TODO: TEMP IMAGE TEXTURE CODE
@@ -116,14 +107,6 @@ VulkanBackend::~VulkanBackend() {
     _device->handle.destroyPipeline(_graphics_pipeline, _allocator);
     _device->handle.destroyPipelineLayout(_pipeline_layout, _allocator);
     _device->handle.destroyRenderPass(_render_pass, _allocator);
-
-
-    // TODO: TEMP SYNC CODE
-    for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++) {
-        _device->handle.destroySemaphore(_semaphores_image_available[i], _allocator);
-        _device->handle.destroySemaphore(_semaphores_render_finished[i], _allocator);
-        _device->handle.destroyFence(_fences_in_flight[i], _allocator);
-    }
 
 
     // TODO: TEMP COMMAND CODE
@@ -359,25 +342,8 @@ void VulkanBackend::create_device() {
     // Create device
     _device = new VulkanDevice(_vulkan_instance, _vulkan_surface, _allocator);
 
-    // Set maximum MSAA samples
-    auto count = _device->info.framebuffer_color_sample_counts &
-        _device->info.framebuffer_depth_sample_counts;
-
-    _msaa_samples = vk::SampleCountFlagBits::e1;
-    if (count & vk::SampleCountFlagBits::e64) _msaa_samples = vk::SampleCountFlagBits::e64;
-    else if (count & vk::SampleCountFlagBits::e32) _msaa_samples = vk::SampleCountFlagBits::e32;
-    else if (count & vk::SampleCountFlagBits::e16) _msaa_samples = vk::SampleCountFlagBits::e16;
-    else if (count & vk::SampleCountFlagBits::e8) _msaa_samples = vk::SampleCountFlagBits::e8;
-    else if (count & vk::SampleCountFlagBits::e4) _msaa_samples = vk::SampleCountFlagBits::e4;
-    else if (count & vk::SampleCountFlagBits::e2) _msaa_samples = vk::SampleCountFlagBits::e2;
-
-    if (_msaa_samples > VulkanSettings::max_msaa_samples)
-        _msaa_samples = VulkanSettings::max_msaa_samples;
-
     // Create vulkan images
     _texture_image = new VulkanImage(_device, _allocator);
-    _depth_image = new VulkanImage(_device, _allocator);
-    _color_image = new VulkanImage(_device, _allocator);
 }
 
 // COMMAND BUFFER CODE
@@ -398,9 +364,9 @@ void VulkanBackend::record_command_buffer(vk::CommandBuffer command_buffer, uint
 
     vk::RenderPassBeginInfo render_pass_begin_info{};
     render_pass_begin_info.setRenderPass(_render_pass);
-    render_pass_begin_info.setFramebuffer(_swapchain_framebuffers[image_index]);
+    render_pass_begin_info.setFramebuffer(_swapchain->framebuffers[image_index]);
     render_pass_begin_info.renderArea.setOffset({ 0, 0 });
-    render_pass_begin_info.renderArea.setExtent(_swapchain_extent);
+    render_pass_begin_info.renderArea.setExtent(_swapchain->extent);
     render_pass_begin_info.setClearValues(clear_values);
 
     command_buffer.beginRenderPass(render_pass_begin_info, vk::SubpassContents::eInline);
@@ -420,8 +386,8 @@ void VulkanBackend::record_command_buffer(vk::CommandBuffer command_buffer, uint
     vk::Viewport viewport{};
     viewport.setX(0.0f);
     viewport.setY(0.0f);
-    viewport.setWidth(static_cast<float32>(_swapchain_extent.width));
-    viewport.setHeight(static_cast<float32>(_swapchain_extent.height));
+    viewport.setWidth(static_cast<float32>(_swapchain->extent.width));
+    viewport.setHeight(static_cast<float32>(_swapchain->extent.height));
     viewport.setMinDepth(0.0f);
     viewport.setMaxDepth(1.0f);
 
@@ -429,7 +395,7 @@ void VulkanBackend::record_command_buffer(vk::CommandBuffer command_buffer, uint
 
     vk::Rect2D scissor{};
     scissor.setOffset({ 0, 0 });
-    scissor.setExtent(_swapchain_extent);
+    scissor.setExtent(_swapchain->extent);
 
     command_buffer.setScissor(0, 1, &scissor);
 
@@ -451,46 +417,11 @@ void VulkanBackend::record_command_buffer(vk::CommandBuffer command_buffer, uint
     command_buffer.end();
 }
 
-// SYNC CODE
-void VulkanBackend::create_sync_objects() {
-    _semaphores_image_available.resize(VulkanSettings::max_frames_in_flight);
-    _semaphores_render_finished.resize(VulkanSettings::max_frames_in_flight);
-    _fences_in_flight.resize(VulkanSettings::max_frames_in_flight);
-
-    vk::SemaphoreCreateInfo semaphore_info{};
-    vk::FenceCreateInfo fence_info{};
-    fence_info.setFlags(vk::FenceCreateFlagBits::eSignaled); // Fence becomes signaled on initialization
-
-    vk::Result result;
-    for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++) {
-        result = _device->handle.createSemaphore(&semaphore_info, _allocator, &_semaphores_image_available[i]);
-        if (result != vk::Result::eSuccess) throw std::runtime_error("Failed to create semaphores.");
-        result = _device->handle.createSemaphore(&semaphore_info, _allocator, &_semaphores_render_finished[i]);
-        if (result != vk::Result::eSuccess) throw std::runtime_error("Failed to create semaphores.");
-        result = _device->handle.createFence(&fence_info, _allocator, &_fences_in_flight[i]);
-        if (result != vk::Result::eSuccess) throw std::runtime_error("Failed to create fences.");
-    }
-}
-
 // DRAW CODE
 void VulkanBackend::draw_frame() {
-    // Wait for previous frame to finish drawing
-    auto result = _device->handle.waitForFences(1, &_fences_in_flight[current_frame], true, UINT64_MAX);
-    if (result != vk::Result::eSuccess) throw std::runtime_error("Failed to draw frame.");
-
-    // Obtain a swapchain image (next in queue for drawing)
-    auto obtained = _device->handle.acquireNextImageKHR(_swapchain, UINT64_MAX, _semaphores_image_available[current_frame]);
-    if (obtained.result == vk::Result::eErrorOutOfDateKHR) {
-        recreate_swapchain();
-        return;
-    } else if (obtained.result != vk::Result::eSuccess && obtained.result != vk::Result::eSuboptimalKHR) {
-        Logger::fatal("Failed to obtain a swapchain image.");
-    }
-    auto image_index = obtained.value;
-
-    // Reset fence
-    result = _device->handle.resetFences(1, &_fences_in_flight[current_frame]);
-    if (result != vk::Result::eSuccess) throw std::runtime_error("Failed to draw frame.");
+    // Acquire next image index
+    auto image_index = _swapchain->acquire_next_image_index(current_frame);
+    if (image_index == -1) return;
 
     // Record commands
     _command_buffers[current_frame].reset();
@@ -499,40 +430,9 @@ void VulkanBackend::draw_frame() {
     // Update uniform buffer data
     update_uniform_buffer(current_frame);
 
-    // Submit command buffer
-    vk::Semaphore wait_semaphores[] = { _semaphores_image_available[current_frame] };
-    vk::PipelineStageFlags wait_stages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
-    vk::Semaphore signal_semaphores[] = { _semaphores_render_finished[current_frame] };
-
-    vk::SubmitInfo submit_info{};
-    submit_info.setWaitSemaphoreCount(1);
-    submit_info.setPWaitSemaphores(wait_semaphores);
-    submit_info.setPWaitDstStageMask(wait_stages);
-    submit_info.setCommandBufferCount(1);
-    submit_info.setPCommandBuffers(&_command_buffers[current_frame]);
-    submit_info.setSignalSemaphoreCount(1);
-    submit_info.setPSignalSemaphores(signal_semaphores);
-
-    result = _device->graphics_queue.submit(1, &submit_info, _fences_in_flight[current_frame]);
-    if (result != vk::Result::eSuccess)
-        throw std::runtime_error("Failed to submit draw command buffer.");
-
-    // Result presentation
-    vk::SwapchainKHR swapchains[] = { _swapchain };
-
-    vk::PresentInfoKHR present_info{};
-    present_info.setWaitSemaphoreCount(1);
-    present_info.setPWaitSemaphores(signal_semaphores);
-    present_info.setSwapchainCount(1);
-    present_info.setPSwapchains(swapchains);
-    present_info.setPImageIndices(&image_index);
-
-    result = _device->presentation_queue.presentKHR(present_info);
-    if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR || _surface->resized) {
-        recreate_swapchain();
-        _surface->resized = false;
-    } else if (result != vk::Result::eSuccess)
-        throw std::runtime_error("Failed to present rendered image.");
+    // Present swapchain
+    std::vector<vk::CommandBuffer> command_buffers = { _command_buffers[current_frame] };
+    _swapchain->present(current_frame, image_index, command_buffers);
 
     // Advance current frame
     current_frame = (current_frame + 1) % VulkanSettings::max_frames_in_flight;
@@ -671,7 +571,7 @@ void VulkanBackend::update_uniform_buffer(uint32 current_image) {
     float32 delta_time = std::chrono::duration<float32, std::chrono::seconds::period>(current_time - start_time).count();
 
     // Define ubo transformations
-    float32 screen_ratio = _swapchain_extent.width / (float32) _swapchain_extent.height;
+    float32 screen_ratio = _swapchain->extent.width / (float32) _swapchain->extent.height;
     UniformBufferObject ubo{};
     ubo.model = glm::rotate(glm::mat4(1.0f), delta_time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
@@ -841,42 +741,6 @@ void VulkanBackend::create_texture_sampler() {
         throw std::runtime_error("Failed to create texture sampler.");
 }
 
-// DEPTH BUFFER CODE
-void VulkanBackend::create_depth_resources() {
-    auto depth_format = find_depth_format();
-
-    _depth_image->create(
-        _swapchain_extent.width, _swapchain_extent.height, 1,
-        _msaa_samples,
-        depth_format,
-        vk::ImageTiling::eOptimal,
-        vk::ImageUsageFlagBits::eDepthStencilAttachment,
-        vk::MemoryPropertyFlagBits::eDeviceLocal,
-        vk::ImageAspectFlagBits::eDepth
-    );
-}
-
-vk::Format VulkanBackend::find_depth_format() {
-    std::vector<vk::Format> candidates = {
-        vk::Format::eD32Sfloat,
-        vk::Format::eD32SfloatS8Uint,
-        vk::Format::eD24UnormS8Uint
-    };
-    vk::ImageTiling tiling = vk::ImageTiling::eOptimal;
-    vk::FormatFeatureFlags features = vk::FormatFeatureFlagBits::eDepthStencilAttachment;
-
-    for (auto format : candidates) {
-        auto properties = _device->info.get_format_properties(format);
-        vk::FormatFeatureFlags supported_features;
-        if (tiling == vk::ImageTiling::eLinear && (features & properties.linearTilingFeatures) == features)
-            return format;
-        else if (tiling == vk::ImageTiling::eOptimal && (features & properties.optimalTilingFeatures) == features)
-            return format;
-    }
-    Logger::fatal("Failed to find supported format.");
-    return vk::Format();
-}
-
 // MODEL LOADING
 void VulkanBackend::load_model() {
     // Load model
@@ -1018,20 +882,4 @@ void VulkanBackend::generate_mipmaps(vk::Image image, vk::Format format, uint32 
     );
 
     _command_pool->end_single_time_commands(command_buffer);
-}
-
-// MSAA CODE
-void VulkanBackend::create_color_resource() {
-    vk::Format color_format = _swapchain_format;
-
-    _color_image->create(
-        _swapchain_extent.width, _swapchain_extent.height, 1,
-        _msaa_samples,
-        color_format,
-        vk::ImageTiling::eOptimal,
-        vk::ImageUsageFlagBits::eTransientAttachment |
-        vk::ImageUsageFlagBits::eColorAttachment,
-        vk::MemoryPropertyFlagBits::eDeviceLocal,
-        vk::ImageAspectFlagBits::eColor
-    );
 }

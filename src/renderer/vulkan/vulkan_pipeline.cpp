@@ -6,45 +6,21 @@ std::vector<byte> read_file(const std::string& filepath);
 
 void VulkanBackend::create_render_pass() {
     // Color attachment
-    vk::AttachmentDescription color_attachment{};
-    color_attachment.setFormat(_swapchain_format);
-    color_attachment.setSamples(_msaa_samples);
-    color_attachment.setLoadOp(vk::AttachmentLoadOp::eClear);
-    color_attachment.setStoreOp(vk::AttachmentStoreOp::eStore);
-    color_attachment.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
-    color_attachment.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
-    color_attachment.setInitialLayout(vk::ImageLayout::eUndefined);
-    color_attachment.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
+    vk::AttachmentDescription color_attachment = _swapchain->get_color_attachment();
 
     vk::AttachmentReference color_attachment_ref{};
     color_attachment_ref.setLayout(vk::ImageLayout::eColorAttachmentOptimal);
     color_attachment_ref.setAttachment(0);
 
     // Depth attachment
-    vk::AttachmentDescription depth_attachment{};
-    depth_attachment.setFormat(find_depth_format());
-    depth_attachment.setSamples(_msaa_samples);
-    depth_attachment.setLoadOp(vk::AttachmentLoadOp::eClear);
-    depth_attachment.setStoreOp(vk::AttachmentStoreOp::eDontCare);
-    depth_attachment.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
-    depth_attachment.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
-    depth_attachment.setInitialLayout(vk::ImageLayout::eUndefined);
-    depth_attachment.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+    vk::AttachmentDescription depth_attachment = _swapchain->get_depth_attachment();
 
     vk::AttachmentReference depth_attachment_ref{};
     depth_attachment_ref.setLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
     depth_attachment_ref.setAttachment(1);
 
     // Resolve attachment
-    vk::AttachmentDescription color_attachment_resolve{};
-    color_attachment_resolve.setFormat(_swapchain_format);
-    color_attachment_resolve.setSamples(vk::SampleCountFlagBits::e1);
-    color_attachment_resolve.setLoadOp(vk::AttachmentLoadOp::eDontCare);
-    color_attachment_resolve.setStoreOp(vk::AttachmentStoreOp::eStore);
-    color_attachment_resolve.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
-    color_attachment_resolve.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
-    color_attachment_resolve.setInitialLayout(vk::ImageLayout::eUndefined);
-    color_attachment_resolve.setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
+    vk::AttachmentDescription color_attachment_resolve = _swapchain->get_color_attachment_resolve();
 
     vk::AttachmentReference color_attachment_resolve_ref{};
     color_attachment_resolve_ref.setLayout(vk::ImageLayout::eColorAttachmentOptimal);
@@ -153,7 +129,7 @@ void VulkanBackend::create_pipeline() {
     // Multisampling
     vk::PipelineMultisampleStateCreateInfo multisampling_info{};
     multisampling_info.setSampleShadingEnable(true);
-    multisampling_info.setRasterizationSamples(_msaa_samples);
+    multisampling_info.setRasterizationSamples(_swapchain->msaa_samples);
     multisampling_info.setMinSampleShading(0.2f);
     multisampling_info.setPSampleMask(nullptr);
     multisampling_info.setAlphaToCoverageEnable(false);
