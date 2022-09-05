@@ -25,22 +25,18 @@ VulkanSwapchain::VulkanSwapchain(
     if (msaa_samples > VulkanSettings::max_msaa_samples)
         msaa_samples = VulkanSettings::max_msaa_samples;
 
-    // Create vulkan images
-    _depth_image = new VulkanImage(_device, _allocator);
-    _color_image = new VulkanImage(_device, _allocator);
-
     // Create swapchain proper
     create();
+
+    // Create vulkan images
+    _depth_image = new VulkanImage(_device, _allocator);
+    create_depth_resources();
+    _color_image = new VulkanImage(_device, _allocator);
+    create_color_resource();
 }
 
 VulkanSwapchain::~VulkanSwapchain() {
     destroy();
-
-    for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++) {
-        _device->handle.destroySemaphore(_semaphores_image_available[i], _allocator);
-        _device->handle.destroySemaphore(_semaphores_render_finished[i], _allocator);
-        _device->handle.destroyFence(_fences_in_flight[i], _allocator);
-    }
 }
 
 // /////////////// //
@@ -139,10 +135,13 @@ void VulkanSwapchain::destroy() {
 }
 
 void VulkanSwapchain::recreate() {
+    // Finish all rendering
     _device->handle.waitIdle();
 
+    // Destroy previous swapchain resources
     destroy();
 
+    // Create new swapchain resources
     create();
     create_color_resource();
     create_depth_resources();
@@ -157,7 +156,6 @@ void VulkanSwapchain::create_color_resource() {
         msaa_samples,
         color_format,
         vk::ImageTiling::eOptimal,
-        vk::ImageUsageFlagBits::eTransientAttachment |
         vk::ImageUsageFlagBits::eColorAttachment,
         vk::MemoryPropertyFlagBits::eDeviceLocal,
         vk::ImageAspectFlagBits::eColor
@@ -186,6 +184,7 @@ vk::Format VulkanSwapchain::find_depth_format() {
     vk::ImageTiling tiling = vk::ImageTiling::eOptimal;
     vk::FormatFeatureFlags features = vk::FormatFeatureFlagBits::eDepthStencilAttachment;
 
+    // Find a format among the candidates that satisfies the tiling and feature requirements
     for (auto format : candidates) {
         auto properties = _device->info.get_format_properties(format);
         vk::FormatFeatureFlags supported_features;
@@ -201,6 +200,7 @@ vk::Format VulkanSwapchain::find_depth_format() {
 void VulkanSwapchain::create_framebuffers() {
     framebuffers.resize(_image_views.size());
 
+    // Create a framebuffer for each swapchain image view
     for (uint32 i = 0; i < framebuffers.size(); i++) {
         std::array<vk::ImageView, 3> attachments = {
             _color_image->view,
@@ -210,35 +210,16 @@ void VulkanSwapchain::create_framebuffers() {
 
         // Create framebuffer
         vk::FramebufferCreateInfo framebuffer_info{};
-        framebuffer_info.setRenderPass(*_render_pass);
+        framebuffer_info.setRenderPass(*_render_pass); // Render pass with which framebuffer need to be compatible
+        // List of objects bound to the corresponding attachment descriptions render pass
         framebuffer_info.setAttachments(attachments);
-        framebuffer_info.setWidth(extent.width);
-        framebuffer_info.setHeight(extent.height);
-        framebuffer_info.setLayers(1);
+        framebuffer_info.setWidth(extent.width);       // Framebuffer width
+        framebuffer_info.setHeight(extent.height);     // Framebuffer height
+        framebuffer_info.setLayers(1);                 // Number of layers in image array
 
-        auto result = _device->handle.createFramebuffer(&framebuffer_info, _allocator, &framebuffers[i]);
-        if (result != vk::Result::eSuccess)
-            throw std::runtime_error("Failed to create framebuffer.");
-    }
-}
-
-void VulkanSwapchain::create_sync_objects() {
-    _semaphores_image_available.resize(VulkanSettings::max_frames_in_flight);
-    _semaphores_render_finished.resize(VulkanSettings::max_frames_in_flight);
-    _fences_in_flight.resize(VulkanSettings::max_frames_in_flight);
-
-    vk::SemaphoreCreateInfo semaphore_info{};
-    vk::FenceCreateInfo fence_info{};
-    fence_info.setFlags(vk::FenceCreateFlagBits::eSignaled); // Fence becomes signaled on initialization
-
-    vk::Result result;
-    for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++) {
-        result = _device->handle.createSemaphore(&semaphore_info, _allocator, &_semaphores_image_available[i]);
-        if (result != vk::Result::eSuccess) throw std::runtime_error("Failed to create semaphores.");
-        result = _device->handle.createSemaphore(&semaphore_info, _allocator, &_semaphores_render_finished[i]);
-        if (result != vk::Result::eSuccess) throw std::runtime_error("Failed to create semaphores.");
-        result = _device->handle.createFence(&fence_info, _allocator, &_fences_in_flight[i]);
-        if (result != vk::Result::eSuccess) throw std::runtime_error("Failed to create fences.");
+        try {
+            framebuffers[i] = _device->handle.createFramebuffer(framebuffer_info, _allocator);
+        } catch (vk::SystemError e) { Logger::fatal(e.what()); }
     }
 }
 
@@ -246,13 +227,9 @@ void VulkanSwapchain::create_sync_objects() {
 // Public methods //
 // ////////////// //
 
-void VulkanSwapchain::initialize_framebuffer(vk::RenderPass* render_pass) {
-    create_depth_resources();
-    create_color_resource();
-    create_sync_objects();
-
-    _render_pass = render_pass;
-    create_framebuffers();
+void VulkanSwapchain::initialize_framebuffers(vk::RenderPass* render_pass) {
+    _render_pass = render_pass; // Set render pass requirement
+    create_framebuffers();      // Create framebuffer
 }
 
 vk::AttachmentDescription VulkanSwapchain::get_depth_attachment() {
@@ -297,61 +274,33 @@ vk::AttachmentDescription VulkanSwapchain::get_color_attachment_resolve() {
     return color_attachment_resolve;
 }
 
-uint32 VulkanSwapchain::acquire_next_image_index(uint32 current_frame) {
-    // Wait for previous frame to finish drawing
-    auto result = _device->handle.waitForFences(1, &_fences_in_flight[current_frame], true, UINT64_MAX);
-    if (result != vk::Result::eSuccess) throw std::runtime_error("Failed to draw frame.");
-
+uint32 VulkanSwapchain::acquire_next_image_index(vk::Semaphore signal_semaphore) {
     // Obtain a swapchain image (next in queue for drawing)
-    auto obtained = _device->handle.acquireNextImageKHR(_handle, UINT64_MAX, _semaphores_image_available[current_frame]);
+    auto obtained = _device->handle.acquireNextImageKHR(_handle, UINT64_MAX, signal_semaphore);
     if (obtained.result == vk::Result::eErrorOutOfDateKHR) {
+        // Surface changed, and so swapchain needs to be recreated
         recreate();
         return -1;
     } else if (obtained.result != vk::Result::eSuccess && obtained.result != vk::Result::eSuboptimalKHR) {
         Logger::fatal("Failed to obtain a swapchain image.");
     }
-
-    // Reset fence
-    result = _device->handle.resetFences(1, &_fences_in_flight[current_frame]);
-    if (result != vk::Result::eSuccess) throw std::runtime_error("Failed to draw frame.");
-
     return obtained.value;
 }
 
-void VulkanSwapchain::present(
-    uint32 current_frame,
-    uint32 image_index,
-    std::vector<vk::CommandBuffer> command_buffers
-) {
-    // Submit command buffer
-    vk::Semaphore wait_semaphores[] = { _semaphores_image_available[current_frame] };
-    vk::PipelineStageFlags wait_stages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
-    vk::Semaphore signal_semaphores[] = { _semaphores_render_finished[current_frame] };
-
-    vk::SubmitInfo submit_info{};
-    submit_info.setWaitSemaphoreCount(1);
-    submit_info.setPWaitSemaphores(wait_semaphores);
-    submit_info.setPWaitDstStageMask(wait_stages);
-    submit_info.setCommandBuffers(command_buffers);
-    submit_info.setSignalSemaphoreCount(1);
-    submit_info.setPSignalSemaphores(signal_semaphores);
-
-    auto result = _device->graphics_queue.submit(1, &submit_info, _fences_in_flight[current_frame]);
-    if (result != vk::Result::eSuccess)
-        throw std::runtime_error("Failed to submit draw command buffer.");
-
-    // Present results
+void VulkanSwapchain::present(uint32 image_index, std::vector<vk::Semaphore> wait_for_semaphores) {
     std::vector<vk::SwapchainKHR> swapchains = { _handle };
 
+    // Present results
     vk::PresentInfoKHR present_info{};
-    present_info.setWaitSemaphoreCount(1);
-    present_info.setPWaitSemaphores(signal_semaphores); // Semaphores to wait on before presenting
-    present_info.setSwapchains(swapchains);             // List of presenting swapchains
-    present_info.setPImageIndices(&image_index);        // Index of presenting image for each swapchain
-    present_info.setPResults(nullptr);                  // Check if presentation is successful for each swapchain (not needed)
+    present_info.setWaitSemaphores(wait_for_semaphores); // Semaphores to wait on before presenting
+    present_info.setSwapchains(swapchains);              // List of presenting swapchains
+    present_info.setPImageIndices(&image_index);         // Index of presenting image for each swapchain
+    // Check if presentation is successful for each swapchain (not needed, as there is only 1)
+    present_info.setPResults(nullptr);
 
-    result = _device->presentation_queue.presentKHR(present_info);
+    auto result = _device->presentation_queue.presentKHR(present_info);
     if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR || _surface->resized) {
+        // Surface changed, and so swapchain needs to be recreated
         recreate();
         _surface->resized = false;
     } else if (result != vk::Result::eSuccess) {

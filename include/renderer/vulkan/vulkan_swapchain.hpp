@@ -17,7 +17,6 @@ private:
     void create();
     void destroy();
     void recreate();
-
     void create_framebuffers();
 
     // Image resources
@@ -28,17 +27,14 @@ private:
     void create_depth_resources();
     vk::Format find_depth_format();
 
-    // Synchronization objects
-    std::vector<vk::Semaphore> _semaphores_image_available;
-    std::vector<vk::Semaphore> _semaphores_render_finished;
-    std::vector<vk::Fence> _fences_in_flight;
-
-    void create_sync_objects();
-
 public:
+    /// @brief Swapchain image format
     vk::Format format;
+    /// @brief Swapchain image extent
     vk::Extent2D extent;
+    /// @brief Framebuffers used for each swapchain image
     std::vector<vk::Framebuffer> framebuffers;
+    /// @brief Number of sampled used for Multisample anti-aliasing
     vk::SampleCountFlagBits msaa_samples;
 
     VulkanSwapchain(
@@ -49,16 +45,23 @@ public:
     );
     ~VulkanSwapchain();
 
-    void initialize_framebuffer(vk::RenderPass* render_pass);
+    /// @brief Used for initial creation of framebuffers
+    /// @param render_pass Render pass for which to create the framebuffers
+    void initialize_framebuffers(vk::RenderPass* render_pass);
 
+    /// @return Appropriately filled vk::AttachmentDescription object for depth attachment
     vk::AttachmentDescription get_depth_attachment();
+    /// @return Appropriately filled vk::AttachmentDescription object for color attachment
     vk::AttachmentDescription get_color_attachment();
+    /// @return Appropriately filled vk::AttachmentDescription object for color attachment resolve
     vk::AttachmentDescription get_color_attachment_resolve();
 
-    uint32 acquire_next_image_index(uint32 current_frame);
-    void present(
-        uint32 current_frame,
-        uint32 image_index,
-        std::vector<vk::CommandBuffer> command_buffers
-    );
+    /// @brief Compute the index of the next swapchain image to be rendered to
+    /// @param signal_semaphore Semaphore to signal after acquisition
+    /// @return Index of next image to be rendered to
+    uint32 acquire_next_image_index(vk::Semaphore signal_semaphore);
+    /// @brief Present render results
+    /// @param image_index Index of the image to present
+    /// @param wait_for_semaphores Semaphores to wait on before presenting
+    void present(uint32 image_index, std::vector<vk::Semaphore> wait_for_semaphores);
 };

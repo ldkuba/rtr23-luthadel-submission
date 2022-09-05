@@ -26,8 +26,14 @@ private:
     vk::DebugUtilsMessengerCreateInfoEXT debug_messenger_create_info();
 
     // Surface
-    Platform::Surface* _surface;
     vk::SurfaceKHR _vulkan_surface;
+
+    // Synchronization objects
+    std::vector<vk::Semaphore> _semaphores_image_available;
+    std::vector<vk::Semaphore> _semaphores_render_finished;
+    std::vector<vk::Fence> _fences_in_flight;
+
+    void create_sync_objects();
 
     // Buffer
     void create_buffer(

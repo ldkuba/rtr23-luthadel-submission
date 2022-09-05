@@ -26,14 +26,13 @@ VulkanBackend::VulkanBackend(Platform::Surface* surface) : RendererBackend(surfa
     setup_debug_messenger();
 
     // SURFACE
-    _surface = surface;
     _vulkan_surface = surface->get_vulkan_surface(_vulkan_instance, _allocator);
 
     // DEVICE CODE
     create_device();
 
     // SWAPCHAIN
-    _swapchain = new VulkanSwapchain(_vulkan_surface, _surface, _device, _allocator);
+    _swapchain = new VulkanSwapchain(_vulkan_surface, surface, _device, _allocator);
 
     // TODO: TEMP UNIFORM CODE
     create_descriptor_set_layout();
@@ -51,7 +50,7 @@ VulkanBackend::VulkanBackend(Platform::Surface* surface) : RendererBackend(surfa
     );
 
     // TODO: TEMP FRAMEBUFFER CODE
-    _swapchain->initialize_framebuffer(&_render_pass);
+    _swapchain->initialize_framebuffers(&_render_pass);
 
     // TODO: TEMP IMAGE TEXTURE CODE
     create_texture_image();
@@ -73,6 +72,9 @@ VulkanBackend::VulkanBackend(Platform::Surface* surface) : RendererBackend(surfa
 
     // TODO: TEMP COMMAND CODE
     _command_buffers = _command_pool->allocate_command_buffers(VulkanSettings::max_frames_in_flight);
+
+    // Synchronization
+    create_sync_objects();
 }
 
 VulkanBackend::~VulkanBackend() {
@@ -111,6 +113,14 @@ VulkanBackend::~VulkanBackend() {
 
     // TODO: TEMP COMMAND CODE
     delete _command_pool;
+
+
+    // Synchronization code
+    for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++) {
+        _device->handle.destroySemaphore(_semaphores_image_available[i], _allocator);
+        _device->handle.destroySemaphore(_semaphores_render_finished[i], _allocator);
+        _device->handle.destroyFence(_fences_in_flight[i], _allocator);
+    }
 
 
     delete _device;
@@ -417,11 +427,43 @@ void VulkanBackend::record_command_buffer(vk::CommandBuffer command_buffer, uint
     command_buffer.end();
 }
 
+// SYNCH
+
+void VulkanBackend::create_sync_objects() {
+    _semaphores_image_available.resize(VulkanSettings::max_frames_in_flight);
+    _semaphores_render_finished.resize(VulkanSettings::max_frames_in_flight);
+    _fences_in_flight.resize(VulkanSettings::max_frames_in_flight);
+
+    // Create synchronization objects
+    vk::SemaphoreCreateInfo semaphore_info{};
+    vk::FenceCreateInfo fence_info{};
+    // Fence becomes signaled on initialization
+    fence_info.setFlags(vk::FenceCreateFlagBits::eSignaled);
+
+    try {
+        for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++) {
+            _semaphores_image_available[i] = _device->handle.createSemaphore(semaphore_info, _allocator);
+            _semaphores_render_finished[i] = _device->handle.createSemaphore(semaphore_info, _allocator);
+            _fences_in_flight[i] = _device->handle.createFence(fence_info, _allocator);
+        }
+    } catch (vk::SystemError e) { Logger::fatal(e.what()); }
+}
+
 // DRAW CODE
 void VulkanBackend::draw_frame() {
+    // Wait for previous frame to finish drawing
+    std::vector<vk::Fence> fences = { _fences_in_flight[current_frame] };
+    auto result = _device->handle.waitForFences(fences, true, UINT64_MAX);
+    if (result != vk::Result::eSuccess) throw std::runtime_error("Failed to draw frame.");
+
     // Acquire next image index
-    auto image_index = _swapchain->acquire_next_image_index(current_frame);
+    auto image_index = _swapchain->acquire_next_image_index(_semaphores_image_available[current_frame]);
     if (image_index == -1) return;
+
+    // Reset fence
+    try {
+        _device->handle.resetFences(fences);
+    } catch (const vk::SystemError& e) { Logger::fatal(e.what()); }
 
     // Record commands
     _command_buffers[current_frame].reset();
@@ -430,9 +472,25 @@ void VulkanBackend::draw_frame() {
     // Update uniform buffer data
     update_uniform_buffer(current_frame);
 
+    // Submit command buffer
+    vk::PipelineStageFlags wait_stages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
+    std::vector<vk::Semaphore> wait_semaphores = { _semaphores_image_available[current_frame] };
+    std::vector<vk::Semaphore> signal_semaphores = { _semaphores_render_finished[current_frame] };
+
+    vk::SubmitInfo submit_info{};
+    submit_info.setPWaitDstStageMask(wait_stages);
+    submit_info.setWaitSemaphores(wait_semaphores);
+    submit_info.setSignalSemaphores(signal_semaphores);
+    submit_info.setCommandBufferCount(1);
+    submit_info.setPCommandBuffers(&_command_buffers[current_frame]);
+    std::array<vk::SubmitInfo, 1> submits = { submit_info };
+
+    try {
+        _device->graphics_queue.submit(submits, fences[0]);
+    } catch (const vk::SystemError& e) { Logger::fatal(e.what()); }
+
     // Present swapchain
-    std::vector<vk::CommandBuffer> command_buffers = { _command_buffers[current_frame] };
-    _swapchain->present(current_frame, image_index, command_buffers);
+    _swapchain->present(image_index, signal_semaphores);
 
     // Advance current frame
     current_frame = (current_frame + 1) % VulkanSettings::max_frames_in_flight;
