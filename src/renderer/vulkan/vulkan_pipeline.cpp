@@ -4,70 +4,6 @@
 
 std::vector<byte> read_file(const std::string& filepath);
 
-void VulkanBackend::create_render_pass() {
-    // Color attachment
-    vk::AttachmentDescription color_attachment = _swapchain->get_color_attachment();
-
-    vk::AttachmentReference color_attachment_ref{};
-    color_attachment_ref.setLayout(vk::ImageLayout::eColorAttachmentOptimal);
-    color_attachment_ref.setAttachment(0);
-
-    // Depth attachment
-    vk::AttachmentDescription depth_attachment = _swapchain->get_depth_attachment();
-
-    vk::AttachmentReference depth_attachment_ref{};
-    depth_attachment_ref.setLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
-    depth_attachment_ref.setAttachment(1);
-
-    // Resolve attachment
-    vk::AttachmentDescription color_attachment_resolve = _swapchain->get_color_attachment_resolve();
-
-    vk::AttachmentReference color_attachment_resolve_ref{};
-    color_attachment_resolve_ref.setLayout(vk::ImageLayout::eColorAttachmentOptimal);
-    color_attachment_resolve_ref.setAttachment(2);
-
-    // Subpass
-    vk::SubpassDescription subpass{};
-    subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
-    subpass.setColorAttachmentCount(1);
-    subpass.setPColorAttachments(&color_attachment_ref);
-    subpass.setPDepthStencilAttachment(&depth_attachment_ref);
-    subpass.setPResolveAttachments(&color_attachment_resolve_ref);
-
-    // Subpass dependencies
-    vk::SubpassDependency dependency{};
-    dependency.setSrcSubpass(VK_SUBPASS_EXTERNAL);
-    dependency.setDstSubpass(0);
-    dependency.setSrcStageMask(
-        vk::PipelineStageFlagBits::eColorAttachmentOutput |
-        vk::PipelineStageFlagBits::eEarlyFragmentTests);
-    dependency.setDstStageMask(
-        vk::PipelineStageFlagBits::eColorAttachmentOutput |
-        vk::PipelineStageFlagBits::eEarlyFragmentTests);
-    dependency.setSrcAccessMask(vk::AccessFlagBits::eNone);
-    dependency.setDstAccessMask(
-        vk::AccessFlagBits::eColorAttachmentWrite |
-        vk::AccessFlagBits::eDepthStencilAttachmentWrite);
-
-    // Create subpass
-    std::array<vk::AttachmentDescription, 3> attachments = {
-        color_attachment,
-        depth_attachment,
-        color_attachment_resolve
-    };
-
-    vk::RenderPassCreateInfo create_info{};
-    create_info.setAttachments(attachments);
-    create_info.setSubpassCount(1);
-    create_info.setPSubpasses(&subpass);
-    create_info.setDependencyCount(1);
-    create_info.setPDependencies(&dependency);
-
-    auto result = _device->handle.createRenderPass(&create_info, _allocator, &_render_pass);
-    if (result != vk::Result::eSuccess)
-        throw std::runtime_error("Failed to create a render pass.");
-}
-
 void VulkanBackend::create_pipeline() {
     auto vertex_code = read_file("shaders/simple_vertex_shader.vert.spv");
     auto fragment_code = read_file("shaders/simple_fragment_shader.frag.spv");
@@ -206,7 +142,7 @@ void VulkanBackend::create_pipeline() {
     // Pipeline layout handle
     create_info.setLayout(_pipeline_layout);
     // Render passes
-    create_info.setRenderPass(_render_pass);
+    create_info.setRenderPass(_render_pass->handle);
     create_info.setSubpass(0);
     // Other
     create_info.setBasePipelineHandle(VK_NULL_HANDLE);

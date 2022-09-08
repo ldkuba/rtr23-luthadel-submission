@@ -1,7 +1,5 @@
-#include "renderer/vulkan/vulkan_backend.hpp"
+#include "renderer/vulkan/vulkan_settings.hpp"
 #include "renderer/vulkan/vulkan_swapchain.hpp"
-
-#include "logger.hpp"
 
 // Constructor & Destructor
 VulkanSwapchain::VulkanSwapchain(
@@ -99,7 +97,7 @@ void VulkanSwapchain::create() {
 
 
     // Remember swapchain format and extent
-    this->format = surface_format.format;
+    _format = surface_format.format;
     this->extent = extent;
 
     // Retrieve handles to images created with the swapchain
@@ -108,7 +106,7 @@ void VulkanSwapchain::create() {
     _image_views.resize(swapchain_images.size());
     for (uint32 i = 0; i < swapchain_images.size(); i++) {
         _image_views[i] = VulkanImage::get_view_from_image(
-            format,
+            _format,
             vk::ImageAspectFlagBits::eColor,
             swapchain_images[i],
             _device->handle,
@@ -149,7 +147,7 @@ void VulkanSwapchain::recreate() {
 }
 
 void VulkanSwapchain::create_color_resource() {
-    vk::Format color_format = format;
+    vk::Format color_format = _format;
 
     _color_image->create(
         extent.width, extent.height, 1,
@@ -248,7 +246,7 @@ vk::AttachmentDescription VulkanSwapchain::get_depth_attachment() {
 
 vk::AttachmentDescription VulkanSwapchain::get_color_attachment() {
     vk::AttachmentDescription color_attachment{};
-    color_attachment.setFormat(format);
+    color_attachment.setFormat(_format);
     color_attachment.setSamples(msaa_samples);
     color_attachment.setLoadOp(vk::AttachmentLoadOp::eClear);
     color_attachment.setStoreOp(vk::AttachmentStoreOp::eStore);
@@ -262,7 +260,7 @@ vk::AttachmentDescription VulkanSwapchain::get_color_attachment() {
 
 vk::AttachmentDescription VulkanSwapchain::get_color_attachment_resolve() {
     vk::AttachmentDescription color_attachment_resolve{};
-    color_attachment_resolve.setFormat(format);
+    color_attachment_resolve.setFormat(_format);
     color_attachment_resolve.setSamples(vk::SampleCountFlagBits::e1);
     color_attachment_resolve.setLoadOp(vk::AttachmentLoadOp::eDontCare);
     color_attachment_resolve.setStoreOp(vk::AttachmentStoreOp::eStore);

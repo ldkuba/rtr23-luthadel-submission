@@ -1,6 +1,7 @@
 #pragma once
 
 #include "vulkan_structures.hpp"
+#include "logger.hpp"
 
 class VulkanDevice {
 private:

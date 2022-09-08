@@ -3,7 +3,7 @@
 #include <vulkan/vulkan.hpp>
 #include <vector>
 
-#include "defines.hpp"
+#include "logger.hpp"
 
 class VulkanCommandPool {
 private:

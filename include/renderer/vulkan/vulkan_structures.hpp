@@ -32,7 +32,7 @@ struct PhysicalDeviceInfo {
     std::string type;
     std::string driver_version;
     std::string api_version;
-    float max_sampler_anisotropy;
+    float32 max_sampler_anisotropy;
     vk::SampleCountFlags framebuffer_color_sample_counts;
     vk::SampleCountFlags framebuffer_depth_sample_counts;
 

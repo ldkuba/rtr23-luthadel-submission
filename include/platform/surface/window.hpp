@@ -13,7 +13,7 @@ private:
     int32 _height;
     std::string _name;
 
-    static void framebuffer_resize_callback(GLFWwindow* window, int width, int height);
+    static void framebuffer_resize_callback(GLFWwindow* window, int32 width, int32 height);
 
 public:
     Window(int32 width, int32 height, std::string name);

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vulkan_device.hpp"
+#include "vulkan_image.hpp"
 #include "platform/platform.hpp"
 
 class VulkanSwapchain {
@@ -13,6 +13,7 @@ private:
     vk::SurfaceKHR _vulkan_surface;
     vk::SwapchainKHR _handle;
     std::vector<vk::ImageView> _image_views;
+    vk::Format _format;
 
     void create();
     void destroy();
@@ -28,8 +29,6 @@ private:
     vk::Format find_depth_format();
 
 public:
-    /// @brief Swapchain image format
-    vk::Format format;
     /// @brief Swapchain image extent
     vk::Extent2D extent;
     /// @brief Framebuffers used for each swapchain image

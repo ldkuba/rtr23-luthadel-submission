@@ -1,11 +1,8 @@
 #pragma once
 
 #include "renderer/renderer_backend.hpp"
-#include "renderer/vulkan/vulkan_structures.hpp"
-#include "vulkan_command_pool.hpp"
 #include "vulkan_settings.hpp"
-#include "vulkan_image.hpp"
-#include "vulkan_swapchain.hpp"
+#include "vulkan_render_pass.hpp"
 
 class VulkanBackend : public RendererBackend {
 private:
@@ -63,12 +60,13 @@ private:
     VulkanSwapchain* _swapchain;
     uint32 current_frame = 0;
 
+    // RENDER PASS
+    VulkanRenderPass* _render_pass;
+
     // TODO: TEMP PIPELINE CODE
-    vk::RenderPass _render_pass;
     vk::PipelineLayout _pipeline_layout;
     vk::Pipeline _graphics_pipeline;
 
-    void create_render_pass();
     void create_pipeline();
 
     vk::ShaderModule create_shader_module(const std::vector<byte>& code);

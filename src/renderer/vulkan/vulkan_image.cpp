@@ -1,7 +1,5 @@
 #include "renderer/vulkan/vulkan_image.hpp"
 
-#include "logger.hpp"
-
 VulkanImage::~VulkanImage() {
     _device->handle.destroyImage(handle, _allocator);
     _device->handle.freeMemory(memory, _allocator);

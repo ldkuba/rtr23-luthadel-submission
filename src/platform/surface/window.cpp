@@ -32,7 +32,7 @@ Window::~Window() {
     glfwTerminate();
 }
 
-void Window::framebuffer_resize_callback(GLFWwindow* window, int width, int height) {
+void Window::framebuffer_resize_callback(GLFWwindow* window, int32 width, int32 height) {
     auto surface = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
     surface->resized = true;
 }

@@ -1,8 +1,6 @@
 #include "renderer/vulkan/vulkan_device.hpp"
 #include "renderer/vulkan/vulkan_settings.hpp"
 
-#include "logger.hpp"
-
 // Helper function forward declaration
 bool check_device_extension_support(const vk::PhysicalDevice& device);
 bool device_supports_required_features(const vk::PhysicalDeviceFeatures& features);

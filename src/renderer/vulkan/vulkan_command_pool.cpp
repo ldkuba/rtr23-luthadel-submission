@@ -1,8 +1,6 @@
 #include "renderer/vulkan/vulkan_command_pool.hpp"
 #include "renderer/vulkan/vulkan_settings.hpp"
 
-#include "logger.hpp"
-
 VulkanCommandPool::VulkanCommandPool(
     const vk::Device* device,
     const vk::AllocationCallbacks* allocator,

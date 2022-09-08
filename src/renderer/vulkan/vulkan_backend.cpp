@@ -1,7 +1,5 @@
 #include "renderer/vulkan/vulkan_backend.hpp"
 
-#include "renderer/vulkan/vulkan_settings.hpp"
-#include "logger.hpp"
 
 // TODO: TEMP IMAGE LOADING LIBS
 #define STB_IMAGE_IMPLEMENTATION
@@ -38,7 +36,7 @@ VulkanBackend::VulkanBackend(Platform::Surface* surface) : RendererBackend(surfa
     create_descriptor_set_layout();
 
     // TODO: TEMP PIPELINE CODE
-    create_render_pass();
+    _render_pass = new VulkanRenderPass(_swapchain, &_device->handle, _allocator);
     create_pipeline();
 
     // TODO: TEMP COMMAND CODE
@@ -50,7 +48,7 @@ VulkanBackend::VulkanBackend(Platform::Surface* surface) : RendererBackend(surfa
     );
 
     // TODO: TEMP FRAMEBUFFER CODE
-    _swapchain->initialize_framebuffers(&_render_pass);
+    _swapchain->initialize_framebuffers(&_render_pass->handle);
 
     // TODO: TEMP IMAGE TEXTURE CODE
     create_texture_image();
@@ -108,7 +106,10 @@ VulkanBackend::~VulkanBackend() {
     // TODO: TEMP PIPELINE CODE
     _device->handle.destroyPipeline(_graphics_pipeline, _allocator);
     _device->handle.destroyPipelineLayout(_pipeline_layout, _allocator);
-    _device->handle.destroyRenderPass(_render_pass, _allocator);
+
+
+    // RENDER PASS
+    delete _render_pass;
 
 
     // TODO: TEMP COMMAND CODE
@@ -366,20 +367,7 @@ void VulkanBackend::record_command_buffer(vk::CommandBuffer command_buffer, uint
     command_buffer.begin(begin_info);
 
     // Begin render pass
-    std::array<float, 4> clear_color = { 0.0f, 0.0f, 0.0f, 1.0f };
-    std::array<vk::ClearValue, 2>clear_values{};
-    clear_values[0].setColor({ clear_color });
-    clear_values[1].setDepthStencil({ 1.0f, 0 });
-
-
-    vk::RenderPassBeginInfo render_pass_begin_info{};
-    render_pass_begin_info.setRenderPass(_render_pass);
-    render_pass_begin_info.setFramebuffer(_swapchain->framebuffers[image_index]);
-    render_pass_begin_info.renderArea.setOffset({ 0, 0 });
-    render_pass_begin_info.renderArea.setExtent(_swapchain->extent);
-    render_pass_begin_info.setClearValues(clear_values);
-
-    command_buffer.beginRenderPass(render_pass_begin_info, vk::SubpassContents::eInline);
+    _render_pass->begin(command_buffer, _swapchain->framebuffers[image_index]);
 
     // Bind graphics pipeline
     command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, _graphics_pipeline);
@@ -421,7 +409,7 @@ void VulkanBackend::record_command_buffer(vk::CommandBuffer command_buffer, uint
     command_buffer.drawIndexed(static_cast<uint32>(indices.size()), 1, 0, 0, 0);
 
     // End render pass
-    command_buffer.endRenderPass();
+    _render_pass->end(command_buffer);
 
     // End recording
     command_buffer.end();
@@ -792,7 +780,7 @@ void VulkanBackend::create_texture_sampler() {
     sampler_info.setMipmapMode(vk::SamplerMipmapMode::eLinear);
     sampler_info.setMipLodBias(0.0f);
     sampler_info.setMinLod(0.0f);
-    sampler_info.setMaxLod(static_cast<float>(_mip_levels));
+    sampler_info.setMaxLod(static_cast<float32>(_mip_levels));
 
     auto result = _device->handle.createSampler(&sampler_info, _allocator, &_texture_sampler);
     if (result != vk::Result::eSuccess)
