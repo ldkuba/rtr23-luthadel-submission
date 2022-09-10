@@ -72,8 +72,6 @@ VulkanRenderPass::VulkanRenderPass(
     try {
         handle = _device->createRenderPass(create_info, _allocator);
     } catch (vk::SystemError e) { Logger::fatal(e.what()); }
-
-    Logger::log("AAAAAAAAA");
 }
 VulkanRenderPass::~VulkanRenderPass() {
     _device->destroyRenderPass(handle, _allocator);

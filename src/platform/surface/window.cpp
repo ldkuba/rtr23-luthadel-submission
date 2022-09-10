@@ -34,7 +34,7 @@ Window::~Window() {
 
 void Window::framebuffer_resize_callback(GLFWwindow* window, int32 width, int32 height) {
     auto surface = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
-    surface->resized = true;
+    surface->resize_event(width, height);
 }
 
 vk::SurfaceKHR Window::get_vulkan_surface(vk::Instance& vulkan_instance, vk::AllocationCallbacks* allocator) {

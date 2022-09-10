@@ -1,12 +1,10 @@
 #pragma once
 
 #include "vulkan_image.hpp"
-#include "platform/platform.hpp"
 
 class VulkanSwapchain {
 private:
     VulkanDevice* _device;
-    Platform::Surface* _surface;
     vk::RenderPass* _render_pass;
     vk::AllocationCallbacks* _allocator;
 
@@ -14,6 +12,10 @@ private:
     vk::SwapchainKHR _handle;
     std::vector<vk::ImageView> _image_views;
     vk::Format _format;
+
+    uint32 _width;
+    uint32 _height;
+    bool _should_resize = false;
 
     void create();
     void destroy();
@@ -37,13 +39,17 @@ public:
     vk::SampleCountFlagBits msaa_samples;
 
     VulkanSwapchain(
+        uint32 width, uint32 height,
         vk::SurfaceKHR vulkan_surface,
-        Platform::Surface* surface,
         VulkanDevice* device,
         vk::AllocationCallbacks* allocator
     );
     ~VulkanSwapchain();
 
+    /// @brief Change swapchain image extent
+    /// @param width New width
+    /// @param height New height
+    void change_extent(uint32 width, uint32 height);
     /// @brief Used for initial creation of framebuffers
     /// @param render_pass Render pass for which to create the framebuffers
     void initialize_framebuffers(vk::RenderPass* render_pass);

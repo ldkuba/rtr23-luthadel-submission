@@ -6,6 +6,7 @@
 #include <vulkan/vulkan.hpp>
 
 #include "defines.hpp"
+#include "event.hpp"
 
 class Platform {
 private:
@@ -35,8 +36,7 @@ public:
         Surface() {}
     public:
         ~Surface() {}
-
-        bool resized = false;
+        Event<void, uint32, uint32> resize_event;
 
         static Surface* get_instance(uint32 width, uint32 height, std::string name);
 

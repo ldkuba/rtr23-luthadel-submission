@@ -25,12 +25,14 @@ VulkanBackend::VulkanBackend(Platform::Surface* surface) : RendererBackend(surfa
 
     // SURFACE
     _vulkan_surface = surface->get_vulkan_surface(_vulkan_instance, _allocator);
+    uint32 width = surface->get_width_in_pixels();
+    uint32 height = surface->get_height_in_pixels();
 
     // DEVICE CODE
     create_device();
 
     // SWAPCHAIN
-    _swapchain = new VulkanSwapchain(_vulkan_surface, surface, _device, _allocator);
+    _swapchain = new VulkanSwapchain(width, height, _vulkan_surface, _device, _allocator);
 
     // TODO: TEMP UNIFORM CODE
     create_descriptor_set_layout();
@@ -305,7 +307,11 @@ void VulkanBackend::copy_buffer_to_image(vk::Buffer buffer, vk::Image image, uin
 // VULKAN RENDERER PUBLIC FUNCTIONS //
 // //////////////////////////////// //
 
-void VulkanBackend::resized(uint32 width, uint32 height) {}
+void VulkanBackend::resized(uint32 width, uint32 height) {
+    if (_swapchain != nullptr) {
+        _swapchain->change_extent(width, height);
+    }
+}
 bool VulkanBackend::begin_frame(float32 delta_time) {
     // Wait for previous frame to finish drawing
     std::vector<vk::Fence> fences = { _fences_in_flight[current_frame] };

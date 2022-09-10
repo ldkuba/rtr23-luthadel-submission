@@ -3,11 +3,11 @@
 
 // Constructor & Destructor
 VulkanSwapchain::VulkanSwapchain(
+    uint32 width, uint32 height,
     vk::SurfaceKHR vulkan_surface,
-    Platform::Surface* surface,
     VulkanDevice* device,
     vk::AllocationCallbacks* allocator
-) : _vulkan_surface(vulkan_surface), _surface(surface), _device(device), _allocator(allocator) {
+) : _width(width), _height(height), _vulkan_surface(vulkan_surface), _device(device), _allocator(allocator) {
     // Set maximum MSAA samples
     auto count = _device->info.framebuffer_color_sample_counts &
         _device->info.framebuffer_depth_sample_counts;
@@ -45,7 +45,7 @@ void VulkanSwapchain::create() {
     // Get swapchain details
     SwapchainSupportDetails swapchain_support = _device->info.get_swapchain_support_details(_vulkan_surface);
 
-    vk::Extent2D extent = swapchain_support.get_extent(_surface->get_width_in_pixels(), _surface->get_height_in_pixels());
+    vk::Extent2D extent = swapchain_support.get_extent(_width, _height);
     vk::SurfaceFormatKHR surface_format = swapchain_support.get_surface_format();
     vk::PresentModeKHR presentation_mode = swapchain_support.get_presentation_mode();
 
@@ -225,6 +225,12 @@ void VulkanSwapchain::create_framebuffers() {
 // Public methods //
 // ////////////// //
 
+void VulkanSwapchain::change_extent(uint32 width, uint32 height) {
+    _width = width;
+    _height = height;
+    _should_resize = true;
+}
+
 void VulkanSwapchain::initialize_framebuffers(vk::RenderPass* render_pass) {
     _render_pass = render_pass; // Set render pass requirement
     create_framebuffers();      // Create framebuffer
@@ -297,10 +303,10 @@ void VulkanSwapchain::present(uint32 image_index, std::vector<vk::Semaphore> wai
     present_info.setPResults(nullptr);
 
     auto result = _device->presentation_queue.presentKHR(present_info);
-    if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR || _surface->resized) {
+    if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR || _should_resize) {
         // Surface changed, and so swapchain needs to be recreated
         recreate();
-        _surface->resized = false;
+        _should_resize = false;
     } else if (result != vk::Result::eSuccess) {
         Logger::fatal("Failed to present rendered image.");
     }
