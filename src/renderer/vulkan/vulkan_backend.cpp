@@ -307,7 +307,49 @@ void VulkanBackend::copy_buffer_to_image(vk::Buffer buffer, vk::Image image, uin
 
 void VulkanBackend::resized(uint32 width, uint32 height) {}
 bool VulkanBackend::begin_frame(float32 delta_time) {
-    draw_frame();
+    // Wait for previous frame to finish drawing
+    std::vector<vk::Fence> fences = { _fences_in_flight[current_frame] };
+    auto result = _device->handle.waitForFences(fences, true, UINT64_MAX);
+    if (result != vk::Result::eSuccess) throw std::runtime_error("Failed to draw frame.");
+
+    // Acquire next image index
+    auto image_index = _swapchain->acquire_next_image_index(_semaphores_image_available[current_frame]);
+    if (image_index == -1) return false;
+
+    // Reset fence
+    try {
+        _device->handle.resetFences(fences);
+    } catch (const vk::SystemError& e) { Logger::fatal(e.what()); }
+
+    // Record commands
+    _command_buffers[current_frame].reset();
+    record_command_buffer(_command_buffers[current_frame], image_index);
+
+    // Update uniform buffer data
+    update_uniform_buffer(current_frame);
+
+    // Submit command buffer
+    vk::PipelineStageFlags wait_stages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
+    std::vector<vk::Semaphore> wait_semaphores = { _semaphores_image_available[current_frame] };
+    std::vector<vk::Semaphore> signal_semaphores = { _semaphores_render_finished[current_frame] };
+
+    vk::SubmitInfo submit_info{};
+    submit_info.setPWaitDstStageMask(wait_stages);
+    submit_info.setWaitSemaphores(wait_semaphores);
+    submit_info.setSignalSemaphores(signal_semaphores);
+    submit_info.setCommandBufferCount(1);
+    submit_info.setPCommandBuffers(&_command_buffers[current_frame]);
+    std::array<vk::SubmitInfo, 1> submits = { submit_info };
+
+    try {
+        _device->graphics_queue.submit(submits, fences[0]);
+    } catch (const vk::SystemError& e) { Logger::fatal(e.what()); }
+
+    // Present swapchain
+    _swapchain->present(image_index, signal_semaphores);
+
+    // Advance current frame
+    current_frame = (current_frame + 1) % VulkanSettings::max_frames_in_flight;
     return true;
 }
 bool VulkanBackend::end_frame(float32 delta_time) {
@@ -361,7 +403,6 @@ void VulkanBackend::create_device() {
 void VulkanBackend::record_command_buffer(vk::CommandBuffer command_buffer, uint32 image_index) {
     // Begin recoding
     vk::CommandBufferBeginInfo begin_info{};
-    /* begin_info.setFlags(0); */
     begin_info.setPInheritanceInfo(nullptr);
 
     command_buffer.begin(begin_info);
@@ -381,16 +422,18 @@ void VulkanBackend::record_command_buffer(vk::CommandBuffer command_buffer, uint
     command_buffer.bindIndexBuffer(_index_buffer, 0, vk::IndexType::eUint32);
 
     // Dynamic states
+    // Viewport
     vk::Viewport viewport{};
     viewport.setX(0.0f);
-    viewport.setY(0.0f);
+    viewport.setY(static_cast<float32>(_swapchain->extent.height));
     viewport.setWidth(static_cast<float32>(_swapchain->extent.width));
-    viewport.setHeight(static_cast<float32>(_swapchain->extent.height));
+    viewport.setHeight(-static_cast<float32>(_swapchain->extent.height));
     viewport.setMinDepth(0.0f);
     viewport.setMaxDepth(1.0f);
 
     command_buffer.setViewport(0, 1, &viewport);
 
+    // Scissors
     vk::Rect2D scissor{};
     scissor.setOffset({ 0, 0 });
     scissor.setExtent(_swapchain->extent);
@@ -436,54 +479,6 @@ void VulkanBackend::create_sync_objects() {
         }
     } catch (vk::SystemError e) { Logger::fatal(e.what()); }
 }
-
-// DRAW CODE
-void VulkanBackend::draw_frame() {
-    // Wait for previous frame to finish drawing
-    std::vector<vk::Fence> fences = { _fences_in_flight[current_frame] };
-    auto result = _device->handle.waitForFences(fences, true, UINT64_MAX);
-    if (result != vk::Result::eSuccess) throw std::runtime_error("Failed to draw frame.");
-
-    // Acquire next image index
-    auto image_index = _swapchain->acquire_next_image_index(_semaphores_image_available[current_frame]);
-    if (image_index == -1) return;
-
-    // Reset fence
-    try {
-        _device->handle.resetFences(fences);
-    } catch (const vk::SystemError& e) { Logger::fatal(e.what()); }
-
-    // Record commands
-    _command_buffers[current_frame].reset();
-    record_command_buffer(_command_buffers[current_frame], image_index);
-
-    // Update uniform buffer data
-    update_uniform_buffer(current_frame);
-
-    // Submit command buffer
-    vk::PipelineStageFlags wait_stages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
-    std::vector<vk::Semaphore> wait_semaphores = { _semaphores_image_available[current_frame] };
-    std::vector<vk::Semaphore> signal_semaphores = { _semaphores_render_finished[current_frame] };
-
-    vk::SubmitInfo submit_info{};
-    submit_info.setPWaitDstStageMask(wait_stages);
-    submit_info.setWaitSemaphores(wait_semaphores);
-    submit_info.setSignalSemaphores(signal_semaphores);
-    submit_info.setCommandBufferCount(1);
-    submit_info.setPCommandBuffers(&_command_buffers[current_frame]);
-    std::array<vk::SubmitInfo, 1> submits = { submit_info };
-
-    try {
-        _device->graphics_queue.submit(submits, fences[0]);
-    } catch (const vk::SystemError& e) { Logger::fatal(e.what()); }
-
-    // Present swapchain
-    _swapchain->present(image_index, signal_semaphores);
-
-    // Advance current frame
-    current_frame = (current_frame + 1) % VulkanSettings::max_frames_in_flight;
-}
-
 
 // VERTEX BUFFER
 void VulkanBackend::create_vertex_buffer() {
@@ -622,7 +617,6 @@ void VulkanBackend::update_uniform_buffer(uint32 current_image) {
     ubo.model = glm::rotate(glm::mat4(1.0f), delta_time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     ubo.project = glm::perspective(glm::radians(45.0f), screen_ratio, 0.1f, 100.0f);
-    ubo.project[1][1] *= -1; // Flip Y axis
 
     // Copy ubo data to the buffer
     auto data = _device->handle.mapMemory(_uniform_buffers_memory[current_image], 0, sizeof(ubo));

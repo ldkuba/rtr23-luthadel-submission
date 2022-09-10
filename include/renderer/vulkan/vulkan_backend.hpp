@@ -134,7 +134,4 @@ public:
     void wait_for_shutdown() {
         _device->handle.waitIdle();
     }
-
-    // TODO: TEMP DRAW CODE
-    void draw_frame();
 };
