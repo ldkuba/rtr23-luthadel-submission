@@ -3,6 +3,7 @@
 #include "renderer/renderer_backend.hpp"
 #include "vulkan_settings.hpp"
 #include "vulkan_render_pass.hpp"
+#include "vulkan_buffer.hpp"
 
 class VulkanBackend : public RendererBackend {
 private:
@@ -32,25 +33,6 @@ private:
 
     void create_sync_objects();
 
-    // Buffer
-    void create_buffer(
-        vk::DeviceSize size,
-        vk::BufferUsageFlags usage,
-        vk::MemoryPropertyFlags properties,
-        vk::Buffer& buffer, vk::DeviceMemory& buffer_memory
-    );
-    void copy_buffer(
-        vk::Buffer source_buffer,
-        vk::Buffer destination_buffer,
-        vk::DeviceSize size
-    );
-    void copy_buffer_to_image(
-        vk::Buffer buffer,
-        vk::Image image,
-        uint32 width,
-        uint32 height
-    );
-
     // DEVICE CODE
     VulkanDevice* _device;
 
@@ -78,14 +60,12 @@ private:
     void record_command_buffer(vk::CommandBuffer command_buffer, uint32 image_index);
 
     // TODO: TEMP VERTEX BUFFER CODE
-    vk::Buffer _vertex_buffer;
-    vk::DeviceMemory _vertex_buffer_memory;
+    VulkanBuffer* _vertex_buffer;
 
     void create_vertex_buffer();
 
     // TODO: TEMP INDEX BUFFER CODE
-    vk::Buffer _index_buffer;
-    vk::DeviceMemory _index_buffer_memory;
+    VulkanBuffer* _index_buffer;
 
     void create_index_buffer();
 
@@ -94,8 +74,7 @@ private:
     vk::DescriptorPool _descriptor_pool;
     std::vector<vk::DescriptorSet> _descriptor_sets;
 
-    std::vector<vk::Buffer> _uniform_buffers;
-    std::vector<vk::DeviceMemory> _uniform_buffers_memory;
+    std::vector<VulkanBuffer*> _uniform_buffers;
 
     void create_descriptor_set_layout();
     void create_descriptor_pool();

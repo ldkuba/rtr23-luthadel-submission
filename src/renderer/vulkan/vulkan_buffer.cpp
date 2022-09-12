@@ -123,7 +123,7 @@ void VulkanBuffer::copy_data_to_buffer(
 
 void VulkanBuffer::copy_data_to_image(
     VulkanCommandPool* command_pool,
-    VulkanImage& image
+    VulkanImage* image
 ) {
     auto command_buffer = command_pool->begin_single_time_commands();
 
@@ -139,10 +139,10 @@ void VulkanBuffer::copy_data_to_image(
     region.imageSubresource.setBaseArrayLayer(0);
     region.imageSubresource.setLayerCount(1);
     region.setImageOffset({ 0,0,0 });
-    region.setImageExtent({ image.width, image.height, 1 });
+    region.setImageExtent({ image->width, image->height, 1 });
 
     command_buffer.copyBufferToImage(
-        handle, image.handle,
+        handle, image->handle,
         vk::ImageLayout::eTransferDstOptimal,
         1, &region
     );

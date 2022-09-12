@@ -51,6 +51,6 @@ public:
 
     void copy_data_to_image(
         VulkanCommandPool* command_pool,
-        VulkanImage& image
+        VulkanImage* image
     );
 };

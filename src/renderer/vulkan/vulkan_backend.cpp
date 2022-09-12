@@ -88,21 +88,18 @@ VulkanBackend::~VulkanBackend() {
 
     // TODO: TEMP UNIFORM CODE
     for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++) {
-        _device->handle.destroyBuffer(_uniform_buffers[i]);
-        _device->handle.freeMemory(_uniform_buffers_memory[i]);
+        delete _uniform_buffers[i];
     }
     _device->handle.destroyDescriptorPool(_descriptor_pool, _allocator);
     _device->handle.destroyDescriptorSetLayout(_descriptor_set_layout, _allocator);
 
 
     // TODO: TEMP INDEX BUFFER CODE
-    _device->handle.destroyBuffer(_index_buffer, _allocator);
-    _device->handle.freeMemory(_vertex_buffer_memory, _allocator);
+    delete _index_buffer;
 
 
     // TODO: TEMP VERTEX BUFFER CODE
-    _device->handle.destroyBuffer(_vertex_buffer, _allocator);
-    _device->handle.freeMemory(_vertex_buffer_memory, _allocator);
+    delete _vertex_buffer;
 
 
     // TODO: TEMP PIPELINE CODE
@@ -231,78 +228,6 @@ vk::DebugUtilsMessengerCreateInfoEXT VulkanBackend::debug_messenger_create_info(
     return create_info;
 }
 
-// Buffer functions
-void VulkanBackend::create_buffer(
-    vk::DeviceSize size,
-    vk::BufferUsageFlags usage,
-    vk::MemoryPropertyFlags properties,
-    vk::Buffer& buffer,
-    vk::DeviceMemory& buffer_memory
-) {
-    // Create buffer
-    vk::BufferCreateInfo buffer_info{};
-    buffer_info.setSize(size);
-    buffer_info.setUsage(usage);
-    buffer_info.setSharingMode(vk::SharingMode::eExclusive);
-
-    auto result = _device->handle.createBuffer(&buffer_info, _allocator, &buffer);
-    if (result != vk::Result::eSuccess)
-        throw std::runtime_error("Failed to create vertex buffer.");
-
-    // Allocate memory to the buffer
-    auto memory_requirements = _device->handle.getBufferMemoryRequirements(buffer);
-
-    vk::MemoryAllocateInfo allocation_info{};
-    allocation_info.setAllocationSize(memory_requirements.size);
-    allocation_info.setMemoryTypeIndex(_device->find_memory_type(memory_requirements.memoryTypeBits, properties));
-
-    result = _device->handle.allocateMemory(&allocation_info, _allocator, &buffer_memory);
-    if (result != vk::Result::eSuccess)
-        throw std::runtime_error("Failed to allocate vertex buffer memory.");
-
-    // Bind allocated memory to buffer
-    _device->handle.bindBufferMemory(buffer, buffer_memory, 0);
-}
-
-void VulkanBackend::copy_buffer(vk::Buffer source_buffer, vk::Buffer destination_buffer, vk::DeviceSize size) {
-    auto command_buffer = _command_pool->begin_single_time_commands();
-
-    // Issue transfer
-    vk::BufferCopy copy_region{};
-    copy_region.setSrcOffset(0);
-    copy_region.setDstOffset(0);
-    copy_region.setSize(size);
-    command_buffer.copyBuffer(source_buffer, destination_buffer, 1, &copy_region);
-
-    _command_pool->end_single_time_commands(command_buffer);
-}
-
-void VulkanBackend::copy_buffer_to_image(vk::Buffer buffer, vk::Image image, uint32 width, uint32 height) {
-    auto command_buffer = _command_pool->begin_single_time_commands();
-
-    // Preform copy ops
-    vk::BufferImageCopy region{};
-    // Buffer info
-    region.setBufferOffset(0);
-    region.setBufferRowLength(0);
-    region.setBufferImageHeight(0);
-    // Image info
-    region.imageSubresource.setAspectMask(vk::ImageAspectFlagBits::eColor);
-    region.imageSubresource.setMipLevel(0);
-    region.imageSubresource.setBaseArrayLayer(0);
-    region.imageSubresource.setLayerCount(1);
-    region.setImageOffset({ 0,0,0 });
-    region.setImageExtent({ width, height, 1 });
-
-    command_buffer.copyBufferToImage(
-        buffer, image,
-        vk::ImageLayout::eTransferDstOptimal,
-        1, &region
-    );
-
-    _command_pool->end_single_time_commands(command_buffer);
-}
-
 // //////////////////////////////// //
 // VULKAN RENDERER PUBLIC FUNCTIONS //
 // //////////////////////////////// //
@@ -422,12 +347,12 @@ void VulkanBackend::record_command_buffer(vk::CommandBuffer command_buffer, uint
     command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, _graphics_pipeline);
 
     // Bind vertex buffer
-    std::vector<vk::Buffer>vertex_buffers = { _vertex_buffer };
+    std::vector<vk::Buffer>vertex_buffers = { _vertex_buffer->handle };
     std::vector<vk::DeviceSize> offsets = { 0 };
     command_buffer.bindVertexBuffers(0, vertex_buffers, offsets);
 
     // Bind index buffer
-    command_buffer.bindIndexBuffer(_index_buffer, 0, vk::IndexType::eUint32);
+    command_buffer.bindIndexBuffer(_index_buffer->handle, 0, vk::IndexType::eUint32);
 
     // Dynamic states
     // Viewport
@@ -493,36 +418,30 @@ void VulkanBackend::create_vertex_buffer() {
     vk::DeviceSize buffer_size = sizeof(vertices[0]) * vertices.size();
 
     // Create staging buffer
-    vk::Buffer staging_buffer;
-    vk::DeviceMemory staging_buffer_memory;
-
-    create_buffer(
+    auto staging_buffer = new VulkanBuffer(_device, _allocator);
+    staging_buffer->create(
         buffer_size,
         vk::BufferUsageFlagBits::eTransferSrc,
         vk::MemoryPropertyFlagBits::eHostVisible |
-        vk::MemoryPropertyFlagBits::eHostCoherent,
-        staging_buffer, staging_buffer_memory
+        vk::MemoryPropertyFlagBits::eHostCoherent
     );
 
     // Fill created memory with data
-    auto data = _device->handle.mapMemory(staging_buffer_memory, 0, buffer_size);
-    memcpy(data, vertices.data(), (size_t) buffer_size);
-    _device->handle.unmapMemory(staging_buffer_memory);
+    staging_buffer->load_data(vertices.data(), 0, buffer_size);
 
     // Create vertex buffer
-    create_buffer(
+    _vertex_buffer = new VulkanBuffer(_device, _allocator);
+    _vertex_buffer->create(
         buffer_size,
         vk::BufferUsageFlagBits::eTransferDst |
         vk::BufferUsageFlagBits::eVertexBuffer,
-        vk::MemoryPropertyFlagBits::eDeviceLocal,
-        _vertex_buffer, _vertex_buffer_memory
+        vk::MemoryPropertyFlagBits::eDeviceLocal
     );
 
-    copy_buffer(staging_buffer, _vertex_buffer, buffer_size);
+    staging_buffer->copy_data_to_buffer(_command_pool, _vertex_buffer->handle, 0, 0, buffer_size);
 
     // Cleanup
-    _device->handle.destroyBuffer(staging_buffer, _allocator);
-    _device->handle.freeMemory(staging_buffer_memory, _allocator);
+    delete staging_buffer;
 }
 
 // INDEX BUFFER
@@ -531,36 +450,30 @@ void VulkanBackend::create_index_buffer() {
     vk::DeviceSize buffer_size = sizeof(indices[0]) * indices.size();
 
     // Create staging buffer
-    vk::Buffer staging_buffer;
-    vk::DeviceMemory staging_buffer_memory;
-
-    create_buffer(
+    auto staging_buffer = new VulkanBuffer(_device, _allocator);
+    staging_buffer->create(
         buffer_size,
         vk::BufferUsageFlagBits::eTransferSrc,
         vk::MemoryPropertyFlagBits::eHostVisible |
-        vk::MemoryPropertyFlagBits::eHostCoherent,
-        staging_buffer, staging_buffer_memory
+        vk::MemoryPropertyFlagBits::eHostCoherent
     );
 
     // Fill created memory with data
-    auto data = _device->handle.mapMemory(staging_buffer_memory, 0, buffer_size);
-    memcpy(data, indices.data(), (size_t) buffer_size);
-    _device->handle.unmapMemory(staging_buffer_memory);
+    staging_buffer->load_data(indices.data(), 0, buffer_size);
 
     // Create index buffer
-    create_buffer(
+    _index_buffer = new VulkanBuffer(_device, _allocator);
+    _index_buffer->create(
         buffer_size,
         vk::BufferUsageFlagBits::eTransferDst |
         vk::BufferUsageFlagBits::eIndexBuffer,
-        vk::MemoryPropertyFlagBits::eDeviceLocal,
-        _index_buffer, _index_buffer_memory
+        vk::MemoryPropertyFlagBits::eDeviceLocal
     );
 
-    copy_buffer(staging_buffer, _index_buffer, buffer_size);
+    staging_buffer->copy_data_to_buffer(_command_pool, _index_buffer->handle, 0, 0, buffer_size);
 
     // Cleanup
-    _device->handle.destroyBuffer(staging_buffer, _allocator);
-    _device->handle.freeMemory(staging_buffer_memory, _allocator);
+    delete staging_buffer;
 }
 
 // UNIFORM CODE
@@ -599,15 +512,14 @@ void VulkanBackend::create_uniform_buffers() {
     vk::DeviceSize buffer_size = sizeof(UniformBufferObject);
 
     _uniform_buffers.resize(VulkanSettings::max_frames_in_flight);
-    _uniform_buffers_memory.resize(VulkanSettings::max_frames_in_flight);
 
     for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++) {
-        create_buffer(
+        _uniform_buffers[i] = new VulkanBuffer(_device, _allocator);
+        _uniform_buffers[i]->create(
             buffer_size,
             vk::BufferUsageFlagBits::eUniformBuffer,
             vk::MemoryPropertyFlagBits::eHostVisible |
-            vk::MemoryPropertyFlagBits::eHostCoherent,
-            _uniform_buffers[i], _uniform_buffers_memory[i]
+            vk::MemoryPropertyFlagBits::eHostCoherent
         );
     }
 }
@@ -627,9 +539,7 @@ void VulkanBackend::update_uniform_buffer(uint32 current_image) {
     ubo.project = glm::perspective(glm::radians(45.0f), screen_ratio, 0.1f, 100.0f);
 
     // Copy ubo data to the buffer
-    auto data = _device->handle.mapMemory(_uniform_buffers_memory[current_image], 0, sizeof(ubo));
-    memcpy(data, &ubo, sizeof(ubo));
-    _device->handle.unmapMemory(_uniform_buffers_memory[current_image]);
+    _uniform_buffers[current_image]->load_data(&ubo, 0, sizeof(ubo));
 }
 
 void VulkanBackend::create_descriptor_pool() {
@@ -664,7 +574,7 @@ void VulkanBackend::create_descriptor_sets() {
     for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++) {
         // UBO info
         vk::DescriptorBufferInfo buffer_info{};
-        buffer_info.setBuffer(_uniform_buffers[i]);
+        buffer_info.setBuffer(_uniform_buffers[i]->handle);
         buffer_info.setOffset(0);
         buffer_info.setRange(sizeof(UniformBufferObject));
 
@@ -715,21 +625,16 @@ void VulkanBackend::create_texture_image() {
     _mip_levels = std::floor(std::log2(std::max(width, height))) + 1;
 
     // Create staging buffer
-    vk::Buffer staging_buffer;
-    vk::DeviceMemory staging_buffer_memory;
-
-    create_buffer(
+    auto staging_buffer = new VulkanBuffer(_device, _allocator);
+    staging_buffer->create(
         image_size,
         vk::BufferUsageFlagBits::eTransferSrc,
         vk::MemoryPropertyFlagBits::eHostVisible |
-        vk::MemoryPropertyFlagBits::eHostCoherent,
-        staging_buffer, staging_buffer_memory
+        vk::MemoryPropertyFlagBits::eHostCoherent
     );
 
     // Fill created memory with data
-    auto data = _device->handle.mapMemory(staging_buffer_memory, 0, image_size);
-    memcpy(data, pixels, (size_t) image_size);
-    _device->handle.unmapMemory(staging_buffer_memory);
+    staging_buffer->load_data(pixels, 0, image_size);
     stbi_image_free(pixels);
 
     // Create device side image
@@ -755,14 +660,13 @@ void VulkanBackend::create_texture_image() {
     );
 
     // Copy buffer data to image
-    copy_buffer_to_image(staging_buffer, _texture_image->handle, width, height);
+    staging_buffer->copy_data_to_image(_command_pool, _texture_image);
 
     // Generate mipmaps, this also transitions image to a layout optimal for sampling
     generate_mipmaps(_texture_image->handle, vk::Format::eR8G8B8A8Srgb, width, height, _mip_levels);
 
     // Cleanup
-    _device->handle.destroyBuffer(staging_buffer, _allocator);
-    _device->handle.freeMemory(staging_buffer_memory, _allocator);
+    delete staging_buffer;
 }
 
 void VulkanBackend::create_texture_sampler() {
