@@ -175,5 +175,5 @@ struct UniformBufferObject {
     alignas(16) glm::mat4 project;
 };
 
-const std::string model_path = "../models/viking_room.obj";
-const std::string texture_path = "../textures/viking_room.png";
+const std::string model_path = "./assets/models/viking_room.obj";
+const std::string texture_path = "./assets/textures/viking_room.png";

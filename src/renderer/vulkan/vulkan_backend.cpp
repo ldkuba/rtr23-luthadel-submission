@@ -312,13 +312,18 @@ void VulkanBackend::resized(uint32 width, uint32 height) {
         _swapchain->change_extent(width, height);
     }
 }
+
 bool VulkanBackend::begin_frame(float32 delta_time) {
+    return true;
+}
+
+bool VulkanBackend::end_frame(float32 delta_time) {
     // Wait for previous frame to finish drawing
     std::vector<vk::Fence> fences = { _fences_in_flight[current_frame] };
     auto result = _device->handle.waitForFences(fences, true, UINT64_MAX);
     if (result != vk::Result::eSuccess) throw std::runtime_error("Failed to draw frame.");
 
-    // Acquire next image index
+    // Acquire next swapchain image index
     auto image_index = _swapchain->acquire_next_image_index(_semaphores_image_available[current_frame]);
     if (image_index == -1) return false;
 
@@ -356,9 +361,6 @@ bool VulkanBackend::begin_frame(float32 delta_time) {
 
     // Advance current frame
     current_frame = (current_frame + 1) % VulkanSettings::max_frames_in_flight;
-    return true;
-}
-bool VulkanBackend::end_frame(float32 delta_time) {
     return true;
 }
 

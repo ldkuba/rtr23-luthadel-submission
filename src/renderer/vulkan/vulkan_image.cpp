@@ -1,8 +1,8 @@
 #include "renderer/vulkan/vulkan_image.hpp"
 
 VulkanImage::~VulkanImage() {
-    _device->handle.destroyImage(handle, _allocator);
-    _device->handle.freeMemory(memory, _allocator);
+    if (handle) _device->handle.destroyImage(handle, _allocator);
+    if (memory) _device->handle.freeMemory(memory, _allocator);
     if (_has_view) _device->handle.destroyImageView(view, _allocator);
 }
 

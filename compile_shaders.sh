@@ -1,2 +1,2 @@
-glslc ./src/shaders/simple_vertex_shader.vert -o ./build/shaders/simple_vertex_shader.vert.spv
-glslc ./src/shaders/simple_fragment_shader.frag -o ./build/shaders/simple_fragment_shader.frag.spv
+glslc -fshader-stage=vert ./src/shaders/builtin.object_shader.vert.glsl -o ./assets/shaders/builtin.object_shader.vert.spv
+glslc -fshader-stage=frag ./src/shaders/builtin.object_shader.frag.glsl -o ./assets/shaders/builtin.object_shader.frag.spv

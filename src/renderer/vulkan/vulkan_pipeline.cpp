@@ -1,12 +1,10 @@
 #include "renderer/vulkan/vulkan_backend.hpp"
-#include "renderer/vulkan/vulkan_settings.hpp"
-#include <fstream>
 
-std::vector<byte> read_file(const std::string& filepath);
+#include "file_system.hpp"
 
 void VulkanBackend::create_pipeline() {
-    auto vertex_code = read_file("shaders/simple_vertex_shader.vert.spv");
-    auto fragment_code = read_file("shaders/simple_fragment_shader.frag.spv");
+    auto vertex_code = FileSystem::read_file_bytes("assets/shaders/builtin.object_shader.vert.spv");
+    auto fragment_code = FileSystem::read_file_bytes("assets/shaders/builtin.object_shader.frag.spv");
 
     // Vertex and fragment shaders
     auto vertex_shader_module = create_shader_module(vertex_code);
@@ -156,22 +154,6 @@ void VulkanBackend::create_pipeline() {
     // Free unused objects
     _device->handle.destroyShaderModule(vertex_shader_module, _allocator);
     _device->handle.destroyShaderModule(fragment_shader_module, _allocator);
-}
-
-std::vector<byte> read_file(const std::string& filepath) {
-    std::ifstream file{ filepath, std::ios::ate | std::ios::binary };
-
-    if (!file.is_open()) throw std::runtime_error("Failed to open file: " + filepath);
-
-    size_t file_size = static_cast<size_t>(file.tellg());
-    std::vector<byte> buffer(file_size);
-
-    file.seekg(0);
-    file.read(buffer.data(), file_size);
-
-    file.close();
-
-    return buffer;
 }
 
 vk::ShaderModule VulkanBackend::create_shader_module(const std::vector<byte>& code) {

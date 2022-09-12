@@ -5,6 +5,8 @@
 
 #include "test_app.hpp"
 
+// TODO: APPLICATION / ENGINE SPLIT
+// TODO: UNIT TESTING
 
 int main(int, char**) {
 
