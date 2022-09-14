@@ -35,6 +35,7 @@ VulkanBackend::VulkanBackend(Platform::Surface* surface) : RendererBackend(surfa
     _swapchain = new VulkanSwapchain(width, height, _vulkan_surface, _device, _allocator);
 
     // TODO: TEMP UNIFORM CODE
+    create_descriptor_pool();
     create_descriptor_set_layout();
 
     // TODO: TEMP PIPELINE CODE
@@ -67,7 +68,6 @@ VulkanBackend::VulkanBackend(Platform::Surface* surface) : RendererBackend(surfa
 
     // TODO: TEMP UNIFORM CODE
     create_uniform_buffers();
-    create_descriptor_pool();
     create_descriptor_sets();
 
     // TODO: TEMP COMMAND CODE
@@ -503,9 +503,9 @@ void VulkanBackend::create_descriptor_set_layout() {
     vk::DescriptorSetLayoutCreateInfo layout_info{};
     layout_info.setBindings(bindings);
 
-    auto result = _device->handle.createDescriptorSetLayout(&layout_info, _allocator, &_descriptor_set_layout);
-    if (result != vk::Result::eSuccess)
-        throw std::runtime_error("Failed to create descriptor set layout.");
+    try {
+        _descriptor_set_layout = _device->handle.createDescriptorSetLayout(layout_info, _allocator);
+    } catch (vk::SystemError e) { Logger::fatal(e.what()); }
 }
 
 void VulkanBackend::create_uniform_buffers() {
@@ -553,23 +553,20 @@ void VulkanBackend::create_descriptor_pool() {
     create_info.setPoolSizes(pool_sizes);
     create_info.setMaxSets(VulkanSettings::max_frames_in_flight);
 
-    auto result = _device->handle.createDescriptorPool(&create_info, _allocator, &_descriptor_pool);
-    if (result != vk::Result::eSuccess)
-        throw std::runtime_error("Failed to create descriptor pool.");
+    try {
+        _descriptor_pool = _device->handle.createDescriptorPool(create_info, _allocator);
+    } catch (vk::SystemError e) { Logger::fatal(e.what()); }
 }
 
 void VulkanBackend::create_descriptor_sets() {
     std::vector<vk::DescriptorSetLayout> layouts(VulkanSettings::max_frames_in_flight, _descriptor_set_layout);
     vk::DescriptorSetAllocateInfo allocation_info{};
     allocation_info.setDescriptorPool(_descriptor_pool);
-    allocation_info.setDescriptorSetCount(VulkanSettings::max_frames_in_flight);
-    allocation_info.setPSetLayouts(layouts.data());
+    allocation_info.setSetLayouts(layouts);
 
-    _descriptor_sets.resize(VulkanSettings::max_frames_in_flight);
-
-    auto result = _device->handle.allocateDescriptorSets(&allocation_info, _descriptor_sets.data());
-    if (result != vk::Result::eSuccess)
-        throw std::runtime_error("Failed to allocate descriptor set.");
+    try {
+        _descriptor_sets = _device->handle.allocateDescriptorSets(allocation_info);
+    } catch (vk::SystemError e) { Logger::fatal(e.what()); }
 
     for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++) {
         // UBO info
@@ -603,12 +600,8 @@ void VulkanBackend::create_descriptor_sets() {
 
         // descriptor_writes[1].setPTexelBufferView(nullptr);
 
-        _device->handle.updateDescriptorSets(
-            static_cast<uint32>(descriptor_writes.size()), descriptor_writes.data(),
-            0, nullptr
-        );
+        _device->handle.updateDescriptorSets(descriptor_writes, nullptr);
     }
-
 }
 
 // TEXTURE IMAGE
