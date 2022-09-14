@@ -110,70 +110,8 @@ public:
     // Anti-aliasing
     constexpr static auto max_msaa_samples = vk::SampleCountFlagBits::e16;
 };
-
-#define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#define GLM_ENABLE_EXPERIMENTAL
-#include <glm/glm.hpp>
-#include <glm/gtx/hash.hpp>
-
-// TODO: TEMP VERTEX CODE
-struct Vertex {
-    glm::vec3 position;
-    glm::vec3 color;
-    glm::vec2 texture_coord;
-
-    static vk::VertexInputBindingDescription get_binding_description() {
-        vk::VertexInputBindingDescription binding_description{};
-        binding_description.setBinding(0);
-        binding_description.setStride(sizeof(Vertex));
-        binding_description.setInputRate(vk::VertexInputRate::eVertex);
-
-        return binding_description;
-    }
-
-    static std::array<vk::VertexInputAttributeDescription, 3> get_attribute_descriptions() {
-        std::array<vk::VertexInputAttributeDescription, 3> attribute_descriptions;
-        // Position
-        attribute_descriptions[0].setBinding(0);
-        attribute_descriptions[0].setLocation(0);
-        attribute_descriptions[0].setFormat(vk::Format::eR32G32B32Sfloat);
-        attribute_descriptions[0].setOffset(offsetof(Vertex, position));
-        // Color
-        attribute_descriptions[1].setBinding(0);
-        attribute_descriptions[1].setLocation(1);
-        attribute_descriptions[1].setFormat(vk::Format::eR32G32B32Sfloat);
-        attribute_descriptions[1].setOffset(offsetof(Vertex, color));
-        // Texture coordinates
-        attribute_descriptions[2].setBinding(0);
-        attribute_descriptions[2].setLocation(2);
-        attribute_descriptions[2].setFormat(vk::Format::eR32G32Sfloat);
-        attribute_descriptions[2].setOffset(offsetof(Vertex, texture_coord));
-
-        return attribute_descriptions;
-    }
-
-    bool operator==(const Vertex& other) const {
-        return position == other.position && texture_coord == other.texture_coord;
-    }
-};
-
-namespace std {
-    template<> struct hash<Vertex> {
-        size_t operator()(Vertex const& vertex) const {
-            return ((hash<glm::vec3>()(vertex.position) ^
-                (hash<glm::vec3>()(vertex.color) << 1)) >> 1) ^
-                (hash<glm::vec2>()(vertex.texture_coord) << 1);
-        }
-    };
-}
-
-struct UniformBufferObject {
-    alignas(16) glm::mat4 model;
-    alignas(16) glm::mat4 view;
-    alignas(16) glm::mat4 project;
-};
+    
+    // TODO: TEMP CODE
 
 const std::string model_path = "./assets/models/viking_room.obj";
 const std::string texture_path = "./assets/textures/viking_room.png";

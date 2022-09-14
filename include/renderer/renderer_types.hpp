@@ -13,6 +13,10 @@ struct Vertex {
     glm::vec3 position;
     glm::vec3 color;
     glm::vec2 texture_coord;
+
+    bool operator==(const Vertex& other) const {
+        return position == other.position && texture_coord == other.texture_coord;
+    }
 };
 
 namespace std {

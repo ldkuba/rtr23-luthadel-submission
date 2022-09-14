@@ -13,6 +13,7 @@ protected:
     vk::DescriptorPool _descriptor_pool;
     vk::DescriptorSetLayout _descriptor_set_layout;
     std::vector<vk::DescriptorSet> _descriptor_sets;
+    vk::PipelineLayout _pipeline_layout;
 
     vk::ShaderModule create_shader_module(std::vector<byte> code);
     void create_pipeline(
@@ -26,7 +27,6 @@ protected:
     );
 
 public:
-    vk::PipelineLayout pipeline_layout;
     vk::Pipeline pipeline;
 
     VulkanShader(VulkanDevice* device, vk::AllocationCallbacks* allocator);

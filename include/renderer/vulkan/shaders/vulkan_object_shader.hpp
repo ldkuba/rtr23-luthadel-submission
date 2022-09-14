@@ -20,7 +20,11 @@ public:
 
     void use(const vk::CommandBuffer& command_buffer);
     void create_descriptor_sets(
-        vk::DescriptorBufferInfo buffer_info,
+        std::vector<vk::DescriptorBufferInfo> buffer_infos,
         vk::DescriptorImageInfo image_info
+    );
+    void bind_descriptor_set(
+        const vk::CommandBuffer& command_buffer,
+        const uint32 current_frame
     );
 };

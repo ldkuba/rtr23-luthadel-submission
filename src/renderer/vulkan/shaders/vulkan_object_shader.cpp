@@ -1,6 +1,7 @@
 #include "renderer/vulkan/shaders/vulkan_object_shader.hpp"
 
 #include "renderer/vulkan/vulkan_settings.hpp"
+#include "renderer/renderer_types.hpp"
 #include "file_system.hpp"
 
 VulkanObjectShader::VulkanObjectShader(
@@ -102,7 +103,7 @@ VulkanObjectShader::~VulkanObjectShader() {
 
     // Pipeline
     _device->handle.destroyPipeline(pipeline, _allocator);
-    _device->handle.destroyPipelineLayout(pipeline_layout, _allocator);
+    _device->handle.destroyPipelineLayout(_pipeline_layout, _allocator);
 }
 
 void VulkanObjectShader::use(const vk::CommandBuffer& command_buffer) {
@@ -154,7 +155,7 @@ void VulkanObjectShader::create_descriptor_pool() {
 }
 
 void VulkanObjectShader::create_descriptor_sets(
-    vk::DescriptorBufferInfo buffer_info,
+    std::vector<vk::DescriptorBufferInfo> buffer_infos,
     vk::DescriptorImageInfo image_info
 ) {
     std::vector<vk::DescriptorSetLayout> layouts(VulkanSettings::max_frames_in_flight, _descriptor_set_layout);
@@ -175,7 +176,7 @@ void VulkanObjectShader::create_descriptor_sets(
         descriptor_writes[0].setDstArrayElement(0);
         descriptor_writes[0].setDescriptorType(vk::DescriptorType::eUniformBuffer);
         descriptor_writes[0].setDescriptorCount(1);
-        descriptor_writes[0].setPBufferInfo(&buffer_info);
+        descriptor_writes[0].setPBufferInfo(&buffer_infos[i]);
 
         descriptor_writes[1].setDstSet(_descriptor_sets[i]);
         descriptor_writes[1].setDstBinding(1);
@@ -186,4 +187,16 @@ void VulkanObjectShader::create_descriptor_sets(
 
         _device->handle.updateDescriptorSets(descriptor_writes, nullptr);
     }
+}
+
+void VulkanObjectShader::bind_descriptor_set(
+    const vk::CommandBuffer& command_buffer,
+    const uint32 current_frame
+) {
+    command_buffer.bindDescriptorSets(
+        vk::PipelineBindPoint::eGraphics,
+        _pipeline_layout, 0,
+        1, &_descriptor_sets[current_frame],
+        0, nullptr
+    );
 }

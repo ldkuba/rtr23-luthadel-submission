@@ -114,7 +114,7 @@ void VulkanShader::create_pipeline(
     layout_info.setPushConstantRangeCount(0);
     layout_info.setPPushConstantRanges(nullptr);
 
-    pipeline_layout = _device->handle.createPipelineLayout(layout_info, _allocator);
+    _pipeline_layout = _device->handle.createPipelineLayout(layout_info, _allocator);
 
     // Create pipeline object
     vk::GraphicsPipelineCreateInfo create_info{};
@@ -131,7 +131,7 @@ void VulkanShader::create_pipeline(
     create_info.setPDynamicState(&dynamic_state_info);
     create_info.setPTessellationState(nullptr);
     // Pipeline layout handle
-    create_info.setLayout(pipeline_layout);
+    create_info.setLayout(_pipeline_layout);
     // Render passes
     create_info.setRenderPass(render_pass);
     create_info.setSubpass(0);

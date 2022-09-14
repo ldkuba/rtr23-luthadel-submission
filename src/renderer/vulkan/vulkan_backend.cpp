@@ -34,13 +34,16 @@ VulkanBackend::VulkanBackend(Platform::Surface* surface) : RendererBackend(surfa
     // SWAPCHAIN
     _swapchain = new VulkanSwapchain(width, height, _vulkan_surface, _device, _allocator);
 
-    // TODO: TEMP UNIFORM CODE
-    create_descriptor_pool();
-    create_descriptor_set_layout();
-
-    // TODO: TEMP PIPELINE CODE
+    // Render pass
     _render_pass = new VulkanRenderPass(_swapchain, &_device->handle, _allocator);
-    create_pipeline();
+
+    // Object shader
+    _object_shader = new VulkanObjectShader(
+        _device,
+        _allocator,
+        _render_pass->handle,
+        _swapchain->msaa_samples
+    );
 
     // TODO: TEMP COMMAND CODE
     _command_pool = new VulkanCommandPool(
@@ -90,8 +93,6 @@ VulkanBackend::~VulkanBackend() {
     for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++) {
         delete _uniform_buffers[i];
     }
-    _device->handle.destroyDescriptorPool(_descriptor_pool, _allocator);
-    _device->handle.destroyDescriptorSetLayout(_descriptor_set_layout, _allocator);
 
 
     // TODO: TEMP INDEX BUFFER CODE
@@ -103,8 +104,7 @@ VulkanBackend::~VulkanBackend() {
 
 
     // TODO: TEMP PIPELINE CODE
-    _device->handle.destroyPipeline(_graphics_pipeline, _allocator);
-    _device->handle.destroyPipelineLayout(_pipeline_layout, _allocator);
+    delete _object_shader;
 
 
     // RENDER PASS
@@ -344,7 +344,7 @@ void VulkanBackend::record_command_buffer(vk::CommandBuffer command_buffer, uint
     _render_pass->begin(command_buffer, _swapchain->framebuffers[image_index]);
 
     // Bind graphics pipeline
-    command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, _graphics_pipeline);
+    command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, _object_shader->pipeline);
 
     // Bind vertex buffer
     std::vector<vk::Buffer>vertex_buffers = { _vertex_buffer->handle };
@@ -374,12 +374,7 @@ void VulkanBackend::record_command_buffer(vk::CommandBuffer command_buffer, uint
     command_buffer.setScissor(0, 1, &scissor);
 
     // Bind description sets
-    command_buffer.bindDescriptorSets(
-        vk::PipelineBindPoint::eGraphics,
-        _pipeline_layout, 0,
-        1, &_descriptor_sets[current_frame],
-        0, nullptr
-    );
+    _object_shader->bind_descriptor_set(command_buffer, current_frame);
 
     // Draw command
     command_buffer.drawIndexed(static_cast<uint32>(indices.size()), 1, 0, 0, 0);
@@ -480,34 +475,6 @@ void VulkanBackend::create_index_buffer() {
 #include <glm/gtc/matrix_transform.hpp>
 #include <chrono>
 
-void VulkanBackend::create_descriptor_set_layout() {
-    vk::DescriptorSetLayoutBinding ubo_layout_binding{};
-    ubo_layout_binding.setBinding(0);
-    ubo_layout_binding.setDescriptorType(vk::DescriptorType::eUniformBuffer);
-    ubo_layout_binding.setDescriptorCount(1);
-    ubo_layout_binding.setStageFlags(vk::ShaderStageFlagBits::eVertex);
-    ubo_layout_binding.setPImmutableSamplers(nullptr);
-
-    vk::DescriptorSetLayoutBinding sampler_layout_binding{};
-    sampler_layout_binding.setBinding(1);
-    sampler_layout_binding.setDescriptorType(vk::DescriptorType::eCombinedImageSampler);
-    sampler_layout_binding.setDescriptorCount(1);
-    sampler_layout_binding.setStageFlags(vk::ShaderStageFlagBits::eFragment);
-    sampler_layout_binding.setPImmutableSamplers(nullptr);
-
-    std::array<vk::DescriptorSetLayoutBinding, 2> bindings = {
-        ubo_layout_binding,
-        sampler_layout_binding
-    };
-
-    vk::DescriptorSetLayoutCreateInfo layout_info{};
-    layout_info.setBindings(bindings);
-
-    try {
-        _descriptor_set_layout = _device->handle.createDescriptorSetLayout(layout_info, _allocator);
-    } catch (vk::SystemError e) { Logger::fatal(e.what()); }
-}
-
 void VulkanBackend::create_uniform_buffers() {
     vk::DeviceSize buffer_size = sizeof(UniformBufferObject);
 
@@ -542,66 +509,22 @@ void VulkanBackend::update_uniform_buffer(uint32 current_image) {
     _uniform_buffers[current_image]->load_data(&ubo, 0, sizeof(ubo));
 }
 
-void VulkanBackend::create_descriptor_pool() {
-    std::array<vk::DescriptorPoolSize, 2> pool_sizes{};
-    pool_sizes[0].setType(vk::DescriptorType::eUniformBuffer);
-    pool_sizes[0].setDescriptorCount(VulkanSettings::max_frames_in_flight);
-    pool_sizes[1].setType(vk::DescriptorType::eCombinedImageSampler);
-    pool_sizes[1].setDescriptorCount(VulkanSettings::max_frames_in_flight);
-
-    vk::DescriptorPoolCreateInfo create_info{};
-    create_info.setPoolSizes(pool_sizes);
-    create_info.setMaxSets(VulkanSettings::max_frames_in_flight);
-
-    try {
-        _descriptor_pool = _device->handle.createDescriptorPool(create_info, _allocator);
-    } catch (vk::SystemError e) { Logger::fatal(e.what()); }
-}
-
 void VulkanBackend::create_descriptor_sets() {
-    std::vector<vk::DescriptorSetLayout> layouts(VulkanSettings::max_frames_in_flight, _descriptor_set_layout);
-    vk::DescriptorSetAllocateInfo allocation_info{};
-    allocation_info.setDescriptorPool(_descriptor_pool);
-    allocation_info.setSetLayouts(layouts);
-
-    try {
-        _descriptor_sets = _device->handle.allocateDescriptorSets(allocation_info);
-    } catch (vk::SystemError e) { Logger::fatal(e.what()); }
-
+    // UBO info
+    std::vector<vk::DescriptorBufferInfo> buffer_infos(VulkanSettings::max_frames_in_flight);
     for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++) {
-        // UBO info
-        vk::DescriptorBufferInfo buffer_info{};
-        buffer_info.setBuffer(_uniform_buffers[i]->handle);
-        buffer_info.setOffset(0);
-        buffer_info.setRange(sizeof(UniformBufferObject));
-
-        // Texture info
-        vk::DescriptorImageInfo image_info{};
-        image_info.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
-        image_info.setImageView(_texture_image->view);
-        image_info.setSampler(_texture_sampler);
-
-        // Combined descriptor
-        std::array<vk::WriteDescriptorSet, 2> descriptor_writes{};
-
-        descriptor_writes[0].setDstSet(_descriptor_sets[i]);
-        descriptor_writes[0].setDstBinding(0);
-        descriptor_writes[0].setDstArrayElement(0);
-        descriptor_writes[0].setDescriptorType(vk::DescriptorType::eUniformBuffer);
-        descriptor_writes[0].setDescriptorCount(1);
-        descriptor_writes[0].setPBufferInfo(&buffer_info);
-
-        descriptor_writes[1].setDstSet(_descriptor_sets[i]);
-        descriptor_writes[1].setDstBinding(1);
-        descriptor_writes[1].setDstArrayElement(0);
-        descriptor_writes[1].setDescriptorType(vk::DescriptorType::eCombinedImageSampler);
-        descriptor_writes[1].setDescriptorCount(1);
-        descriptor_writes[1].setPImageInfo(&image_info);
-
-        // descriptor_writes[1].setPTexelBufferView(nullptr);
-
-        _device->handle.updateDescriptorSets(descriptor_writes, nullptr);
+        buffer_infos[i].setBuffer(_uniform_buffers[i]->handle);
+        buffer_infos[i].setOffset(0);
+        buffer_infos[i].setRange(sizeof(UniformBufferObject));
     }
+
+    // Texture info
+    vk::DescriptorImageInfo image_info{};
+    image_info.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+    image_info.setImageView(_texture_image->view);
+    image_info.setSampler(_texture_sampler);
+
+    _object_shader->create_descriptor_sets(buffer_infos, image_info);
 }
 
 // TEXTURE IMAGE

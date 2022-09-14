@@ -4,6 +4,8 @@
 #include "vulkan_settings.hpp"
 #include "vulkan_render_pass.hpp"
 #include "vulkan_buffer.hpp"
+#include "shaders/vulkan_object_shader.hpp"
+#include "../renderer_types.hpp"
 
 class VulkanBackend : public RendererBackend {
 private:
@@ -45,13 +47,8 @@ private:
     // RENDER PASS
     VulkanRenderPass* _render_pass;
 
-    // TODO: TEMP PIPELINE CODE
-    vk::PipelineLayout _pipeline_layout;
-    vk::Pipeline _graphics_pipeline;
-
-    void create_pipeline();
-
-    vk::ShaderModule create_shader_module(const std::vector<byte>& code);
+    // OBJECT SHADER
+    VulkanObjectShader* _object_shader;
 
     // TODO: TEMP COMMAND CODE
     VulkanCommandPool* _command_pool;
@@ -70,14 +67,8 @@ private:
     void create_index_buffer();
 
     // TODO: TEMP UNIFORM CODE
-    vk::DescriptorSetLayout _descriptor_set_layout;
-    vk::DescriptorPool _descriptor_pool;
-    std::vector<vk::DescriptorSet> _descriptor_sets;
-
     std::vector<VulkanBuffer*> _uniform_buffers;
 
-    void create_descriptor_set_layout();
-    void create_descriptor_pool();
     void create_descriptor_sets();
     void create_uniform_buffers();
     void update_uniform_buffer(uint32 current_image);
