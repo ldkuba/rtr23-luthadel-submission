@@ -6,10 +6,10 @@ VulkanBuffer::~VulkanBuffer() {
 }
 
 void VulkanBuffer::create(
-    vk::DeviceSize size,
-    vk::BufferUsageFlags usage,
-    vk::MemoryPropertyFlags properties,
-    bool bind_on_create
+    const vk::DeviceSize size,
+    const vk::BufferUsageFlags usage,
+    const vk::MemoryPropertyFlags properties,
+    const bool bind_on_create
 ) {
     this->size = size;
     _properties = properties;
@@ -42,13 +42,14 @@ void VulkanBuffer::create(
         _device->handle.bindBufferMemory(handle, memory, 0);
 }
 
-void VulkanBuffer::bind(vk::DeviceSize offset) {
-    _device->handle.bindBufferMemory(handle, memory, offset);
+void VulkanBuffer::bind(const vk::DeviceSize offset) const {
+    if (handle)
+        _device->handle.bindBufferMemory(handle, memory, offset);
 }
 
 void VulkanBuffer::resize(
-    VulkanCommandPool* command_pool,
-    vk::DeviceSize new_size
+    VulkanCommandPool* const command_pool,
+    const vk::DeviceSize new_size
 ) {
     // Create new buffer
     vk::BufferCreateInfo buffer_info{};
@@ -91,23 +92,22 @@ void VulkanBuffer::resize(
 }
 
 void VulkanBuffer::load_data(
-    const void* data,
-    vk::DeviceSize offset,
-    vk::DeviceSize size,
-    vk::MemoryMapFlags flags
-) {
-    auto data_ptr = _device->handle.mapMemory(memory, offset, size, flags);
+    const void* const data,
+    const vk::DeviceSize offset,
+    const vk::DeviceSize size
+) const {
+    auto data_ptr = _device->handle.mapMemory(memory, offset, size);
     memcpy(data_ptr, data, (size_t) size);
     _device->handle.unmapMemory(memory);
 }
 
 void VulkanBuffer::copy_data_to_buffer(
-    VulkanCommandPool* command_pool,
-    vk::Buffer& buffer,
-    vk::DeviceSize source_offset,
-    vk::DeviceSize destination_offset,
-    vk::DeviceSize size
-) {
+    VulkanCommandPool* const command_pool,
+    const vk::Buffer& buffer,
+    const vk::DeviceSize source_offset,
+    const vk::DeviceSize destination_offset,
+    const vk::DeviceSize size
+) const {
     auto command_buffer = command_pool->begin_single_time_commands();
 
     // Copy regions
@@ -122,9 +122,9 @@ void VulkanBuffer::copy_data_to_buffer(
 }
 
 void VulkanBuffer::copy_data_to_image(
-    VulkanCommandPool* command_pool,
-    VulkanImage* image
-) {
+    VulkanCommandPool* const command_pool,
+    VulkanImage* const image
+) const {
     auto command_buffer = command_pool->begin_single_time_commands();
 
     // Preform copy ops

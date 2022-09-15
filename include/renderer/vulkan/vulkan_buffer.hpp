@@ -4,53 +4,77 @@
 
 class VulkanBuffer {
 private:
-
-    VulkanDevice* _device;
-    vk::AllocationCallbacks* _allocator;
+    const VulkanDevice* _device;
+    const vk::AllocationCallbacks* const _allocator;
 
     vk::BufferUsageFlags _usage;
     vk::MemoryPropertyFlags _properties;
 
 public:
+    /// @brief Handle to the vk:Buffer
     vk::Buffer handle;
+    /// @brief Pointer to on device memory of the allocated buffer
     vk::DeviceMemory memory;
+    /// @brief Total buffer size in bytes
     vk::DeviceSize size;
 
-    VulkanBuffer(VulkanDevice* device, vk::AllocationCallbacks* allocator) : _device(device), _allocator(allocator) {}
+    VulkanBuffer(const VulkanDevice* const device, const vk::AllocationCallbacks* const allocator)
+        : _device(device), _allocator(allocator) {}
     ~VulkanBuffer();
 
-
+    /// @brief Create and allocate on device memory for this buffer
+    /// @param size Required buffer size
+    /// @param usage Buffer usage flags
+    /// @param properties Required properties for on device memory
+    /// @param bind_on_create Binds created buffer to the allocated memory if true, default = true
     void create(
-        vk::DeviceSize size,
-        vk::BufferUsageFlags usage,
-        vk::MemoryPropertyFlags properties,
-        bool bind_on_create = true
+        const vk::DeviceSize size,
+        const vk::BufferUsageFlags usage,
+        const vk::MemoryPropertyFlags properties,
+        const bool bind_on_create = true
     );
 
-    void bind(vk::DeviceSize offset);
+    /// @brief Bind buffer to memory
+    /// @param offset Offset at which the bind should start at
+    void bind(const vk::DeviceSize offset) const;
 
+    /// @brief Resize buffer
+    /// @param command_pool Command pool to witch the resize command will be submitted
+    /// @param new_size New buffer size in bytes
     void resize(
-        VulkanCommandPool* command_pool,
-        vk::DeviceSize new_size
+        VulkanCommandPool* const command_pool,
+        const vk::DeviceSize new_size
     );
 
+    /// @brief Upload data to buffer
+    /// @param data Byte array to be uploaded
+    /// @param offset Data offset
+    /// @param size Total data size in bytes
     void load_data(
-        const void* data,
-        vk::DeviceSize offset,
-        vk::DeviceSize size,
-        vk::MemoryMapFlags flags = {}
-    );
+        const void* const data,
+        const vk::DeviceSize offset,
+        const vk::DeviceSize size
+    ) const;
 
+    /// @brief Copy buffer data to another buffer
+    /// @param command_pool Command pool to which the transfer command will be submitted
+    /// @param buffer Other buffer
+    /// @param source_offset Source memory offset
+    /// @param destination_offset Destination memory offset
+    /// @param size Number of bytes copied
     void copy_data_to_buffer(
-        VulkanCommandPool* command_pool,
-        vk::Buffer& buffer,
-        vk::DeviceSize source_offset,
-        vk::DeviceSize destination_offset,
-        vk::DeviceSize size
-    );
+        VulkanCommandPool* const command_pool,
+        const vk::Buffer& buffer,
+        const vk::DeviceSize source_offset,
+        const vk::DeviceSize destination_offset,
+        const vk::DeviceSize size
+    ) const;
 
+    /// @brief Copy buffer data to an image
+    /// @param command_pool Command pool to which the transfer command will be submitted
+    /// @param image Image to which we are transferring data
     void copy_data_to_image(
-        VulkanCommandPool* command_pool,
-        VulkanImage* image
-    );
+        VulkanCommandPool* const command_pool,
+        VulkanImage* const image
+    ) const;
 };

@@ -13,8 +13,8 @@ struct QueueFamilyIndices {
     std::optional<uint32> transfer_family;
     std::optional<uint32> present_family;
 
-    bool is_complete();
-    std::set<uint32> get_unique_indices();
+    bool is_complete() const;
+    std::set<uint32> get_unique_indices() const;
 };
 
 struct SwapchainSupportDetails {
@@ -22,9 +22,9 @@ struct SwapchainSupportDetails {
     std::vector<vk::SurfaceFormatKHR> formats;
     std::vector<vk::PresentModeKHR> presentation_modes;
 
-    vk::Extent2D get_extent(uint32 width, uint32 height);
-    vk::SurfaceFormatKHR get_surface_format();
-    vk::PresentModeKHR get_presentation_mode();
+    vk::Extent2D get_extent(const uint32 width, const uint32 height) const;
+    vk::SurfaceFormatKHR get_surface_format() const;
+    vk::PresentModeKHR get_presentation_mode() const;
 };
 
 struct PhysicalDeviceInfo {
@@ -41,8 +41,8 @@ struct PhysicalDeviceInfo {
     std::vector<bool> memory_is_local;
 
     // Swapchain
-    std::function<SwapchainSupportDetails(vk::SurfaceKHR)>get_swapchain_support_details;
+    std::function<SwapchainSupportDetails(const vk::SurfaceKHR&)>get_swapchain_support_details;
 
     // Format properties
-    std::function<vk::FormatProperties(vk::Format)> get_format_properties;
+    std::function<vk::FormatProperties(const vk::Format)> get_format_properties;
 };

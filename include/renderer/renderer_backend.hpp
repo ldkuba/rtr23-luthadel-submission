@@ -6,11 +6,8 @@ class RendererBackend {
 private:
     uint64 _frame_number = 0;
 
-protected:
-    Platform::Surface* _surface;
-
 public:
-    RendererBackend(Platform::Surface* surface) : _surface(surface) {}
+    RendererBackend(Platform::Surface* surface) {}
     ~RendererBackend() {}
 
     void increment_frame_number() { _frame_number++; }

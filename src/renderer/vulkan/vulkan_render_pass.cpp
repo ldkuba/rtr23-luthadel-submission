@@ -2,9 +2,9 @@
 
 
 VulkanRenderPass::VulkanRenderPass(
-    VulkanSwapchain* swapchain,
-    vk::Device* device,
-    vk::AllocationCallbacks* allocator
+    const vk::Device* const device,
+    const vk::AllocationCallbacks* const allocator,
+    VulkanSwapchain* const swapchain
 ) : _device(device), _swapchain(swapchain), _allocator(allocator) {
     // Color attachment
     vk::AttachmentDescription color_attachment = _swapchain->get_color_attachment();

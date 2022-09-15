@@ -5,22 +5,22 @@
 
 class VulkanImage {
 private:
-    VulkanDevice* _device;
-    vk::AllocationCallbacks* _allocator;
+    const VulkanDevice* _device;
+    const vk::AllocationCallbacks* const _allocator;
 
     bool _has_view = false;
     vk::ImageAspectFlags _aspect_flags;
 
     void create_view(
-        uint32 mip_levels,
-        vk::Format format,
-        vk::ImageAspectFlags aspect_flags
+        const uint32 mip_levels,
+        const vk::Format format,
+        const vk::ImageAspectFlags aspect_flags
     );
 
 public:
     /// @brief Handle to the vk::Image
     vk::Image handle;
-    /// @brief Pointer to the allocated image on device memory
+    /// @brief Pointer to on device memory the allocated image
     vk::DeviceMemory memory;
     /// @brief Image view
     vk::ImageView view;
@@ -30,7 +30,8 @@ public:
     /// @brief Image height
     uint32 height;
 
-    VulkanImage(VulkanDevice* device, vk::AllocationCallbacks* allocator) : _device(device), _allocator(allocator) {}
+    VulkanImage(const VulkanDevice* const device, const vk::AllocationCallbacks* const allocator)
+        : _device(device), _allocator(allocator) {}
     ~VulkanImage();
 
     /// @brief Creates and allocates vulkan image in device local memory
@@ -43,14 +44,14 @@ public:
     /// @param usage Purpose of the image (Allow for better driver optimizations)
     /// @param properties Properties of the allocated memory
     void create(
-        uint32 width,
-        uint32 height,
-        uint32 mip_levels,
-        vk::SampleCountFlagBits number_of_samples,
-        vk::Format format,
-        vk::ImageTiling tiling,
-        vk::ImageUsageFlags usage,
-        vk::MemoryPropertyFlags properties
+        const uint32 width,
+        const uint32 height,
+        const uint32 mip_levels,
+        const vk::SampleCountFlagBits number_of_samples,
+        const vk::Format format,
+        const vk::ImageTiling tiling,
+        const vk::ImageUsageFlags usage,
+        const vk::MemoryPropertyFlags properties
     );
 
     /// @brief Creates and allocates vulkan image in device local memory.
@@ -65,15 +66,15 @@ public:
     /// @param properties Properties of the allocated memory
     /// @param aspect_flags Image aspect covered (eg. color, depth...)
     void create(
-        uint32 width,
-        uint32 height,
-        uint32 mip_levels,
-        vk::SampleCountFlagBits number_of_samples,
-        vk::Format format,
-        vk::ImageTiling tiling,
-        vk::ImageUsageFlags usage,
-        vk::MemoryPropertyFlags properties,
-        vk::ImageAspectFlags aspect_flags
+        const uint32 width,
+        const uint32 height,
+        const uint32 mip_levels,
+        const vk::SampleCountFlagBits number_of_samples,
+        const vk::Format format,
+        const vk::ImageTiling tiling,
+        const vk::ImageUsageFlags usage,
+        const vk::MemoryPropertyFlags properties,
+        const vk::ImageAspectFlags aspect_flags
     );
 
     /// @brief Create image view for an already created handel.
@@ -82,10 +83,10 @@ public:
     /// @param format Image format
     /// @param aspect_flags Image aspect covered (eg. color, depth...)
     void create(
-        vk::Image image,
-        uint32 mip_levels,
-        vk::Format format,
-        vk::ImageAspectFlags aspect_flags
+        const vk::Image image,
+        const uint32 mip_levels,
+        const vk::Format format,
+        const vk::ImageAspectFlags aspect_flags
     );
 
     /// @brief Transition image between layouts
@@ -96,12 +97,12 @@ public:
     /// @param mip_levels Max number mipmaping levels
     /// @throws std::invalid_argument Exception if invalid layout transition is provided
     void transition_image_layout(
-        VulkanCommandPool* command_pool,
-        vk::Format format,
-        vk::ImageLayout old_layout,
-        vk::ImageLayout new_layout,
-        uint32 mip_levels
-    );
+        VulkanCommandPool* const command_pool,
+        const vk::Format format,
+        const vk::ImageLayout old_layout,
+        const vk::ImageLayout new_layout,
+        const uint32 mip_levels
+    ) const;
 
     /// @brief Creates an image view corresponding to the provided vk::Image
     /// @param format Image format
@@ -111,10 +112,10 @@ public:
     /// @param allocator Vulkan allocation callback
     /// @returns Image view
     static vk::ImageView get_view_from_image(
-        vk::Format format,
-        vk::ImageAspectFlags aspect_flags,
+        const vk::Format format,
+        const vk::ImageAspectFlags aspect_flags,
         const vk::Image& image,
         const vk::Device& device,
-        const vk::AllocationCallbacks* allocator
+        const vk::AllocationCallbacks* const allocator
     );
 };

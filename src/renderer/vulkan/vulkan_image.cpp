@@ -8,14 +8,14 @@ VulkanImage::~VulkanImage() {
 
 // Image functions
 void VulkanImage::create(
-    uint32 width,
-    uint32 height,
-    uint32 mip_levels,
-    vk::SampleCountFlagBits number_of_samples,
-    vk::Format format,
-    vk::ImageTiling tiling,
-    vk::ImageUsageFlags usage,
-    vk::MemoryPropertyFlags properties
+    const uint32 width,
+    const uint32 height,
+    const uint32 mip_levels,
+    const vk::SampleCountFlagBits number_of_samples,
+    const vk::Format format,
+    const vk::ImageTiling tiling,
+    const vk::ImageUsageFlags usage,
+    const vk::MemoryPropertyFlags properties
 ) {
     // Remember width and height
     this->width = width;
@@ -62,15 +62,15 @@ void VulkanImage::create(
 }
 
 void VulkanImage::create(
-    uint32 width,
-    uint32 height,
-    uint32 mip_levels,
-    vk::SampleCountFlagBits number_of_samples,
-    vk::Format format,
-    vk::ImageTiling tiling,
-    vk::ImageUsageFlags usage,
-    vk::MemoryPropertyFlags properties,
-    vk::ImageAspectFlags aspect_flags
+    const uint32 width,
+    const uint32 height,
+    const uint32 mip_levels,
+    const vk::SampleCountFlagBits number_of_samples,
+    const vk::Format format,
+    const vk::ImageTiling tiling,
+    const vk::ImageUsageFlags usage,
+    const vk::MemoryPropertyFlags properties,
+    const vk::ImageAspectFlags aspect_flags
 ) {
     // Construct image
     create(
@@ -93,19 +93,19 @@ void VulkanImage::create(
 }
 
 void VulkanImage::create(
-    vk::Image image,
-    uint32 mip_levels,
-    vk::Format format,
-    vk::ImageAspectFlags aspect_flags
+    const vk::Image image,
+    const uint32 mip_levels,
+    const vk::Format format,
+    const vk::ImageAspectFlags aspect_flags
 ) {
     handle = image;
     create_view(mip_levels, format, aspect_flags);
 }
 
 void VulkanImage::create_view(
-    uint32 mip_levels,
-    vk::Format format,
-    vk::ImageAspectFlags aspect_flags
+    const uint32 mip_levels,
+    const vk::Format format,
+    const vk::ImageAspectFlags aspect_flags
 ) {
     // Construct image view
     _has_view = true;
@@ -128,12 +128,12 @@ void VulkanImage::create_view(
 }
 
 void VulkanImage::transition_image_layout(
-    VulkanCommandPool* command_pool,
-    vk::Format format,
-    vk::ImageLayout old_layout,
-    vk::ImageLayout new_layout,
-    uint32 mip_levels
-) {
+    VulkanCommandPool* const command_pool,
+    const vk::Format format,
+    const vk::ImageLayout old_layout,
+    const vk::ImageLayout new_layout,
+    const uint32 mip_levels
+) const {
     auto command_buffer = command_pool->begin_single_time_commands();
 
     // Implement transition barrier
@@ -189,15 +189,15 @@ void VulkanImage::transition_image_layout(
 }
 
 vk::ImageView VulkanImage::get_view_from_image(
-    vk::Format format,
-    vk::ImageAspectFlags aspect_flags,
+    const vk::Format format,
+    const vk::ImageAspectFlags aspect_flags,
     const vk::Image& image,
     const vk::Device& device,
-    const vk::AllocationCallbacks* allocator
+    const vk::AllocationCallbacks* const allocator
 ) {
     // Construct image view
     vk::ImageViewCreateInfo create_info{};
-    create_info.setImage(image);                             // Image for which we are creating a view
+    create_info.setImage(image);                              // Image for which we are creating a view
     create_info.setViewType(vk::ImageViewType::e2D);          // 2D image
     create_info.setFormat(format);                            // Image format
     create_info.subresourceRange.setAspectMask(aspect_flags); // Image aspect (eg. color, depth...)

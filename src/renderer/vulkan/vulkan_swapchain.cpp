@@ -3,10 +3,11 @@
 
 // Constructor & Destructor
 VulkanSwapchain::VulkanSwapchain(
-    uint32 width, uint32 height,
-    vk::SurfaceKHR vulkan_surface,
-    VulkanDevice* device,
-    vk::AllocationCallbacks* allocator
+    const uint32 width,
+    const uint32 height,
+    const vk::SurfaceKHR vulkan_surface,
+    const VulkanDevice* const device,
+    const vk::AllocationCallbacks* const allocator
 ) : _width(width), _height(height), _vulkan_surface(vulkan_surface), _device(device), _allocator(allocator) {
     // Set maximum MSAA samples
     auto count = _device->info.framebuffer_color_sample_counts &
@@ -173,7 +174,7 @@ void VulkanSwapchain::create_depth_resources() {
     );
 }
 
-vk::Format VulkanSwapchain::find_depth_format() {
+vk::Format VulkanSwapchain::find_depth_format() const {
     std::vector<vk::Format> candidates = {
         vk::Format::eD32Sfloat,
         vk::Format::eD32SfloatS8Uint,
@@ -225,18 +226,18 @@ void VulkanSwapchain::create_framebuffers() {
 // Public methods //
 // ////////////// //
 
-void VulkanSwapchain::change_extent(uint32 width, uint32 height) {
+void VulkanSwapchain::change_extent(const uint32 width, const uint32 height) {
     _width = width;
     _height = height;
     _should_resize = true;
 }
 
-void VulkanSwapchain::initialize_framebuffers(vk::RenderPass* render_pass) {
+void VulkanSwapchain::initialize_framebuffers(vk::RenderPass* const render_pass) {
     _render_pass = render_pass; // Set render pass requirement
     create_framebuffers();      // Create framebuffer
 }
 
-vk::AttachmentDescription VulkanSwapchain::get_depth_attachment() {
+vk::AttachmentDescription VulkanSwapchain::get_depth_attachment() const {
     vk::AttachmentDescription depth_attachment{};
     depth_attachment.setFormat(find_depth_format());
     depth_attachment.setSamples(msaa_samples);
@@ -250,7 +251,7 @@ vk::AttachmentDescription VulkanSwapchain::get_depth_attachment() {
     return depth_attachment;
 }
 
-vk::AttachmentDescription VulkanSwapchain::get_color_attachment() {
+vk::AttachmentDescription VulkanSwapchain::get_color_attachment() const {
     vk::AttachmentDescription color_attachment{};
     color_attachment.setFormat(_format);
     color_attachment.setSamples(msaa_samples);
@@ -264,7 +265,7 @@ vk::AttachmentDescription VulkanSwapchain::get_color_attachment() {
     return color_attachment;
 }
 
-vk::AttachmentDescription VulkanSwapchain::get_color_attachment_resolve() {
+vk::AttachmentDescription VulkanSwapchain::get_color_attachment_resolve() const {
     vk::AttachmentDescription color_attachment_resolve{};
     color_attachment_resolve.setFormat(_format);
     color_attachment_resolve.setSamples(vk::SampleCountFlagBits::e1);
@@ -278,7 +279,7 @@ vk::AttachmentDescription VulkanSwapchain::get_color_attachment_resolve() {
     return color_attachment_resolve;
 }
 
-uint32 VulkanSwapchain::acquire_next_image_index(vk::Semaphore signal_semaphore) {
+uint32 VulkanSwapchain::acquire_next_image_index(const vk::Semaphore& signal_semaphore) {
     // Obtain a swapchain image (next in queue for drawing)
     auto obtained = _device->handle.acquireNextImageKHR(_handle, UINT64_MAX, signal_semaphore);
     if (obtained.result == vk::Result::eErrorOutOfDateKHR) {
@@ -291,7 +292,10 @@ uint32 VulkanSwapchain::acquire_next_image_index(vk::Semaphore signal_semaphore)
     return obtained.value;
 }
 
-void VulkanSwapchain::present(uint32 image_index, std::vector<vk::Semaphore> wait_for_semaphores) {
+void VulkanSwapchain::present(
+    const uint32 image_index, const
+    std::vector<vk::Semaphore>& wait_for_semaphores
+) {
     std::vector<vk::SwapchainKHR> swapchains = { _handle };
 
     // Present results

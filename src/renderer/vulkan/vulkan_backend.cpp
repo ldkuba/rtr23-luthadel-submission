@@ -35,7 +35,7 @@ VulkanBackend::VulkanBackend(Platform::Surface* surface) : RendererBackend(surfa
     _swapchain = new VulkanSwapchain(width, height, _vulkan_surface, _device, _allocator);
 
     // Render pass
-    _render_pass = new VulkanRenderPass(_swapchain, &_device->handle, _allocator);
+    _render_pass = new VulkanRenderPass(&_device->handle, _allocator, _swapchain);
 
     // Object shader
     _object_shader = new VulkanObjectShader(

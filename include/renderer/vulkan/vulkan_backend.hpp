@@ -3,7 +3,6 @@
 #include "renderer/renderer_backend.hpp"
 #include "vulkan_settings.hpp"
 #include "vulkan_render_pass.hpp"
-#include "vulkan_buffer.hpp"
 #include "shaders/vulkan_object_shader.hpp"
 #include "../renderer_types.hpp"
 

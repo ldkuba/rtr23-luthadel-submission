@@ -5,27 +5,31 @@
 
 class VulkanDevice {
 private:
-    vk::AllocationCallbacks* _allocator = nullptr;
+    const vk::AllocationCallbacks* const _allocator = nullptr;
 
     vk::PhysicalDevice pick_physical_device(
         const vk::Instance& vulkan_instance,
         const vk::SurfaceKHR& vulkan_surface
-    );
-    vk::Device create_logical_device(vk::PhysicalDevice physical_device);
+    ) const;
+    vk::Device create_logical_device(
+        const vk::PhysicalDevice physical_device
+    ) const;
 
-    PhysicalDeviceInfo get_physical_device_info(vk::PhysicalDevice physical_device);
+    PhysicalDeviceInfo get_physical_device_info(
+        const vk::PhysicalDevice physical_device
+    ) const;
     int32 rate_device_suitability(
         const vk::PhysicalDevice& device,
         const vk::SurfaceKHR& vulkan_surface
-    );
+    ) const;
     QueueFamilyIndices find_queue_families(
         const vk::PhysicalDevice& device,
         const vk::SurfaceKHR& vulkan_surface
-    );
+    ) const;
     SwapchainSupportDetails query_swapchain_support_details(
         const vk::PhysicalDevice& device,
         const vk::SurfaceKHR& surface
-    );
+    ) const;
 
 public:
     /// @brief Vulkan handle to a logical device.
@@ -37,7 +41,7 @@ public:
     VulkanDevice(
         const vk::Instance& vulkan_instance,
         const vk::SurfaceKHR& vulkan_surface,
-        vk::AllocationCallbacks* allocator
+        const vk::AllocationCallbacks* const allocator
     );
     ~VulkanDevice();
 
@@ -46,7 +50,10 @@ public:
     /// @param properties Memory properties that need to be satisfied.
     /// @return Index of a memory type satisfying above specified conditions.
     /// @throws runtime_error If no suitable memory type is found.
-    uint32 find_memory_type(uint32 type_filter, vk::MemoryPropertyFlags properties);
+    uint32 find_memory_type(
+        const uint32 type_filter,
+        const vk::MemoryPropertyFlags properties
+    ) const;
 
     // Queue families
     QueueFamilyIndices queue_family_indices;

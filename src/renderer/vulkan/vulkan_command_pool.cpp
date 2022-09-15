@@ -2,9 +2,9 @@
 #include "renderer/vulkan/vulkan_settings.hpp"
 
 VulkanCommandPool::VulkanCommandPool(
-    const vk::Device* device,
-    const vk::AllocationCallbacks* allocator,
-    const vk::Queue* queue,
+    const vk::Device* const device,
+    const vk::AllocationCallbacks* const allocator,
+    const vk::Queue* const queue,
     const uint32 queue_index
 ) : _device(device), _allocator(allocator), _queue(queue) {
     // Create vulkan command pool
@@ -27,16 +27,19 @@ VulkanCommandPool::~VulkanCommandPool() {
 // Private methods //
 // /////////////// //
 
-
-
 // ////////////// //
 // Public methods //
 // ////////////// //
-vk::CommandBuffer VulkanCommandPool::allocate_command_buffer(bool primary) {
+vk::CommandBuffer VulkanCommandPool::allocate_command_buffer(
+    const bool primary
+) const {
     return allocate_command_buffers(1, primary)[0];
 }
 
-std::vector<vk::CommandBuffer> VulkanCommandPool::allocate_command_buffers(uint32 size, bool primary) {
+std::vector<vk::CommandBuffer> VulkanCommandPool::allocate_command_buffers(
+    const uint32 size,
+    const bool primary
+) const {
     // Allocate command buffers from the pool
     vk::CommandBufferAllocateInfo alloc_info{};
     alloc_info.setCommandPool(_command_pool);   // Pool reference
@@ -53,15 +56,16 @@ std::vector<vk::CommandBuffer> VulkanCommandPool::allocate_command_buffers(uint3
     return command_buffers;
 }
 
-void VulkanCommandPool::free_command_buffer(vk::CommandBuffer command_buffer) {
+void VulkanCommandPool::free_command_buffer(vk::CommandBuffer& command_buffer) const {
     _device->freeCommandBuffers(_command_pool, 1, &command_buffer);
 }
 
-void VulkanCommandPool::free_command_buffers(std::vector<vk::CommandBuffer> command_buffers) {
+void VulkanCommandPool::free_command_buffers(std::vector<vk::CommandBuffer>& command_buffers) const {
     _device->freeCommandBuffers(_command_pool, command_buffers);
+    command_buffers.clear();
 }
 
-vk::CommandBuffer VulkanCommandPool::begin_single_time_commands() {
+vk::CommandBuffer VulkanCommandPool::begin_single_time_commands() const {
     vk::CommandBuffer command_buffer = allocate_command_buffer();
 
     // Begin recording commands (indicating the single use property)
@@ -73,7 +77,7 @@ vk::CommandBuffer VulkanCommandPool::begin_single_time_commands() {
     return command_buffer;
 }
 
-void VulkanCommandPool::end_single_time_commands(vk::CommandBuffer command_buffer) {
+void VulkanCommandPool::end_single_time_commands(vk::CommandBuffer& command_buffer) const {
     // Finish recording
     command_buffer.end();
 
