@@ -4,33 +4,6 @@
 #include "logger.hpp"
 
 class VulkanDevice {
-private:
-    const vk::AllocationCallbacks* const _allocator = nullptr;
-
-    vk::PhysicalDevice pick_physical_device(
-        const vk::Instance& vulkan_instance,
-        const vk::SurfaceKHR& vulkan_surface
-    ) const;
-    vk::Device create_logical_device(
-        const vk::PhysicalDevice physical_device
-    ) const;
-
-    PhysicalDeviceInfo get_physical_device_info(
-        const vk::PhysicalDevice physical_device
-    ) const;
-    int32 rate_device_suitability(
-        const vk::PhysicalDevice& device,
-        const vk::SurfaceKHR& vulkan_surface
-    ) const;
-    QueueFamilyIndices find_queue_families(
-        const vk::PhysicalDevice& device,
-        const vk::SurfaceKHR& vulkan_surface
-    ) const;
-    SwapchainSupportDetails query_swapchain_support_details(
-        const vk::PhysicalDevice& device,
-        const vk::SurfaceKHR& surface
-    ) const;
-
 public:
     /// @brief Vulkan handle to a logical device.
     vk::Device handle;
@@ -61,4 +34,31 @@ public:
     vk::Queue presentation_queue;
     vk::Queue transfer_queue;
     vk::Queue compute_queue;
+
+private:
+    const vk::AllocationCallbacks* const _allocator = nullptr;
+
+    vk::PhysicalDevice pick_physical_device(
+        const vk::Instance& vulkan_instance,
+        const vk::SurfaceKHR& vulkan_surface
+    ) const;
+    vk::Device create_logical_device(
+        const vk::PhysicalDevice physical_device
+    ) const;
+
+    PhysicalDeviceInfo get_physical_device_info(
+        const vk::PhysicalDevice physical_device
+    ) const;
+    int32 rate_device_suitability(
+        const vk::PhysicalDevice& device,
+        const vk::SurfaceKHR& vulkan_surface
+    ) const;
+    QueueFamilyIndices find_queue_families(
+        const vk::PhysicalDevice& device,
+        const vk::SurfaceKHR& vulkan_surface
+    ) const;
+    SwapchainSupportDetails query_swapchain_support_details(
+        const vk::PhysicalDevice& device,
+        const vk::SurfaceKHR& surface
+    ) const;
 };

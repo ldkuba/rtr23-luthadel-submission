@@ -23,13 +23,10 @@ VulkanCommandPool::~VulkanCommandPool() {
     _device->destroyCommandPool(_command_pool, _allocator);
 }
 
-// /////////////// //
-// Private methods //
-// /////////////// //
+// ////////////////////////////////// //
+// VULKAN COMMAND POOL PUBLIC METHODS //
+// ////////////////////////////////// //
 
-// ////////////// //
-// Public methods //
-// ////////////// //
 vk::CommandBuffer VulkanCommandPool::allocate_command_buffer(
     const bool primary
 ) const {

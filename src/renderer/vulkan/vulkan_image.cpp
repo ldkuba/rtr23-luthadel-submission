@@ -6,7 +6,10 @@ VulkanImage::~VulkanImage() {
     if (_has_view) _device->handle.destroyImageView(view, _allocator);
 }
 
-// Image functions
+// /////////////////////////// //
+// VULKAN IMAGE PUBLIC METHODS //
+// /////////////////////////// //
+
 void VulkanImage::create(
     const uint32 width,
     const uint32 height,
@@ -102,31 +105,6 @@ void VulkanImage::create(
     create_view(mip_levels, format, aspect_flags);
 }
 
-void VulkanImage::create_view(
-    const uint32 mip_levels,
-    const vk::Format format,
-    const vk::ImageAspectFlags aspect_flags
-) {
-    // Construct image view
-    _has_view = true;
-    _aspect_flags = aspect_flags;
-    vk::ImageViewCreateInfo create_info{};
-    create_info.setImage(handle);                             // Image for which we are creating a view
-    create_info.setViewType(vk::ImageViewType::e2D);          // 2D image
-    create_info.setFormat(format);                            // Image format
-    create_info.subresourceRange.setAspectMask(aspect_flags); // Image aspect (eg. color, depth...)
-    // Mipmaping
-    create_info.subresourceRange.setBaseMipLevel(0);          // Level to start mipmaping from
-    create_info.subresourceRange.setLevelCount(mip_levels);   // Maximum number of mipmaping levels
-    // Image array
-    create_info.subresourceRange.setBaseArrayLayer(0);
-    create_info.subresourceRange.setLayerCount(1);
-
-    try {
-        view = _device->handle.createImageView(create_info, _allocator);
-    } catch (const vk::SystemError& e) { Logger::fatal(e.what()); }
-}
-
 void VulkanImage::transition_image_layout(
     VulkanCommandPool* const command_pool,
     const vk::Format format,
@@ -212,4 +190,33 @@ vk::ImageView VulkanImage::get_view_from_image(
         return device.createImageView(create_info, allocator);
     } catch (const vk::SystemError& e) { Logger::fatal(e.what()); }
     return vk::ImageView();
+}
+
+// //////////////////////////// //
+// VULKAN IMAGE PRIVATE METHODS //
+// //////////////////////////// //
+
+void VulkanImage::create_view(
+    const uint32 mip_levels,
+    const vk::Format format,
+    const vk::ImageAspectFlags aspect_flags
+) {
+    // Construct image view
+    _has_view = true;
+    _aspect_flags = aspect_flags;
+    vk::ImageViewCreateInfo create_info{};
+    create_info.setImage(handle);                             // Image for which we are creating a view
+    create_info.setViewType(vk::ImageViewType::e2D);          // 2D image
+    create_info.setFormat(format);                            // Image format
+    create_info.subresourceRange.setAspectMask(aspect_flags); // Image aspect (eg. color, depth...)
+    // Mipmaping
+    create_info.subresourceRange.setBaseMipLevel(0);          // Level to start mipmaping from
+    create_info.subresourceRange.setLevelCount(mip_levels);   // Maximum number of mipmaping levels
+    // Image array
+    create_info.subresourceRange.setBaseArrayLayer(0);
+    create_info.subresourceRange.setLayerCount(1);
+
+    try {
+        view = _device->handle.createImageView(create_info, _allocator);
+    } catch (const vk::SystemError& e) { Logger::fatal(e.what()); }
 }

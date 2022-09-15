@@ -23,21 +23,33 @@ VulkanBackend::VulkanBackend(Platform::Surface* surface) : RendererBackend(surfa
     create_vulkan_instance();
     setup_debug_messenger();
 
-    // SURFACE
+    // Get vulkan surface
     _vulkan_surface = surface->get_vulkan_surface(_vulkan_instance, _allocator);
-    uint32 width = surface->get_width_in_pixels();
-    uint32 height = surface->get_height_in_pixels();
 
-    // DEVICE CODE
-    create_device();
+    // Create device
+    _device = new VulkanDevice(
+        _vulkan_instance,
+        _vulkan_surface,
+        _allocator
+    );
 
-    // SWAPCHAIN
-    _swapchain = new VulkanSwapchain(width, height, _vulkan_surface, _device, _allocator);
+    // Create swapchain
+    _swapchain = new VulkanSwapchain(
+        surface->get_width_in_pixels(),
+        surface->get_height_in_pixels(),
+        _vulkan_surface,
+        _device,
+        _allocator
+    );
 
-    // Render pass
-    _render_pass = new VulkanRenderPass(&_device->handle, _allocator, _swapchain);
+    // Create render pass
+    _render_pass = new VulkanRenderPass(
+        &_device->handle,
+        _allocator,
+        _swapchain
+    );
 
-    // Object shader
+    // Create object shader
     _object_shader = new VulkanObjectShader(
         _device,
         _allocator,
@@ -45,7 +57,7 @@ VulkanBackend::VulkanBackend(Platform::Surface* surface) : RendererBackend(surfa
         _swapchain->msaa_samples
     );
 
-    // TODO: TEMP COMMAND CODE
+    // Create command pool
     _command_pool = new VulkanCommandPool(
         &_device->handle,
         _allocator,
@@ -53,7 +65,7 @@ VulkanBackend::VulkanBackend(Platform::Surface* surface) : RendererBackend(surfa
         _device->queue_family_indices.graphics_family.value()
     );
 
-    // TODO: TEMP FRAMEBUFFER CODE
+    // Initialize framebuffers
     _swapchain->initialize_framebuffers(&_render_pass->handle);
 
     // TODO: TEMP IMAGE TEXTURE CODE
@@ -90,9 +102,8 @@ VulkanBackend::~VulkanBackend() {
 
 
     // TODO: TEMP UNIFORM CODE
-    for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++) {
+    for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++)
         delete _uniform_buffers[i];
-    }
 
 
     // TODO: TEMP INDEX BUFFER CODE
@@ -103,17 +114,9 @@ VulkanBackend::~VulkanBackend() {
     delete _vertex_buffer;
 
 
-    // TODO: TEMP PIPELINE CODE
     delete _object_shader;
-
-
-    // RENDER PASS
     delete _render_pass;
-
-
-    // TODO: TEMP COMMAND CODE
     delete _command_pool;
-
 
     // Synchronization code
     for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++) {
@@ -122,10 +125,7 @@ VulkanBackend::~VulkanBackend() {
         _device->handle.destroyFence(_fences_in_flight[i], _allocator);
     }
 
-
     delete _device;
-    _vulkan_instance.destroySurfaceKHR(_vulkan_surface, _allocator);
-
 
     if (VulkanSettings::enable_validation_layers)
         _vulkan_instance.destroyDebugUtilsMessengerEXT(_debug_messenger, _allocator,
@@ -133,9 +133,70 @@ VulkanBackend::~VulkanBackend() {
     _vulkan_instance.destroy(_allocator);
 }
 
-// ///////////////////////////////// //
-// VULKAN RENDERER PRIVATE FUNCTIONS //
-// ///////////////////////////////// //
+// ////////////////////////////// //
+// VULKAN RENDERER PUBLIC METHODS //
+// ////////////////////////////// //
+
+void VulkanBackend::resized(uint32 width, uint32 height) {
+    if (_swapchain != nullptr) {
+        _swapchain->change_extent(width, height);
+    }
+}
+
+bool VulkanBackend::begin_frame(float32 delta_time) {
+    return true;
+}
+
+bool VulkanBackend::end_frame(float32 delta_time) {
+    // Wait for previous frame to finish drawing
+    std::vector<vk::Fence> fences = { _fences_in_flight[current_frame] };
+    auto result = _device->handle.waitForFences(fences, true, UINT64_MAX);
+    if (result != vk::Result::eSuccess) throw std::runtime_error("Failed to draw frame.");
+
+    // Acquire next swapchain image index
+    auto image_index = _swapchain->acquire_next_image_index(_semaphores_image_available[current_frame]);
+    if (image_index == -1) return false;
+
+    // Reset fence
+    try {
+        _device->handle.resetFences(fences);
+    } catch (const vk::SystemError& e) { Logger::fatal(e.what()); }
+
+    // Record commands
+    _command_buffers[current_frame].reset();
+    record_command_buffer(_command_buffers[current_frame], image_index);
+
+    // Update uniform buffer data
+    update_uniform_buffer(current_frame);
+
+    // Submit command buffer
+    vk::PipelineStageFlags wait_stages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
+    std::vector<vk::Semaphore> wait_semaphores = { _semaphores_image_available[current_frame] };
+    std::vector<vk::Semaphore> signal_semaphores = { _semaphores_render_finished[current_frame] };
+
+    vk::SubmitInfo submit_info{};
+    submit_info.setPWaitDstStageMask(wait_stages);
+    submit_info.setWaitSemaphores(wait_semaphores);
+    submit_info.setSignalSemaphores(signal_semaphores);
+    submit_info.setCommandBufferCount(1);
+    submit_info.setPCommandBuffers(&_command_buffers[current_frame]);
+    std::array<vk::SubmitInfo, 1> submits = { submit_info };
+
+    try {
+        _device->graphics_queue.submit(submits, fences[0]);
+    } catch (const vk::SystemError& e) { Logger::fatal(e.what()); }
+
+    // Present swapchain
+    _swapchain->present(image_index, signal_semaphores);
+
+    // Advance current frame
+    current_frame = (current_frame + 1) % VulkanSettings::max_frames_in_flight;
+    return true;
+}
+
+// /////////////////////////////// //
+// VULKAN RENDERER PRIVATE METHODS //
+// /////////////////////////////// //
 
 void VulkanBackend::create_vulkan_instance() {
     if (VulkanSettings::enable_validation_layers && !all_validation_layers_are_available())
@@ -228,70 +289,9 @@ vk::DebugUtilsMessengerCreateInfoEXT VulkanBackend::debug_messenger_create_info(
     return create_info;
 }
 
-// //////////////////////////////// //
-// VULKAN RENDERER PUBLIC FUNCTIONS //
-// //////////////////////////////// //
-
-void VulkanBackend::resized(uint32 width, uint32 height) {
-    if (_swapchain != nullptr) {
-        _swapchain->change_extent(width, height);
-    }
-}
-
-bool VulkanBackend::begin_frame(float32 delta_time) {
-    return true;
-}
-
-bool VulkanBackend::end_frame(float32 delta_time) {
-    // Wait for previous frame to finish drawing
-    std::vector<vk::Fence> fences = { _fences_in_flight[current_frame] };
-    auto result = _device->handle.waitForFences(fences, true, UINT64_MAX);
-    if (result != vk::Result::eSuccess) throw std::runtime_error("Failed to draw frame.");
-
-    // Acquire next swapchain image index
-    auto image_index = _swapchain->acquire_next_image_index(_semaphores_image_available[current_frame]);
-    if (image_index == -1) return false;
-
-    // Reset fence
-    try {
-        _device->handle.resetFences(fences);
-    } catch (const vk::SystemError& e) { Logger::fatal(e.what()); }
-
-    // Record commands
-    _command_buffers[current_frame].reset();
-    record_command_buffer(_command_buffers[current_frame], image_index);
-
-    // Update uniform buffer data
-    update_uniform_buffer(current_frame);
-
-    // Submit command buffer
-    vk::PipelineStageFlags wait_stages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
-    std::vector<vk::Semaphore> wait_semaphores = { _semaphores_image_available[current_frame] };
-    std::vector<vk::Semaphore> signal_semaphores = { _semaphores_render_finished[current_frame] };
-
-    vk::SubmitInfo submit_info{};
-    submit_info.setPWaitDstStageMask(wait_stages);
-    submit_info.setWaitSemaphores(wait_semaphores);
-    submit_info.setSignalSemaphores(signal_semaphores);
-    submit_info.setCommandBufferCount(1);
-    submit_info.setPCommandBuffers(&_command_buffers[current_frame]);
-    std::array<vk::SubmitInfo, 1> submits = { submit_info };
-
-    try {
-        _device->graphics_queue.submit(submits, fences[0]);
-    } catch (const vk::SystemError& e) { Logger::fatal(e.what()); }
-
-    // Present swapchain
-    _swapchain->present(image_index, signal_semaphores);
-
-    // Advance current frame
-    current_frame = (current_frame + 1) % VulkanSettings::max_frames_in_flight;
-    return true;
-}
-
-// //////////////// //
-// Helper functions //
-// //////////////// //
+// /////////////////////////////// //
+// VULKAN BACKEND HELPER FUNCTIONS //
+// /////////////////////////////// //
 
 VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback_function(
     VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
@@ -322,15 +322,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback_function(
     return VK_FALSE;
 }
 
-/// TODO: TEMP
-// DEVICE
-void VulkanBackend::create_device() {
-    // Create device
-    _device = new VulkanDevice(_vulkan_instance, _vulkan_surface, _allocator);
-
-    // Create vulkan images
-    _texture_image = new VulkanImage(_device, _allocator);
-}
+/// TODO: TEMP CODE BELOW
 
 // COMMAND BUFFER CODE
 void VulkanBackend::record_command_buffer(vk::CommandBuffer command_buffer, uint32 image_index) {
@@ -554,6 +546,7 @@ void VulkanBackend::create_texture_image() {
     stbi_image_free(pixels);
 
     // Create device side image
+    _texture_image = new VulkanImage(_device, _allocator);
     _texture_image->create(
         width, height, _mip_levels,
         vk::SampleCountFlagBits::e1,
@@ -751,3 +744,4 @@ void VulkanBackend::generate_mipmaps(vk::Image image, vk::Format format, uint32 
 
     _command_pool->end_single_time_commands(command_buffer);
 }
+// TODO: TEMP CODE END

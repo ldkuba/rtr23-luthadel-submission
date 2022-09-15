@@ -5,6 +5,10 @@ VulkanBuffer::~VulkanBuffer() {
     if (memory) _device->handle.freeMemory(memory, _allocator);
 }
 
+// //////////////////////////// //
+// VULKAN BUFFER PUBLIC METHODS //
+// //////////////////////////// //
+
 void VulkanBuffer::create(
     const vk::DeviceSize size,
     const vk::BufferUsageFlags usage,

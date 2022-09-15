@@ -3,33 +3,6 @@
 #include "vulkan_image.hpp"
 
 class VulkanSwapchain {
-private:
-    const VulkanDevice* _device;
-    const vk::AllocationCallbacks* const _allocator;
-    const vk::SurfaceKHR _vulkan_surface;
-    vk::RenderPass* _render_pass;
-
-    vk::SwapchainKHR _handle;
-    std::vector<vk::ImageView> _image_views;
-    vk::Format _format;
-
-    uint32 _width;
-    uint32 _height;
-    bool _should_resize = false;
-
-    void create();
-    void destroy();
-    void recreate();
-    void create_framebuffers();
-
-    // Image resources
-    VulkanImage* _depth_image;
-    VulkanImage* _color_image;
-
-    void create_color_resource();
-    void create_depth_resources();
-    vk::Format find_depth_format() const;
-
 public:
     /// @brief Swapchain image extent
     vk::Extent2D extent;
@@ -73,4 +46,31 @@ public:
         const uint32 image_index,
         const std::vector<vk::Semaphore>& wait_for_semaphores
     );
+
+private:
+    const VulkanDevice* _device;
+    const vk::AllocationCallbacks* const _allocator;
+    const vk::SurfaceKHR _vulkan_surface;
+    vk::RenderPass* _render_pass;
+
+    vk::SwapchainKHR _handle;
+    std::vector<vk::ImageView> _image_views;
+    vk::Format _format;
+
+    uint32 _width;
+    uint32 _height;
+    bool _should_resize = false;
+
+    void create();
+    void destroy();
+    void recreate();
+    void create_framebuffers();
+
+    // Image resources
+    VulkanImage* _depth_image;
+    VulkanImage* _color_image;
+
+    void create_color_resource();
+    void create_depth_resources();
+    vk::Format find_depth_format() const;
 };

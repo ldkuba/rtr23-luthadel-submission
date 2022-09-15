@@ -6,13 +6,6 @@
 #include "logger.hpp"
 
 class VulkanCommandPool {
-private:
-    const vk::Device* _device;
-    const vk::AllocationCallbacks* const _allocator;
-    const vk::Queue* const _queue;
-
-    vk::CommandPool _command_pool;
-
 public:
     VulkanCommandPool(
         const vk::Device* const device,
@@ -46,4 +39,11 @@ public:
     /// @brief End and free a single use buffer
     /// @param command_buffer Buffer to free
     void end_single_time_commands(vk::CommandBuffer& command_buffer) const;
+
+private:
+    const vk::Device* _device;
+    const vk::AllocationCallbacks* const _allocator;
+    const vk::Queue* const _queue;
+
+    vk::CommandPool _command_pool;
 };

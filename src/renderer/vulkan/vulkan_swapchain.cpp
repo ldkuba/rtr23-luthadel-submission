@@ -38,9 +38,103 @@ VulkanSwapchain::~VulkanSwapchain() {
     destroy();
 }
 
-// /////////////// //
-// Private methods //
-// /////////////// //
+// /////////////////////////////// //
+// VULKAN SWAPCHAIN PUBLIC METHODS //
+// /////////////////////////////// //
+
+void VulkanSwapchain::change_extent(const uint32 width, const uint32 height) {
+    _width = width;
+    _height = height;
+    _should_resize = true;
+}
+
+void VulkanSwapchain::initialize_framebuffers(vk::RenderPass* const render_pass) {
+    _render_pass = render_pass; // Set render pass requirement
+    create_framebuffers();      // Create framebuffer
+}
+
+vk::AttachmentDescription VulkanSwapchain::get_depth_attachment() const {
+    vk::AttachmentDescription depth_attachment{};
+    depth_attachment.setFormat(find_depth_format());
+    depth_attachment.setSamples(msaa_samples);
+    depth_attachment.setLoadOp(vk::AttachmentLoadOp::eClear);
+    depth_attachment.setStoreOp(vk::AttachmentStoreOp::eDontCare);
+    depth_attachment.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+    depth_attachment.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
+    depth_attachment.setInitialLayout(vk::ImageLayout::eUndefined);
+    depth_attachment.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+
+    return depth_attachment;
+}
+
+vk::AttachmentDescription VulkanSwapchain::get_color_attachment() const {
+    vk::AttachmentDescription color_attachment{};
+    color_attachment.setFormat(_format);
+    color_attachment.setSamples(msaa_samples);
+    color_attachment.setLoadOp(vk::AttachmentLoadOp::eClear);
+    color_attachment.setStoreOp(vk::AttachmentStoreOp::eStore);
+    color_attachment.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+    color_attachment.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
+    color_attachment.setInitialLayout(vk::ImageLayout::eUndefined);
+    color_attachment.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
+
+    return color_attachment;
+}
+
+vk::AttachmentDescription VulkanSwapchain::get_color_attachment_resolve() const {
+    vk::AttachmentDescription color_attachment_resolve{};
+    color_attachment_resolve.setFormat(_format);
+    color_attachment_resolve.setSamples(vk::SampleCountFlagBits::e1);
+    color_attachment_resolve.setLoadOp(vk::AttachmentLoadOp::eDontCare);
+    color_attachment_resolve.setStoreOp(vk::AttachmentStoreOp::eStore);
+    color_attachment_resolve.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+    color_attachment_resolve.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
+    color_attachment_resolve.setInitialLayout(vk::ImageLayout::eUndefined);
+    color_attachment_resolve.setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
+
+    return color_attachment_resolve;
+}
+
+uint32 VulkanSwapchain::acquire_next_image_index(const vk::Semaphore& signal_semaphore) {
+    // Obtain a swapchain image (next in queue for drawing)
+    auto obtained = _device->handle.acquireNextImageKHR(_handle, UINT64_MAX, signal_semaphore);
+    if (obtained.result == vk::Result::eErrorOutOfDateKHR) {
+        // Surface changed, and so swapchain needs to be recreated
+        recreate();
+        return -1;
+    } else if (obtained.result != vk::Result::eSuccess && obtained.result != vk::Result::eSuboptimalKHR) {
+        Logger::fatal("Failed to obtain a swapchain image.");
+    }
+    return obtained.value;
+}
+
+void VulkanSwapchain::present(
+    const uint32 image_index, const
+    std::vector<vk::Semaphore>& wait_for_semaphores
+) {
+    std::vector<vk::SwapchainKHR> swapchains = { _handle };
+
+    // Present results
+    vk::PresentInfoKHR present_info{};
+    present_info.setWaitSemaphores(wait_for_semaphores); // Semaphores to wait on before presenting
+    present_info.setSwapchains(swapchains);              // List of presenting swapchains
+    present_info.setPImageIndices(&image_index);         // Index of presenting image for each swapchain
+    // Check if presentation is successful for each swapchain (not needed, as there is only 1)
+    present_info.setPResults(nullptr);
+
+    auto result = _device->presentation_queue.presentKHR(present_info);
+    if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR || _should_resize) {
+        // Surface changed, and so swapchain needs to be recreated
+        recreate();
+        _should_resize = false;
+    } else if (result != vk::Result::eSuccess) {
+        Logger::fatal("Failed to present rendered image.");
+    }
+}
+
+// //////////////////////////////// //
+// VULKAN SWAPCHAIN PRIVATE METHODS //
+// //////////////////////////////// //
 
 void VulkanSwapchain::create() {
     // Get swapchain details
@@ -219,99 +313,5 @@ void VulkanSwapchain::create_framebuffers() {
         try {
             framebuffers[i] = _device->handle.createFramebuffer(framebuffer_info, _allocator);
         } catch (vk::SystemError e) { Logger::fatal(e.what()); }
-    }
-}
-
-// ////////////// //
-// Public methods //
-// ////////////// //
-
-void VulkanSwapchain::change_extent(const uint32 width, const uint32 height) {
-    _width = width;
-    _height = height;
-    _should_resize = true;
-}
-
-void VulkanSwapchain::initialize_framebuffers(vk::RenderPass* const render_pass) {
-    _render_pass = render_pass; // Set render pass requirement
-    create_framebuffers();      // Create framebuffer
-}
-
-vk::AttachmentDescription VulkanSwapchain::get_depth_attachment() const {
-    vk::AttachmentDescription depth_attachment{};
-    depth_attachment.setFormat(find_depth_format());
-    depth_attachment.setSamples(msaa_samples);
-    depth_attachment.setLoadOp(vk::AttachmentLoadOp::eClear);
-    depth_attachment.setStoreOp(vk::AttachmentStoreOp::eDontCare);
-    depth_attachment.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
-    depth_attachment.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
-    depth_attachment.setInitialLayout(vk::ImageLayout::eUndefined);
-    depth_attachment.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
-
-    return depth_attachment;
-}
-
-vk::AttachmentDescription VulkanSwapchain::get_color_attachment() const {
-    vk::AttachmentDescription color_attachment{};
-    color_attachment.setFormat(_format);
-    color_attachment.setSamples(msaa_samples);
-    color_attachment.setLoadOp(vk::AttachmentLoadOp::eClear);
-    color_attachment.setStoreOp(vk::AttachmentStoreOp::eStore);
-    color_attachment.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
-    color_attachment.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
-    color_attachment.setInitialLayout(vk::ImageLayout::eUndefined);
-    color_attachment.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
-
-    return color_attachment;
-}
-
-vk::AttachmentDescription VulkanSwapchain::get_color_attachment_resolve() const {
-    vk::AttachmentDescription color_attachment_resolve{};
-    color_attachment_resolve.setFormat(_format);
-    color_attachment_resolve.setSamples(vk::SampleCountFlagBits::e1);
-    color_attachment_resolve.setLoadOp(vk::AttachmentLoadOp::eDontCare);
-    color_attachment_resolve.setStoreOp(vk::AttachmentStoreOp::eStore);
-    color_attachment_resolve.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
-    color_attachment_resolve.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
-    color_attachment_resolve.setInitialLayout(vk::ImageLayout::eUndefined);
-    color_attachment_resolve.setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
-
-    return color_attachment_resolve;
-}
-
-uint32 VulkanSwapchain::acquire_next_image_index(const vk::Semaphore& signal_semaphore) {
-    // Obtain a swapchain image (next in queue for drawing)
-    auto obtained = _device->handle.acquireNextImageKHR(_handle, UINT64_MAX, signal_semaphore);
-    if (obtained.result == vk::Result::eErrorOutOfDateKHR) {
-        // Surface changed, and so swapchain needs to be recreated
-        recreate();
-        return -1;
-    } else if (obtained.result != vk::Result::eSuccess && obtained.result != vk::Result::eSuboptimalKHR) {
-        Logger::fatal("Failed to obtain a swapchain image.");
-    }
-    return obtained.value;
-}
-
-void VulkanSwapchain::present(
-    const uint32 image_index, const
-    std::vector<vk::Semaphore>& wait_for_semaphores
-) {
-    std::vector<vk::SwapchainKHR> swapchains = { _handle };
-
-    // Present results
-    vk::PresentInfoKHR present_info{};
-    present_info.setWaitSemaphores(wait_for_semaphores); // Semaphores to wait on before presenting
-    present_info.setSwapchains(swapchains);              // List of presenting swapchains
-    present_info.setPImageIndices(&image_index);         // Index of presenting image for each swapchain
-    // Check if presentation is successful for each swapchain (not needed, as there is only 1)
-    present_info.setPResults(nullptr);
-
-    auto result = _device->presentation_queue.presentKHR(present_info);
-    if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR || _should_resize) {
-        // Surface changed, and so swapchain needs to be recreated
-        recreate();
-        _should_resize = false;
-    } else if (result != vk::Result::eSuccess) {
-        Logger::fatal("Failed to present rendered image.");
     }
 }

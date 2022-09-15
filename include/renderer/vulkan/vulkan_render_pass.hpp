@@ -3,11 +3,6 @@
 #include "vulkan_swapchain.hpp"
 
 class VulkanRenderPass {
-private:
-    const vk::Device* _device;
-    const vk::AllocationCallbacks* const _allocator;
-    VulkanSwapchain* const _swapchain;
-
 public:
     vk::RenderPass handle;
 
@@ -28,4 +23,9 @@ public:
     /// @brief End render pass
     /// @param command_buffer  Buffer to store end command
     void end(const vk::CommandBuffer& command_buffer);
+
+private:
+    const vk::Device* _device;
+    const vk::AllocationCallbacks* const _allocator;
+    VulkanSwapchain* const _swapchain;
 };

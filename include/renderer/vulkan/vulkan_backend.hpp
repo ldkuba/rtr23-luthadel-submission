@@ -7,6 +7,18 @@
 #include "../renderer_types.hpp"
 
 class VulkanBackend : public RendererBackend {
+public:
+    VulkanBackend(Platform::Surface* surface);
+    ~VulkanBackend();
+
+    void resized(uint32 width, uint32 height);
+    bool begin_frame(float32 delta_time);
+    bool end_frame(float32 delta_time);
+
+    void wait_for_shutdown() {
+        _device->handle.waitIdle();
+    }
+
 private:
     // TODO: Custom allocator
     vk::AllocationCallbacks* _allocator = nullptr;
@@ -36,8 +48,6 @@ private:
 
     // DEVICE CODE
     VulkanDevice* _device;
-
-    void create_device();
 
     // SWAPCHAIN CODE
     VulkanSwapchain* _swapchain;
@@ -89,18 +99,4 @@ private:
     uint32 _mip_levels;
 
     void generate_mipmaps(vk::Image image, vk::Format format, uint32 width, uint32 height, uint32 mip_levels);
-
-    // TODO: TEMP MSAA CODE
-
-public:
-    VulkanBackend(Platform::Surface* surface);
-    ~VulkanBackend();
-
-    void resized(uint32 width, uint32 height);
-    bool begin_frame(float32 delta_time);
-    bool end_frame(float32 delta_time);
-
-    void wait_for_shutdown() {
-        _device->handle.waitIdle();
-    }
 };

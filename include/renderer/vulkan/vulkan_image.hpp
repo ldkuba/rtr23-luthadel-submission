@@ -4,19 +4,6 @@
 #include "vulkan_device.hpp"
 
 class VulkanImage {
-private:
-    const VulkanDevice* _device;
-    const vk::AllocationCallbacks* const _allocator;
-
-    bool _has_view = false;
-    vk::ImageAspectFlags _aspect_flags;
-
-    void create_view(
-        const uint32 mip_levels,
-        const vk::Format format,
-        const vk::ImageAspectFlags aspect_flags
-    );
-
 public:
     /// @brief Handle to the vk::Image
     vk::Image handle;
@@ -117,5 +104,18 @@ public:
         const vk::Image& image,
         const vk::Device& device,
         const vk::AllocationCallbacks* const allocator
+    );
+
+private:
+    const VulkanDevice* _device;
+    const vk::AllocationCallbacks* const _allocator;
+
+    bool _has_view = false;
+    vk::ImageAspectFlags _aspect_flags;
+
+    void create_view(
+        const uint32 mip_levels,
+        const vk::Format format,
+        const vk::ImageAspectFlags aspect_flags
     );
 };

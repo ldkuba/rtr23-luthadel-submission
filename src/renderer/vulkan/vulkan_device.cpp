@@ -51,9 +51,26 @@ VulkanDevice::~VulkanDevice() {
     handle.destroy(_allocator);
 }
 
-// /////////////////////////////// //
-// Vulkan device private functions //
-// /////////////////////////////// //
+// //////////////////////////// //
+// VULKAN DEVICE PUBLIC METHODS //
+// //////////////////////////// //
+
+uint32 VulkanDevice::find_memory_type(
+    const uint32 type_filter,
+    const vk::MemoryPropertyFlags properties
+) const {
+    for (uint32 i = 0; i < info.memory_types.size(); i++) {
+        if ((type_filter & (1 << i)) &&
+            (info.memory_types[i].propertyFlags & properties) == properties)
+            return i;
+    }
+
+    throw std::runtime_error("Failed to find suitable memory type.");
+}
+
+// ///////////////////////////// //
+// VULKAN DEVICE PRIVATE METHODS //
+// ///////////////////////////// //
 
 vk::PhysicalDevice VulkanDevice::pick_physical_device(
     const vk::Instance& vulkan_instance,
@@ -250,24 +267,7 @@ SwapchainSupportDetails VulkanDevice::query_swapchain_support_details(
 }
 
 // ////////////////////////////// //
-// Vulkan device public functions //
-// ////////////////////////////// //
-
-uint32 VulkanDevice::find_memory_type(
-    const uint32 type_filter,
-    const vk::MemoryPropertyFlags properties
-) const {
-    for (uint32 i = 0; i < info.memory_types.size(); i++) {
-        if ((type_filter & (1 << i)) &&
-            (info.memory_types[i].propertyFlags & properties) == properties)
-            return i;
-    }
-
-    throw std::runtime_error("Failed to find suitable memory type.");
-}
-
-// ////////////////////////////// //
-// Vulkan device helper functions //
+// VULKAN DEVICE HELPER FUNCTIONS //
 // ////////////////////////////// //
 
 bool check_device_extension_support(const vk::PhysicalDevice& device) {

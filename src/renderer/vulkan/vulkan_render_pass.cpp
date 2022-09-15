@@ -1,6 +1,6 @@
 #include "renderer/vulkan/vulkan_render_pass.hpp"
 
-
+// Constructor & Destructor
 VulkanRenderPass::VulkanRenderPass(
     const vk::Device* const device,
     const vk::AllocationCallbacks* const allocator,
@@ -76,6 +76,10 @@ VulkanRenderPass::VulkanRenderPass(
 VulkanRenderPass::~VulkanRenderPass() {
     _device->destroyRenderPass(handle, _allocator);
 }
+
+// ///////////////////////////////// //
+// VULKAN RENDER PASS PUBLIC METHODS //
+// ///////////////////////////////// //
 
 void VulkanRenderPass::begin(const vk::CommandBuffer& command_buffer, const vk::Framebuffer& framebuffer) {
     // Default background values of color and depth stencil for rendered area of the render pass

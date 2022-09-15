@@ -3,13 +3,6 @@
 #include "vulkan_image.hpp"
 
 class VulkanBuffer {
-private:
-    const VulkanDevice* _device;
-    const vk::AllocationCallbacks* const _allocator;
-
-    vk::BufferUsageFlags _usage;
-    vk::MemoryPropertyFlags _properties;
-
 public:
     /// @brief Handle to the vk:Buffer
     vk::Buffer handle;
@@ -77,4 +70,11 @@ public:
         VulkanCommandPool* const command_pool,
         VulkanImage* const image
     ) const;
+
+private:
+    const VulkanDevice* _device;
+    const vk::AllocationCallbacks* const _allocator;
+
+    vk::BufferUsageFlags _usage;
+    vk::MemoryPropertyFlags _properties;
 };
