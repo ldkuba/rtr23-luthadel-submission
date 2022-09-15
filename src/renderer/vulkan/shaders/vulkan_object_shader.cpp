@@ -4,11 +4,12 @@
 #include "renderer/renderer_types.hpp"
 #include "file_system.hpp"
 
+// Constructor & Destructor
 VulkanObjectShader::VulkanObjectShader(
-    VulkanDevice* device,
-    vk::AllocationCallbacks* allocator,
-    vk::RenderPass render_pass,
-    vk::SampleCountFlagBits number_of_msaa_samples
+    const VulkanDevice* const device,
+    const vk::AllocationCallbacks* const allocator,
+    const vk::RenderPass render_pass,
+    const vk::SampleCountFlagBits number_of_msaa_samples
 ) : VulkanShader(device, allocator) {
     // Create shader modules
     auto vertex_code = FileSystem::read_file_bytes("assets/shaders/builtin.object_shader.vert.spv");
@@ -106,36 +107,12 @@ VulkanObjectShader::~VulkanObjectShader() {
     _device->handle.destroyPipelineLayout(_pipeline_layout, _allocator);
 }
 
+// /////////////////////////////////// //
+// VULKAN OBJECT SHADER PUBLIC METHODS //
+// /////////////////////////////////// //
+
 void VulkanObjectShader::use(const vk::CommandBuffer& command_buffer) {
 
-}
-
-void VulkanObjectShader::create_descriptor_set_layout() {
-    vk::DescriptorSetLayoutBinding ubo_layout_binding{};
-    ubo_layout_binding.setBinding(0);
-    ubo_layout_binding.setDescriptorType(vk::DescriptorType::eUniformBuffer);
-    ubo_layout_binding.setDescriptorCount(1);
-    ubo_layout_binding.setStageFlags(vk::ShaderStageFlagBits::eVertex);
-    ubo_layout_binding.setPImmutableSamplers(nullptr);
-
-    vk::DescriptorSetLayoutBinding sampler_layout_binding{};
-    sampler_layout_binding.setBinding(1);
-    sampler_layout_binding.setDescriptorType(vk::DescriptorType::eCombinedImageSampler);
-    sampler_layout_binding.setDescriptorCount(1);
-    sampler_layout_binding.setStageFlags(vk::ShaderStageFlagBits::eFragment);
-    sampler_layout_binding.setPImmutableSamplers(nullptr);
-
-    std::array<vk::DescriptorSetLayoutBinding, 2> bindings = {
-        ubo_layout_binding,
-        sampler_layout_binding
-    };
-
-    vk::DescriptorSetLayoutCreateInfo layout_info{};
-    layout_info.setBindings(bindings);
-
-    try {
-        _descriptor_set_layout = _device->handle.createDescriptorSetLayout(layout_info, _allocator);
-    } catch (vk::SystemError e) { Logger::fatal(e.what()); }
 }
 
 void VulkanObjectShader::create_descriptor_pool() {
@@ -155,8 +132,8 @@ void VulkanObjectShader::create_descriptor_pool() {
 }
 
 void VulkanObjectShader::create_descriptor_sets(
-    std::vector<vk::DescriptorBufferInfo> buffer_infos,
-    vk::DescriptorImageInfo image_info
+    const std::vector<vk::DescriptorBufferInfo>& buffer_infos,
+    const vk::DescriptorImageInfo& image_info
 ) {
     std::vector<vk::DescriptorSetLayout> layouts(VulkanSettings::max_frames_in_flight, _descriptor_set_layout);
     vk::DescriptorSetAllocateInfo allocation_info{};
@@ -199,4 +176,36 @@ void VulkanObjectShader::bind_descriptor_set(
         1, &_descriptor_sets[current_frame],
         0, nullptr
     );
+}
+
+// //////////////////////////////////// //
+// VULKAN OBJECT SHADER PRIVATE METHODS //
+// //////////////////////////////////// //
+
+void VulkanObjectShader::create_descriptor_set_layout() {
+    vk::DescriptorSetLayoutBinding ubo_layout_binding{};
+    ubo_layout_binding.setBinding(0);
+    ubo_layout_binding.setDescriptorType(vk::DescriptorType::eUniformBuffer);
+    ubo_layout_binding.setDescriptorCount(1);
+    ubo_layout_binding.setStageFlags(vk::ShaderStageFlagBits::eVertex);
+    ubo_layout_binding.setPImmutableSamplers(nullptr);
+
+    vk::DescriptorSetLayoutBinding sampler_layout_binding{};
+    sampler_layout_binding.setBinding(1);
+    sampler_layout_binding.setDescriptorType(vk::DescriptorType::eCombinedImageSampler);
+    sampler_layout_binding.setDescriptorCount(1);
+    sampler_layout_binding.setStageFlags(vk::ShaderStageFlagBits::eFragment);
+    sampler_layout_binding.setPImmutableSamplers(nullptr);
+
+    std::array<vk::DescriptorSetLayoutBinding, 2> bindings = {
+        ubo_layout_binding,
+        sampler_layout_binding
+    };
+
+    vk::DescriptorSetLayoutCreateInfo layout_info{};
+    layout_info.setBindings(bindings);
+
+    try {
+        _descriptor_set_layout = _device->handle.createDescriptorSetLayout(layout_info, _allocator);
+    } catch (vk::SystemError e) { Logger::fatal(e.what()); }
 }

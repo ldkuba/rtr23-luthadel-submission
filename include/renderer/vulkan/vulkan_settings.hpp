@@ -11,6 +11,7 @@ public:
     constexpr static uint32 vulkan_version = VK_API_VERSION_1_2;
 
     // Validation
+    static const std::vector<const char*> validation_layers;
 #ifdef NDEBUG
     constexpr static bool enable_validation_layers = false;
 #else
@@ -110,8 +111,8 @@ public:
     // Anti-aliasing
     constexpr static auto max_msaa_samples = vk::SampleCountFlagBits::e16;
 };
-    
-    // TODO: TEMP CODE
+
+// TODO: TEMP CODE
 
 const std::string model_path = "./assets/models/viking_room.obj";
 const std::string texture_path = "./assets/textures/viking_room.png";

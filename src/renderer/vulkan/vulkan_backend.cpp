@@ -20,8 +20,11 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback_function(
 
 
 VulkanBackend::VulkanBackend(Platform::Surface* surface) : RendererBackend(surface) {
-    create_vulkan_instance();
-    setup_debug_messenger();
+    // Create instance
+    _vulkan_instance = create_vulkan_instance();
+
+    // Create debug messenger
+    _debug_messenger = setup_debug_messenger();
 
     // Get vulkan surface
     _vulkan_surface = surface->get_vulkan_surface(_vulkan_instance, _allocator);
@@ -93,6 +96,9 @@ VulkanBackend::VulkanBackend(Platform::Surface* surface) : RendererBackend(surfa
 }
 
 VulkanBackend::~VulkanBackend() {
+    _device->handle.waitIdle();
+
+    // Swapchain
     delete _swapchain;
 
 
@@ -137,17 +143,17 @@ VulkanBackend::~VulkanBackend() {
 // VULKAN RENDERER PUBLIC METHODS //
 // ////////////////////////////// //
 
-void VulkanBackend::resized(uint32 width, uint32 height) {
+void VulkanBackend::resized(const uint32 width, const uint32 height) {
     if (_swapchain != nullptr) {
         _swapchain->change_extent(width, height);
     }
 }
 
-bool VulkanBackend::begin_frame(float32 delta_time) {
+bool VulkanBackend::begin_frame(const float32 delta_time) {
     return true;
 }
 
-bool VulkanBackend::end_frame(float32 delta_time) {
+bool VulkanBackend::end_frame(const float32 delta_time) {
     // Wait for previous frame to finish drawing
     std::vector<vk::Fence> fences = { _fences_in_flight[current_frame] };
     auto result = _device->handle.waitForFences(fences, true, UINT64_MAX);
@@ -198,21 +204,21 @@ bool VulkanBackend::end_frame(float32 delta_time) {
 // VULKAN RENDERER PRIVATE METHODS //
 // /////////////////////////////// //
 
-void VulkanBackend::create_vulkan_instance() {
+vk::Instance VulkanBackend::create_vulkan_instance() const {
     if (VulkanSettings::enable_validation_layers && !all_validation_layers_are_available())
         throw std::runtime_error("Validation layer was requested, but not available.");
 
     // Optional application info
     vk::ApplicationInfo app_info{};
-    app_info.pApplicationName = APP_NAME;                   // Application name
-    app_info.applicationVersion = 1;                        // Application version
-    app_info.pEngineName = ENGINE_NAME;                     // Engine name
-    app_info.engineVersion = 1;                             // Engine version
-    app_info.apiVersion = VulkanSettings::vulkan_version;   // Set vulkan version
+    app_info.setPApplicationName(APP_NAME);                   // Application name
+    app_info.setApplicationVersion(1);                        // Application version
+    app_info.setPEngineName(ENGINE_NAME);                     // Engine name
+    app_info.setEngineVersion(1);                             // Engine version
+    app_info.setApiVersion(VulkanSettings::vulkan_version);   // Set vulkan version
 
     // Mandatory vulkan info info
     vk::InstanceCreateInfo create_info{};
-    create_info.pApplicationInfo = &app_info;
+    create_info.setPApplicationInfo(&app_info);
 
     // Specifying required extensions:
     // - Platform extensions
@@ -221,21 +227,20 @@ void VulkanBackend::create_vulkan_instance() {
     if (VulkanSettings::enable_validation_layers)
         extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
-    create_info.enabledExtensionCount = static_cast<uint32>(extensions.size());
-    create_info.ppEnabledExtensionNames = extensions.data();
+    create_info.setPEnabledExtensionNames(extensions);
 
     // Validation layers debugging
     vk::DebugUtilsMessengerCreateInfoEXT debug_create_info;
     if (VulkanSettings::enable_validation_layers) {
         debug_create_info = debug_messenger_create_info();
-        create_info.pNext = (vk::DebugUtilsMessengerCreateInfoEXT*) &debug_create_info;
-        create_info.enabledLayerCount = static_cast<uint32>(_validation_layers.size());
-        create_info.ppEnabledLayerNames = _validation_layers.data();
-    } else create_info.enabledLayerCount = 0;
+        create_info.setPNext((vk::DebugUtilsMessengerCreateInfoEXT*) &debug_create_info);
+        create_info.setPEnabledLayerNames(VulkanSettings::validation_layers);
+    }
 
     // Create instance
+    vk::Instance instance;
     try {
-        _vulkan_instance = vk::createInstance(create_info, _allocator);
+        instance = vk::createInstance(create_info, _allocator);
     } catch (const vk::SystemError& e) { Logger::fatal(e.what()); }
 
 #define PRINT_EXTENSIONS 0
@@ -244,10 +249,12 @@ void VulkanBackend::create_vulkan_instance() {
     auto extensions = vk::enumerateInstanceExtensionProperties();
     for (const auto& extension : extensions) std::cout << '\t' << extension.extensionName << '\n';
 #endif
+
+    return instance;
 }
 
-void VulkanBackend::setup_debug_messenger() {
-    if (!VulkanSettings::enable_validation_layers) return;
+vk::DebugUtilsMessengerEXT VulkanBackend::setup_debug_messenger() const {
+    if (!VulkanSettings::enable_validation_layers) return _debug_messenger;
 
     auto create_info = debug_messenger_create_info();
 
@@ -255,16 +262,18 @@ void VulkanBackend::setup_debug_messenger() {
     auto dispatcher = vk::DispatchLoaderDynamic{ _vulkan_instance, vkGetInstanceProcAddr };
 
     // Create debugger
+    vk::DebugUtilsMessengerEXT messenger;
     try {
-        _debug_messenger = _vulkan_instance.createDebugUtilsMessengerEXT(create_info, _allocator, dispatcher);
+        messenger = _vulkan_instance.createDebugUtilsMessengerEXT(create_info, _allocator, dispatcher);
     } catch (const vk::SystemError& e) { Logger::fatal(e.what()); }
+    return messenger;
 }
 
 // Debug messenger
-bool VulkanBackend::all_validation_layers_are_available() {
+bool VulkanBackend::all_validation_layers_are_available() const {
     auto available_layers = vk::enumerateInstanceLayerProperties();
 
-    for (auto validation_layer : _validation_layers) {
+    for (auto validation_layer : VulkanSettings::validation_layers) {
         bool validation_layer_available = false;
         for (auto layer : available_layers) {
             if (std::strcmp(layer.layerName, validation_layer) == 0) {
@@ -279,7 +288,7 @@ bool VulkanBackend::all_validation_layers_are_available() {
     return true;
 }
 
-vk::DebugUtilsMessengerCreateInfoEXT VulkanBackend::debug_messenger_create_info() {
+vk::DebugUtilsMessengerCreateInfoEXT VulkanBackend::debug_messenger_create_info() const {
     vk::DebugUtilsMessengerCreateInfoEXT create_info{};
     create_info.setMessageSeverity(VulkanSettings::enabled_message_security_levels); // Severity levels enabled
     create_info.setMessageType(VulkanSettings::enabled_message_types);               // Message types enabled

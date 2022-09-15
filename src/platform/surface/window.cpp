@@ -37,7 +37,10 @@ void Window::framebuffer_resize_callback(GLFWwindow* window, int32 width, int32 
     surface->resize_event(width, height);
 }
 
-vk::SurfaceKHR Window::get_vulkan_surface(vk::Instance& vulkan_instance, vk::AllocationCallbacks* allocator) {
+vk::SurfaceKHR Window::get_vulkan_surface(
+    const vk::Instance& vulkan_instance,
+    const vk::AllocationCallbacks* const allocator
+) const {
     vk::SurfaceKHR vulkan_surface;
     VkResult result = glfwCreateWindowSurface(
         vulkan_instance, _window, (VkAllocationCallbacks*) allocator, (VkSurfaceKHR*) &vulkan_surface);

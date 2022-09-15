@@ -41,7 +41,9 @@ public:
         static Surface* get_instance(uint32 width, uint32 height, std::string name);
 
         // Vulkan functions
-        virtual vk::SurfaceKHR get_vulkan_surface(vk::Instance& vulkan_instance, vk::AllocationCallbacks* allocator) {
+        virtual vk::SurfaceKHR get_vulkan_surface(
+            const vk::Instance& vulkan_instance,
+            const vk::AllocationCallbacks* const allocator) const {
             return vk::SurfaceKHR();
         }
 

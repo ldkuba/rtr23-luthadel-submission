@@ -22,7 +22,10 @@ public:
     Window(const Window&) = delete;
     Window& operator=(const Window&) = delete;
 
-    vk::SurfaceKHR get_vulkan_surface(vk::Instance& vulkan_instance, vk::AllocationCallbacks* allocator);
+    vk::SurfaceKHR get_vulkan_surface(
+        const vk::Instance& vulkan_instance,
+        const vk::AllocationCallbacks* const allocator
+    ) const;
 
     uint32 get_width_in_pixels();
     uint32 get_height_in_pixels();

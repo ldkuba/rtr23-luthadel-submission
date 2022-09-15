@@ -11,30 +11,22 @@ public:
     VulkanBackend(Platform::Surface* surface);
     ~VulkanBackend();
 
-    void resized(uint32 width, uint32 height);
-    bool begin_frame(float32 delta_time);
-    bool end_frame(float32 delta_time);
-
-    void wait_for_shutdown() {
-        _device->handle.waitIdle();
-    }
+    void resized(const uint32 width, const uint32 height);
+    bool begin_frame(const float32 delta_time);
+    bool end_frame(const float32 delta_time);
 
 private:
     // TODO: Custom allocator
-    vk::AllocationCallbacks* _allocator = nullptr;
+    const vk::AllocationCallbacks* const _allocator = nullptr;
 
     vk::Instance _vulkan_instance;
     vk::DebugUtilsMessengerEXT _debug_messenger;
 
-    const std::vector<const char*> _validation_layers = {
-        "VK_LAYER_KHRONOS_validation"
-    };
+    vk::Instance create_vulkan_instance() const;
+    vk::DebugUtilsMessengerEXT setup_debug_messenger() const;
 
-    void create_vulkan_instance();
-    void setup_debug_messenger();
-
-    bool all_validation_layers_are_available();
-    vk::DebugUtilsMessengerCreateInfoEXT debug_messenger_create_info();
+    bool all_validation_layers_are_available() const;
+    vk::DebugUtilsMessengerCreateInfoEXT debug_messenger_create_info() const;
 
     // Surface
     vk::SurfaceKHR _vulkan_surface;

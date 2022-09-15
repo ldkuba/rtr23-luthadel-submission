@@ -13,10 +13,10 @@ Renderer::Renderer(RendererBackendType backend_type, Platform::Surface* surface)
 }
 Renderer::~Renderer() {}
 
-void Renderer::on_resize(uint32 width, uint32 height) {
+void Renderer::on_resize(const uint32 width, const uint32 height) {
     _backend->resized(width, height);
 }
-bool Renderer::draw_frame(float32 delta_time) {
+bool Renderer::draw_frame(const float32 delta_time) {
     if (_backend->begin_frame(delta_time)) {
         bool result = _backend->end_frame(delta_time);
         _backend->increment_frame_number();
@@ -27,8 +27,4 @@ bool Renderer::draw_frame(float32 delta_time) {
     }
 
     return true;
-}
-
-void Renderer::wait_for_shutdown() {
-    _backend->wait_for_shutdown();
 }

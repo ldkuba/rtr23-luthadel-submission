@@ -1,10 +1,16 @@
 #include "renderer/vulkan/shaders/vulkan_shader.hpp"
 
-VulkanShader::VulkanShader(VulkanDevice* device, vk::AllocationCallbacks* allocator)
-    : _device(device), _allocator(allocator) {}
+VulkanShader::VulkanShader(
+    const VulkanDevice* const device,
+    const vk::AllocationCallbacks* const allocator
+) : _device(device), _allocator(allocator) {}
 VulkanShader::~VulkanShader() {}
 
-vk::ShaderModule VulkanShader::create_shader_module(std::vector<byte> code) {
+// /////////////////////////////// //
+// VULKAN SHADER PROTECTED METHODS //
+// /////////////////////////////// //
+
+vk::ShaderModule VulkanShader::create_shader_module(const std::vector<byte> code) const {
     vk::ShaderModuleCreateInfo create_info{};
     create_info.setCodeSize(code.size());
     create_info.setPCode(reinterpret_cast<const uint32*> (code.data()));
@@ -12,13 +18,13 @@ vk::ShaderModule VulkanShader::create_shader_module(std::vector<byte> code) {
 }
 
 void VulkanShader::create_pipeline(
-    std::vector<vk::PipelineShaderStageCreateInfo> shader_stages,
-    std::vector<vk::VertexInputBindingDescription> binding_descriptions,
-    std::vector<vk::VertexInputAttributeDescription> attribute_descriptions,
-    std::vector<vk::DescriptorSetLayout> descriptor_set_layouts,
-    vk::RenderPass render_pass,
-    vk::SampleCountFlagBits number_of_msaa_samples,
-    bool is_wire_frame
+    const std::vector<vk::PipelineShaderStageCreateInfo>& shader_stages,
+    const std::vector<vk::VertexInputBindingDescription>& binding_descriptions,
+    const std::vector<vk::VertexInputAttributeDescription>& attribute_descriptions,
+    const std::vector<vk::DescriptorSetLayout>& descriptor_set_layouts,
+    const vk::RenderPass render_pass,
+    const vk::SampleCountFlagBits number_of_msaa_samples,
+    const bool is_wire_frame
 ) {
     // Input assembly
     vk::PipelineInputAssemblyStateCreateInfo input_assembly_info{};
