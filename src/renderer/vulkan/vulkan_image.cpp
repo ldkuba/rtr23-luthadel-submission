@@ -201,9 +201,9 @@ void VulkanImage::create_view(
     const vk::Format format,
     const vk::ImageAspectFlags aspect_flags
 ) {
-    // Construct image view
     _has_view = true;
     _aspect_flags = aspect_flags;
+    // Construct image view
     vk::ImageViewCreateInfo create_info{};
     create_info.setImage(handle);                             // Image for which we are creating a view
     create_info.setViewType(vk::ImageViewType::e2D);          // 2D image

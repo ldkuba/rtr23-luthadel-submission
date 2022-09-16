@@ -66,9 +66,11 @@ public:
     /// @brief Copy buffer data to an image
     /// @param command_pool Command pool to which the transfer command will be submitted
     /// @param image Image to which we are transferring data
+    /// @param image_aspect Image aspect to which we are transferring data, default = color
     void copy_data_to_image(
         VulkanCommandPool* const command_pool,
-        VulkanImage* const image
+        VulkanImage* const image,
+        const vk::ImageAspectFlags image_aspect = vk::ImageAspectFlagBits::eColor
     ) const;
 
 private:
@@ -77,4 +79,13 @@ private:
 
     vk::BufferUsageFlags _usage;
     vk::MemoryPropertyFlags _properties;
+
+    vk::Buffer create_buffer(
+        const vk::DeviceSize size,
+        const vk::BufferUsageFlags usage
+    ) const;
+    vk::DeviceMemory allocate_buffer_memory(
+        const vk::Buffer buffer,
+        const vk::MemoryPropertyFlags properties
+    ) const;
 };
