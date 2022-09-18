@@ -42,10 +42,14 @@ vk::SurfaceKHR Window::get_vulkan_surface(
     const vk::AllocationCallbacks* const allocator
 ) const {
     vk::SurfaceKHR vulkan_surface;
-    VkResult result = glfwCreateWindowSurface(
-        vulkan_instance, _window, (VkAllocationCallbacks*) allocator, (VkSurfaceKHR*) &vulkan_surface);
-    if (result != VK_SUCCESS)
-        throw "Failed to create window surface.";
+    vk::Result result = static_cast<vk::Result>(
+        glfwCreateWindowSurface(
+            vulkan_instance, _window,
+            (VkAllocationCallbacks*) allocator,
+            (VkSurfaceKHR*) &vulkan_surface
+        ));
+    if (result != vk::Result::eSuccess)
+        throw std::runtime_error("Failed to create window surface.");
     return vulkan_surface;
 }
 

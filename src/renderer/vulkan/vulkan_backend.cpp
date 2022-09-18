@@ -156,12 +156,13 @@ bool VulkanBackend::begin_frame(const float32 delta_time) {
 bool VulkanBackend::end_frame(const float32 delta_time) {
     // Wait for previous frame to finish drawing
     std::vector<vk::Fence> fences = { _fences_in_flight[_current_frame] };
-    auto result = _device->handle.waitForFences(fences, true, UINT64_MAX);
-    if (result != vk::Result::eSuccess) throw std::runtime_error("Failed to draw frame.");
+    try {
+        auto result = _device->handle.waitForFences(fences, true, UINT64_MAX);
+        if (result != vk::Result::eSuccess) throw std::runtime_error("End of frame fence timed-out.");
+    } catch (const vk::SystemError& e) { Logger::fatal(e.what()); }
 
     // Acquire next swapchain image index
     auto image_index = _swapchain->acquire_next_image_index(_semaphores_image_available[_current_frame]);
-    if (image_index == -1) return false;
 
     // Reset fence
     try {
@@ -604,9 +605,9 @@ void VulkanBackend::create_texture_sampler() {
     sampler_info.setMinLod(0.0f);
     sampler_info.setMaxLod(static_cast<float32>(_mip_levels));
 
-    auto result = _device->handle.createSampler(&sampler_info, _allocator, &_texture_sampler);
-    if (result != vk::Result::eSuccess)
-        throw std::runtime_error("Failed to create texture sampler.");
+    try {
+        _texture_sampler = _device->handle.createSampler(sampler_info, _allocator);
+    } catch (vk::SystemError e) { Logger::fatal(e.what()); }
 }
 
 // MODEL LOADING

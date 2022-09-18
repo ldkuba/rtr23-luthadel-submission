@@ -97,15 +97,13 @@ vk::AttachmentDescription VulkanSwapchain::get_color_attachment_resolve() const 
 
 uint32 VulkanSwapchain::acquire_next_image_index(const vk::Semaphore& signal_semaphore) {
     // Obtain a swapchain image (next in queue for drawing)
-    auto obtained = _device->handle.acquireNextImageKHR(_handle, UINT64_MAX, signal_semaphore);
-    if (obtained.result == vk::Result::eErrorOutOfDateKHR) {
-        // Surface changed, and so swapchain needs to be recreated
-        recreate();
-        return -1;
-    } else if (obtained.result != vk::Result::eSuccess && obtained.result != vk::Result::eSuboptimalKHR) {
-        Logger::fatal("Failed to obtain a swapchain image.");
-    }
-    return obtained.value;
+    try {
+        auto obtained = _device->handle.acquireNextImageKHR(_handle, UINT64_MAX, signal_semaphore);
+        if (obtained.result != vk::Result::eSuccess && obtained.result != vk::Result::eSuboptimalKHR)
+            Logger::fatal("Swapchain image index acquisition timed-out.");
+        return obtained.value;
+    } catch (const vk::SystemError& e) { Logger::fatal(e.what()); }
+    return -1;
 }
 
 void VulkanSwapchain::present(
@@ -122,14 +120,14 @@ void VulkanSwapchain::present(
     // Check if presentation is successful for each swapchain (not needed, as there is only 1)
     present_info.setPResults(nullptr);
 
-    auto result = _device->presentation_queue.presentKHR(present_info);
-    if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR || _should_resize) {
-        // Surface changed, and so swapchain needs to be recreated
-        recreate();
-        _should_resize = false;
-    } else if (result != vk::Result::eSuccess) {
-        Logger::fatal("Failed to present rendered image.");
-    }
+    try {
+        auto result = _device->presentation_queue.presentKHR(present_info);
+        if (result == vk::Result::eSuboptimalKHR || _should_resize) {
+            // Surface changed, and so swapchain needs to be recreated
+            recreate();
+            _should_resize = false;
+        }
+    } catch (vk::SystemError e) { Logger::fatal(e.what()); }
 }
 
 // //////////////////////////////// //

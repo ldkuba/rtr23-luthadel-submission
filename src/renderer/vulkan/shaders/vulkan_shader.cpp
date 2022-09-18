@@ -166,7 +166,7 @@ void VulkanShader::create_pipeline(
     try {
         auto result = _device->handle.createGraphicsPipeline(VK_NULL_HANDLE, create_info, _allocator);
         if (result.result != vk::Result::eSuccess)
-            throw std::runtime_error("Failed to create graphics pipeline.");
+            throw std::runtime_error("Failed to create graphics pipeline (Unexpected compilation).");
         _pipeline = result.value;
     } catch (vk::SystemError e) { Logger::fatal(e.what()); }
 }
