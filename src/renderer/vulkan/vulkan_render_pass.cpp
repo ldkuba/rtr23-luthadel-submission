@@ -6,23 +6,24 @@ VulkanRenderPass::VulkanRenderPass(
     const vk::AllocationCallbacks* const allocator,
     VulkanSwapchain* const swapchain
 ) : _device(device), _swapchain(swapchain), _allocator(allocator) {
+    // Get all attachment descriptions from swapchain
     // Color attachment
-    vk::AttachmentDescription color_attachment = _swapchain->get_color_attachment();
-
+    vk::AttachmentDescription color_attachment =
+        _swapchain->get_color_attachment();
     vk::AttachmentReference color_attachment_ref{};
     color_attachment_ref.setLayout(vk::ImageLayout::eColorAttachmentOptimal);
     color_attachment_ref.setAttachment(0);
 
     // Depth attachment
-    vk::AttachmentDescription depth_attachment = _swapchain->get_depth_attachment();
-
+    vk::AttachmentDescription depth_attachment =
+        _swapchain->get_depth_attachment();
     vk::AttachmentReference depth_attachment_ref{};
     depth_attachment_ref.setLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
     depth_attachment_ref.setAttachment(1);
 
     // Resolve attachment
-    vk::AttachmentDescription color_attachment_resolve = _swapchain->get_color_attachment_resolve();
-
+    vk::AttachmentDescription color_attachment_resolve =
+        _swapchain->get_color_attachment_resolve();
     vk::AttachmentReference color_attachment_resolve_ref{};
     color_attachment_resolve_ref.setLayout(vk::ImageLayout::eColorAttachmentOptimal);
     color_attachment_resolve_ref.setAttachment(2);
@@ -81,13 +82,15 @@ VulkanRenderPass::~VulkanRenderPass() {
 // VULKAN RENDER PASS PUBLIC METHODS //
 // ///////////////////////////////// //
 
-void VulkanRenderPass::begin(const vk::CommandBuffer& command_buffer, const vk::Framebuffer& framebuffer) {
+void VulkanRenderPass::begin(
+    const vk::CommandBuffer& command_buffer,
+    const vk::Framebuffer& framebuffer
+) {
     // Default background values of color and depth stencil for rendered area of the render pass
     std::array<float32, 4> clear_color = { 0.0f, 0.0f, 0.0f, 1.0f };
     std::array<vk::ClearValue, 2>clear_values{};
     clear_values[0].setColor({ clear_color });
     clear_values[1].setDepthStencil({ 1.0f, 0 });
-
 
     // Begin render pass
     vk::RenderPassBeginInfo render_pass_begin_info{};
@@ -101,6 +104,8 @@ void VulkanRenderPass::begin(const vk::CommandBuffer& command_buffer, const vk::
     command_buffer.beginRenderPass(render_pass_begin_info, vk::SubpassContents::eInline);
 }
 
-void VulkanRenderPass::end(const vk::CommandBuffer& command_buffer) {
+void VulkanRenderPass::end(
+    const vk::CommandBuffer& command_buffer
+) {
     command_buffer.endRenderPass();
 }

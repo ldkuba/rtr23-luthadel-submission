@@ -155,12 +155,12 @@ bool VulkanBackend::begin_frame(const float32 delta_time) {
 
 bool VulkanBackend::end_frame(const float32 delta_time) {
     // Wait for previous frame to finish drawing
-    std::vector<vk::Fence> fences = { _fences_in_flight[current_frame] };
+    std::vector<vk::Fence> fences = { _fences_in_flight[_current_frame] };
     auto result = _device->handle.waitForFences(fences, true, UINT64_MAX);
     if (result != vk::Result::eSuccess) throw std::runtime_error("Failed to draw frame.");
 
     // Acquire next swapchain image index
-    auto image_index = _swapchain->acquire_next_image_index(_semaphores_image_available[current_frame]);
+    auto image_index = _swapchain->acquire_next_image_index(_semaphores_image_available[_current_frame]);
     if (image_index == -1) return false;
 
     // Reset fence
@@ -169,23 +169,23 @@ bool VulkanBackend::end_frame(const float32 delta_time) {
     } catch (const vk::SystemError& e) { Logger::fatal(e.what()); }
 
     // Record commands
-    _command_buffers[current_frame].reset();
-    record_command_buffer(_command_buffers[current_frame], image_index);
+    _command_buffers[_current_frame].reset();
+    record_command_buffer(_command_buffers[_current_frame], image_index);
 
     // Update uniform buffer data
-    update_uniform_buffer(current_frame);
+    update_uniform_buffer(_current_frame);
 
     // Submit command buffer
     vk::PipelineStageFlags wait_stages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
-    std::vector<vk::Semaphore> wait_semaphores = { _semaphores_image_available[current_frame] };
-    std::vector<vk::Semaphore> signal_semaphores = { _semaphores_render_finished[current_frame] };
+    std::vector<vk::Semaphore> wait_semaphores = { _semaphores_image_available[_current_frame] };
+    std::vector<vk::Semaphore> signal_semaphores = { _semaphores_render_finished[_current_frame] };
 
     vk::SubmitInfo submit_info{};
     submit_info.setPWaitDstStageMask(wait_stages);
     submit_info.setWaitSemaphores(wait_semaphores);
     submit_info.setSignalSemaphores(signal_semaphores);
     submit_info.setCommandBufferCount(1);
-    submit_info.setPCommandBuffers(&_command_buffers[current_frame]);
+    submit_info.setPCommandBuffers(&_command_buffers[_current_frame]);
     std::array<vk::SubmitInfo, 1> submits = { submit_info };
 
     try {
@@ -196,7 +196,7 @@ bool VulkanBackend::end_frame(const float32 delta_time) {
     _swapchain->present(image_index, signal_semaphores);
 
     // Advance current frame
-    current_frame = (current_frame + 1) % VulkanSettings::max_frames_in_flight;
+    _current_frame = (_current_frame + 1) % VulkanSettings::max_frames_in_flight;
     return true;
 }
 
@@ -344,8 +344,9 @@ void VulkanBackend::record_command_buffer(vk::CommandBuffer command_buffer, uint
     // Begin render pass
     _render_pass->begin(command_buffer, _swapchain->framebuffers[image_index]);
 
-    // Bind graphics pipeline
-    command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, _object_shader->pipeline);
+    // Bind object shader
+    _object_shader->use(command_buffer);
+    _object_shader->bind_descriptor_set(command_buffer, _current_frame);
 
     // Bind vertex buffer
     std::vector<vk::Buffer>vertex_buffers = { _vertex_buffer->handle };
@@ -373,9 +374,6 @@ void VulkanBackend::record_command_buffer(vk::CommandBuffer command_buffer, uint
     scissor.setExtent(_swapchain->extent);
 
     command_buffer.setScissor(0, 1, &scissor);
-
-    // Bind description sets
-    _object_shader->bind_descriptor_set(command_buffer, current_frame);
 
     // Draw command
     command_buffer.drawIndexed(static_cast<uint32>(indices.size()), 1, 0, 0, 0);

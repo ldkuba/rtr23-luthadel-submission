@@ -11,20 +11,20 @@ VulkanObjectShader::VulkanObjectShader(
     const vk::RenderPass render_pass,
     const vk::SampleCountFlagBits number_of_msaa_samples
 ) : VulkanShader(device, allocator) {
-    // Create shader modules
+    // === Create shader modules ===
     auto vertex_code = FileSystem::read_file_bytes("assets/shaders/builtin.object_shader.vert.spv");
     auto fragment_code = FileSystem::read_file_bytes("assets/shaders/builtin.object_shader.frag.spv");
     auto vertex_shader_module = create_shader_module(vertex_code);
     auto fragment_shader_module = create_shader_module(fragment_code);
 
-    // Shader stages
+    // === Shader stages ===
     std::vector<vk::PipelineShaderStageCreateInfo> shader_stages(2);
 
     // Vertex shader stage
     shader_stages[0].setStage(vk::ShaderStageFlagBits::eVertex);
-    shader_stages[0].setModule(vertex_shader_module);
-    shader_stages[0].setPName("main");
-    shader_stages[0].setPSpecializationInfo(nullptr);           // Set initial shader constants
+    shader_stages[0].setModule(vertex_shader_module); // Shader module containing the code
+    shader_stages[0].setPName("main");                // Function to invoke as an entrypoint
+    shader_stages[0].setPSpecializationInfo(nullptr); // Initial shader constants
 
     // Fragment shader stage
     shader_stages[1].setStage(vk::ShaderStageFlagBits::eFragment);
@@ -32,11 +32,11 @@ VulkanObjectShader::VulkanObjectShader(
     shader_stages[1].setPName("main");
     shader_stages[1].setPSpecializationInfo(nullptr);
 
-
-    // Global descriptors
+    // === Global descriptors ===
     create_descriptor_set_layout();
     create_descriptor_pool();
 
+    // === Vertex input state info ===
     // Vertex bindings
     std::vector<vk::VertexInputBindingDescription> binding_descriptions(1);
     binding_descriptions[0].setBinding(0);
@@ -61,18 +61,29 @@ VulkanObjectShader::VulkanObjectShader(
     attribute_descriptions[2].setFormat(vk::Format::eR32G32Sfloat);
     attribute_descriptions[2].setOffset(offsetof(Vertex, texture_coord));
 
-    // Create pipeline
-    std::vector<vk::DescriptorSetLayout> dsl{ _descriptor_set_layout };
+    vk::PipelineVertexInputStateCreateInfo vertex_input_info{};
+    vertex_input_info.setVertexBindingDescriptionCount(1);
+    vertex_input_info.setVertexBindingDescriptions(binding_descriptions);
+    vertex_input_info.setVertexAttributeDescriptions(attribute_descriptions);
+
+    // === Pipeline layout info ===
+    vk::PipelineLayoutCreateInfo layout_info{};
+    std::vector<vk::DescriptorSetLayout> description_set_layouts{ _descriptor_set_layout };
+    // Used for UNIFORM values
+    layout_info.setSetLayouts(description_set_layouts); // Layout of used descriptor sets
+    layout_info.setPushConstantRangeCount(0);           // Push constant ranges used
+    layout_info.setPPushConstantRanges(nullptr);
+
+    // === Create pipeline ===
     create_pipeline(
         shader_stages,
-        binding_descriptions,
-        attribute_descriptions,
-        dsl,
+        vertex_input_info,
+        layout_info,
         render_pass,
         number_of_msaa_samples
     );
 
-    // Free unused objects
+    // === Free unused objects ===
     _device->handle.destroyShaderModule(vertex_shader_module, _allocator);
     _device->handle.destroyShaderModule(fragment_shader_module, _allocator);
 
@@ -103,7 +114,7 @@ VulkanObjectShader::~VulkanObjectShader() {
         _device->handle.destroyDescriptorSetLayout(_descriptor_set_layout, _allocator);
 
     // Pipeline
-    _device->handle.destroyPipeline(pipeline, _allocator);
+    _device->handle.destroyPipeline(_pipeline, _allocator);
     _device->handle.destroyPipelineLayout(_pipeline_layout, _allocator);
 }
 
@@ -112,7 +123,7 @@ VulkanObjectShader::~VulkanObjectShader() {
 // /////////////////////////////////// //
 
 void VulkanObjectShader::use(const vk::CommandBuffer& command_buffer) {
-
+    command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, _pipeline);
 }
 
 void VulkanObjectShader::create_descriptor_pool() {

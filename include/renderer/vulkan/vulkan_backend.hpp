@@ -43,7 +43,7 @@ private:
 
     // SWAPCHAIN CODE
     VulkanSwapchain* _swapchain;
-    uint32 current_frame = 0;
+    uint32 _current_frame = 0;
 
     // RENDER PASS
     VulkanRenderPass* _render_pass;
