@@ -47,8 +47,8 @@ VulkanBackend::VulkanBackend(Platform::Surface* surface) : RendererBackend(surfa
         _swapchain
     );
 
-    // Create object shader
-    _object_shader = new VulkanObjectShader(
+    // Create material shader
+    _material_shader = new VulkanMaterialShader(
         _device,
         _allocator,
         _render_pass->handle,
@@ -115,7 +115,7 @@ VulkanBackend::~VulkanBackend() {
     delete _vertex_buffer;
 
 
-    delete _object_shader;
+    delete _material_shader;
     delete _render_pass;
     delete _command_pool;
 
@@ -213,7 +213,62 @@ void VulkanBackend::update_global_uniform_buffer_state(
 }
 
 void VulkanBackend::create_texture(Texture* texture) {
+    byte* internal_data = texture->data;
+    vk::DeviceSize texture_size = texture->total_size;
 
+    // Calculate mip levels
+    auto mip_levels = std::floor(std::log2(std::max(texture->width(), texture->height()))) + 1;
+
+    // Image format
+    // NOTE: assumes 8 bits per channel
+    auto texture_format = vk::Format::eR8G8B8A8Srgb;
+
+    // Create staging buffer
+    auto staging_buffer = new VulkanBuffer(_device, _allocator);
+    staging_buffer->create(
+        texture_size,
+        vk::BufferUsageFlagBits::eTransferSrc,
+        vk::MemoryPropertyFlagBits::eHostVisible |
+        vk::MemoryPropertyFlagBits::eHostCoherent
+    );
+
+    // Fill created memory with data
+    staging_buffer->load_data(internal_data, 0, texture_size);
+
+    // Create device side image
+    // NOTE: Lots of assumptions here
+    auto texture_image = new VulkanImage(_device, _allocator);
+    texture_image->create(
+        texture->width, texture->height, mip_levels,
+        vk::SampleCountFlagBits::e1,
+        texture_format,
+        vk::ImageTiling::eOptimal,
+        vk::ImageUsageFlagBits::eTransferSrc |
+        vk::ImageUsageFlagBits::eTransferDst |
+        vk::ImageUsageFlagBits::eSampled,
+        vk::MemoryPropertyFlagBits::eDeviceLocal,
+        vk::ImageAspectFlagBits::eColor
+    );
+
+    // Transition image to a layout optimal for data transfer
+    auto command_buffer = _command_pool->begin_single_time_commands();
+    texture_image->transition_image_layout(
+        command_buffer,
+        vk::ImageLayout::eUndefined,
+        vk::ImageLayout::eTransferDstOptimal
+    );
+
+    // Copy buffer data to image
+    staging_buffer->copy_data_to_image(command_buffer, texture_image);
+
+    // Generate mipmaps, this also transitions image to a layout optimal for sampling
+    texture_image->generate_mipmaps(
+        command_buffer
+    );
+    _command_pool->end_single_time_commands(command_buffer);
+
+    // Cleanup
+    delete staging_buffer;
 }
 void VulkanBackend::destroy_texture(Texture* texture) {
 
@@ -364,9 +419,9 @@ void VulkanBackend::record_command_buffer(vk::CommandBuffer command_buffer, uint
     std::vector<vk::Framebuffer> framebuffers = _swapchain->framebuffers;
     _render_pass->begin(command_buffer, framebuffers[image_index]);
 
-    // Bind object shader
-    _object_shader->use(command_buffer);
-    _object_shader->bind_descriptor_set(command_buffer, _current_frame);
+    // Bind material shader
+    _material_shader->use(command_buffer);
+    _material_shader->bind_descriptor_set(command_buffer, _current_frame);
 
     // Bind vertex buffer
     std::vector<vk::Buffer>vertex_buffers = { _vertex_buffer->handle };
@@ -452,7 +507,9 @@ void VulkanBackend::create_vertex_buffer() {
         vk::MemoryPropertyFlagBits::eDeviceLocal
     );
 
-    staging_buffer->copy_data_to_buffer(_command_pool, _vertex_buffer->handle, 0, 0, buffer_size);
+    auto command_buffer = _command_pool->begin_single_time_commands();
+    staging_buffer->copy_data_to_buffer(command_buffer, _vertex_buffer->handle, 0, 0, buffer_size);
+    _command_pool->end_single_time_commands(command_buffer);
 
     // Cleanup
     delete staging_buffer;
@@ -484,7 +541,9 @@ void VulkanBackend::create_index_buffer() {
         vk::MemoryPropertyFlagBits::eDeviceLocal
     );
 
-    staging_buffer->copy_data_to_buffer(_command_pool, _index_buffer->handle, 0, 0, buffer_size);
+    auto command_buffer = _command_pool->begin_single_time_commands();
+    staging_buffer->copy_data_to_buffer(command_buffer, _index_buffer->handle, 0, 0, buffer_size);
+    _command_pool->end_single_time_commands(command_buffer);
 
     // Cleanup
     delete staging_buffer;
@@ -522,7 +581,7 @@ void VulkanBackend::create_descriptor_sets() {
     image_info.setImageView(_texture_image->view);
     image_info.setSampler(_texture_sampler);
 
-    _object_shader->create_descriptor_sets(buffer_infos, image_info);
+    _material_shader->create_descriptor_sets(buffer_infos, image_info);
 }
 
 // TEXTURE IMAGE
@@ -532,7 +591,7 @@ void VulkanBackend::create_texture_image() {
     vk::DeviceSize texture_size = texture->total_size;
 
     // Calculate mip levels
-    _mip_levels = std::floor(std::log2(std::max(texture->width(), texture->height()))) + 1;
+    auto mip_levels = std::floor(std::log2(std::max(texture->width(), texture->height()))) + 1;
 
     // Create staging buffer
     auto staging_buffer = new VulkanBuffer(_device, _allocator);
@@ -544,12 +603,12 @@ void VulkanBackend::create_texture_image() {
     );
 
     // Fill created memory with data
-    staging_buffer->load_data(texture->pixels, 0, texture_size);
+    staging_buffer->load_data(texture->data, 0, texture_size);
 
     // Create device side image
     _texture_image = new VulkanImage(_device, _allocator);
     _texture_image->create(
-        texture->width, texture->height, _mip_levels,
+        texture->width, texture->height, mip_levels,
         vk::SampleCountFlagBits::e1,
         vk::Format::eR8G8B8A8Srgb,
         vk::ImageTiling::eOptimal,
@@ -561,25 +620,21 @@ void VulkanBackend::create_texture_image() {
     );
 
     // Transition image to a layout optimal for data transfer
+    auto command_buffer = _command_pool->begin_single_time_commands();
     _texture_image->transition_image_layout(
-        _command_pool,
-        vk::Format::eR8G8B8A8Srgb,
+        command_buffer,
         vk::ImageLayout::eUndefined,
-        vk::ImageLayout::eTransferDstOptimal,
-        _mip_levels
+        vk::ImageLayout::eTransferDstOptimal
     );
 
     // Copy buffer data to image
-    staging_buffer->copy_data_to_image(_command_pool, _texture_image);
+    staging_buffer->copy_data_to_image(command_buffer, _texture_image);
 
     // Generate mipmaps, this also transitions image to a layout optimal for sampling
-    generate_mipmaps(
-        _texture_image->handle,
-        vk::Format::eR8G8B8A8Srgb,
-        texture->width,
-        texture->height,
-        _mip_levels
+    _texture_image->generate_mipmaps(
+        command_buffer
     );
+    _command_pool->end_single_time_commands(command_buffer);
 
     // Cleanup
     delete staging_buffer;
@@ -602,7 +657,7 @@ void VulkanBackend::create_texture_sampler() {
     sampler_info.setMipmapMode(vk::SamplerMipmapMode::eLinear);
     sampler_info.setMipLodBias(0.0f);
     sampler_info.setMinLod(0.0f);
-    sampler_info.setMaxLod(static_cast<float32>(_mip_levels));
+    sampler_info.setMaxLod(static_cast<float32>(_texture_image->mip_levels()));
 
     try {
         _texture_sampler = _device->handle().createSampler(sampler_info, _allocator);
@@ -650,105 +705,5 @@ void VulkanBackend::load_model() {
             indices.push_back(unique_vertices[vertex]);
         }
     }
-}
-
-// MIPMAP CODE
-
-void VulkanBackend::generate_mipmaps(vk::Image image, vk::Format format, uint32 width, uint32 height, uint32 mip_levels) {
-    // Check if image format supports linear blitting
-    auto properties = _device->info().get_format_properties(format);
-    if (!(properties.optimalTilingFeatures & vk::FormatFeatureFlagBits::eSampledImageFilterLinear))
-        throw std::runtime_error("Texture image format does not support linear blitting.");
-
-    // Generate mipmaps
-    auto command_buffer = _command_pool->begin_single_time_commands();
-
-    vk::ImageMemoryBarrier barrier{};
-    barrier.setImage(image);
-    barrier.setSrcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED);
-    barrier.setDstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED);
-    barrier.subresourceRange.setAspectMask(vk::ImageAspectFlagBits::eColor);
-    barrier.subresourceRange.setBaseArrayLayer(0);
-    barrier.subresourceRange.setLayerCount(1);
-    barrier.subresourceRange.setLevelCount(1);
-
-    uint32 mip_width = width;
-    uint32 mip_height = height;
-    for (uint32 i = 1; i < mip_levels; i++) {
-        // Transition bitmap layer i-1 to transfer optimal layout
-        barrier.subresourceRange.setBaseMipLevel(i - 1);
-        barrier.setOldLayout(vk::ImageLayout::eTransferDstOptimal);
-        barrier.setNewLayout(vk::ImageLayout::eTransferSrcOptimal);
-        barrier.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
-        barrier.setDstAccessMask(vk::AccessFlagBits::eTransferRead);
-
-        command_buffer.pipelineBarrier(
-            vk::PipelineStageFlagBits::eTransfer,
-            vk::PipelineStageFlagBits::eTransfer,
-            vk::DependencyFlags(),
-            0, nullptr,
-            0, nullptr,
-            1, &barrier
-        );
-
-        // Create bitmap level
-        vk::ImageBlit blit{};
-        blit.srcOffsets[0] = vk::Offset3D(0, 0, 0);
-        blit.srcOffsets[1] = vk::Offset3D(mip_width, mip_height, 1);
-        blit.srcSubresource.setAspectMask(vk::ImageAspectFlagBits::eColor);
-        blit.srcSubresource.setMipLevel(i - 1);
-        blit.srcSubresource.setBaseArrayLayer(0);
-        blit.srcSubresource.setLayerCount(1);
-        blit.dstOffsets[0] = vk::Offset3D(0, 0, 0);
-        blit.dstOffsets[1] = vk::Offset3D(mip_width > 1 ? mip_width / 2 : 1, mip_height > 1 ? mip_height / 2 : 1, 1);
-        blit.dstSubresource.setAspectMask(vk::ImageAspectFlagBits::eColor);
-        blit.dstSubresource.setMipLevel(i);
-        blit.dstSubresource.setBaseArrayLayer(0);
-        blit.dstSubresource.setLayerCount(1);
-
-        command_buffer.blitImage(
-            image, vk::ImageLayout::eTransferSrcOptimal,
-            image, vk::ImageLayout::eTransferDstOptimal,
-            1, &blit,
-            vk::Filter::eLinear
-        );
-
-        // Transition bitmap layer i-1 to read only optimal layout
-        barrier.setOldLayout(vk::ImageLayout::eTransferSrcOptimal);
-        barrier.setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
-        barrier.setSrcAccessMask(vk::AccessFlagBits::eTransferRead);
-        barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-
-        command_buffer.pipelineBarrier(
-            vk::PipelineStageFlagBits::eTransfer,
-            vk::PipelineStageFlagBits::eFragmentShader,
-            vk::DependencyFlags(),
-            0, nullptr,
-            0, nullptr,
-            1, &barrier
-        );
-
-        // Half mipmap resolution for next iteration
-        if (mip_width > 1) mip_width /= 2;
-        if (mip_height > 1) mip_height /= 2;
-    }
-
-    // Transition last bitmap layer to read only optimal layout
-    barrier.subresourceRange.setBaseMipLevel(mip_levels - 1);
-    barrier.setOldLayout(vk::ImageLayout::eTransferDstOptimal);
-    barrier.setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
-    barrier.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
-    barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-
-    command_buffer.pipelineBarrier(
-        vk::PipelineStageFlagBits::eTransfer,
-        vk::PipelineStageFlagBits::eFragmentShader,
-        vk::DependencyFlags(),
-        0, nullptr,
-        0, nullptr,
-        1, &barrier
-    );
-
-    _command_pool->end_single_time_commands(command_buffer);
 }
 // TODO: TEMP CODE END

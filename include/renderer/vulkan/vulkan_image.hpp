@@ -1,6 +1,5 @@
 #pragma once
 
-#include "vulkan_command_pool.hpp"
 #include "vulkan_device.hpp"
 
 class VulkanImage {
@@ -16,6 +15,8 @@ public:
     Property<uint32> width{ Get { return _width; } };
     /// @brief Image height
     Property<uint32> height{ Get { return _height; } };
+    /// @brief Number of mipmap levels used
+    Property<uint32> mip_levels{ Get { return _mip_levels; } };
 
     VulkanImage(const VulkanDevice* const device, const vk::AllocationCallbacks* const allocator)
         : _device(device), _allocator(allocator) {}
@@ -77,18 +78,20 @@ public:
     );
 
     /// @brief Transition image between layouts
-    /// @param command_pool Command pool to witch the transition command will be submitted
-    /// @param format Image format
+    /// @param command_buffer Command buffer to witch the transition command will be submitted
     /// @param old_layout Currently active image layout
     /// @param new_layout Image layout to transition to
-    /// @param mip_levels Max number mipmaping levels
     /// @throws std::invalid_argument Exception if invalid layout transition is provided
     void transition_image_layout(
-        VulkanCommandPool* const command_pool,
-        const vk::Format format,
+        const vk::CommandBuffer& command_buffer,
         const vk::ImageLayout old_layout,
-        const vk::ImageLayout new_layout,
-        const uint32 mip_levels
+        const vk::ImageLayout new_layout
+    ) const;
+
+    /// @brief Generate image mipmap levels
+    /// @param command_buffer Command buffer to witch the generation command will be submitted
+    void generate_mipmaps(
+        const vk::CommandBuffer& command_buffer
     ) const;
 
     /// @brief Creates an image view corresponding to the provided vk::Image
@@ -114,12 +117,13 @@ private:
     vk::Image _handle;
     vk::DeviceMemory _memory;
     vk::ImageView _view;
-    vk::ImageAspectFlags _aspect_flags;
-
     bool _has_view = false;
 
     uint32 _width;
     uint32 _height;
+    uint32 _mip_levels;
+    vk::Format _format;
+    vk::ImageAspectFlags _aspect_flags;
 
     void create_view(
         const uint32 mip_levels,

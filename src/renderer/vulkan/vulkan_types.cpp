@@ -1,4 +1,4 @@
-#include "renderer/vulkan/vulkan_structures.hpp"
+#include "renderer/vulkan/vulkan_types.hpp"
 #include "renderer/vulkan/vulkan_settings.hpp"
 
 bool QueueFamilyIndices::is_complete() const {

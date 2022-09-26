@@ -32,10 +32,10 @@ public:
     void bind(const vk::DeviceSize offset) const;
 
     /// @brief Resize buffer
-    /// @param command_pool Command pool to witch the resize command will be submitted
+    /// @param command_buffer Command buffer to witch the resize command will be submitted
     /// @param new_size New buffer size in bytes
     void resize(
-        VulkanCommandPool* const command_pool,
+        const vk::CommandBuffer& command_buffer,
         const vk::DeviceSize new_size
     );
 
@@ -50,13 +50,13 @@ public:
     ) const;
 
     /// @brief Copy buffer data to another buffer
-    /// @param command_pool Command pool to which the transfer command will be submitted
+    /// @param command_buffer Command buffer to which the transfer command will be submitted
     /// @param buffer Other buffer
     /// @param source_offset Source memory offset
     /// @param destination_offset Destination memory offset
     /// @param size Number of bytes copied
     void copy_data_to_buffer(
-        VulkanCommandPool* const command_pool,
+        const vk::CommandBuffer& command_buffer,
         const vk::Buffer& buffer,
         const vk::DeviceSize source_offset,
         const vk::DeviceSize destination_offset,
@@ -64,11 +64,11 @@ public:
     ) const;
 
     /// @brief Copy buffer data to an image
-    /// @param command_pool Command pool to which the transfer command will be submitted
+    /// @param command_buffer Command buffer to which the transfer command will be submitted
     /// @param image Image to which we are transferring data
     /// @param image_aspect Image aspect to which we are transferring data, default = color
     void copy_data_to_image(
-        VulkanCommandPool* const command_pool,
+        const vk::CommandBuffer& command_buffer,
         VulkanImage* const image,
         const vk::ImageAspectFlags image_aspect = vk::ImageAspectFlagBits::eColor
     ) const;

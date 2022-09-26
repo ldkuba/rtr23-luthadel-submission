@@ -1,19 +1,19 @@
-#include "renderer/vulkan/shaders/vulkan_object_shader.hpp"
+#include "renderer/vulkan/shaders/vulkan_material_shader.hpp"
 
 #include "renderer/vulkan/vulkan_settings.hpp"
 #include "renderer/renderer_types.hpp"
 #include "file_system.hpp"
 
 // Constructor & Destructor
-VulkanObjectShader::VulkanObjectShader(
+VulkanMaterialShader::VulkanMaterialShader(
     const VulkanDevice* const device,
     const vk::AllocationCallbacks* const allocator,
     const vk::RenderPass render_pass,
     const vk::SampleCountFlagBits number_of_msaa_samples
 ) : VulkanShader(device, allocator) {
     // === Create shader modules ===
-    auto vertex_code = FileSystem::read_file_bytes("assets/shaders/builtin.object_shader.vert.spv");
-    auto fragment_code = FileSystem::read_file_bytes("assets/shaders/builtin.object_shader.frag.spv");
+    auto vertex_code = FileSystem::read_file_bytes("assets/shaders/builtin.material_shader.vert.spv");
+    auto fragment_code = FileSystem::read_file_bytes("assets/shaders/builtin.material_shader.frag.spv");
     auto vertex_shader_module = create_shader_module(vertex_code);
     auto fragment_shader_module = create_shader_module(fragment_code);
 
@@ -102,7 +102,7 @@ VulkanObjectShader::VulkanObjectShader(
     }
 }
 
-VulkanObjectShader::~VulkanObjectShader() {
+VulkanMaterialShader::~VulkanMaterialShader() {
     // Uniforms
     for (uint32 i = 0; i < _uniform_buffers.size(); i++)
         delete _uniform_buffers[i];
@@ -119,14 +119,14 @@ VulkanObjectShader::~VulkanObjectShader() {
 }
 
 // /////////////////////////////////// //
-// VULKAN OBJECT SHADER PUBLIC METHODS //
+// VULKAN MATERIAL SHADER PUBLIC METHODS //
 // /////////////////////////////////// //
 
-void VulkanObjectShader::use(const vk::CommandBuffer& command_buffer) {
+void VulkanMaterialShader::use(const vk::CommandBuffer& command_buffer) {
     command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, _pipeline);
 }
 
-void VulkanObjectShader::create_descriptor_pool() {
+void VulkanMaterialShader::create_descriptor_pool() {
     std::array<vk::DescriptorPoolSize, 2> pool_sizes{};
     pool_sizes[0].setType(vk::DescriptorType::eUniformBuffer);
     pool_sizes[0].setDescriptorCount(VulkanSettings::max_frames_in_flight);
@@ -142,7 +142,7 @@ void VulkanObjectShader::create_descriptor_pool() {
     } catch (vk::SystemError e) { Logger::fatal(e.what()); }
 }
 
-void VulkanObjectShader::create_descriptor_sets(
+void VulkanMaterialShader::create_descriptor_sets(
     const std::vector<vk::DescriptorBufferInfo>& buffer_infos,
     const vk::DescriptorImageInfo& image_info
 ) {
@@ -177,7 +177,7 @@ void VulkanObjectShader::create_descriptor_sets(
     }
 }
 
-void VulkanObjectShader::bind_descriptor_set(
+void VulkanMaterialShader::bind_descriptor_set(
     const vk::CommandBuffer& command_buffer,
     const uint32 current_frame
 ) {
@@ -190,10 +190,10 @@ void VulkanObjectShader::bind_descriptor_set(
 }
 
 // //////////////////////////////////// //
-// VULKAN OBJECT SHADER PRIVATE METHODS //
+// VULKAN MATERIAL SHADER PRIVATE METHODS //
 // //////////////////////////////////// //
 
-void VulkanObjectShader::create_descriptor_set_layout() {
+void VulkanMaterialShader::create_descriptor_set_layout() {
     vk::DescriptorSetLayoutBinding ubo_layout_binding{};
     ubo_layout_binding.setBinding(0);
     ubo_layout_binding.setDescriptorType(vk::DescriptorType::eUniformBuffer);

@@ -10,8 +10,8 @@ template<class T>
 class Property {
 public:
     Property(
-        std::function<T const& ()> get_fn,
-        std::function<void(T)> set_fn
+        const std::function<T const& ()> get_fn,
+        const std::function<void(T)> set_fn
         = [](auto&& value) { throw std::runtime_error("This property cannot be changed."); }
     ) : _getter{ std::move(get_fn) }, _setter{ std::move(set_fn) } {}
 
@@ -38,6 +38,6 @@ public:
     }
 
 private:
-    std::function<T const& ()> _getter;
-    std::function<void(T)> _setter;
+    const std::function<T const& ()> _getter;
+    const std::function<void(T)> _setter;
 };

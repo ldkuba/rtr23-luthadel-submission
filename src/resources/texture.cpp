@@ -11,10 +11,10 @@ Texture::Texture(
     const int32 height,
     const int32 channel_count,
     const String name,
-    byte* const pixels,
+    byte* const data,
     const bool has_transparency
 ) : _width(width), _height(height), _channel_count(channel_count),
-_name(name), _pixels(pixels), _has_transparency(has_transparency) {
+_name(name), _data(data), _has_transparency(has_transparency) {
     total_size = width * height * channel_count;
 }
 Texture::Texture(
@@ -39,13 +39,13 @@ Texture::Texture(
     _total_size = _width * _height * _channel_count;
 
     this->_name = name;
-    _pixels = (byte*) image_pixels;
+    _data = (byte*) image_pixels;
 
     // Check for transparency
     _has_transparency = false;
     if (image_channels > 3) {
         for (uint64 i = 3; i < _total_size; i += _channel_count) {
-            if (_pixels[i] < (byte) 255) {
+            if (_data[i] < (byte) 255) {
                 _has_transparency = true;
                 break;
             }

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vulkan_structures.hpp"
+#include "vulkan_types.hpp"
 #include "logger.hpp"
 #include "property.hpp"
 

@@ -2,15 +2,15 @@
 
 #include "vulkan_shader.hpp"
 
-class VulkanObjectShader : public VulkanShader {
+class VulkanMaterialShader : public VulkanShader {
 public:
-    VulkanObjectShader(
+    VulkanMaterialShader(
         const VulkanDevice* const device,
         const vk::AllocationCallbacks* const allocator,
         const vk::RenderPass render_pass,
         const vk::SampleCountFlagBits number_of_msaa_samples
     );
-    ~VulkanObjectShader();
+    ~VulkanMaterialShader();
 
     /// @brief Select shader for rendering
     /// @param command_buffer Buffer to store bind commands

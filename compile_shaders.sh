@@ -1,2 +1,2 @@
-glslc -fshader-stage=vert ./src/shaders/builtin.object_shader.vert.glsl -o ./assets/shaders/builtin.object_shader.vert.spv
-glslc -fshader-stage=frag ./src/shaders/builtin.object_shader.frag.glsl -o ./assets/shaders/builtin.object_shader.frag.spv
+glslc -fshader-stage=vert ./src/shaders/builtin.material_shader.vert.glsl -o ./assets/shaders/builtin.material_shader.vert.spv
+glslc -fshader-stage=frag ./src/shaders/builtin.material_shader.frag.glsl -o ./assets/shaders/builtin.material_shader.frag.spv

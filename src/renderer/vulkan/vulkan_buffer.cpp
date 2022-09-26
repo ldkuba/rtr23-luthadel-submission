@@ -34,7 +34,7 @@ void VulkanBuffer::bind(const vk::DeviceSize offset) const {
 }
 
 void VulkanBuffer::resize(
-    VulkanCommandPool* const command_pool,
+    const vk::CommandBuffer& command_buffer,
     const vk::DeviceSize new_size
 ) {
     // Create new buffer with new required size
@@ -47,7 +47,7 @@ void VulkanBuffer::resize(
     _device->handle().bindBufferMemory(new_handle, new_memory, 0);
 
     // Copy all the data over
-    copy_data_to_buffer(command_pool, new_handle, 0, 0, size);
+    copy_data_to_buffer(command_buffer, new_handle, 0, 0, size);
 
     // Destroy the old
     if (_handle) _device->handle().destroyBuffer(_handle, _allocator);
@@ -71,14 +71,12 @@ void VulkanBuffer::load_data(
 }
 
 void VulkanBuffer::copy_data_to_buffer(
-    VulkanCommandPool* const command_pool,
+    const vk::CommandBuffer& command_buffer,
     const vk::Buffer& buffer,
     const vk::DeviceSize source_offset,
     const vk::DeviceSize destination_offset,
     const vk::DeviceSize size
 ) const {
-    auto command_buffer = command_pool->begin_single_time_commands();
-
     // Copy regions
     vk::BufferCopy copy_region;
     copy_region.setSrcOffset(source_offset);
@@ -86,17 +84,13 @@ void VulkanBuffer::copy_data_to_buffer(
     copy_region.setSize(size);
 
     command_buffer.copyBuffer(handle, buffer, 1, &copy_region);
-
-    command_pool->end_single_time_commands(command_buffer);
 }
 
 void VulkanBuffer::copy_data_to_image(
-    VulkanCommandPool* const command_pool,
+    const vk::CommandBuffer& command_buffer,
     VulkanImage* const image,
     const vk::ImageAspectFlags image_aspect
 ) const {
-    auto command_buffer = command_pool->begin_single_time_commands();
-
     // Preform copy ops
     vk::BufferImageCopy region{};
     // Buffer info
@@ -116,8 +110,6 @@ void VulkanBuffer::copy_data_to_image(
         vk::ImageLayout::eTransferDstOptimal,
         1, &region
     );
-
-    command_pool->end_single_time_commands(command_buffer);
 }
 
 // /////////////////////////////// //

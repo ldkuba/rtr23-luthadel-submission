@@ -1,10 +1,11 @@
 #pragma once
 
+#include "renderer/renderer_types.hpp"
 #include "renderer/renderer_backend.hpp"
 #include "vulkan_settings.hpp"
 #include "vulkan_render_pass.hpp"
-#include "shaders/vulkan_object_shader.hpp"
-#include "../renderer_types.hpp"
+#include "vulkan_command_pool.hpp"
+#include "shaders/vulkan_material_shader.hpp"
 
 #include "resources/texture.hpp"
 
@@ -61,7 +62,7 @@ private:
     VulkanRenderPass* _render_pass;
 
     // OBJECT SHADER
-    VulkanObjectShader* _object_shader;
+    VulkanMaterialShader* _material_shader;
 
     // TODO: TEMP COMMAND CODE
     VulkanCommandPool* _command_pool;
@@ -97,9 +98,4 @@ private:
     std::vector<uint32> indices;
 
     void load_model();
-
-    // TODO: TEMP MIPMAP CODE
-    uint32 _mip_levels;
-
-    void generate_mipmaps(vk::Image image, vk::Format format, uint32 width, uint32 height, uint32 mip_levels);
 };
