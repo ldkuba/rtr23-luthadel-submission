@@ -6,16 +6,16 @@
 class VulkanImage {
 public:
     /// @brief Handle to the vk::Image
-    vk::Image handle;
+    Property<vk::Image> handle{ Get { return _handle; } };
     /// @brief Pointer to on device memory the allocated image
-    vk::DeviceMemory memory;
+    Property<vk::DeviceMemory> memory{ Get { return _memory; } };
     /// @brief Image view
-    vk::ImageView view;
+    Property<vk::ImageView> view{ Get { return _view; } };
 
     /// @brief Image width
-    uint32 width;
+    Property<uint32> width{ Get { return _width; } };
     /// @brief Image height
-    uint32 height;
+    Property<uint32> height{ Get { return _height; } };
 
     VulkanImage(const VulkanDevice* const device, const vk::AllocationCallbacks* const allocator)
         : _device(device), _allocator(allocator) {}
@@ -107,11 +107,19 @@ public:
     );
 
 private:
+
     const VulkanDevice* _device;
     const vk::AllocationCallbacks* const _allocator;
 
-    bool _has_view = false;
+    vk::Image _handle;
+    vk::DeviceMemory _memory;
+    vk::ImageView _view;
     vk::ImageAspectFlags _aspect_flags;
+
+    bool _has_view = false;
+
+    uint32 _width;
+    uint32 _height;
 
     void create_view(
         const uint32 mip_levels,

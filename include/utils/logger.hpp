@@ -1,7 +1,7 @@
 #pragma once
 
 #include "defines.hpp"
-#include <string>
+#include "string.hpp"
 
 #define LOG_WARNING_ENABLED 1
 #define LOG_INFO_ENABLED 1
@@ -112,3 +112,5 @@ template<>
 void Logger::logger_output_one<const char*>(uint32 kind, const char* message);
 template<>
 void Logger::logger_output_one<std::string>(uint32 kind, std::string message);
+template<>
+void Logger::logger_output_one<String>(uint32 kind, String message);

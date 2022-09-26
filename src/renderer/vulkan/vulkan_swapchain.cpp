@@ -10,19 +10,19 @@ VulkanSwapchain::VulkanSwapchain(
     const vk::AllocationCallbacks* const allocator
 ) : _width(width), _height(height), _vulkan_surface(vulkan_surface), _device(device), _allocator(allocator) {
     // Set maximum MSAA samples
-    auto count = _device->info.framebuffer_color_sample_counts &
-        _device->info.framebuffer_depth_sample_counts;
+    auto count = _device->info().framebuffer_color_sample_counts &
+        _device->info().framebuffer_depth_sample_counts;
 
-    msaa_samples = vk::SampleCountFlagBits::e1;
-    if (count & vk::SampleCountFlagBits::e64) msaa_samples = vk::SampleCountFlagBits::e64;
-    else if (count & vk::SampleCountFlagBits::e32) msaa_samples = vk::SampleCountFlagBits::e32;
-    else if (count & vk::SampleCountFlagBits::e16) msaa_samples = vk::SampleCountFlagBits::e16;
-    else if (count & vk::SampleCountFlagBits::e8) msaa_samples = vk::SampleCountFlagBits::e8;
-    else if (count & vk::SampleCountFlagBits::e4) msaa_samples = vk::SampleCountFlagBits::e4;
-    else if (count & vk::SampleCountFlagBits::e2) msaa_samples = vk::SampleCountFlagBits::e2;
+    _msaa_samples = vk::SampleCountFlagBits::e1;
+    if (count & vk::SampleCountFlagBits::e64) _msaa_samples = vk::SampleCountFlagBits::e64;
+    else if (count & vk::SampleCountFlagBits::e32) _msaa_samples = vk::SampleCountFlagBits::e32;
+    else if (count & vk::SampleCountFlagBits::e16) _msaa_samples = vk::SampleCountFlagBits::e16;
+    else if (count & vk::SampleCountFlagBits::e8) _msaa_samples = vk::SampleCountFlagBits::e8;
+    else if (count & vk::SampleCountFlagBits::e4) _msaa_samples = vk::SampleCountFlagBits::e4;
+    else if (count & vk::SampleCountFlagBits::e2) _msaa_samples = vk::SampleCountFlagBits::e2;
 
-    if (msaa_samples > VulkanSettings::max_msaa_samples)
-        msaa_samples = VulkanSettings::max_msaa_samples;
+    if (_msaa_samples > VulkanSettings::max_msaa_samples)
+        _msaa_samples = VulkanSettings::max_msaa_samples;
 
     // Create swapchain proper
     create();
@@ -48,7 +48,7 @@ void VulkanSwapchain::change_extent(const uint32 width, const uint32 height) {
     _should_resize = true;
 }
 
-void VulkanSwapchain::initialize_framebuffers(vk::RenderPass* const render_pass) {
+void VulkanSwapchain::initialize_framebuffers(const vk::RenderPass* const render_pass) {
     _render_pass = render_pass; // Set render pass requirement
     create_framebuffers();      // Create framebuffer
 }
@@ -56,7 +56,7 @@ void VulkanSwapchain::initialize_framebuffers(vk::RenderPass* const render_pass)
 vk::AttachmentDescription VulkanSwapchain::get_depth_attachment() const {
     vk::AttachmentDescription depth_attachment{};
     depth_attachment.setFormat(find_depth_format());
-    depth_attachment.setSamples(msaa_samples);
+    depth_attachment.setSamples(_msaa_samples);
     depth_attachment.setLoadOp(vk::AttachmentLoadOp::eClear);
     depth_attachment.setStoreOp(vk::AttachmentStoreOp::eDontCare);
     depth_attachment.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
@@ -70,7 +70,7 @@ vk::AttachmentDescription VulkanSwapchain::get_depth_attachment() const {
 vk::AttachmentDescription VulkanSwapchain::get_color_attachment() const {
     vk::AttachmentDescription color_attachment{};
     color_attachment.setFormat(_format);
-    color_attachment.setSamples(msaa_samples);
+    color_attachment.setSamples(_msaa_samples);
     color_attachment.setLoadOp(vk::AttachmentLoadOp::eClear);
     color_attachment.setStoreOp(vk::AttachmentStoreOp::eStore);
     color_attachment.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
@@ -98,7 +98,7 @@ vk::AttachmentDescription VulkanSwapchain::get_color_attachment_resolve() const 
 uint32 VulkanSwapchain::acquire_next_image_index(const vk::Semaphore& signal_semaphore) {
     // Obtain a swapchain image (next in queue for drawing)
     try {
-        auto obtained = _device->handle.acquireNextImageKHR(_handle, UINT64_MAX, signal_semaphore);
+        auto obtained = _device->handle().acquireNextImageKHR(_handle, UINT64_MAX, signal_semaphore);
         if (obtained.result != vk::Result::eSuccess && obtained.result != vk::Result::eSuboptimalKHR)
             Logger::fatal("Swapchain image index acquisition timed-out.");
         return obtained.value;
@@ -136,7 +136,7 @@ void VulkanSwapchain::present(
 
 void VulkanSwapchain::create() {
     // Get swapchain details
-    SwapchainSupportDetails swapchain_support = _device->info.get_swapchain_support_details(_vulkan_surface);
+    SwapchainSupportDetails swapchain_support = _device->info().get_swapchain_support_details(_vulkan_surface);
 
     vk::Extent2D extent = swapchain_support.get_extent(_width, _height);
     vk::SurfaceFormatKHR surface_format = swapchain_support.get_surface_format();
@@ -185,16 +185,16 @@ void VulkanSwapchain::create() {
     }
 
     try {
-        _handle = _device->handle.createSwapchainKHR(create_info, _allocator);
+        _handle = _device->handle().createSwapchainKHR(create_info, _allocator);
     } catch (const vk::SystemError& e) { Logger::fatal(e.what()); }
 
 
     // Remember swapchain format and extent
     _format = surface_format.format;
-    this->extent = extent;
+    this->_extent = extent;
 
     // Retrieve handles to images created with the swapchain
-    auto swapchain_images = _device->handle.getSwapchainImagesKHR(_handle);
+    auto swapchain_images = _device->handle().getSwapchainImagesKHR(_handle);
     // Create swapchain image views
     _image_views.resize(swapchain_images.size());
     for (uint32 i = 0; i < swapchain_images.size(); i++) {
@@ -202,7 +202,7 @@ void VulkanSwapchain::create() {
             _format,
             vk::ImageAspectFlagBits::eColor,
             swapchain_images[i],
-            _device->handle,
+            _device->handle(),
             _allocator
         );
     }
@@ -214,20 +214,20 @@ void VulkanSwapchain::destroy() {
     _depth_image->~VulkanImage();
 
     // Destroy framebuffers
-    for (auto framebuffer : framebuffers)
-        _device->handle.destroyFramebuffer(framebuffer, _allocator);
+    for (auto framebuffer : _framebuffers)
+        _device->handle().destroyFramebuffer(framebuffer, _allocator);
 
     // Destroy image views
     for (auto image_view : _image_views)
-        _device->handle.destroyImageView(image_view, _allocator);
+        _device->handle().destroyImageView(image_view, _allocator);
 
     // Destroy handle
-    _device->handle.destroySwapchainKHR(_handle, _allocator);
+    _device->handle().destroySwapchainKHR(_handle, _allocator);
 }
 
 void VulkanSwapchain::recreate() {
     // Finish all rendering
-    _device->handle.waitIdle();
+    _device->handle().waitIdle();
 
     // Destroy previous swapchain resources
     destroy();
@@ -243,8 +243,8 @@ void VulkanSwapchain::create_color_resource() {
     vk::Format color_format = _format;
 
     _color_image->create(
-        extent.width, extent.height, 1,
-        msaa_samples,
+        _extent.width, _extent.height, 1,
+        _msaa_samples,
         color_format,
         vk::ImageTiling::eOptimal,
         vk::ImageUsageFlagBits::eColorAttachment,
@@ -256,8 +256,8 @@ void VulkanSwapchain::create_depth_resources() {
     auto depth_format = find_depth_format();
 
     _depth_image->create(
-        extent.width, extent.height, 1,
-        msaa_samples,
+        _extent.width, _extent.height, 1,
+        _msaa_samples,
         depth_format,
         vk::ImageTiling::eOptimal,
         vk::ImageUsageFlagBits::eDepthStencilAttachment,
@@ -277,7 +277,7 @@ vk::Format VulkanSwapchain::find_depth_format() const {
 
     // Find a format among the candidates that satisfies the tiling and feature requirements
     for (auto format : candidates) {
-        auto properties = _device->info.get_format_properties(format);
+        auto properties = _device->info().get_format_properties(format);
         vk::FormatFeatureFlags supported_features;
         if (tiling == vk::ImageTiling::eLinear && (features & properties.linearTilingFeatures) == features)
             return format;
@@ -289,13 +289,13 @@ vk::Format VulkanSwapchain::find_depth_format() const {
 }
 
 void VulkanSwapchain::create_framebuffers() {
-    framebuffers.resize(_image_views.size());
+    _framebuffers.resize(_image_views.size());
 
     // Create a framebuffer for each swapchain image view
-    for (uint32 i = 0; i < framebuffers.size(); i++) {
+    for (uint32 i = 0; i < _framebuffers.size(); i++) {
         std::array<vk::ImageView, 3> attachments = {
-            _color_image->view,
-            _depth_image->view,
+            _color_image->view(),
+            _depth_image->view(),
             _image_views[i]
         };
 
@@ -304,12 +304,12 @@ void VulkanSwapchain::create_framebuffers() {
         framebuffer_info.setRenderPass(*_render_pass); // Render pass with which framebuffer need to be compatible
         // List of objects bound to the corresponding attachment descriptions render pass
         framebuffer_info.setAttachments(attachments);
-        framebuffer_info.setWidth(extent.width);       // Framebuffer width
-        framebuffer_info.setHeight(extent.height);     // Framebuffer height
+        framebuffer_info.setWidth(_extent.width);       // Framebuffer width
+        framebuffer_info.setHeight(_extent.height);     // Framebuffer height
         framebuffer_info.setLayers(1);                 // Number of layers in image array
 
         try {
-            framebuffers[i] = _device->handle.createFramebuffer(framebuffer_info, _allocator);
+            _framebuffers[i] = _device->handle().createFramebuffer(framebuffer_info, _allocator);
         } catch (vk::SystemError e) { Logger::fatal(e.what()); }
     }
 }

@@ -18,37 +18,37 @@ VulkanDevice::VulkanDevice(
     queue_family_indices = find_queue_families(physical_device, vulkan_surface);
 
     // Get other physical device info
-    info = get_physical_device_info(physical_device);
+    _info = get_physical_device_info(physical_device);
 
     // Log basic device info
     Logger::log("Suitable vulkan device found.");
-    Logger::log("Device selected\t\t: ", info.name);
-    Logger::log("GPU type\t\t\t: ", info.type);
-    Logger::log("GPU driver version\t: ", info.driver_version);
-    Logger::log("Vulkan api version\t: ", info.api_version);
-    for (uint32 i = 0; i < info.memory_size_in_gb.size(); i++) {
-        if (info.memory_is_local[i])
-            Logger::log("Local GPU memory\t\t: ", info.memory_size_in_gb[i], " GiB.");
+    Logger::log("Device selected\t\t: ", _info.name);
+    Logger::log("GPU type\t\t\t: ", _info.type);
+    Logger::log("GPU driver version\t: ", _info.driver_version);
+    Logger::log("Vulkan api version\t: ", _info.api_version);
+    for (uint32 i = 0; i < _info.memory_size_in_gb.size(); i++) {
+        if (_info.memory_is_local[i])
+            Logger::log("Local GPU memory\t\t: ", _info.memory_size_in_gb[i], " GiB.");
         else
-            Logger::log("Shared GPU memory\t: ", info.memory_size_in_gb[i], " GiB.");
+            Logger::log("Shared GPU memory\t: ", _info.memory_size_in_gb[i], " GiB.");
     }
 
     // Create logical device
-    handle = create_logical_device(physical_device);
+    _handle = create_logical_device(physical_device);
 
     // Retrieving queue handles
     if (VulkanSettings::graphics_family_required)
-        graphics_queue = handle.getQueue(queue_family_indices.graphics_family.value(), 0);
+        graphics_queue = _handle.getQueue(queue_family_indices.graphics_family.value(), 0);
     if (VulkanSettings::present__family_required)
-        presentation_queue = handle.getQueue(queue_family_indices.present_family.value(), 0);
+        presentation_queue = _handle.getQueue(queue_family_indices.present_family.value(), 0);
     if (VulkanSettings::transfer_family_required)
-        transfer_queue = handle.getQueue(queue_family_indices.transfer_family.value(), 0);
+        transfer_queue = _handle.getQueue(queue_family_indices.transfer_family.value(), 0);
     if (VulkanSettings::compute__family_required)
-        compute_queue = handle.getQueue(queue_family_indices.compute_family.value(), 0);
+        compute_queue = _handle.getQueue(queue_family_indices.compute_family.value(), 0);
 }
 
 VulkanDevice::~VulkanDevice() {
-    handle.destroy(_allocator);
+    _handle.destroy(_allocator);
 }
 
 // //////////////////////////// //
@@ -59,9 +59,9 @@ uint32 VulkanDevice::find_memory_type(
     const uint32 type_filter,
     const vk::MemoryPropertyFlags properties
 ) const {
-    for (uint32 i = 0; i < info.memory_types.size(); i++) {
+    for (uint32 i = 0; i < _info.memory_types.size(); i++) {
         if ((type_filter & (1 << i)) &&
-            (info.memory_types[i].propertyFlags & properties) == properties)
+            (_info.memory_types[i].propertyFlags & properties) == properties)
             return i;
     }
 

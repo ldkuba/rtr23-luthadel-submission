@@ -2,13 +2,14 @@
 
 #include "vulkan_structures.hpp"
 #include "logger.hpp"
+#include "property.hpp"
 
 class VulkanDevice {
 public:
     /// @brief Vulkan handle to a logical device.
-    vk::Device handle;
+    Property<vk::Device> handle{ Get { return _handle; } };
     /// @brief Vulkan physical device info.
-    PhysicalDeviceInfo info;
+    Property<PhysicalDeviceInfo> info{ Get { return _info; } };
 
     VulkanDevice() {}
     VulkanDevice(
@@ -37,6 +38,9 @@ public:
 
 private:
     const vk::AllocationCallbacks* const _allocator = nullptr;
+
+    vk::Device _handle;
+    PhysicalDeviceInfo _info;
 
     vk::PhysicalDevice pick_physical_device(
         const vk::Instance& vulkan_instance,

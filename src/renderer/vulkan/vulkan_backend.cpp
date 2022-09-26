@@ -1,10 +1,5 @@
 #include "renderer/vulkan/vulkan_backend.hpp"
 
-
-// TODO: TEMP IMAGE LOADING LIBS
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
-
 // TODO: TEMP MODEL LOADING LIBS
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
@@ -47,7 +42,7 @@ VulkanBackend::VulkanBackend(Platform::Surface* surface) : RendererBackend(surfa
 
     // Create render pass
     _render_pass = new VulkanRenderPass(
-        &_device->handle,
+        &_device->handle(),
         _allocator,
         _swapchain
     );
@@ -62,14 +57,14 @@ VulkanBackend::VulkanBackend(Platform::Surface* surface) : RendererBackend(surfa
 
     // Create command pool
     _command_pool = new VulkanCommandPool(
-        &_device->handle,
+        &_device->handle(),
         _allocator,
         &_device->graphics_queue,
         _device->queue_family_indices.graphics_family.value()
     );
 
     // Initialize framebuffers
-    _swapchain->initialize_framebuffers(&_render_pass->handle);
+    _swapchain->initialize_framebuffers(&_render_pass->handle());
 
     // TODO: TEMP IMAGE TEXTURE CODE
     create_texture_image();
@@ -96,14 +91,14 @@ VulkanBackend::VulkanBackend(Platform::Surface* surface) : RendererBackend(surfa
 }
 
 VulkanBackend::~VulkanBackend() {
-    _device->handle.waitIdle();
+    _device->handle().waitIdle();
 
     // Swapchain
     delete _swapchain;
 
 
     // TODO: TEMP IMAGE TEXTURE CODE
-    _device->handle.destroySampler(_texture_sampler, _allocator);
+    _device->handle().destroySampler(_texture_sampler, _allocator);
     delete _texture_image;
 
 
@@ -126,9 +121,9 @@ VulkanBackend::~VulkanBackend() {
 
     // Synchronization code
     for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++) {
-        _device->handle.destroySemaphore(_semaphores_image_available[i], _allocator);
-        _device->handle.destroySemaphore(_semaphores_render_finished[i], _allocator);
-        _device->handle.destroyFence(_fences_in_flight[i], _allocator);
+        _device->handle().destroySemaphore(_semaphores_image_available[i], _allocator);
+        _device->handle().destroySemaphore(_semaphores_render_finished[i], _allocator);
+        _device->handle().destroyFence(_fences_in_flight[i], _allocator);
     }
 
     delete _device;
@@ -157,7 +152,7 @@ bool VulkanBackend::end_frame(const float32 delta_time) {
     // Wait for previous frame to finish drawing
     std::vector<vk::Fence> fences = { _fences_in_flight[_current_frame] };
     try {
-        auto result = _device->handle.waitForFences(fences, true, UINT64_MAX);
+        auto result = _device->handle().waitForFences(fences, true, UINT64_MAX);
         if (result != vk::Result::eSuccess) throw std::runtime_error("End of frame fence timed-out.");
     } catch (const vk::SystemError& e) { Logger::fatal(e.what()); }
 
@@ -166,15 +161,12 @@ bool VulkanBackend::end_frame(const float32 delta_time) {
 
     // Reset fence
     try {
-        _device->handle.resetFences(fences);
+        _device->handle().resetFences(fences);
     } catch (const vk::SystemError& e) { Logger::fatal(e.what()); }
 
     // Record commands
     _command_buffers[_current_frame].reset();
     record_command_buffer(_command_buffers[_current_frame], image_index);
-
-    // Update uniform buffer data
-    update_uniform_buffer(_current_frame);
 
     // Submit command buffer
     vk::PipelineStageFlags wait_stages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
@@ -199,6 +191,32 @@ bool VulkanBackend::end_frame(const float32 delta_time) {
     // Advance current frame
     _current_frame = (_current_frame + 1) % VulkanSettings::max_frames_in_flight;
     return true;
+}
+
+void VulkanBackend::update_global_uniform_buffer_state(
+    const glm::mat4 projection,
+    const glm::mat4 view,
+    const glm::vec3 view_position,
+    const glm::vec4 ambient_color,
+    const int32 mode
+) {
+    // Define ubo transformations
+    static float32 rotation = 0.0f;
+    rotation += 0.01f;
+    UniformBufferObject ubo{};
+    ubo.model = glm::rotate(glm::mat4(1.0f), glm::radians(rotation), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.view = view;
+    ubo.project = projection;
+
+    // Copy ubo data to the buffer
+    _uniform_buffers[_current_frame]->load_data(&ubo, 0, sizeof(ubo));
+}
+
+void VulkanBackend::create_texture(Texture* texture) {
+
+}
+void VulkanBackend::destroy_texture(Texture* texture) {
+
 }
 
 // /////////////////////////////// //
@@ -343,7 +361,8 @@ void VulkanBackend::record_command_buffer(vk::CommandBuffer command_buffer, uint
     command_buffer.begin(begin_info);
 
     // Begin render pass
-    _render_pass->begin(command_buffer, _swapchain->framebuffers[image_index]);
+    std::vector<vk::Framebuffer> framebuffers = _swapchain->framebuffers;
+    _render_pass->begin(command_buffer, framebuffers[image_index]);
 
     // Bind object shader
     _object_shader->use(command_buffer);
@@ -361,9 +380,9 @@ void VulkanBackend::record_command_buffer(vk::CommandBuffer command_buffer, uint
     // Viewport
     vk::Viewport viewport{};
     viewport.setX(0.0f);
-    viewport.setY(static_cast<float32>(_swapchain->extent.height));
-    viewport.setWidth(static_cast<float32>(_swapchain->extent.width));
-    viewport.setHeight(-static_cast<float32>(_swapchain->extent.height));
+    viewport.setY(static_cast<float32>(_swapchain->extent().height));
+    viewport.setWidth(static_cast<float32>(_swapchain->extent().width));
+    viewport.setHeight(-static_cast<float32>(_swapchain->extent().height));
     viewport.setMinDepth(0.0f);
     viewport.setMaxDepth(1.0f);
 
@@ -401,9 +420,9 @@ void VulkanBackend::create_sync_objects() {
 
     try {
         for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++) {
-            _semaphores_image_available[i] = _device->handle.createSemaphore(semaphore_info, _allocator);
-            _semaphores_render_finished[i] = _device->handle.createSemaphore(semaphore_info, _allocator);
-            _fences_in_flight[i] = _device->handle.createFence(fence_info, _allocator);
+            _semaphores_image_available[i] = _device->handle().createSemaphore(semaphore_info, _allocator);
+            _semaphores_render_finished[i] = _device->handle().createSemaphore(semaphore_info, _allocator);
+            _fences_in_flight[i] = _device->handle().createFence(fence_info, _allocator);
         }
     } catch (vk::SystemError e) { Logger::fatal(e.what()); }
 }
@@ -472,9 +491,6 @@ void VulkanBackend::create_index_buffer() {
 }
 
 // UNIFORM CODE
-#include <glm/gtc/matrix_transform.hpp>
-#include <chrono>
-
 void VulkanBackend::create_uniform_buffers() {
     vk::DeviceSize buffer_size = sizeof(UniformBufferObject);
 
@@ -489,24 +505,6 @@ void VulkanBackend::create_uniform_buffers() {
             vk::MemoryPropertyFlagBits::eHostCoherent
         );
     }
-}
-
-void VulkanBackend::update_uniform_buffer(uint32 current_image) {
-    static auto start_time = std::chrono::high_resolution_clock::now();
-
-    // Calculate delta time
-    auto current_time = std::chrono::high_resolution_clock::now();
-    float32 delta_time = std::chrono::duration<float32, std::chrono::seconds::period>(current_time - start_time).count();
-
-    // Define ubo transformations
-    float32 screen_ratio = _swapchain->extent.width / (float32) _swapchain->extent.height;
-    UniformBufferObject ubo{};
-    ubo.model = glm::rotate(glm::mat4(1.0f), delta_time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    ubo.project = glm::perspective(glm::radians(45.0f), screen_ratio, 0.1f, 100.0f);
-
-    // Copy ubo data to the buffer
-    _uniform_buffers[current_image]->load_data(&ubo, 0, sizeof(ubo));
 }
 
 void VulkanBackend::create_descriptor_sets() {
@@ -530,33 +528,28 @@ void VulkanBackend::create_descriptor_sets() {
 // TEXTURE IMAGE
 void VulkanBackend::create_texture_image() {
     // Load image
-    int32 width, height, channels;
-    stbi_uc* pixels = stbi_load(texture_path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
-    vk::DeviceSize image_size = width * height * 4;
-
-    if (!pixels)
-        throw std::runtime_error("Failed to load texture image.");
+    Texture* texture = new Texture("viking_room", "png");
+    vk::DeviceSize texture_size = texture->total_size;
 
     // Calculate mip levels
-    _mip_levels = std::floor(std::log2(std::max(width, height))) + 1;
+    _mip_levels = std::floor(std::log2(std::max(texture->width(), texture->height()))) + 1;
 
     // Create staging buffer
     auto staging_buffer = new VulkanBuffer(_device, _allocator);
     staging_buffer->create(
-        image_size,
+        texture_size,
         vk::BufferUsageFlagBits::eTransferSrc,
         vk::MemoryPropertyFlagBits::eHostVisible |
         vk::MemoryPropertyFlagBits::eHostCoherent
     );
 
     // Fill created memory with data
-    staging_buffer->load_data(pixels, 0, image_size);
-    stbi_image_free(pixels);
+    staging_buffer->load_data(texture->pixels, 0, texture_size);
 
     // Create device side image
     _texture_image = new VulkanImage(_device, _allocator);
     _texture_image->create(
-        width, height, _mip_levels,
+        texture->width, texture->height, _mip_levels,
         vk::SampleCountFlagBits::e1,
         vk::Format::eR8G8B8A8Srgb,
         vk::ImageTiling::eOptimal,
@@ -580,7 +573,13 @@ void VulkanBackend::create_texture_image() {
     staging_buffer->copy_data_to_image(_command_pool, _texture_image);
 
     // Generate mipmaps, this also transitions image to a layout optimal for sampling
-    generate_mipmaps(_texture_image->handle, vk::Format::eR8G8B8A8Srgb, width, height, _mip_levels);
+    generate_mipmaps(
+        _texture_image->handle,
+        vk::Format::eR8G8B8A8Srgb,
+        texture->width,
+        texture->height,
+        _mip_levels
+    );
 
     // Cleanup
     delete staging_buffer;
@@ -592,7 +591,7 @@ void VulkanBackend::create_texture_sampler() {
     sampler_info.setAddressModeV(vk::SamplerAddressMode::eRepeat);
     sampler_info.setAddressModeW(vk::SamplerAddressMode::eRepeat);
     sampler_info.setAnisotropyEnable(true);
-    sampler_info.setMaxAnisotropy(_device->info.max_sampler_anisotropy);
+    sampler_info.setMaxAnisotropy(_device->info().max_sampler_anisotropy);
     sampler_info.setBorderColor(vk::BorderColor::eIntOpaqueBlack);
     sampler_info.setUnnormalizedCoordinates(false);
     sampler_info.setCompareEnable(false);
@@ -606,7 +605,7 @@ void VulkanBackend::create_texture_sampler() {
     sampler_info.setMaxLod(static_cast<float32>(_mip_levels));
 
     try {
-        _texture_sampler = _device->handle.createSampler(sampler_info, _allocator);
+        _texture_sampler = _device->handle().createSampler(sampler_info, _allocator);
     } catch (vk::SystemError e) { Logger::fatal(e.what()); }
 }
 
@@ -657,7 +656,7 @@ void VulkanBackend::load_model() {
 
 void VulkanBackend::generate_mipmaps(vk::Image image, vk::Format format, uint32 width, uint32 height, uint32 mip_levels) {
     // Check if image format supports linear blitting
-    auto properties = _device->info.get_format_properties(format);
+    auto properties = _device->info().get_format_properties(format);
     if (!(properties.optimalTilingFeatures & vk::FormatFeatureFlagBits::eSampledImageFilterLinear))
         throw std::runtime_error("Texture image format does not support linear blitting.");
 

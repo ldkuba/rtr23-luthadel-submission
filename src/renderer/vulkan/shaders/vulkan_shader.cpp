@@ -14,7 +14,7 @@ vk::ShaderModule VulkanShader::create_shader_module(const std::vector<byte> code
     vk::ShaderModuleCreateInfo create_info{};
     create_info.setCodeSize(code.size());
     create_info.setPCode(reinterpret_cast<const uint32*> (code.data()));
-    return _device->handle.createShaderModule(create_info, _allocator);
+    return _device->handle().createShaderModule(create_info, _allocator);
 }
 
 void VulkanShader::create_pipeline(
@@ -137,7 +137,7 @@ void VulkanShader::create_pipeline(
 
     // === Create pipeline layout ===
     try {
-        _pipeline_layout = _device->handle.createPipelineLayout(layout_info, _allocator);
+        _pipeline_layout = _device->handle().createPipelineLayout(layout_info, _allocator);
     } catch (vk::SystemError e) { Logger::fatal(e.what()); }
 
     // === Create pipeline object ===
@@ -164,7 +164,7 @@ void VulkanShader::create_pipeline(
     create_info.setBasePipelineIndex(-1);
 
     try {
-        auto result = _device->handle.createGraphicsPipeline(VK_NULL_HANDLE, create_info, _allocator);
+        auto result = _device->handle().createGraphicsPipeline(VK_NULL_HANDLE, create_info, _allocator);
         if (result.result != vk::Result::eSuccess)
             throw std::runtime_error("Failed to create graphics pipeline (Unexpected compilation).");
         _pipeline = result.value;

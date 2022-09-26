@@ -15,3 +15,8 @@ template<>
 void Logger::logger_output_one<std::string>(uint32 kind, std::string message) {
     Platform::Console::write(message, kind, false);
 }
+
+template<>
+void Logger::logger_output_one<String>(uint32 kind, String message) {
+    Platform::Console::write(message, kind, false);
+}

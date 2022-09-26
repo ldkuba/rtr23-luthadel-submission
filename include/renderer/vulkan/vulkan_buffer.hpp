@@ -5,11 +5,11 @@
 class VulkanBuffer {
 public:
     /// @brief Handle to the vk:Buffer
-    vk::Buffer handle;
+    Property<vk::Buffer> handle{ Get { return _handle; } };
     /// @brief Pointer to on device memory of the allocated buffer
-    vk::DeviceMemory memory;
+    Property<vk::DeviceMemory> memory{ Get { return _memory;} };
     /// @brief Total buffer size in bytes
-    vk::DeviceSize size;
+    Property<vk::DeviceSize> size{ Get { return _size; } };
 
     VulkanBuffer(const VulkanDevice* const device, const vk::AllocationCallbacks* const allocator)
         : _device(device), _allocator(allocator) {}
@@ -74,9 +74,13 @@ public:
     ) const;
 
 private:
+
     const VulkanDevice* _device;
     const vk::AllocationCallbacks* const _allocator;
 
+    vk::Buffer _handle;
+    vk::DeviceMemory _memory;
+    vk::DeviceSize _size;
     vk::BufferUsageFlags _usage;
     vk::MemoryPropertyFlags _properties;
 

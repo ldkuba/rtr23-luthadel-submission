@@ -1,9 +1,9 @@
 #include "renderer/vulkan/vulkan_image.hpp"
 
 VulkanImage::~VulkanImage() {
-    if (handle) _device->handle.destroyImage(handle, _allocator);
-    if (memory) _device->handle.freeMemory(memory, _allocator);
-    if (_has_view) _device->handle.destroyImageView(view, _allocator);
+    if (_handle) _device->handle().destroyImage(_handle, _allocator);
+    if (_memory) _device->handle().freeMemory(_memory, _allocator);
+    if (_has_view) _device->handle().destroyImageView(view, _allocator);
 }
 
 // /////////////////////////// //
@@ -21,8 +21,8 @@ void VulkanImage::create(
     const vk::MemoryPropertyFlags properties
 ) {
     // Remember width and height
-    this->width = width;
-    this->height = height;
+    this->_width = width;
+    this->_height = height;
 
     // Create image
     vk::ImageCreateInfo image_info{};
@@ -43,11 +43,11 @@ void VulkanImage::create(
     image_info.setSamples(number_of_samples);    // Number of samples used for MSAA
 
     try {
-        handle = _device->handle.createImage(image_info, _allocator);
+        _handle = _device->handle().createImage(image_info, _allocator);
     } catch (vk::SystemError e) { Logger::log(e.what()); }
 
     // Allocate image memory
-    auto memory_requirements = _device->handle.getImageMemoryRequirements(handle);
+    auto memory_requirements = _device->handle().getImageMemoryRequirements(handle);
 
     vk::MemoryAllocateInfo allocation_info{};
     // Number of bytes to be allocated
@@ -57,11 +57,11 @@ void VulkanImage::create(
         _device->find_memory_type(memory_requirements.memoryTypeBits, properties));
 
     try {
-        memory = _device->handle.allocateMemory(allocation_info, _allocator);
+        _memory = _device->handle().allocateMemory(allocation_info, _allocator);
     } catch (const vk::SystemError& e) { Logger::fatal(e.what()); }
 
     // Bind memory to the created image
-    _device->handle.bindImageMemory(handle, memory, 0);
+    _device->handle().bindImageMemory(handle, memory, 0);
 }
 
 void VulkanImage::create(
@@ -205,7 +205,7 @@ void VulkanImage::create_view(
     _aspect_flags = aspect_flags;
     // Construct image view
     vk::ImageViewCreateInfo create_info{};
-    create_info.setImage(handle);                             // Image for which we are creating a view
+    create_info.setImage(_handle);                             // Image for which we are creating a view
     create_info.setViewType(vk::ImageViewType::e2D);          // 2D image
     create_info.setFormat(format);                            // Image format
     create_info.subresourceRange.setAspectMask(aspect_flags); // Image aspect (eg. color, depth...)
@@ -217,6 +217,6 @@ void VulkanImage::create_view(
     create_info.subresourceRange.setLayerCount(1);
 
     try {
-        view = _device->handle.createImageView(create_info, _allocator);
+        _view = _device->handle().createImageView(create_info, _allocator);
     } catch (const vk::SystemError& e) { Logger::fatal(e.what()); }
 }

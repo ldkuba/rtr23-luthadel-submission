@@ -1,8 +1,8 @@
 #include "renderer/vulkan/vulkan_buffer.hpp"
 
 VulkanBuffer::~VulkanBuffer() {
-    if (handle) _device->handle.destroyBuffer(handle, _allocator);
-    if (memory) _device->handle.freeMemory(memory, _allocator);
+    if (_handle) _device->handle().destroyBuffer(_handle, _allocator);
+    if (_memory) _device->handle().freeMemory(_memory, _allocator);
 }
 
 // //////////////////////////// //
@@ -15,22 +15,22 @@ void VulkanBuffer::create(
     const vk::MemoryPropertyFlags properties,
     const bool bind_on_create
 ) {
-    this->size = size;
+    this->_size = size;
     _properties = properties;
     _usage = usage;
 
     // Create buffer
-    handle = create_buffer(size, usage);
+    _handle = create_buffer(size, usage);
 
     // Allocate memory to the buffer
-    memory = allocate_buffer_memory(handle, properties);
+    _memory = allocate_buffer_memory(_handle, properties);
 
     // Bind allocated memory to the buffer if required
-    if (bind_on_create) _device->handle.bindBufferMemory(handle, memory, 0);
+    if (bind_on_create) _device->handle().bindBufferMemory(_handle, _memory, 0);
 }
 
 void VulkanBuffer::bind(const vk::DeviceSize offset) const {
-    if (handle) _device->handle.bindBufferMemory(handle, memory, offset);
+    if (_handle) _device->handle().bindBufferMemory(_handle, _memory, offset);
 }
 
 void VulkanBuffer::resize(
@@ -44,19 +44,19 @@ void VulkanBuffer::resize(
     vk::DeviceMemory new_memory = allocate_buffer_memory(new_handle, _properties);
 
     // Bind allocated memory to buffer
-    _device->handle.bindBufferMemory(new_handle, new_memory, 0);
+    _device->handle().bindBufferMemory(new_handle, new_memory, 0);
 
     // Copy all the data over
     copy_data_to_buffer(command_pool, new_handle, 0, 0, size);
 
     // Destroy the old
-    if (handle) _device->handle.destroyBuffer(handle, _allocator);
-    if (memory) _device->handle.freeMemory(memory, _allocator);
+    if (_handle) _device->handle().destroyBuffer(_handle, _allocator);
+    if (_memory) _device->handle().freeMemory(_memory, _allocator);
 
     // Set the new
-    size = new_size;
-    handle = new_handle;
-    memory = new_memory;
+    _size = new_size;
+    _handle = new_handle;
+    _memory = new_memory;
 }
 
 void VulkanBuffer::load_data(
@@ -65,9 +65,9 @@ void VulkanBuffer::load_data(
     const vk::DeviceSize size
 ) const {
     // Map buffer memory into a CPU accessible memory
-    auto data_ptr = _device->handle.mapMemory(memory, offset, size);
+    auto data_ptr = _device->handle().mapMemory(memory, offset, size);
     memcpy(data_ptr, data, (size_t) size); // Copy data to the assigned memory
-    _device->handle.unmapMemory(memory);   // Unmap the memory
+    _device->handle().unmapMemory(memory);   // Unmap the memory
 }
 
 void VulkanBuffer::copy_data_to_buffer(
@@ -135,7 +135,7 @@ vk::Buffer VulkanBuffer::create_buffer(
 
     vk::Buffer buffer;
     try {
-        buffer = _device->handle.createBuffer(buffer_info, _allocator);
+        buffer = _device->handle().createBuffer(buffer_info, _allocator);
     } catch (vk::SystemError e) { Logger::fatal(e.what()); }
     return buffer;
 }
@@ -144,7 +144,7 @@ vk::DeviceMemory VulkanBuffer::allocate_buffer_memory(
     const vk::Buffer buffer,
     const vk::MemoryPropertyFlags properties
 ) const {
-    auto memory_requirements = _device->handle.getBufferMemoryRequirements(buffer);
+    auto memory_requirements = _device->handle().getBufferMemoryRequirements(buffer);
 
     vk::MemoryAllocateInfo allocation_info{};
     // Number of bytes to be allocated
@@ -155,7 +155,7 @@ vk::DeviceMemory VulkanBuffer::allocate_buffer_memory(
 
     vk::DeviceMemory memory;
     try {
-        memory = _device->handle.allocateMemory(allocation_info, _allocator);
+        memory = _device->handle().allocateMemory(allocation_info, _allocator);
     } catch (vk::SystemError e) { Logger::fatal(e.what()); }
     return memory;
 }

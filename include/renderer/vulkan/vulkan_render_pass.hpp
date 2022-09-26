@@ -4,7 +4,8 @@
 
 class VulkanRenderPass {
 public:
-    vk::RenderPass handle;
+    /// @brief Handle to the vk::RenderPass object
+    Property<vk::RenderPass> handle{ Get { return _handle; } };
 
     VulkanRenderPass(
         const vk::Device* const device,
@@ -28,4 +29,6 @@ private:
     const vk::Device* _device;
     const vk::AllocationCallbacks* const _allocator;
     VulkanSwapchain* const _swapchain;
+
+    vk::RenderPass _handle;
 };

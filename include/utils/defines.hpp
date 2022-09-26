@@ -6,6 +6,10 @@
 
 // byte
 typedef char byte;
+typedef unsigned char ubyte;
+
+// Unsigned char
+typedef unsigned char uchar;
 
 // Unsigned integer
 typedef unsigned char uint8;
@@ -28,6 +32,9 @@ typedef __float128 float128;
 
 // Check if sizes are correct
 static_assert(sizeof(byte) == 1, "Expected a 1 byte long byte.");
+static_assert(sizeof(ubyte) == 1, "Expected a 1 byte long ubyte.");
+
+static_assert(sizeof(uchar) == 1, "Expected a 1 byte long uchar.");
 
 static_assert(sizeof(uint8) == 1, "Expected a 1 byte long uint8.");
 static_assert(sizeof(uint16) == 2, "Expected a 2 byte long uint16.");

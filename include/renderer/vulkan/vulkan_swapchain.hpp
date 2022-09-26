@@ -5,11 +5,11 @@
 class VulkanSwapchain {
 public:
     /// @brief Swapchain image extent
-    vk::Extent2D extent;
+    Property<vk::Extent2D> extent{ Get { return _extent; } };
     /// @brief Framebuffers used for each swapchain image
-    std::vector<vk::Framebuffer> framebuffers;
+    Property<std::vector<vk::Framebuffer>> framebuffers{ Get { return _framebuffers; } };
     /// @brief Number of sampled used for Multisample anti-aliasing
-    vk::SampleCountFlagBits msaa_samples;
+    Property<vk::SampleCountFlagBits> msaa_samples{ Get { return _msaa_samples; } };
 
     VulkanSwapchain(
         const uint32 width,
@@ -26,7 +26,7 @@ public:
     void change_extent(const uint32 width, const uint32 height);
     /// @brief Used for initial creation of framebuffers
     /// @param render_pass Render pass for which to create the framebuffers
-    void initialize_framebuffers(vk::RenderPass* const render_pass);
+    void initialize_framebuffers(const vk::RenderPass* const render_pass);
 
     /// @return Appropriately filled vk::AttachmentDescription object for depth attachment
     vk::AttachmentDescription get_depth_attachment() const;
@@ -51,11 +51,16 @@ private:
     const VulkanDevice* _device;
     const vk::AllocationCallbacks* const _allocator;
     const vk::SurfaceKHR _vulkan_surface;
-    vk::RenderPass* _render_pass;
+    const vk::RenderPass* _render_pass;
+
 
     vk::SwapchainKHR _handle;
     std::vector<vk::ImageView> _image_views;
     vk::Format _format;
+
+    vk::Extent2D _extent;
+    std::vector<vk::Framebuffer> _framebuffers;
+    vk::SampleCountFlagBits _msaa_samples;
 
     uint32 _width;
     uint32 _height;

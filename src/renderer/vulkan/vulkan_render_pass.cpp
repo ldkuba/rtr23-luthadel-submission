@@ -71,7 +71,7 @@ VulkanRenderPass::VulkanRenderPass(
     create_info.setDependencies(dependencies);
 
     try {
-        handle = _device->createRenderPass(create_info, _allocator);
+        _handle = _device->createRenderPass(create_info, _allocator);
     } catch (vk::SystemError e) { Logger::fatal(e.what()); }
 }
 VulkanRenderPass::~VulkanRenderPass() {

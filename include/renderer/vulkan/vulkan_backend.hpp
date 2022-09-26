@@ -6,6 +6,8 @@
 #include "shaders/vulkan_object_shader.hpp"
 #include "../renderer_types.hpp"
 
+#include "resources/texture.hpp"
+
 class VulkanBackend : public RendererBackend {
 public:
     VulkanBackend(Platform::Surface* surface);
@@ -14,6 +16,16 @@ public:
     void resized(const uint32 width, const uint32 height);
     bool begin_frame(const float32 delta_time);
     bool end_frame(const float32 delta_time);
+    void update_global_uniform_buffer_state(
+        const glm::mat4 projection,
+        const glm::mat4 view,
+        const glm::vec3 view_position,
+        const glm::vec4 ambient_color,
+        const int32 mode
+    );
+
+    void create_texture(Texture* texture);
+    void destroy_texture(Texture* texture);
 
 private:
     // TODO: Custom allocator
@@ -72,7 +84,6 @@ private:
 
     void create_descriptor_sets();
     void create_uniform_buffers();
-    void update_uniform_buffer(uint32 current_image);
 
     // TODO: TEMP IMAGE CODE
     VulkanImage* _texture_image;

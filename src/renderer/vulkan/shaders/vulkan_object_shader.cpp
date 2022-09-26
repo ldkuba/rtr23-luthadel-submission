@@ -84,8 +84,8 @@ VulkanObjectShader::VulkanObjectShader(
     );
 
     // === Free unused objects ===
-    _device->handle.destroyShaderModule(vertex_shader_module, _allocator);
-    _device->handle.destroyShaderModule(fragment_shader_module, _allocator);
+    _device->handle().destroyShaderModule(vertex_shader_module, _allocator);
+    _device->handle().destroyShaderModule(fragment_shader_module, _allocator);
 
     // Create uniform buffers
     vk::DeviceSize buffer_size = sizeof(UniformBufferObject);
@@ -109,13 +109,13 @@ VulkanObjectShader::~VulkanObjectShader() {
 
     // Descriptors
     if (_descriptor_pool)
-        _device->handle.destroyDescriptorPool(_descriptor_pool, _allocator);
+        _device->handle().destroyDescriptorPool(_descriptor_pool, _allocator);
     if (_descriptor_set_layout)
-        _device->handle.destroyDescriptorSetLayout(_descriptor_set_layout, _allocator);
+        _device->handle().destroyDescriptorSetLayout(_descriptor_set_layout, _allocator);
 
     // Pipeline
-    _device->handle.destroyPipeline(_pipeline, _allocator);
-    _device->handle.destroyPipelineLayout(_pipeline_layout, _allocator);
+    _device->handle().destroyPipeline(_pipeline, _allocator);
+    _device->handle().destroyPipelineLayout(_pipeline_layout, _allocator);
 }
 
 // /////////////////////////////////// //
@@ -138,7 +138,7 @@ void VulkanObjectShader::create_descriptor_pool() {
     create_info.setMaxSets(VulkanSettings::max_frames_in_flight);
 
     try {
-        _descriptor_pool = _device->handle.createDescriptorPool(create_info, _allocator);
+        _descriptor_pool = _device->handle().createDescriptorPool(create_info, _allocator);
     } catch (vk::SystemError e) { Logger::fatal(e.what()); }
 }
 
@@ -152,7 +152,7 @@ void VulkanObjectShader::create_descriptor_sets(
     allocation_info.setSetLayouts(layouts);
 
     try {
-        _descriptor_sets = _device->handle.allocateDescriptorSets(allocation_info);
+        _descriptor_sets = _device->handle().allocateDescriptorSets(allocation_info);
     } catch (vk::SystemError e) { Logger::fatal(e.what()); }
 
     for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++) {
@@ -173,7 +173,7 @@ void VulkanObjectShader::create_descriptor_sets(
         descriptor_writes[1].setDescriptorCount(1);
         descriptor_writes[1].setPImageInfo(&image_info);
 
-        _device->handle.updateDescriptorSets(descriptor_writes, nullptr);
+        _device->handle().updateDescriptorSets(descriptor_writes, nullptr);
     }
 }
 
@@ -217,6 +217,6 @@ void VulkanObjectShader::create_descriptor_set_layout() {
     layout_info.setBindings(bindings);
 
     try {
-        _descriptor_set_layout = _device->handle.createDescriptorSetLayout(layout_info, _allocator);
+        _descriptor_set_layout = _device->handle().createDescriptorSetLayout(layout_info, _allocator);
     } catch (vk::SystemError e) { Logger::fatal(e.what()); }
 }
