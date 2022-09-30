@@ -19,13 +19,25 @@ void Renderer::on_resize(const uint32 width, const uint32 height) {
 }
 bool Renderer::draw_frame(const float32 delta_time) {
     if (_backend->begin_frame(delta_time)) {
-        _backend->update_global_uniform_buffer_state(
+        // Update global state
+        _backend->update_global_state(
             _projection,
             _view,
             glm::vec3(0.0),
             glm::vec4(1.0),
             0
         );
+
+        // TODO: Temp code; update one and only object
+        static float rotation = 0.0f;
+        rotation += 50.0f * delta_time;
+        GeometryRenderData data = {};
+        data.object_id = 0;
+        data.model = glm::rotate(glm::mat4(1.0f), glm::radians(rotation), glm::vec3(0.0f, 0.0f, 1.0f));
+        data.textures[0] = current_texture;
+
+        _backend->update_object(data);
+
         bool result = _backend->end_frame(delta_time);
         _backend->increment_frame_number();
         if (!result) {

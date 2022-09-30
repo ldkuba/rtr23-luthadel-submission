@@ -46,3 +46,18 @@ struct PhysicalDeviceInfo {
     // Format properties
     std::function<vk::FormatProperties(const vk::Format)> get_format_properties;
 };
+
+struct DescriptorInfo {
+    vk::DescriptorType type;
+    vk::ShaderStageFlagBits shader_stage;
+    uint32 count;
+};
+
+#include "resources/texture.hpp"
+
+class VulkanImage;
+
+struct VulkanTextureData : public InternalTextureData {
+    VulkanImage* image;
+    vk::Sampler sampler;
+};

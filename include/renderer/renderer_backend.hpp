@@ -6,9 +6,6 @@
 #include "resources/texture.hpp"
 
 class RendererBackend {
-private:
-    uint64 _frame_number = 0;
-
 public:
     RendererBackend(Platform::Surface* surface) {}
     ~RendererBackend() {}
@@ -17,14 +14,21 @@ public:
     virtual void resized(const uint32 width, const uint32 height) {}
     virtual bool begin_frame(const float32 delta_time) { return false; }
     virtual bool end_frame(const float32 delta_time) { return false; }
-    virtual void update_global_uniform_buffer_state(
+    virtual void update_global_state(
         const glm::mat4 projection,
         const glm::mat4 view,
         const glm::vec3 view_position,
         const glm::vec4 ambient_color,
         const int32 mode
     ) {}
+    virtual void update_object(
+        const GeometryRenderData data
+    ) {}
 
     virtual void create_texture(Texture* texture) {}
     virtual void destroy_texture(Texture* texture) {}
+
+
+private:
+    uint64 _frame_number = 0;
 };

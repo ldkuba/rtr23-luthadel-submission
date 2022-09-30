@@ -170,3 +170,46 @@ void VulkanShader::create_pipeline(
         _pipeline = result.value;
     } catch (vk::SystemError e) { Logger::fatal(e.what()); }
 }
+
+vk::DescriptorPool VulkanShader::create_descriptor_pool(
+    const std::vector<DescriptorInfo>& descriptor_info,
+    const uint32 max_sets
+) const {
+    std::vector<vk::DescriptorPoolSize> pool_sizes(descriptor_info.size());
+    for (uint32 i = 0; i < descriptor_info.size(); i++) {
+        pool_sizes[i].setType(descriptor_info[i].type);
+        pool_sizes[i].setDescriptorCount(descriptor_info[i].count);
+    }
+
+    vk::DescriptorPoolCreateInfo create_info{};
+    create_info.setPoolSizes(pool_sizes);
+    create_info.setMaxSets(max_sets);
+
+    vk::DescriptorPool descriptor_pool;
+    try {
+        descriptor_pool = _device->handle().createDescriptorPool(create_info, _allocator);
+    } catch (vk::SystemError e) { Logger::fatal(e.what()); }
+    return descriptor_pool;
+}
+
+vk::DescriptorSetLayout VulkanShader::create_descriptor_set_layout(
+    const std::vector<DescriptorInfo>& descriptor_info
+) const {
+    std::vector<vk::DescriptorSetLayoutBinding> bindings(descriptor_info.size());
+    for (uint32 i = 0; i < descriptor_info.size(); i++) {
+        bindings[i].setBinding(i);
+        bindings[i].setDescriptorCount(1);
+        bindings[i].setDescriptorType(descriptor_info[i].type);
+        bindings[i].setStageFlags(descriptor_info[i].shader_stage);
+        bindings[i].setPImmutableSamplers(nullptr);
+    }
+
+    vk::DescriptorSetLayoutCreateInfo layout_info{};
+    layout_info.setBindings(bindings);
+
+    vk::DescriptorSetLayout descriptor_set_layout;
+    try {
+        descriptor_set_layout = _device->handle().createDescriptorSetLayout(layout_info, _allocator);
+    } catch (vk::SystemError e) { Logger::fatal(e.what()); }
+    return descriptor_set_layout;
+}

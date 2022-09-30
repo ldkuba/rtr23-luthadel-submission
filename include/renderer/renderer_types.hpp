@@ -1,6 +1,7 @@
 #pragma once
 
 #include "math_libs.hpp"
+#include "resources/texture.hpp"
 
 // Vertex
 struct Vertex {
@@ -24,8 +25,17 @@ namespace std {
 }
 
 // UBO
-struct UniformBufferObject {
-    alignas(16) glm::mat4 model;
+struct GlobalUniformObject {
     alignas(16) glm::mat4 view;
     alignas(16) glm::mat4 project;
+};
+
+struct LocalUniformObject {
+    alignas(16) glm::mat4 model;
+};
+
+struct GeometryRenderData {
+    uint32 object_id;
+    glm::mat4 model;
+    std::array<Texture*, 16> textures;
 };

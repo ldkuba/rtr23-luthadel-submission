@@ -47,13 +47,8 @@ VulkanBackend::VulkanBackend(Platform::Surface* surface) : RendererBackend(surfa
         _swapchain
     );
 
-    // Create material shader
-    _material_shader = new VulkanMaterialShader(
-        _device,
-        _allocator,
-        _render_pass->handle,
-        _swapchain->msaa_samples
-    );
+    // Initialize framebuffers
+    _swapchain->initialize_framebuffers(&_render_pass->handle());
 
     // Create command pool
     _command_pool = new VulkanCommandPool(
@@ -63,8 +58,16 @@ VulkanBackend::VulkanBackend(Platform::Surface* surface) : RendererBackend(surfa
         _device->queue_family_indices.graphics_family.value()
     );
 
-    // Initialize framebuffers
-    _swapchain->initialize_framebuffers(&_render_pass->handle());
+    // Create material shader
+    _material_shader = new VulkanMaterialShader(
+        _device,
+        _allocator,
+        _render_pass->handle,
+        _swapchain->msaa_samples
+    );
+
+    // TODO: TEMP OBJECT ACQUISITION
+    _material_shader->acquire_resource();
 
     // TODO: TEMP IMAGE TEXTURE CODE
     create_texture_image();
@@ -78,10 +81,6 @@ VulkanBackend::VulkanBackend(Platform::Surface* surface) : RendererBackend(surfa
 
     // TODO: TEMP INDEX BUFFER CODE
     create_index_buffer();
-
-    // TODO: TEMP UNIFORM CODE
-    create_uniform_buffers();
-    create_descriptor_sets();
 
     // TODO: TEMP COMMAND CODE
     _command_buffers = _command_pool->allocate_command_buffers(VulkanSettings::max_frames_in_flight);
@@ -100,11 +99,6 @@ VulkanBackend::~VulkanBackend() {
     // TODO: TEMP IMAGE TEXTURE CODE
     _device->handle().destroySampler(_texture_sampler, _allocator);
     delete _texture_image;
-
-
-    // TODO: TEMP UNIFORM CODE
-    for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++)
-        delete _uniform_buffers[i];
 
 
     // TODO: TEMP INDEX BUFFER CODE
@@ -145,28 +139,68 @@ void VulkanBackend::resized(const uint32 width, const uint32 height) {
 }
 
 bool VulkanBackend::begin_frame(const float32 delta_time) {
-    return true;
-}
-
-bool VulkanBackend::end_frame(const float32 delta_time) {
     // Wait for previous frame to finish drawing
     std::vector<vk::Fence> fences = { _fences_in_flight[_current_frame] };
     try {
         auto result = _device->handle().waitForFences(fences, true, UINT64_MAX);
-        if (result != vk::Result::eSuccess) throw std::runtime_error("End of frame fence timed-out.");
+        if (result != vk::Result::eSuccess) {
+            Logger::warning("End of frame fence timed-out.");
+            return false;
+        }
     } catch (const vk::SystemError& e) { Logger::fatal(e.what()); }
 
     // Acquire next swapchain image index
-    auto image_index = _swapchain->acquire_next_image_index(_semaphores_image_available[_current_frame]);
+    _current_image = _swapchain->acquire_next_image_index(_semaphores_image_available[_current_frame]);
 
     // Reset fence
     try {
         _device->handle().resetFences(fences);
     } catch (const vk::SystemError& e) { Logger::fatal(e.what()); }
 
-    // Record commands
-    _command_buffers[_current_frame].reset();
-    record_command_buffer(_command_buffers[_current_frame], image_index);
+    // Begin recording commands
+    auto command_buffer = _command_buffers[_current_frame];
+    command_buffer.reset();
+
+    // Begin recoding
+    vk::CommandBufferBeginInfo begin_info{};
+    begin_info.setPInheritanceInfo(nullptr);
+
+    command_buffer.begin(begin_info);
+
+    // Begin render pass
+    std::vector<vk::Framebuffer> framebuffers = _swapchain->framebuffers;
+    _render_pass->begin(command_buffer, framebuffers[_current_image]);
+
+    // Set dynamic states
+    // Viewport
+    vk::Viewport viewport{};
+    viewport.setX(0.0f);
+    viewport.setY(static_cast<float32>(_swapchain->extent().height));
+    viewport.setWidth(static_cast<float32>(_swapchain->extent().width));
+    viewport.setHeight(-static_cast<float32>(_swapchain->extent().height));
+    viewport.setMinDepth(0.0f);
+    viewport.setMaxDepth(1.0f);
+
+    command_buffer.setViewport(0, 1, &viewport);
+
+    // Scissors
+    vk::Rect2D scissor{};
+    scissor.setOffset({ 0, 0 });
+    scissor.setExtent(_swapchain->extent);
+
+    command_buffer.setScissor(0, 1, &scissor);
+
+    return true;
+}
+
+bool VulkanBackend::end_frame(const float32 delta_time) {
+    auto command_buffer = _command_buffers[_current_frame];
+
+    // End render pass
+    _render_pass->end(command_buffer);
+
+    // End recording
+    command_buffer.end();
 
     // Submit command buffer
     vk::PipelineStageFlags wait_stages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
@@ -182,40 +216,68 @@ bool VulkanBackend::end_frame(const float32 delta_time) {
     std::array<vk::SubmitInfo, 1> submits = { submit_info };
 
     try {
-        _device->graphics_queue.submit(submits, fences[0]);
+        _device->graphics_queue.submit(submits, _fences_in_flight[_current_frame]);
     } catch (const vk::SystemError& e) { Logger::fatal(e.what()); }
 
     // Present swapchain
-    _swapchain->present(image_index, signal_semaphores);
+    _swapchain->present(_current_image, signal_semaphores);
 
     // Advance current frame
     _current_frame = (_current_frame + 1) % VulkanSettings::max_frames_in_flight;
     return true;
 }
 
-void VulkanBackend::update_global_uniform_buffer_state(
+void VulkanBackend::update_global_state(
     const glm::mat4 projection,
     const glm::mat4 view,
     const glm::vec3 view_position,
     const glm::vec4 ambient_color,
     const int32 mode
 ) {
-    // Define ubo transformations
-    static float32 rotation = 0.0f;
-    rotation += 0.01f;
-    UniformBufferObject ubo{};
-    ubo.model = glm::rotate(glm::mat4(1.0f), glm::radians(rotation), glm::vec3(0.0f, 0.0f, 1.0f));
-    ubo.view = view;
-    ubo.project = projection;
+    _material_shader->update_global_state(
+        projection,
+        view,
+        view_position,
+        ambient_color,
+        mode,
+        _current_frame
+    );
 
-    // Copy ubo data to the buffer
-    _uniform_buffers[_current_frame]->load_data(&ubo, 0, sizeof(ubo));
+    auto command_buffer = _command_buffers[_current_frame];
+
+    // Bind material shader
+    _material_shader->use(command_buffer);
+    _material_shader->bind_descriptor_set(command_buffer, _current_frame);
+}
+
+void VulkanBackend::update_object(
+    const GeometryRenderData data
+) {
+    try {
+        _material_shader->update_object_state(data, _current_frame);
+    } catch (std::runtime_error e) {
+        Logger::error(e.what());
+        return;
+    }
+
+    auto command_buffer = _command_buffers[_current_frame];
+
+    // Bind object
+    _material_shader->bind_object(command_buffer, _current_frame, data.object_id);
+
+    // Bind vertex buffer
+    std::vector<vk::Buffer>vertex_buffers = { _vertex_buffer->handle };
+    std::vector<vk::DeviceSize> offsets = { 0 };
+    command_buffer.bindVertexBuffers(0, vertex_buffers, offsets);
+
+    // Bind index buffer
+    command_buffer.bindIndexBuffer(_index_buffer->handle, 0, vk::IndexType::eUint32);
+
+    // Draw command
+    command_buffer.drawIndexed(static_cast<uint32>(indices.size()), 1, 0, 0, 0);
 }
 
 void VulkanBackend::create_texture(Texture* texture) {
-    byte* internal_data = texture->data;
-    vk::DeviceSize texture_size = texture->total_size;
-
     // Calculate mip levels
     auto mip_levels = std::floor(std::log2(std::max(texture->width(), texture->height()))) + 1;
 
@@ -226,14 +288,14 @@ void VulkanBackend::create_texture(Texture* texture) {
     // Create staging buffer
     auto staging_buffer = new VulkanBuffer(_device, _allocator);
     staging_buffer->create(
-        texture_size,
+        texture->total_size,
         vk::BufferUsageFlagBits::eTransferSrc,
         vk::MemoryPropertyFlagBits::eHostVisible |
         vk::MemoryPropertyFlagBits::eHostCoherent
     );
 
     // Fill created memory with data
-    staging_buffer->load_data(internal_data, 0, texture_size);
+    staging_buffer->load_data(texture->data, 0, texture->total_size);
 
     // Create device side image
     // NOTE: Lots of assumptions here
@@ -269,9 +331,48 @@ void VulkanBackend::create_texture(Texture* texture) {
 
     // Cleanup
     delete staging_buffer;
+
+    // TODO: CREATE SAMPLER
+    vk::SamplerCreateInfo sampler_info{};
+    sampler_info.setAddressModeU(vk::SamplerAddressMode::eRepeat);
+    sampler_info.setAddressModeV(vk::SamplerAddressMode::eRepeat);
+    sampler_info.setAddressModeW(vk::SamplerAddressMode::eRepeat);
+    sampler_info.setAnisotropyEnable(true);
+    sampler_info.setMaxAnisotropy(_device->info().max_sampler_anisotropy);
+    sampler_info.setBorderColor(vk::BorderColor::eIntOpaqueBlack);
+    sampler_info.setUnnormalizedCoordinates(false);
+    sampler_info.setCompareEnable(false);
+    sampler_info.setCompareOp(vk::CompareOp::eAlways);
+    // Mipmap settings
+    sampler_info.setMagFilter(vk::Filter::eLinear);
+    sampler_info.setMinFilter(vk::Filter::eLinear);
+    sampler_info.setMipmapMode(vk::SamplerMipmapMode::eLinear);
+    sampler_info.setMipLodBias(0.0f);
+    sampler_info.setMinLod(0.0f);
+    sampler_info.setMaxLod(static_cast<float32>(mip_levels));
+
+
+    vk::Sampler texture_sampler;
+    try {
+        texture_sampler = _device->handle().createSampler(sampler_info, _allocator);
+    } catch (vk::SystemError e) { Logger::fatal(e.what()); }
+
+    // Save internal data
+    VulkanTextureData* vulkan_texture_data = new VulkanTextureData();
+    vulkan_texture_data->image = texture_image;
+    vulkan_texture_data->sampler = texture_sampler;
+    texture->internal_data = vulkan_texture_data;
 }
 void VulkanBackend::destroy_texture(Texture* texture) {
+    if (texture == nullptr) return;
+    if (texture->internal_data == nullptr) return;
+    auto data = reinterpret_cast<VulkanTextureData*>(texture->internal_data());
 
+    _device->handle().waitIdle();
+    if (data->image)
+        delete data->image;
+    if (data->sampler)
+        _device->handle().destroySampler(data->sampler);
 }
 
 // /////////////////////////////// //
@@ -407,61 +508,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback_function(
 
 /// TODO: TEMP CODE BELOW
 
-// COMMAND BUFFER CODE
-void VulkanBackend::record_command_buffer(vk::CommandBuffer command_buffer, uint32 image_index) {
-    // Begin recoding
-    vk::CommandBufferBeginInfo begin_info{};
-    begin_info.setPInheritanceInfo(nullptr);
-
-    command_buffer.begin(begin_info);
-
-    // Begin render pass
-    std::vector<vk::Framebuffer> framebuffers = _swapchain->framebuffers;
-    _render_pass->begin(command_buffer, framebuffers[image_index]);
-
-    // Bind material shader
-    _material_shader->use(command_buffer);
-    _material_shader->bind_descriptor_set(command_buffer, _current_frame);
-
-    // Bind vertex buffer
-    std::vector<vk::Buffer>vertex_buffers = { _vertex_buffer->handle };
-    std::vector<vk::DeviceSize> offsets = { 0 };
-    command_buffer.bindVertexBuffers(0, vertex_buffers, offsets);
-
-    // Bind index buffer
-    command_buffer.bindIndexBuffer(_index_buffer->handle, 0, vk::IndexType::eUint32);
-
-    // Dynamic states
-    // Viewport
-    vk::Viewport viewport{};
-    viewport.setX(0.0f);
-    viewport.setY(static_cast<float32>(_swapchain->extent().height));
-    viewport.setWidth(static_cast<float32>(_swapchain->extent().width));
-    viewport.setHeight(-static_cast<float32>(_swapchain->extent().height));
-    viewport.setMinDepth(0.0f);
-    viewport.setMaxDepth(1.0f);
-
-    command_buffer.setViewport(0, 1, &viewport);
-
-    // Scissors
-    vk::Rect2D scissor{};
-    scissor.setOffset({ 0, 0 });
-    scissor.setExtent(_swapchain->extent);
-
-    command_buffer.setScissor(0, 1, &scissor);
-
-    // Draw command
-    command_buffer.drawIndexed(static_cast<uint32>(indices.size()), 1, 0, 0, 0);
-
-    // End render pass
-    _render_pass->end(command_buffer);
-
-    // End recording
-    command_buffer.end();
-}
-
 // SYNCH
-
 void VulkanBackend::create_sync_objects() {
     _semaphores_image_available.resize(VulkanSettings::max_frames_in_flight);
     _semaphores_render_finished.resize(VulkanSettings::max_frames_in_flight);
@@ -516,7 +563,6 @@ void VulkanBackend::create_vertex_buffer() {
 }
 
 // INDEX BUFFER
-
 void VulkanBackend::create_index_buffer() {
     vk::DeviceSize buffer_size = sizeof(indices[0]) * indices.size();
 
@@ -547,41 +593,6 @@ void VulkanBackend::create_index_buffer() {
 
     // Cleanup
     delete staging_buffer;
-}
-
-// UNIFORM CODE
-void VulkanBackend::create_uniform_buffers() {
-    vk::DeviceSize buffer_size = sizeof(UniformBufferObject);
-
-    _uniform_buffers.resize(VulkanSettings::max_frames_in_flight);
-
-    for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++) {
-        _uniform_buffers[i] = new VulkanBuffer(_device, _allocator);
-        _uniform_buffers[i]->create(
-            buffer_size,
-            vk::BufferUsageFlagBits::eUniformBuffer,
-            vk::MemoryPropertyFlagBits::eHostVisible |
-            vk::MemoryPropertyFlagBits::eHostCoherent
-        );
-    }
-}
-
-void VulkanBackend::create_descriptor_sets() {
-    // UBO info
-    std::vector<vk::DescriptorBufferInfo> buffer_infos(VulkanSettings::max_frames_in_flight);
-    for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++) {
-        buffer_infos[i].setBuffer(_uniform_buffers[i]->handle);
-        buffer_infos[i].setOffset(0);
-        buffer_infos[i].setRange(sizeof(UniformBufferObject));
-    }
-
-    // Texture info
-    vk::DescriptorImageInfo image_info{};
-    image_info.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
-    image_info.setImageView(_texture_image->view);
-    image_info.setSampler(_texture_sampler);
-
-    _material_shader->create_descriptor_sets(buffer_infos, image_info);
 }
 
 // TEXTURE IMAGE

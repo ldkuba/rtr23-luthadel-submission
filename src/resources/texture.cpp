@@ -15,7 +15,7 @@ Texture::Texture(
     const bool has_transparency
 ) : _width(width), _height(height), _channel_count(channel_count),
 _name(name), _data(data), _has_transparency(has_transparency) {
-    total_size = width * height * channel_count;
+    _total_size = width * height * channel_count;
 }
 Texture::Texture(
     const String& name,

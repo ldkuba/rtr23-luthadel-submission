@@ -19,11 +19,7 @@ protected:
     const VulkanDevice* _device;
     const vk::AllocationCallbacks* const _allocator;
 
-    // VulkanBuffer* _uniform_buffer;
     vk::Pipeline _pipeline;
-    vk::DescriptorPool _descriptor_pool;
-    vk::DescriptorSetLayout _descriptor_set_layout;
-    std::vector<vk::DescriptorSet> _descriptor_sets;
     vk::PipelineLayout _pipeline_layout;
 
     vk::ShaderModule create_shader_module(const std::vector<byte> code) const;
@@ -35,4 +31,12 @@ protected:
         const vk::SampleCountFlagBits number_of_msaa_samples = vk::SampleCountFlagBits::e1,
         const bool is_wire_frame = false
     );
+
+    vk::DescriptorPool create_descriptor_pool(
+        const std::vector<DescriptorInfo>& descriptor_info,
+        const uint32 max_sets
+    ) const;
+    vk::DescriptorSetLayout create_descriptor_set_layout(
+        const std::vector<DescriptorInfo>& descriptor_info
+    ) const;
 };

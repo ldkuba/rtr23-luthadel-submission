@@ -11,6 +11,9 @@ public:
     Renderer(RendererBackendType backend_type, Platform::Surface* surface);
     ~Renderer();
 
+    // TODO: TEMP TEST CODE
+    Texture* current_texture = nullptr;
+
     void on_resize(const uint32 width, const uint32 height);
     bool draw_frame(const float32 delta_time);
 
@@ -18,7 +21,7 @@ public:
     void destroy_texture(Texture* texture);
 
 private:
-    RendererBackend* _backend;
+    RendererBackend* _backend = nullptr;
 
     float32 _near_plane = 0.01f;
     float32 _far_plane = 1000.0f;

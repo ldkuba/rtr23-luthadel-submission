@@ -28,7 +28,8 @@ TestApplication::TestApplication() {}
 TestApplication::~TestApplication() {}
 
 void TestApplication::run() {
-
+    _app_renderer.current_texture = _texture_system.default_texture;
+    _app_renderer.current_texture = _texture_system.acquire("viking_room", true);
 
     while (!_app_surface->should_close()) {
         _app_surface->process_events();
@@ -44,6 +45,8 @@ void TestApplication::run() {
 float32 TestApplication::calculate_delta_time() {
     static auto start_time = std::chrono::high_resolution_clock::now();
     auto current_time = std::chrono::high_resolution_clock::now();
-    return std::chrono::duration<float32, std::chrono::seconds::period>
+    auto delta_time = std::chrono::duration<float32, std::chrono::seconds::period>
         (current_time - start_time).count();
+    start_time = current_time;
+    return delta_time;
 }
