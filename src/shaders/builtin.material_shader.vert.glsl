@@ -7,6 +7,7 @@ layout(set=0,binding=0)uniform global_uniform_buffer{
 }gub;
 layout(set=1,binding=0)uniform local_uniform_buffer{
     mat4 model;
+    vec4 diffuse_color;
 }lub;
 
 layout(location=0)in vec3 in_position;

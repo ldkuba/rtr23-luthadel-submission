@@ -173,7 +173,8 @@ void VulkanShader::create_pipeline(
 
 vk::DescriptorPool VulkanShader::create_descriptor_pool(
     const std::vector<DescriptorInfo>& descriptor_info,
-    const uint32 max_sets
+    const uint32 max_sets,
+    const bool can_free
 ) const {
     std::vector<vk::DescriptorPoolSize> pool_sizes(descriptor_info.size());
     for (uint32 i = 0; i < descriptor_info.size(); i++) {
@@ -184,6 +185,8 @@ vk::DescriptorPool VulkanShader::create_descriptor_pool(
     vk::DescriptorPoolCreateInfo create_info{};
     create_info.setPoolSizes(pool_sizes);
     create_info.setMaxSets(max_sets);
+    if (can_free) // Allows explicit call of free commands on descriptor pools
+        create_info.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
 
     vk::DescriptorPool descriptor_pool;
     try {

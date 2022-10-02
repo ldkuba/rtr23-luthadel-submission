@@ -1,10 +1,25 @@
 #pragma once
 
 #include <vector>
-#include <string>
 #include <fstream>
 
-#include "defines.hpp"
+#include "string.hpp"
+
+class FileSystemException : public std::runtime_error {
+public:
+    using std::runtime_error::runtime_error;
+};
+
+class File {
+public:
+    File();
+    ~File();
+};
+class BinaryFile {
+public:
+    BinaryFile();
+    ~BinaryFile();
+};
 
 class FileSystem {
 private:
@@ -13,5 +28,7 @@ public:
     FileSystem();
     ~FileSystem();
 
-    static std::vector<byte> read_file_bytes(const std::string& file_path);
+    static File open(const String& file_path);
+    static std::vector<byte> read_file_bytes(const String& file_path);
+    static std::vector<String> read_file_lines(const String& file_path);
 };

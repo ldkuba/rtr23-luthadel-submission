@@ -3,7 +3,7 @@
 #include "platform/platform.hpp"
 #include "math_libs.hpp"
 
-#include "resources/texture.hpp"
+#include "resources/material.hpp"
 
 class RendererBackend {
 public:
@@ -25,9 +25,11 @@ public:
         const GeometryRenderData data
     ) {}
 
-    virtual void create_texture(Texture* texture) {}
+    virtual void create_texture(Texture* texture, const byte* const data) {}
     virtual void destroy_texture(Texture* texture) {}
 
+    virtual void create_material(Material* const material) {}
+    virtual void destroy_material(Material* const material) {}
 
 private:
     uint64 _frame_number = 0;

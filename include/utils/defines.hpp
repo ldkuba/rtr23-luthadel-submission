@@ -52,6 +52,14 @@ static_assert(sizeof(float32) == 4, "Expected a 4 byte long float32.");
 static_assert(sizeof(float64) == 8, "Expected a 8 byte long float64.");
 static_assert(sizeof(float128) == 16, "Expected a 16 byte long float128.");
 
+
+// Additional max values
+const uint128 UINT128_MAX = (uint128) -1;
+const int128 INT128_MAX = UINT128_MAX / 2;
+
+
+// #define UINT128_MAX (uint128) 
+
 // List of supported platforms
 #define LINUX 1
 #define WINDOWS32 2

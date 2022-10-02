@@ -12,13 +12,16 @@ public:
     ~Renderer();
 
     // TODO: TEMP TEST CODE
-    Texture* current_texture = nullptr;
+    Material* current_material = nullptr;
 
     void on_resize(const uint32 width, const uint32 height);
     bool draw_frame(const float32 delta_time);
 
-    void create_texture(Texture* texture);
+    void create_texture(Texture* texture, const byte* const data);
     void destroy_texture(Texture* texture);
+
+    void create_material(Material* const material);
+    void destroy_material(Material* const material);
 
 private:
     RendererBackend* _backend = nullptr;

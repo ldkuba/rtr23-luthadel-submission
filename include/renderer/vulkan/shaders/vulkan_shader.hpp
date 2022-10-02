@@ -34,7 +34,8 @@ protected:
 
     vk::DescriptorPool create_descriptor_pool(
         const std::vector<DescriptorInfo>& descriptor_info,
-        const uint32 max_sets
+        const uint32 max_sets,
+        const bool can_free = false
     ) const;
     vk::DescriptorSetLayout create_descriptor_set_layout(
         const std::vector<DescriptorInfo>& descriptor_info

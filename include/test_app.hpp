@@ -4,8 +4,7 @@
 
 #include "renderer/renderer.hpp"
 #include "systems/texture_system.hpp"
-
-#include <chrono>
+#include "systems/material_system.hpp"
 
 class TestApplication {
 public:
@@ -19,6 +18,7 @@ private:
     Renderer _app_renderer{ RendererBackendType::Vulkan, _app_surface };
 
     TextureSystem _texture_system{ &_app_renderer };
+    MaterialSystem _material_system{ &_app_renderer, &_texture_system };
 
     float32 calculate_delta_time();
 };
@@ -28,8 +28,12 @@ TestApplication::TestApplication() {}
 TestApplication::~TestApplication() {}
 
 void TestApplication::run() {
-    _app_renderer.current_texture = _texture_system.default_texture;
-    _app_renderer.current_texture = _texture_system.acquire("viking_room", true);
+    _app_renderer.current_material = _material_system.acquire(
+        "default1",
+        true,
+        glm::vec4(1.0f),
+        "viking_room"
+    );
 
     while (!_app_surface->should_close()) {
         _app_surface->process_events();
@@ -43,10 +47,9 @@ void TestApplication::run() {
 }
 
 float32 TestApplication::calculate_delta_time() {
-    static auto start_time = std::chrono::high_resolution_clock::now();
-    auto current_time = std::chrono::high_resolution_clock::now();
-    auto delta_time = std::chrono::duration<float32, std::chrono::seconds::period>
-        (current_time - start_time).count();
+    static auto start_time = Platform::get_absolute_time();
+    auto current_time = Platform::get_absolute_time();
+    auto delta_time = current_time - start_time;
     start_time = current_time;
     return delta_time;
 }

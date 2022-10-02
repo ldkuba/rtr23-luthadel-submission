@@ -32,9 +32,8 @@ bool Renderer::draw_frame(const float32 delta_time) {
         static float rotation = 0.0f;
         rotation += 50.0f * delta_time;
         GeometryRenderData data = {};
-        data.object_id = 0;
         data.model = glm::rotate(glm::mat4(1.0f), glm::radians(rotation), glm::vec3(0.0f, 0.0f, 1.0f));
-        data.textures[0] = current_texture;
+        data.material = current_material;
 
         _backend->update_object(data);
 
@@ -49,9 +48,16 @@ bool Renderer::draw_frame(const float32 delta_time) {
     return true;
 }
 
-void Renderer::create_texture(Texture* texture) {
-    _backend->create_texture(texture);
+void Renderer::create_texture(Texture* texture, const byte* const data) {
+    _backend->create_texture(texture, data);
 }
 void Renderer::destroy_texture(Texture* texture) {
     _backend->destroy_texture(texture);
+}
+
+void Renderer::create_material(Material* const material) {
+    _backend->create_material(material);
+}
+void Renderer::destroy_material(Material* const material) {
+    _backend->destroy_material(material);
 }

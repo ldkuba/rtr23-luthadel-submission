@@ -1,7 +1,7 @@
 #pragma once
 
 #include "math_libs.hpp"
-#include "resources/texture.hpp"
+#include "resources/material.hpp"
 
 // Vertex
 struct Vertex {
@@ -32,10 +32,10 @@ struct GlobalUniformObject {
 
 struct LocalUniformObject {
     alignas(16) glm::mat4 model;
+    alignas(16) glm::vec4 diffuse_color;
 };
 
 struct GeometryRenderData {
-    uint32 object_id;
     glm::mat4 model;
-    std::array<Texture*, 16> textures;
+    Material* material;
 };

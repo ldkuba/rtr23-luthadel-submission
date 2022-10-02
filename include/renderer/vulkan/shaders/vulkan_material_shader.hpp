@@ -48,17 +48,17 @@ public:
         uint32 current_frame
     );
 
-    uint32 acquire_resource();
-    void release_resource(uint32 object_id);
+    void acquire_resource(Material* const);
+    void release_resource(Material* const);
 
 private:
-
     static const uint32 _material_descriptor_count = 2;
+    static const uint32 _material_sampler_count = 1;
     struct DescriptorState {
         std::array<std::optional<uint32>,
             VulkanSettings::max_frames_in_flight> ids;
     };
-    struct ObjectState {
+    struct MaterialInstanceState {
         bool allocated = false;
         std::vector<vk::DescriptorSet> descriptor_sets;
         std::array<DescriptorState,
@@ -74,7 +74,8 @@ private:
     vk::DescriptorSetLayout _local_descriptor_set_layout;
     std::vector<VulkanBuffer*> _local_uniform_buffers;
 
-    std::map<int, ObjectState> _object_states;
+    std::map<int, MaterialInstanceState> _instance_states;
+    TextureUse _sampler_uses[_material_sampler_count];
 
     void create_global_descriptor_sets();
     uint32 get_next_available_ubo_index();

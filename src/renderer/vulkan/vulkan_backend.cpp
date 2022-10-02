@@ -66,13 +66,6 @@ VulkanBackend::VulkanBackend(Platform::Surface* surface) : RendererBackend(surfa
         _swapchain->msaa_samples
     );
 
-    // TODO: TEMP OBJECT ACQUISITION
-    _material_shader->acquire_resource();
-
-    // TODO: TEMP IMAGE TEXTURE CODE
-    create_texture_image();
-    create_texture_sampler();
-
     // TODO: TEMP MODEL LOADING CODE
     load_model();
 
@@ -94,11 +87,6 @@ VulkanBackend::~VulkanBackend() {
 
     // Swapchain
     delete _swapchain;
-
-
-    // TODO: TEMP IMAGE TEXTURE CODE
-    _device->handle().destroySampler(_texture_sampler, _allocator);
-    delete _texture_image;
 
 
     // TODO: TEMP INDEX BUFFER CODE
@@ -253,6 +241,10 @@ void VulkanBackend::update_global_state(
 void VulkanBackend::update_object(
     const GeometryRenderData data
 ) {
+    if (!data.material->internal_id.has_value()) {
+        Logger::error("Renderer :: Material not created. Id unknown.");
+        return;
+    }
     try {
         _material_shader->update_object_state(data, _current_frame);
     } catch (std::runtime_error e) {
@@ -263,7 +255,7 @@ void VulkanBackend::update_object(
     auto command_buffer = _command_buffers[_current_frame];
 
     // Bind object
-    _material_shader->bind_object(command_buffer, _current_frame, data.object_id);
+    _material_shader->bind_object(command_buffer, _current_frame, data.material->internal_id.value());
 
     // Bind vertex buffer
     std::vector<vk::Buffer>vertex_buffers = { _vertex_buffer->handle };
@@ -277,7 +269,7 @@ void VulkanBackend::update_object(
     command_buffer.drawIndexed(static_cast<uint32>(indices.size()), 1, 0, 0, 0);
 }
 
-void VulkanBackend::create_texture(Texture* texture) {
+void VulkanBackend::create_texture(Texture* texture, const byte* const data) {
     // Calculate mip levels
     auto mip_levels = std::floor(std::log2(std::max(texture->width(), texture->height()))) + 1;
 
@@ -295,7 +287,7 @@ void VulkanBackend::create_texture(Texture* texture) {
     );
 
     // Fill created memory with data
-    staging_buffer->load_data(texture->data, 0, texture->total_size);
+    staging_buffer->load_data(data, 0, texture->total_size);
 
     // Create device side image
     // NOTE: Lots of assumptions here
@@ -373,6 +365,26 @@ void VulkanBackend::destroy_texture(Texture* texture) {
         delete data->image;
     if (data->sampler)
         _device->handle().destroySampler(data->sampler);
+}
+
+void VulkanBackend::create_material(Material* const material) {
+    if (!material) {
+        Logger::error("Renderer :: create_material called with nullptr. Creation failed.");
+        return;
+    }
+    _material_shader->acquire_resource(material);
+}
+void VulkanBackend::destroy_material(Material* const material) {
+    if (!material) {
+        Logger::warning("Renderer :: destroy_material called with nullptr. Nothing was done.");
+        return;
+    }
+    if (!material->internal_id.has_value()) {
+        Logger::warning("Renderer :: destroy_material called for a material which was already ",
+            "destroyed. Nothing was done.");
+        return;
+    }
+    _material_shader->release_resource(material);
 }
 
 // /////////////////////////////// //
@@ -593,86 +605,6 @@ void VulkanBackend::create_index_buffer() {
 
     // Cleanup
     delete staging_buffer;
-}
-
-// TEXTURE IMAGE
-void VulkanBackend::create_texture_image() {
-    // Load image
-    Texture* texture = new Texture("viking_room", "png");
-    vk::DeviceSize texture_size = texture->total_size;
-
-    // Calculate mip levels
-    auto mip_levels = std::floor(std::log2(std::max(texture->width(), texture->height()))) + 1;
-
-    // Create staging buffer
-    auto staging_buffer = new VulkanBuffer(_device, _allocator);
-    staging_buffer->create(
-        texture_size,
-        vk::BufferUsageFlagBits::eTransferSrc,
-        vk::MemoryPropertyFlagBits::eHostVisible |
-        vk::MemoryPropertyFlagBits::eHostCoherent
-    );
-
-    // Fill created memory with data
-    staging_buffer->load_data(texture->data, 0, texture_size);
-
-    // Create device side image
-    _texture_image = new VulkanImage(_device, _allocator);
-    _texture_image->create(
-        texture->width, texture->height, mip_levels,
-        vk::SampleCountFlagBits::e1,
-        vk::Format::eR8G8B8A8Srgb,
-        vk::ImageTiling::eOptimal,
-        vk::ImageUsageFlagBits::eTransferSrc |
-        vk::ImageUsageFlagBits::eTransferDst |
-        vk::ImageUsageFlagBits::eSampled,
-        vk::MemoryPropertyFlagBits::eDeviceLocal,
-        vk::ImageAspectFlagBits::eColor
-    );
-
-    // Transition image to a layout optimal for data transfer
-    auto command_buffer = _command_pool->begin_single_time_commands();
-    _texture_image->transition_image_layout(
-        command_buffer,
-        vk::ImageLayout::eUndefined,
-        vk::ImageLayout::eTransferDstOptimal
-    );
-
-    // Copy buffer data to image
-    staging_buffer->copy_data_to_image(command_buffer, _texture_image);
-
-    // Generate mipmaps, this also transitions image to a layout optimal for sampling
-    _texture_image->generate_mipmaps(
-        command_buffer
-    );
-    _command_pool->end_single_time_commands(command_buffer);
-
-    // Cleanup
-    delete staging_buffer;
-}
-
-void VulkanBackend::create_texture_sampler() {
-    vk::SamplerCreateInfo sampler_info{};
-    sampler_info.setAddressModeU(vk::SamplerAddressMode::eRepeat);
-    sampler_info.setAddressModeV(vk::SamplerAddressMode::eRepeat);
-    sampler_info.setAddressModeW(vk::SamplerAddressMode::eRepeat);
-    sampler_info.setAnisotropyEnable(true);
-    sampler_info.setMaxAnisotropy(_device->info().max_sampler_anisotropy);
-    sampler_info.setBorderColor(vk::BorderColor::eIntOpaqueBlack);
-    sampler_info.setUnnormalizedCoordinates(false);
-    sampler_info.setCompareEnable(false);
-    sampler_info.setCompareOp(vk::CompareOp::eAlways);
-    // Mipmap settings
-    sampler_info.setMagFilter(vk::Filter::eLinear);
-    sampler_info.setMinFilter(vk::Filter::eLinear);
-    sampler_info.setMipmapMode(vk::SamplerMipmapMode::eLinear);
-    sampler_info.setMipLodBias(0.0f);
-    sampler_info.setMinLod(0.0f);
-    sampler_info.setMaxLod(static_cast<float32>(_texture_image->mip_levels()));
-
-    try {
-        _texture_sampler = _device->handle().createSampler(sampler_info, _allocator);
-    } catch (vk::SystemError e) { Logger::fatal(e.what()); }
 }
 
 // MODEL LOADING

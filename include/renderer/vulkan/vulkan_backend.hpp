@@ -7,8 +7,6 @@
 #include "vulkan_command_pool.hpp"
 #include "shaders/vulkan_material_shader.hpp"
 
-#include "resources/texture.hpp"
-
 class VulkanBackend : public RendererBackend {
 public:
     VulkanBackend(Platform::Surface* surface);
@@ -26,8 +24,11 @@ public:
     );
     void update_object(const GeometryRenderData data);
 
-    void create_texture(Texture* texture);
+    void create_texture(Texture* texture, const byte* const data);
     void destroy_texture(Texture* texture);
+
+    void create_material(Material* const material);
+    void destroy_material(Material* const material);
 
 private:
     // TODO: Custom allocator
@@ -79,13 +80,6 @@ private:
     VulkanBuffer* _index_buffer;
 
     void create_index_buffer();
-
-    // TODO: TEMP IMAGE CODE
-    VulkanImage* _texture_image;
-    vk::Sampler _texture_sampler;
-
-    void create_texture_image();
-    void create_texture_sampler();
 
     // TODO: TEMP MODEL LOADING CODE
     std::vector<Vertex> vertices;

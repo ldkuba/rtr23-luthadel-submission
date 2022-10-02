@@ -112,7 +112,7 @@ public:
     constexpr static auto max_msaa_samples = vk::SampleCountFlagBits::e16;
 
     // Maximum object count
-    constexpr static uint32 max_object_count = 1024;
+    constexpr static uint32 max_material_count = 1024;
 };
 
 // TODO: TEMP CODE

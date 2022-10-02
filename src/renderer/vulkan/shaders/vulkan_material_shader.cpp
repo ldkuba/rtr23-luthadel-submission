@@ -45,22 +45,26 @@ VulkanMaterialShader::VulkanMaterialShader(
         create_descriptor_pool(global_descriptor_infos, VulkanSettings::max_frames_in_flight);
 
     // Local descriptor
-    const uint32 local_sampler_count = 1;
     std::vector<DescriptorInfo> local_descriptor_infos(2);
     local_descriptor_infos[0] = {
         vk::DescriptorType::eUniformBuffer,
         vk::ShaderStageFlagBits::eVertex,
-        VulkanSettings::max_object_count
+        VulkanSettings::max_material_count
     };
     local_descriptor_infos[1] = {
         vk::DescriptorType::eCombinedImageSampler,
         vk::ShaderStageFlagBits::eFragment,
-        local_sampler_count * VulkanSettings::max_object_count
+        _material_sampler_count * VulkanSettings::max_material_count
     };
 
     _local_descriptor_set_layout = create_descriptor_set_layout(local_descriptor_infos);
-    _local_descriptor_pool =
-        create_descriptor_pool(local_descriptor_infos, VulkanSettings::max_object_count);
+    _local_descriptor_pool = create_descriptor_pool(
+        local_descriptor_infos,
+        VulkanSettings::max_material_count,
+        true
+    );
+
+    _sampler_uses[0] = TextureUse::MapDiffuse;
 
     // === Vertex input state info ===
     // Vertex bindings
@@ -135,7 +139,7 @@ VulkanMaterialShader::VulkanMaterialShader(
     create_global_descriptor_sets();
 
     // Local ubo
-    buffer_size = VulkanSettings::max_object_count * sizeof(LocalUniformObject);
+    buffer_size = VulkanSettings::max_material_count * sizeof(LocalUniformObject);
     _local_uniform_buffers.resize(VulkanSettings::max_frames_in_flight);
     for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++) {
         _local_uniform_buffers[i] = new VulkanBuffer(_device, _allocator);
@@ -198,7 +202,7 @@ void VulkanMaterialShader::bind_object(
     command_buffer.bindDescriptorSets(
         vk::PipelineBindPoint::eGraphics,
         _pipeline_layout, 1,
-        1, &_object_states[object_id].descriptor_sets[current_frame],
+        1, &_instance_states[object_id].descriptor_sets[current_frame],
         0, nullptr
     );
 }
@@ -227,17 +231,18 @@ void VulkanMaterialShader::update_object_state(
     uint32 current_frame
 ) {
     // Obtain material data.
-    ObjectState object_state = _object_states[data.object_id];
+    MaterialInstanceState object_state = _instance_states[data.material->internal_id.value()];
     if (object_state.allocated == false)
         throw std::runtime_error("Requested object is not allocated.");
     vk::DescriptorSet object_descriptor_set = object_state.descriptor_sets[current_frame];
 
     // Load data to buffer
     uint32 size = sizeof(LocalUniformObject);
-    uint64 offset = sizeof(LocalUniformObject) * data.object_id;
+    uint64 offset = sizeof(LocalUniformObject) * data.material->internal_id.value();
     LocalUniformObject lub;
 
     lub.model = data.model;
+    lub.diffuse_color = data.material->diffuse_color;
 
     _local_uniform_buffers[current_frame]->load_data(&lub, offset, size);
 
@@ -267,16 +272,22 @@ void VulkanMaterialShader::update_object_state(
     descriptor_index++;
 
     // Samplers
-    // TODO: load actual number of samplers used
-    const uint32 sampler_count = 1;
+    for (uint32 i = 0; i < _material_sampler_count; i++) {
+        const Texture* texture = nullptr;
 
-    for (uint32 i = 0; i < sampler_count; i++) {
-        Texture* texture = data.textures[i];
+        switch (_sampler_uses[i]) {
+        case TextureUse::MapDiffuse:
+            texture = data.material->diffuse_map().texture;
+            break;
+
+        default:
+            Logger::fatal("Renderer :: Unable to bind sampler to a known use.");
+            break;
+        }
 
         auto& descriptor_id = object_state.descriptor_states[descriptor_index].ids[current_frame];
 
         // If the texture hasn't been loaded yet, use the default.
-        // TODO: Determine which use the texture has and pull appropriate default based on that.
         if (texture == nullptr || !texture->id.has_value()) {
             // texture = texture_system_get_default_texture();
             continue;
@@ -308,33 +319,14 @@ void VulkanMaterialShader::update_object_state(
 
     if (descriptor_writes.size() > 0)
         _device->handle().updateDescriptorSets(descriptor_writes, nullptr);
-
-
-    //     VkWriteDescriptorSet descriptor = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
-    //     descriptor.dstSet = object_descriptor_set;
-    //     descriptor.dstBinding = descriptor_index;
-    //     descriptor.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    //     descriptor.descriptorCount = 1;
-    //     descriptor.pImageInfo = &image_infos[sampler_index];
-
-    //     descriptor_writes[descriptor_count] = descriptor;
-    //     descriptor_count++;
-
-    //     // Sync frame generation if not using a default texture.
-    //     if (t->generation != INVALID_ID) {
-    //         *descriptor_generation = t->generation;
-    //         *descriptor_id = t->id;
-    //     }
-    //     descriptor_index++;
-    // }
 }
 
-uint32 VulkanMaterialShader::acquire_resource() {
+void VulkanMaterialShader::acquire_resource(Material* const material) {
     // Acquire next object slot on gpu
-    auto object_id = get_next_available_ubo_index();
+    material->internal_id = get_next_available_ubo_index();
 
     // Reset object descriptor info
-    ObjectState& state = _object_states[object_id];
+    MaterialInstanceState& state = _instance_states[material->internal_id.value()];
     for (auto descriptor_state : state.descriptor_states) {
         for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++) {
             descriptor_state.ids[i].reset();
@@ -352,12 +344,11 @@ uint32 VulkanMaterialShader::acquire_resource() {
         state.descriptor_sets = _device->handle().allocateDescriptorSets(allocation_info);
     } catch (vk::SystemError e) { Logger::fatal(e.what()); }
     state.allocated = true;
-
-    return object_id;
 }
 
-void VulkanMaterialShader::release_resource(uint32 object_id) {
-    ObjectState& state = _object_states[object_id];
+void VulkanMaterialShader::release_resource(Material* const material) {
+    if (!material->internal_id.has_value()) return;
+    MaterialInstanceState& state = _instance_states[material->internal_id.value()];
 
     // Release object descriptor sets.
     try {
@@ -370,6 +361,8 @@ void VulkanMaterialShader::release_resource(uint32 object_id) {
             descriptor_state.ids[i].reset();
         }
     }
+
+    material->internal_id.reset();
 
     // TODO: add the object_id to the free list
 }
