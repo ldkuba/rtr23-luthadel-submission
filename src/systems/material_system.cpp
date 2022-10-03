@@ -1,12 +1,18 @@
 #include "systems/material_system.hpp"
 
+#define MATERIAL_SYS_LOG "MaterialSystem :: "
+
 MaterialSystem::MaterialSystem(
     Renderer* const renderer,
     TextureSystem* const texture_system
 ) : _renderer(renderer), _texture_system(texture_system) {
+    Logger::trace(MATERIAL_SYS_LOG, "Creating material system.");
+
     if (_max_material_count == 0)
-        Logger::fatal("MaterialSystem :: _max_material_count must be greater than 0.");
+        Logger::fatal(MATERIAL_SYS_LOG, "Const _max_material_count must be greater than 0.");
     create_default_material();
+
+    Logger::trace(MATERIAL_SYS_LOG, "Material system created.");
 }
 MaterialSystem::~MaterialSystem() {
     for (auto material : _registered_materials) {
@@ -16,6 +22,8 @@ MaterialSystem::~MaterialSystem() {
     _registered_materials.clear();
     _renderer->destroy_material(_default_material);
     delete _default_material;
+
+    Logger::trace(MATERIAL_SYS_LOG, "Material system destroyed.");
 }
 
 // ////////////////////////////// //
@@ -45,7 +53,7 @@ Material* MaterialSystem::acquire(const String name) {
     std::vector<String> material_settings;
     try {
         material_settings = FileSystem::read_file_lines(file_path);
-    } catch (FileSystemException e) { Logger::fatal(e.what()); }
+    } catch (FileSystemException e) { Logger::fatal(MATERIAL_SYS_LOG, e.what()); }
 
     // === Parse loaded config ==
     uint32 line_number = 1;
@@ -61,7 +69,7 @@ Material* MaterialSystem::acquire(const String name) {
         // Split line by = int a var/value pair
         auto setting = setting_line.split('=');
         if (setting.size() != 2) {
-            Logger::warning("MaterialSystem :: Potential formatting issue ",
+            Logger::warning(MATERIAL_SYS_LOG, "Potential formatting issue ",
                 "with the number of = tokens found. ", "Skipping line ", line_number,
                 " of file ", file_path, ".");
             line_number++;
@@ -76,7 +84,7 @@ Material* MaterialSystem::acquire(const String name) {
             // TODO: Versions
         } else if (setting_var.compare(M_SETTING_name) == 0) {
             if (setting_val.length() > Material::max_name_length)
-                Logger::warning("MaterialSystem :: Couldn't load material name at line ",
+                Logger::warning(MATERIAL_SYS_LOG, "Couldn't load material name at line ",
                     line_number, " of file ", file_path, ". Name is too long (", setting_val.length(),
                     " characters, while maximum name length is ", Material::max_name_length,
                     " characters).");
@@ -87,7 +95,7 @@ Material* MaterialSystem::acquire(const String name) {
             // Parse vec4
             auto str_floats = setting_val.split(' ');
             if (str_floats.size() != 4) {
-                Logger::warning("MaterialSystem :: Couldn't parse vec4 at line ",
+                Logger::warning(MATERIAL_SYS_LOG, "Couldn't parse vec4 at line ",
                     line_number, " of file ", file_path, ". Wrong argument count.");
             }
             std::vector<float32> floats(str_floats.size());
@@ -95,13 +103,13 @@ Material* MaterialSystem::acquire(const String name) {
                 for (uint32 i = 0; i < str_floats.size(); i++)
                     floats[i] = str_floats[i].parse_as_float32();
             } catch (std::invalid_argument e) {
-                Logger::warning("MaterialSystem :: Couldn't parse vec4 at line ",
+                Logger::warning(MATERIAL_SYS_LOG, "Couldn't parse vec4 at line ",
                     line_number, " of file ", file_path, ". Couldn't parse floats.");
             }
             // Assign to diffuse color
             mat_diffuse_color = glm::vec4(floats[0], floats[1], floats[2], floats[3]);
         } else {
-            Logger::warning("Material System :: Invalid variable : \"",
+            Logger::warning(MATERIAL_SYS_LOG, " Invalid variable : \"",
                 setting_var, "\" at line ", line_number, " of file ", file_path, ".");
         }
 
@@ -122,8 +130,10 @@ Material* MaterialSystem::acquire(
     const glm::vec4 diffuse_color,
     const String diffuse_map_name
 ) {
+    Logger::trace(MATERIAL_SYS_LOG, "Material requested.");
+
     if (name.length() > Material::max_name_length) {
-        Logger::error("MaterialSystem :: Material couldn't be acquired. ",
+        Logger::error(MATERIAL_SYS_LOG, "Material couldn't be acquired. ",
             "Maximum name length of a material is ", Material::max_name_length,
             " characters but ", name.length(), " character long name was passed. ",
             "Default material acquired instead.");
@@ -152,12 +162,13 @@ Material* MaterialSystem::acquire(
     }
     ref.reference_count++;
 
+    Logger::trace(MATERIAL_SYS_LOG, "Material acquired.");
     return ref.handle;
 }
 
 void MaterialSystem::release(const String name) {
     if (name.compare_ci(_default_material_name) == 0) {
-        Logger::warning("MaterialSystem :: Cannot release default material.");
+        Logger::warning(MATERIAL_SYS_LOG, "Cannot release default material.");
         return;
     }
 
@@ -165,7 +176,7 @@ void MaterialSystem::release(const String name) {
     auto ref = _registered_materials.find(s);
 
     if (ref == _registered_materials.end() || ref->second.reference_count == 0) {
-        Logger::warning("MaterialSystem :: Tried to release a non-existent material: ", name);
+        Logger::warning(MATERIAL_SYS_LOG, "Tried to release a non-existent material: ", name);
         return;
     }
     ref->second.reference_count--;
@@ -174,6 +185,8 @@ void MaterialSystem::release(const String name) {
         delete ref->second.handle;
         _registered_materials.erase(s);
     }
+
+    Logger::trace(MATERIAL_SYS_LOG, "Material released.");
 }
 
 // /////////////////////////////// //

@@ -21,16 +21,18 @@ VulkanDevice::VulkanDevice(
     _info = get_physical_device_info(physical_device);
 
     // Log basic device info
-    Logger::log("Suitable vulkan device found.");
-    Logger::log("Device selected\t\t: ", _info.name);
-    Logger::log("GPU type\t\t\t: ", _info.type);
-    Logger::log("GPU driver version\t: ", _info.driver_version);
-    Logger::log("Vulkan api version\t: ", _info.api_version);
+    Logger::log(RENDERER_VULKAN_LOG, "Suitable vulkan device found.");
+    Logger::log(RENDERER_VULKAN_LOG, "Device selected\t\t: ", _info.name);
+    Logger::log(RENDERER_VULKAN_LOG, "GPU type\t\t\t: ", _info.type);
+    Logger::log(RENDERER_VULKAN_LOG, "GPU driver version\t: ", _info.driver_version);
+    Logger::log(RENDERER_VULKAN_LOG, "Vulkan api version\t: ", _info.api_version);
     for (uint32 i = 0; i < _info.memory_size_in_gb.size(); i++) {
         if (_info.memory_is_local[i])
-            Logger::log("Local GPU memory\t\t: ", _info.memory_size_in_gb[i], " GiB.");
+            Logger::log(RENDERER_VULKAN_LOG, "Local GPU memory\t\t: ",
+                _info.memory_size_in_gb[i], " GiB.");
         else
-            Logger::log("Shared GPU memory\t: ", _info.memory_size_in_gb[i], " GiB.");
+            Logger::log(RENDERER_VULKAN_LOG, "Shared GPU memory\t: ",
+                _info.memory_size_in_gb[i], " GiB.");
     }
 
     // Create logical device
@@ -49,6 +51,7 @@ VulkanDevice::VulkanDevice(
 
 VulkanDevice::~VulkanDevice() {
     _handle.destroy(_allocator);
+    Logger::trace(RENDERER_VULKAN_LOG, "Device destroyed.");
 }
 
 // //////////////////////////// //
@@ -76,11 +79,13 @@ vk::PhysicalDevice VulkanDevice::pick_physical_device(
     const vk::Instance& vulkan_instance,
     const vk::SurfaceKHR& vulkan_surface
 ) const {
+    Logger::trace(RENDERER_VULKAN_LOG, "Choosing physical device.");
+
     // Get list of physical devices with vulkan support
     auto devices = vulkan_instance.enumeratePhysicalDevices();
 
     if (devices.size() == 0)
-        Logger::fatal("Failed to find GPUs with Vulkan support.");
+        Logger::fatal(RENDERER_VULKAN_LOG, "Failed to find GPUs with Vulkan support.");
 
     // Find the most suitable physical device
     vk::PhysicalDevice best_device;
@@ -94,12 +99,15 @@ vk::PhysicalDevice VulkanDevice::pick_physical_device(
     }
 
     if (best_device_suitability == 0)
-        Logger::fatal("Failed to find a suitable GPU.");
+        Logger::fatal(RENDERER_VULKAN_LOG, "Failed to find a suitable GPU.");
 
+    Logger::trace(RENDERER_VULKAN_LOG, "Physical device picked.");
     return best_device;
 }
 
 vk::Device VulkanDevice::create_logical_device(const vk::PhysicalDevice physical_device) const {
+    Logger::trace(RENDERER_VULKAN_LOG, "Creating logical device.");
+
     // Queue indices used
     auto unique_indices = queue_family_indices.get_unique_indices();
 
@@ -126,10 +134,13 @@ vk::Device VulkanDevice::create_logical_device(const vk::PhysicalDevice physical
     create_info.setPEnabledFeatures(&device_features);
     create_info.setPEnabledExtensionNames(VulkanSettings::device_required_extensions);
 
+    vk::Device device;
     try {
-        return physical_device.createDevice(create_info, _allocator);
-    } catch (const vk::SystemError& e) { Logger::fatal(e.what()); }
-    return vk::Device();
+        device = physical_device.createDevice(create_info, _allocator);
+    } catch (const vk::SystemError& e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
+
+    Logger::trace(RENDERER_VULKAN_LOG, "Logical device created.");
+    return device;
 }
 
 PhysicalDeviceInfo VulkanDevice::get_physical_device_info(

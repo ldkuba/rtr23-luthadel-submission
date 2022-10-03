@@ -8,11 +8,18 @@
 
 template<class T>
 class Property {
+private:
+    class PropertyException {
+    public:
+        PropertyException(const String message) {}
+        ~PropertyException() {}
+    };
+
 public:
     Property(
         const std::function<T const& ()> get_fn,
         const std::function<void(T)> set_fn
-        = [](auto&& value) { throw std::runtime_error("This property cannot be changed."); }
+        = [](auto&& value) { throw PropertyException("This property cannot be changed."); }
     ) : _getter{ std::move(get_fn) }, _setter{ std::move(set_fn) } {}
 
     Property() = delete;

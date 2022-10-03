@@ -1,12 +1,19 @@
 #include "systems/texture_system.hpp"
 
+#define TEXTURE_SYS_LOG "MaterialSystem :: "
+
 void create_default_textures();
 void destroy_default_textures();
 
+// Constructor & Destructor
 TextureSystem::TextureSystem(Renderer* const renderer) : _renderer(renderer) {
+    Logger::trace(TEXTURE_SYS_LOG, "Creating texture system.");
+
     if (_max_texture_count == 0)
-        Logger::fatal("TextureSystem :: _max_texture_count must be greater than 0.");
+        Logger::fatal(TEXTURE_SYS_LOG, "Const _max_texture_count must be greater than 0.");
     create_default_textures();
+
+    Logger::trace(TEXTURE_SYS_LOG, "Texture system created.");
 }
 TextureSystem::~TextureSystem() {
     for (auto texture : _registered_textures) {
@@ -15,6 +22,8 @@ TextureSystem::~TextureSystem() {
     }
     _registered_textures.clear();
     destroy_default_textures();
+
+    Logger::trace(TEXTURE_SYS_LOG, "Texture system destroyed.");
 }
 
 // ///////////////////////////// //
@@ -22,15 +31,17 @@ TextureSystem::~TextureSystem() {
 // ///////////////////////////// //
 
 Texture* TextureSystem::acquire(const String name, const bool auto_release) {
+    Logger::trace(TEXTURE_SYS_LOG, "Texture requested.");
+
     if (name.length() > Texture::max_name_length) {
-        Logger::error("TextureSystem :: Texture couldn't be acquired. ",
+        Logger::error(TEXTURE_SYS_LOG, "Texture couldn't be acquired. ",
             "Maximum name length of a texture is ", Texture::max_name_length,
             " characters but ", name.length(), " character long name was passed. ",
             "Default texture acquired instead.");
         return _default_texture;
     }
     if (name.compare_ci(_default_texture_name) == 0) {
-        Logger::warning("TextureSystem :: To acquire the default texture from ",
+        Logger::warning(TEXTURE_SYS_LOG, "To acquire the default texture from ",
             "texture system use default_texture property instead.");
         return _default_texture;
     }
@@ -50,12 +61,13 @@ Texture* TextureSystem::acquire(const String name, const bool auto_release) {
     }
     ref.reference_count++;
 
+    Logger::trace(TEXTURE_SYS_LOG, "Texture acquired.");
     return ref.handle;
 }
 
 void TextureSystem::release(const String name) {
     if (name.compare_ci(_default_texture_name) == 0) {
-        Logger::warning("TextureSystem :: Cannot release default texture.");
+        Logger::warning(TEXTURE_SYS_LOG, "Cannot release default texture.");
         return;
     }
 
@@ -63,7 +75,7 @@ void TextureSystem::release(const String name) {
     auto ref = _registered_textures.find(s);
 
     if (ref == _registered_textures.end() || ref->second.reference_count == 0) {
-        Logger::warning("TextureSystem :: Tried to release a non-existent texture: ", name);
+        Logger::warning(TEXTURE_SYS_LOG, "Tried to release a non-existent texture: ", name);
         return;
     }
     ref->second.reference_count--;
@@ -72,6 +84,8 @@ void TextureSystem::release(const String name) {
         delete ref->second.handle;
         _registered_textures.erase(s);
     }
+
+    Logger::trace(TEXTURE_SYS_LOG, "Texture released.");
 }
 
 // ////////////////////////////// //

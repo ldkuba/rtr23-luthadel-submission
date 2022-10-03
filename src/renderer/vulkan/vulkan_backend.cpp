@@ -22,7 +22,9 @@ VulkanBackend::VulkanBackend(Platform::Surface* surface) : RendererBackend(surfa
     _debug_messenger = setup_debug_messenger();
 
     // Get vulkan surface
-    _vulkan_surface = surface->get_vulkan_surface(_vulkan_instance, _allocator);
+    try {
+        _vulkan_surface = surface->get_vulkan_surface(_vulkan_instance, _allocator);
+    } catch (std::runtime_error e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
 
     // Create device
     _device = new VulkanDevice(
@@ -107,13 +109,18 @@ VulkanBackend::~VulkanBackend() {
         _device->handle().destroySemaphore(_semaphores_render_finished[i], _allocator);
         _device->handle().destroyFence(_fences_in_flight[i], _allocator);
     }
+    Logger::trace(RENDERER_VULKAN_LOG, "Synchronization objects destroyed.");
 
     delete _device;
 
-    if (VulkanSettings::enable_validation_layers)
+    if (VulkanSettings::enable_validation_layers) {
         _vulkan_instance.destroyDebugUtilsMessengerEXT(_debug_messenger, _allocator,
             vk::DispatchLoaderDynamic{ _vulkan_instance, vkGetInstanceProcAddr });
+        Logger::trace(RENDERER_VULKAN_LOG, "Debug messenger destroyed.");
+    }
     _vulkan_instance.destroy(_allocator);
+    Logger::trace(RENDERER_VULKAN_LOG, "Vulkan instance destroyed.");
+
 }
 
 // ////////////////////////////// //
@@ -132,10 +139,10 @@ bool VulkanBackend::begin_frame(const float32 delta_time) {
     try {
         auto result = _device->handle().waitForFences(fences, true, UINT64_MAX);
         if (result != vk::Result::eSuccess) {
-            Logger::warning("End of frame fence timed-out.");
+            Logger::warning(RENDERER_VULKAN_LOG, "End of frame fence timed-out.");
             return false;
         }
-    } catch (const vk::SystemError& e) { Logger::fatal(e.what()); }
+    } catch (const vk::SystemError& e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
 
     // Acquire next swapchain image index
     _current_image = _swapchain->acquire_next_image_index(_semaphores_image_available[_current_frame]);
@@ -143,7 +150,7 @@ bool VulkanBackend::begin_frame(const float32 delta_time) {
     // Reset fence
     try {
         _device->handle().resetFences(fences);
-    } catch (const vk::SystemError& e) { Logger::fatal(e.what()); }
+    } catch (const vk::SystemError& e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
 
     // Begin recording commands
     auto command_buffer = _command_buffers[_current_frame];
@@ -205,7 +212,7 @@ bool VulkanBackend::end_frame(const float32 delta_time) {
 
     try {
         _device->graphics_queue.submit(submits, _fences_in_flight[_current_frame]);
-    } catch (const vk::SystemError& e) { Logger::fatal(e.what()); }
+    } catch (const vk::SystemError& e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
 
     // Present swapchain
     _swapchain->present(_current_image, signal_semaphores);
@@ -242,13 +249,13 @@ void VulkanBackend::update_object(
     const GeometryRenderData data
 ) {
     if (!data.material->internal_id.has_value()) {
-        Logger::error("Renderer :: Material not created. Id unknown.");
+        Logger::error(RENDERER_VULKAN_LOG, "Material not created. Id unknown.");
         return;
     }
     try {
         _material_shader->update_object_state(data, _current_frame);
     } catch (std::runtime_error e) {
-        Logger::error(e.what());
+        Logger::error(RENDERER_VULKAN_LOG, e.what());
         return;
     }
 
@@ -270,6 +277,8 @@ void VulkanBackend::update_object(
 }
 
 void VulkanBackend::create_texture(Texture* texture, const byte* const data) {
+    Logger::trace(RENDERER_VULKAN_LOG, "Creating texture.");
+
     // Calculate mip levels
     auto mip_levels = std::floor(std::log2(std::max(texture->width(), texture->height()))) + 1;
 
@@ -306,11 +315,13 @@ void VulkanBackend::create_texture(Texture* texture, const byte* const data) {
 
     // Transition image to a layout optimal for data transfer
     auto command_buffer = _command_pool->begin_single_time_commands();
-    texture_image->transition_image_layout(
-        command_buffer,
-        vk::ImageLayout::eUndefined,
-        vk::ImageLayout::eTransferDstOptimal
-    );
+    try {
+        texture_image->transition_image_layout(
+            command_buffer,
+            vk::ImageLayout::eUndefined,
+            vk::ImageLayout::eTransferDstOptimal
+        );
+    } catch (std::invalid_argument e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
 
     // Copy buffer data to image
     staging_buffer->copy_data_to_image(command_buffer, texture_image);
@@ -343,17 +354,18 @@ void VulkanBackend::create_texture(Texture* texture, const byte* const data) {
     sampler_info.setMinLod(0.0f);
     sampler_info.setMaxLod(static_cast<float32>(mip_levels));
 
-
     vk::Sampler texture_sampler;
     try {
         texture_sampler = _device->handle().createSampler(sampler_info, _allocator);
-    } catch (vk::SystemError e) { Logger::fatal(e.what()); }
+    } catch (vk::SystemError e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
 
     // Save internal data
     VulkanTextureData* vulkan_texture_data = new VulkanTextureData();
     vulkan_texture_data->image = texture_image;
     vulkan_texture_data->sampler = texture_sampler;
     texture->internal_data = vulkan_texture_data;
+
+    Logger::trace(RENDERER_VULKAN_LOG, "Texture created.");
 }
 void VulkanBackend::destroy_texture(Texture* texture) {
     if (texture == nullptr) return;
@@ -365,26 +377,35 @@ void VulkanBackend::destroy_texture(Texture* texture) {
         delete data->image;
     if (data->sampler)
         _device->handle().destroySampler(data->sampler);
+
+    Logger::trace(RENDERER_VULKAN_LOG, "Texture destroyed.");
 }
 
 void VulkanBackend::create_material(Material* const material) {
     if (!material) {
-        Logger::error("Renderer :: create_material called with nullptr. Creation failed.");
+        Logger::error(RENDERER_VULKAN_LOG,
+            "Method create_material called with nullptr. Creation failed.");
         return;
     }
+
+    Logger::trace(RENDERER_VULKAN_LOG, "Creating material.");
     _material_shader->acquire_resource(material);
+    Logger::trace(RENDERER_VULKAN_LOG, "Material created.");
 }
 void VulkanBackend::destroy_material(Material* const material) {
     if (!material) {
-        Logger::warning("Renderer :: destroy_material called with nullptr. Nothing was done.");
+        Logger::warning(RENDERER_VULKAN_LOG,
+            "Method destroy_material called with nullptr. Nothing was done.");
         return;
     }
     if (!material->internal_id.has_value()) {
-        Logger::warning("Renderer :: destroy_material called for a material which was already ",
+        Logger::warning(RENDERER_VULKAN_LOG,
+            "Method destroy_material called for a material which was already ",
             "destroyed. Nothing was done.");
         return;
     }
     _material_shader->release_resource(material);
+    Logger::trace(RENDERER_VULKAN_LOG, "Material destroyed.");
 }
 
 // /////////////////////////////// //
@@ -392,8 +413,10 @@ void VulkanBackend::destroy_material(Material* const material) {
 // /////////////////////////////// //
 
 vk::Instance VulkanBackend::create_vulkan_instance() const {
+    Logger::trace(RENDERER_VULKAN_LOG, "Creating a vulkan instance.");
+
     if (VulkanSettings::enable_validation_layers && !all_validation_layers_are_available())
-        throw std::runtime_error("Validation layer was requested, but not available.");
+        Logger::fatal(RENDERER_VULKAN_LOG, "Validation layer was requested, but not available.");
 
     // Optional application info
     vk::ApplicationInfo app_info{};
@@ -428,7 +451,7 @@ vk::Instance VulkanBackend::create_vulkan_instance() const {
     vk::Instance instance;
     try {
         instance = vk::createInstance(create_info, _allocator);
-    } catch (const vk::SystemError& e) { Logger::fatal(e.what()); }
+    } catch (const vk::SystemError& e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
 
 #define PRINT_EXTENSIONS 0
 #if PRINT_EXTENSIONS
@@ -437,11 +460,14 @@ vk::Instance VulkanBackend::create_vulkan_instance() const {
     for (const auto& extension : extensions) std::cout << '\t' << extension.extensionName << '\n';
 #endif
 
+    Logger::trace(RENDERER_VULKAN_LOG, "Vulkan instance created.");
     return instance;
 }
 
 vk::DebugUtilsMessengerEXT VulkanBackend::setup_debug_messenger() const {
     if (!VulkanSettings::enable_validation_layers) return _debug_messenger;
+
+    Logger::trace(RENDERER_VULKAN_LOG, "Creating debug messenger.");
 
     auto create_info = debug_messenger_create_info();
 
@@ -452,7 +478,9 @@ vk::DebugUtilsMessengerEXT VulkanBackend::setup_debug_messenger() const {
     vk::DebugUtilsMessengerEXT messenger;
     try {
         messenger = _vulkan_instance.createDebugUtilsMessengerEXT(create_info, _allocator, dispatcher);
-    } catch (const vk::SystemError& e) { Logger::fatal(e.what()); }
+    } catch (const vk::SystemError& e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
+
+    Logger::trace(RENDERER_VULKAN_LOG, "Debug messenger created.");
     return messenger;
 }
 
@@ -500,7 +528,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback_function(
         Logger::log("VULKAN :: ", callback_data->pMessage);
         break;
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-        Logger::verbose("VULKAN :: ", callback_data->pMessage);
+        Logger::trace("VULKAN :: ", callback_data->pMessage);
         break;
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
         Logger::warning("VULKAN :: ", callback_data->pMessage);
@@ -522,6 +550,8 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback_function(
 
 // SYNCH
 void VulkanBackend::create_sync_objects() {
+    Logger::trace(RENDERER_VULKAN_LOG, "Creating synchronization objects.");
+
     _semaphores_image_available.resize(VulkanSettings::max_frames_in_flight);
     _semaphores_render_finished.resize(VulkanSettings::max_frames_in_flight);
     _fences_in_flight.resize(VulkanSettings::max_frames_in_flight);
@@ -538,7 +568,9 @@ void VulkanBackend::create_sync_objects() {
             _semaphores_render_finished[i] = _device->handle().createSemaphore(semaphore_info, _allocator);
             _fences_in_flight[i] = _device->handle().createFence(fence_info, _allocator);
         }
-    } catch (vk::SystemError e) { Logger::fatal(e.what()); }
+    } catch (vk::SystemError e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
+
+    Logger::trace(RENDERER_VULKAN_LOG, "All synchronization objects created.");
 }
 
 // VERTEX BUFFER

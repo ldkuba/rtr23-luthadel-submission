@@ -25,7 +25,9 @@ VulkanSwapchain::VulkanSwapchain(
         _msaa_samples = VulkanSettings::max_msaa_samples;
 
     // Create swapchain proper
+    Logger::trace(RENDERER_VULKAN_LOG, "Creating swapchain.");
     create();
+    Logger::trace(RENDERER_VULKAN_LOG, "Swapchain created.");
 
     // Create vulkan images
     _depth_image = new VulkanImage(_device, _allocator);
@@ -36,6 +38,7 @@ VulkanSwapchain::VulkanSwapchain(
 
 VulkanSwapchain::~VulkanSwapchain() {
     destroy();
+    Logger::trace(RENDERER_VULKAN_LOG, "Swapchain destroyed.");
 }
 
 // /////////////////////////////// //
@@ -49,8 +52,10 @@ void VulkanSwapchain::change_extent(const uint32 width, const uint32 height) {
 }
 
 void VulkanSwapchain::initialize_framebuffers(const vk::RenderPass* const render_pass) {
+    Logger::trace(RENDERER_VULKAN_LOG, "Initializing framebuffers.");
     _render_pass = render_pass; // Set render pass requirement
-    create_framebuffers();      // Create framebuffer
+    create_framebuffers();      // Create framebuffers
+    Logger::trace(RENDERER_VULKAN_LOG, "Framebuffers initialized.");
 }
 
 vk::AttachmentDescription VulkanSwapchain::get_depth_attachment() const {
@@ -100,9 +105,9 @@ uint32 VulkanSwapchain::acquire_next_image_index(const vk::Semaphore& signal_sem
     try {
         auto obtained = _device->handle().acquireNextImageKHR(_handle, UINT64_MAX, signal_semaphore);
         if (obtained.result != vk::Result::eSuccess && obtained.result != vk::Result::eSuboptimalKHR)
-            Logger::fatal("Swapchain image index acquisition timed-out.");
+            Logger::fatal(RENDERER_VULKAN_LOG, "Swapchain image index acquisition timed-out.");
         return obtained.value;
-    } catch (const vk::SystemError& e) { Logger::fatal(e.what()); }
+    } catch (const vk::SystemError& e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
     return -1;
 }
 
@@ -127,7 +132,7 @@ void VulkanSwapchain::present(
             recreate();
             _should_resize = false;
         }
-    } catch (vk::SystemError e) { Logger::fatal(e.what()); }
+    } catch (vk::SystemError e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
 }
 
 // //////////////////////////////// //
@@ -186,7 +191,7 @@ void VulkanSwapchain::create() {
 
     try {
         _handle = _device->handle().createSwapchainKHR(create_info, _allocator);
-    } catch (const vk::SystemError& e) { Logger::fatal(e.what()); }
+    } catch (const vk::SystemError& e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
 
 
     // Remember swapchain format and extent
@@ -284,7 +289,7 @@ vk::Format VulkanSwapchain::find_depth_format() const {
         else if (tiling == vk::ImageTiling::eOptimal && (features & properties.optimalTilingFeatures) == features)
             return format;
     }
-    Logger::fatal("Failed to find supported format.");
+    Logger::fatal(RENDERER_VULKAN_LOG, "Failed to find supported format.");
     return vk::Format();
 }
 
@@ -310,6 +315,6 @@ void VulkanSwapchain::create_framebuffers() {
 
         try {
             _framebuffers[i] = _device->handle().createFramebuffer(framebuffer_info, _allocator);
-        } catch (vk::SystemError e) { Logger::fatal(e.what()); }
+        } catch (vk::SystemError e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
     }
 }

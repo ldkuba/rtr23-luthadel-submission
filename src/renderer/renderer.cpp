@@ -1,5 +1,7 @@
 #include "renderer/renderer.hpp"
 
+#define RENDERER_LOG "Renderer :: "
+
 Renderer::Renderer(RendererBackendType backend_type, Platform::Surface* surface) {
     surface->resize_event.subscribe<Renderer>(this, &Renderer::on_resize);
     switch (backend_type) {
@@ -49,15 +51,21 @@ bool Renderer::draw_frame(const float32 delta_time) {
 }
 
 void Renderer::create_texture(Texture* texture, const byte* const data) {
+    Logger::trace(RENDERER_LOG, "Creating texture.");
     _backend->create_texture(texture, data);
+    Logger::trace(RENDERER_LOG, "Texture created.");
 }
 void Renderer::destroy_texture(Texture* texture) {
     _backend->destroy_texture(texture);
+    Logger::trace(RENDERER_LOG, "Destroying texture.");
 }
 
 void Renderer::create_material(Material* const material) {
+    Logger::trace(RENDERER_LOG, "Creating material.");
     _backend->create_material(material);
+    Logger::trace(RENDERER_LOG, "Material created.");
 }
 void Renderer::destroy_material(Material* const material) {
     _backend->destroy_material(material);
+    Logger::trace(RENDERER_LOG, "Destroying material.");
 }

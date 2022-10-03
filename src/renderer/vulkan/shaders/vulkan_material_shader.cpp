@@ -10,11 +10,17 @@ VulkanMaterialShader::VulkanMaterialShader(
     const vk::RenderPass render_pass,
     const vk::SampleCountFlagBits number_of_msaa_samples
 ) : VulkanShader(device, allocator) {
+    Logger::trace(RENDERER_VULKAN_LOG, "Creating material shader.");
+
     // === Create shader modules ===
-    auto vertex_code = FileSystem::read_file_bytes("assets/shaders/builtin.material_shader.vert.spv");
-    auto fragment_code = FileSystem::read_file_bytes("assets/shaders/builtin.material_shader.frag.spv");
-    auto vertex_shader_module = create_shader_module(vertex_code);
-    auto fragment_shader_module = create_shader_module(fragment_code);
+    vk::ShaderModule vertex_shader_module;
+    vk::ShaderModule fragment_shader_module;
+    try {
+        auto vertex_code = FileSystem::read_file_bytes("assets/shaders/builtin.material_shader.vert.spv");
+        auto fragment_code = FileSystem::read_file_bytes("assets/shaders/builtin.material_shader.frag.spv");
+        vertex_shader_module = create_shader_module(vertex_code);
+        fragment_shader_module = create_shader_module(fragment_code);
+    } catch (FileSystemException e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
 
     // === Shader stages ===
     std::vector<vk::PipelineShaderStageCreateInfo> shader_stages(2);
@@ -150,6 +156,8 @@ VulkanMaterialShader::VulkanMaterialShader(
             vk::MemoryPropertyFlagBits::eHostCoherent
         );
     }
+
+    Logger::trace(RENDERER_VULKAN_LOG, "Material shader created.");
 }
 
 VulkanMaterialShader::~VulkanMaterialShader() {
@@ -232,8 +240,10 @@ void VulkanMaterialShader::update_object_state(
 ) {
     // Obtain material data.
     MaterialInstanceState object_state = _instance_states[data.material->internal_id.value()];
-    if (object_state.allocated == false)
-        throw std::runtime_error("Requested object is not allocated.");
+    if (object_state.allocated == false) {
+        Logger::error(RENDERER_VULKAN_LOG, "Requested object is not allocated.");
+        return;
+    }
     vk::DescriptorSet object_descriptor_set = object_state.descriptor_sets[current_frame];
 
     // Load data to buffer
@@ -281,7 +291,7 @@ void VulkanMaterialShader::update_object_state(
             break;
 
         default:
-            Logger::fatal("Renderer :: Unable to bind sampler to a known use.");
+            Logger::fatal(RENDERER_VULKAN_LOG, "Unable to bind sampler to a known use.");
             break;
         }
 
@@ -342,7 +352,7 @@ void VulkanMaterialShader::acquire_resource(Material* const material) {
 
     try {
         state.descriptor_sets = _device->handle().allocateDescriptorSets(allocation_info);
-    } catch (vk::SystemError e) { Logger::fatal(e.what()); }
+    } catch (vk::SystemError e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
     state.allocated = true;
 }
 
@@ -353,7 +363,7 @@ void VulkanMaterialShader::release_resource(Material* const material) {
     // Release object descriptor sets.
     try {
         _device->handle().freeDescriptorSets(_local_descriptor_pool, state.descriptor_sets);
-    } catch (vk::SystemError e) { Logger::fatal(e.what()); }
+    } catch (vk::SystemError e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
 
     // Reset object descriptor info
     for (auto descriptor_state : state.descriptor_states) {
@@ -380,7 +390,7 @@ void VulkanMaterialShader::create_global_descriptor_sets() {
 
     try {
         _global_descriptor_sets = _device->handle().allocateDescriptorSets(allocation_info);
-    } catch (vk::SystemError e) { Logger::fatal(e.what()); }
+    } catch (vk::SystemError e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
 
     for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++) {
         // Combined descriptor

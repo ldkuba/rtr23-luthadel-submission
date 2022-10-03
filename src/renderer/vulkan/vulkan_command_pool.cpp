@@ -1,5 +1,7 @@
 #include "renderer/vulkan/vulkan_command_pool.hpp"
+
 #include "renderer/vulkan/vulkan_settings.hpp"
+#include "renderer/vulkan/vulkan_types.hpp"
 
 VulkanCommandPool::VulkanCommandPool(
     const vk::Device* const device,
@@ -7,6 +9,8 @@ VulkanCommandPool::VulkanCommandPool(
     const vk::Queue* const queue,
     const uint32 queue_index
 ) : _device(device), _allocator(allocator), _queue(queue) {
+    Logger::trace(RENDERER_VULKAN_LOG, "Creating command pool.");
+
     // Create vulkan command pool
     vk::CommandPoolCreateInfo command_pool_info{};
     // Allows for separate reset of buffers from the pool
@@ -16,11 +20,14 @@ VulkanCommandPool::VulkanCommandPool(
 
     try {
         _command_pool = _device->createCommandPool(command_pool_info, _allocator);
-    } catch (const vk::SystemError& e) { Logger::fatal(e.what()); }
+    } catch (const vk::SystemError& e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
+
+    Logger::trace(RENDERER_VULKAN_LOG, "Command pool created.");
 }
 
 VulkanCommandPool::~VulkanCommandPool() {
     _device->destroyCommandPool(_command_pool, _allocator);
+    Logger::trace(RENDERER_VULKAN_LOG, "Command pool destroyed.");
 }
 
 // ////////////////////////////////// //
@@ -48,7 +55,7 @@ std::vector<vk::CommandBuffer> VulkanCommandPool::allocate_command_buffers(
     std::vector<vk::CommandBuffer> command_buffers;
     try {
         command_buffers = _device->allocateCommandBuffers(alloc_info);
-    } catch (const vk::SystemError& e) { Logger::fatal(e.what()); }
+    } catch (const vk::SystemError& e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
 
     return command_buffers;
 }

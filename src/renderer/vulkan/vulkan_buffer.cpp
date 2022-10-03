@@ -1,8 +1,14 @@
 #include "renderer/vulkan/vulkan_buffer.hpp"
 
+// #define TRACE_FILE
+
 VulkanBuffer::~VulkanBuffer() {
     if (_handle) _device->handle().destroyBuffer(_handle, _allocator);
     if (_memory) _device->handle().freeMemory(_memory, _allocator);
+
+#ifdef TRACE_FILE
+    Logger::trace(RENDERER_VULKAN_LOG, "Buffer destroyed.");
+#endif
 }
 
 // //////////////////////////// //
@@ -15,6 +21,10 @@ void VulkanBuffer::create(
     const vk::MemoryPropertyFlags properties,
     const bool bind_on_create
 ) {
+#ifdef TRACE_FILE
+    Logger::trace(RENDERER_VULKAN_LOG, "Creating buffer.");
+#endif
+
     this->_size = size;
     _properties = properties;
     _usage = usage;
@@ -27,6 +37,10 @@ void VulkanBuffer::create(
 
     // Bind allocated memory to the buffer if required
     if (bind_on_create) _device->handle().bindBufferMemory(_handle, _memory, 0);
+
+#ifdef TRACE_FILE
+    Logger::trace(RENDERER_VULKAN_LOG, "Buffer created.");
+#endif
 }
 
 void VulkanBuffer::bind(const vk::DeviceSize offset) const {
@@ -57,6 +71,10 @@ void VulkanBuffer::resize(
     _size = new_size;
     _handle = new_handle;
     _memory = new_memory;
+
+#ifdef TRACE_FILE
+    Logger::trace(RENDERER_VULKAN_LOG, "Buffer resized.");
+#endif
 }
 
 void VulkanBuffer::load_data(
@@ -128,7 +146,7 @@ vk::Buffer VulkanBuffer::create_buffer(
     vk::Buffer buffer;
     try {
         buffer = _device->handle().createBuffer(buffer_info, _allocator);
-    } catch (vk::SystemError e) { Logger::fatal(e.what()); }
+    } catch (vk::SystemError e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
     return buffer;
 }
 
@@ -148,6 +166,6 @@ vk::DeviceMemory VulkanBuffer::allocate_buffer_memory(
     vk::DeviceMemory memory;
     try {
         memory = _device->handle().allocateMemory(allocation_info, _allocator);
-    } catch (vk::SystemError e) { Logger::fatal(e.what()); }
+    } catch (vk::SystemError e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
     return memory;
 }

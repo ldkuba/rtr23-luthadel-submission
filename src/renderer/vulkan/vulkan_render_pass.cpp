@@ -6,6 +6,8 @@ VulkanRenderPass::VulkanRenderPass(
     const vk::AllocationCallbacks* const allocator,
     VulkanSwapchain* const swapchain
 ) : _device(device), _swapchain(swapchain), _allocator(allocator) {
+    Logger::trace(RENDERER_VULKAN_LOG, "Creating render pass.");
+
     // Get all attachment descriptions from swapchain
     // Color attachment
     vk::AttachmentDescription color_attachment =
@@ -72,10 +74,13 @@ VulkanRenderPass::VulkanRenderPass(
 
     try {
         _handle = _device->createRenderPass(create_info, _allocator);
-    } catch (vk::SystemError e) { Logger::fatal(e.what()); }
+    } catch (vk::SystemError e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
+
+    Logger::trace(RENDERER_VULKAN_LOG, "Render pass created.");
 }
 VulkanRenderPass::~VulkanRenderPass() {
     _device->destroyRenderPass(handle, _allocator);
+    Logger::trace(RENDERER_VULKAN_LOG, "Render pass destroyed.");
 }
 
 // ///////////////////////////////// //

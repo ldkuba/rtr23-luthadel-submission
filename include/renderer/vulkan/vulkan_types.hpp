@@ -1,5 +1,7 @@
 #pragma once
 
+#define RENDERER_VULKAN_LOG "Renderer :: VULKAN :: "
+
 #include <vulkan/vulkan.hpp>
 #include <optional>
 #include <set>

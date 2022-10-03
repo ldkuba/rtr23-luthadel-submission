@@ -25,6 +25,8 @@ void VulkanShader::create_pipeline(
     const vk::SampleCountFlagBits number_of_msaa_samples,
     const bool is_wire_frame
 ) {
+    Logger::trace(RENDERER_VULKAN_LOG, "Creating graphics pipeline.");
+
     // === Input assembly ===
     vk::PipelineInputAssemblyStateCreateInfo input_assembly_info{};
     // What geometry will be drawn from the vertices. Possible values:
@@ -138,7 +140,7 @@ void VulkanShader::create_pipeline(
     // === Create pipeline layout ===
     try {
         _pipeline_layout = _device->handle().createPipelineLayout(layout_info, _allocator);
-    } catch (vk::SystemError e) { Logger::fatal(e.what()); }
+    } catch (vk::SystemError e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
 
     // === Create pipeline object ===
     vk::GraphicsPipelineCreateInfo create_info{};
@@ -166,9 +168,11 @@ void VulkanShader::create_pipeline(
     try {
         auto result = _device->handle().createGraphicsPipeline(VK_NULL_HANDLE, create_info, _allocator);
         if (result.result != vk::Result::eSuccess)
-            throw std::runtime_error("Failed to create graphics pipeline (Unexpected compilation).");
+            Logger::fatal(RENDERER_VULKAN_LOG,
+                "Failed to create graphics pipeline (Unexpected compilation).");
         _pipeline = result.value;
-    } catch (vk::SystemError e) { Logger::fatal(e.what()); }
+        Logger::trace(RENDERER_VULKAN_LOG, "Graphics pipeline created.");
+    } catch (vk::SystemError e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
 }
 
 vk::DescriptorPool VulkanShader::create_descriptor_pool(
@@ -191,7 +195,7 @@ vk::DescriptorPool VulkanShader::create_descriptor_pool(
     vk::DescriptorPool descriptor_pool;
     try {
         descriptor_pool = _device->handle().createDescriptorPool(create_info, _allocator);
-    } catch (vk::SystemError e) { Logger::fatal(e.what()); }
+    } catch (vk::SystemError e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
     return descriptor_pool;
 }
 
@@ -213,6 +217,6 @@ vk::DescriptorSetLayout VulkanShader::create_descriptor_set_layout(
     vk::DescriptorSetLayout descriptor_set_layout;
     try {
         descriptor_set_layout = _device->handle().createDescriptorSetLayout(layout_info, _allocator);
-    } catch (vk::SystemError e) { Logger::fatal(e.what()); }
+    } catch (vk::SystemError e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
     return descriptor_set_layout;
 }

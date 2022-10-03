@@ -6,7 +6,7 @@
 #define LOG_WARNING_ENABLED 1
 #define LOG_INFO_ENABLED 1
 #define LOG_DEBUG_ENABLED 1
-#define LOG_VERBOSE_ENABLED 0
+#define LOG_VERBOSE_ENABLED 1
 
 #include "platform/platform.hpp"
 
@@ -94,14 +94,14 @@ public:
 #endif
     }
     /**
-     * @brief Logs given verbose message if LOG_VERBOSE_ENABLED is set to one.
+     * @brief Logs given trace message if LOG_VERBOSE_ENABLED is set to one.
      *
      * Parameter list automaticaly converted to std::string via std::to_string if possible,
      * otherwise throws appropriate error.
      * Argument list is also automaticaly concatenated, ending with a new line.
      */
     template<typename... Args>
-    static void verbose(Args... message) {
+    static void trace(Args... message) {
 #if LOG_VERBOSE_ENABLED
         logger_output(std::string("VER"), 0, message...);
 #endif

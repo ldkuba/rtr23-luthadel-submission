@@ -1,9 +1,14 @@
 #include "renderer/vulkan/vulkan_image.hpp"
 
+// #define TRACE_FILE
+
 VulkanImage::~VulkanImage() {
     if (_handle) _device->handle().destroyImage(_handle, _allocator);
     if (_memory) _device->handle().freeMemory(_memory, _allocator);
     if (_has_view) _device->handle().destroyImageView(view, _allocator);
+#ifdef TRACE_FILE
+    Logger::trace(RENDERER_VULKAN_LOG, "Image destroyed.");
+#endif
 }
 
 // /////////////////////////// //
@@ -46,7 +51,7 @@ void VulkanImage::create(
 
     try {
         _handle = _device->handle().createImage(image_info, _allocator);
-    } catch (vk::SystemError e) { Logger::log(e.what()); }
+    } catch (vk::SystemError e) { Logger::log(RENDERER_VULKAN_LOG, e.what()); }
 
     // Allocate image memory
     auto memory_requirements = _device->handle().getImageMemoryRequirements(handle);
@@ -55,12 +60,14 @@ void VulkanImage::create(
     // Number of bytes to be allocated
     allocation_info.setAllocationSize(memory_requirements.size);
     // Type of memory we wish to allocate from
-    allocation_info.setMemoryTypeIndex(
-        _device->find_memory_type(memory_requirements.memoryTypeBits, properties));
+    try {
+        allocation_info.setMemoryTypeIndex(
+            _device->find_memory_type(memory_requirements.memoryTypeBits, properties));
+    } catch (const std::runtime_error e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
 
     try {
         _memory = _device->handle().allocateMemory(allocation_info, _allocator);
-    } catch (const vk::SystemError& e) { Logger::fatal(e.what()); }
+    } catch (const vk::SystemError& e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
 
     // Bind memory to the created image
     _device->handle().bindImageMemory(handle, memory, 0);
@@ -77,6 +84,10 @@ void VulkanImage::create(
     const vk::MemoryPropertyFlags properties,
     const vk::ImageAspectFlags aspect_flags
 ) {
+#ifdef TRACE_FILE
+    Logger::trace(RENDERER_VULKAN_LOG, "Creating image.");
+#endif
+
     // Construct image
     create(
         width,
@@ -95,6 +106,10 @@ void VulkanImage::create(
         format,
         aspect_flags
     );
+
+#ifdef TRACE_FILE
+    Logger::trace(RENDERER_VULKAN_LOG, "Image created.");
+#endif
 }
 
 void VulkanImage::create(
@@ -103,8 +118,16 @@ void VulkanImage::create(
     const vk::Format format,
     const vk::ImageAspectFlags aspect_flags
 ) {
+#ifdef TRACE_FILE
+    Logger::trace(RENDERER_VULKAN_LOG, "Creating image.");
+#endif
+
     handle = image;
     create_view(mip_levels, format, aspect_flags);
+
+#ifdef TRACE_FILE
+    Logger::trace(RENDERER_VULKAN_LOG, "Image created.");
+#endif
 }
 
 void VulkanImage::transition_image_layout(
@@ -168,7 +191,7 @@ void VulkanImage::generate_mipmaps(
     // Check if image format supports linear blitting
     auto properties = _device->info().get_format_properties(_format);
     if (!(properties.optimalTilingFeatures & vk::FormatFeatureFlagBits::eSampledImageFilterLinear))
-        throw std::runtime_error("Texture image format does not support linear blitting.");
+        Logger::fatal(RENDERER_VULKAN_LOG, "Texture image format does not support linear blitting.");
 
     // Generate mipmaps
     vk::ImageMemoryBarrier barrier{};
@@ -280,7 +303,7 @@ vk::ImageView VulkanImage::get_view_from_image(
 
     try {
         return device.createImageView(create_info, allocator);
-    } catch (const vk::SystemError& e) { Logger::fatal(e.what()); }
+    } catch (const vk::SystemError& e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
     return vk::ImageView();
 }
 
@@ -310,5 +333,5 @@ void VulkanImage::create_view(
 
     try {
         _view = _device->handle().createImageView(create_info, _allocator);
-    } catch (const vk::SystemError& e) { Logger::fatal(e.what()); }
+    } catch (const vk::SystemError& e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
 }

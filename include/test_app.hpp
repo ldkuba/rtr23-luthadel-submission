@@ -29,7 +29,7 @@ TestApplication::~TestApplication() {}
 
 void TestApplication::run() {
     _app_renderer.current_material = _material_system.acquire(
-        "default1",
+        "viking_room",
         true,
         glm::vec4(1.0f),
         "viking_room"
