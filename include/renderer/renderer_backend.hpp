@@ -21,7 +21,7 @@ public:
         const glm::vec4 ambient_color,
         const int32 mode
     ) {}
-    virtual void update_object(
+    virtual void draw_geometry(
         const GeometryRenderData data
     ) {}
 
@@ -30,6 +30,13 @@ public:
 
     virtual void create_material(Material* const material) {}
     virtual void destroy_material(Material* const material) {}
+
+    virtual void create_geometry(
+        Geometry* geometry,
+        const std::vector<Vertex> vertices,
+        const std::vector<uint32> indices
+    ) {}
+    virtual void destroy_geometry(Geometry* geometry) {}
 
 private:
     uint64 _frame_number = 0;

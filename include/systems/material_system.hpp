@@ -36,4 +36,10 @@ private:
     std::map<const String, MaterialRef> _registered_materials;
 
     void create_default_material();
+
+    Material* crete_material(
+        const String name,
+        const String diffuse_material_name,
+        const glm::vec4 diffuse_color
+    );
 };

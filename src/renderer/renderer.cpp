@@ -22,22 +22,16 @@ void Renderer::on_resize(const uint32 width, const uint32 height) {
 bool Renderer::draw_frame(const float32 delta_time) {
     if (_backend->begin_frame(delta_time)) {
         // Update global state
-        _backend->update_global_state(
-            _projection,
-            _view,
-            glm::vec3(0.0),
-            glm::vec4(1.0),
-            0
-        );
+        _backend->update_global_state(_projection, _view, glm::vec3(0.0), glm::vec4(1.0), 0);
 
         // TODO: Temp code; update one and only object
         static float rotation = 0.0f;
         rotation += 50.0f * delta_time;
         GeometryRenderData data = {};
         data.model = glm::rotate(glm::mat4(1.0f), glm::radians(rotation), glm::vec3(0.0f, 0.0f, 1.0f));
-        data.material = current_material;
+        data.geometry = current_geometry;
 
-        _backend->update_object(data);
+        _backend->draw_geometry(data);
 
         bool result = _backend->end_frame(delta_time);
         _backend->increment_frame_number();
@@ -57,7 +51,7 @@ void Renderer::create_texture(Texture* texture, const byte* const data) {
 }
 void Renderer::destroy_texture(Texture* texture) {
     _backend->destroy_texture(texture);
-    Logger::trace(RENDERER_LOG, "Destroying texture.");
+    Logger::trace(RENDERER_LOG, "Texture destroyed.");
 }
 
 void Renderer::create_material(Material* const material) {
@@ -67,5 +61,20 @@ void Renderer::create_material(Material* const material) {
 }
 void Renderer::destroy_material(Material* const material) {
     _backend->destroy_material(material);
-    Logger::trace(RENDERER_LOG, "Destroying material.");
+    Logger::trace(RENDERER_LOG, "Material destroyed.");
+}
+
+void Renderer::create_geometry(
+    Geometry* geometry,
+    const std::vector<Vertex> vertices,
+    const std::vector<uint32> indices
+) {
+    Logger::trace(RENDERER_LOG, "Creating geometry.");
+    _backend->create_geometry(geometry, vertices, indices);
+    Logger::trace(RENDERER_LOG, "Geometry created.");
+}
+void Renderer::destroy_geometry(Geometry* geometry) {
+    _backend->destroy_geometry(geometry);
+    Logger::trace(RENDERER_LOG, "Geometry destroyed.");
+
 }

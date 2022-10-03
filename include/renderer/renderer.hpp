@@ -12,7 +12,7 @@ public:
     ~Renderer();
 
     // TODO: TEMP TEST CODE
-    Material* current_material = nullptr;
+    Geometry* current_geometry = nullptr;
 
     void on_resize(const uint32 width, const uint32 height);
     bool draw_frame(const float32 delta_time);
@@ -22,6 +22,13 @@ public:
 
     void create_material(Material* const material);
     void destroy_material(Material* const material);
+
+    void create_geometry(
+        Geometry* geometry,
+        const std::vector<Vertex> vertices,
+        const std::vector<uint32> indices
+    );
+    void destroy_geometry(Geometry* geometry);
 
 private:
     RendererBackend* _backend = nullptr;

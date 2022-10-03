@@ -22,13 +22,20 @@ public:
         const glm::vec4 ambient_color,
         const int32 mode
     );
-    void update_object(const GeometryRenderData data);
+    void draw_geometry(const GeometryRenderData data);
 
     void create_texture(Texture* texture, const byte* const data);
     void destroy_texture(Texture* texture);
 
     void create_material(Material* const material);
     void destroy_material(Material* const material);
+
+    void create_geometry(
+        Geometry* geometry,
+        const std::vector<Vertex> vertices,
+        const std::vector<uint32> indices
+    );
+    void destroy_geometry(Geometry* geometry);
 
 private:
     // TODO: Custom allocator
@@ -67,23 +74,24 @@ private:
     // OBJECT SHADER
     VulkanMaterialShader* _material_shader;
 
+    // GEOMETRY CODE
+    std::map<uint32, VulkanGeometryData> _geometries;
+
+    uint32 generate_geometry_id();
+
     // TODO: TEMP COMMAND CODE
     VulkanCommandPool* _command_pool;
     std::vector<vk::CommandBuffer> _command_buffers;
 
-    // TODO: TEMP VERTEX BUFFER CODE
+    // TODO: TEMP BUFFER CODE
     VulkanBuffer* _vertex_buffer;
-
-    void create_vertex_buffer();
-
-    // TODO: TEMP INDEX BUFFER CODE
     VulkanBuffer* _index_buffer;
 
-    void create_index_buffer();
-
-    // TODO: TEMP MODEL LOADING CODE
-    std::vector<Vertex> vertices;
-    std::vector<uint32> indices;
-
-    void load_model();
+    void create_buffers();
+    void upload_data_to_buffer(
+        const void* data,
+        vk::DeviceSize size,
+        vk::DeviceSize offset,
+        VulkanBuffer* buffer
+    );
 };

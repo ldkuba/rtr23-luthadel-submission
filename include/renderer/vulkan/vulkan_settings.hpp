@@ -111,8 +111,9 @@ public:
     // Anti-aliasing
     constexpr static auto max_msaa_samples = vk::SampleCountFlagBits::e16;
 
-    // Maximum object count
+    // Maximum object counts // TODO: Make configurable
     constexpr static uint32 max_material_count = 1024;
+    constexpr static uint32 max_geometry_count = 1024;
 };
 
 // TODO: TEMP CODE

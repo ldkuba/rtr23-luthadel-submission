@@ -29,7 +29,7 @@ public:
         const uint32 current_frame
     );
 
-    void bind_object(
+    void bind_material(
         const vk::CommandBuffer& command_buffer,
         const uint32 current_frame,
         const uint32 object_id

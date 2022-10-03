@@ -202,15 +202,15 @@ void VulkanMaterialShader::bind_descriptor_set(
     );
 }
 
-void VulkanMaterialShader::bind_object(
+void VulkanMaterialShader::bind_material(
     const vk::CommandBuffer& command_buffer,
     const uint32 current_frame,
-    const uint32 object_id
+    const uint32 material_id
 ) {
     command_buffer.bindDescriptorSets(
         vk::PipelineBindPoint::eGraphics,
         _pipeline_layout, 1,
-        1, &_instance_states[object_id].descriptor_sets[current_frame],
+        1, &_instance_states[material_id].descriptor_sets[current_frame],
         0, nullptr
     );
 }
@@ -238,8 +238,10 @@ void VulkanMaterialShader::update_object_state(
     const GeometryRenderData data,
     uint32 current_frame
 ) {
+    Material* material = data.geometry->material;
+
     // Obtain material data.
-    MaterialInstanceState object_state = _instance_states[data.material->internal_id.value()];
+    MaterialInstanceState object_state = _instance_states[material->internal_id.value()];
     if (object_state.allocated == false) {
         Logger::error(RENDERER_VULKAN_LOG, "Requested object is not allocated.");
         return;
@@ -248,11 +250,11 @@ void VulkanMaterialShader::update_object_state(
 
     // Load data to buffer
     uint32 size = sizeof(LocalUniformObject);
-    uint64 offset = sizeof(LocalUniformObject) * data.material->internal_id.value();
+    uint64 offset = sizeof(LocalUniformObject) * material->internal_id.value();
     LocalUniformObject lub;
 
     lub.model = data.model;
-    lub.diffuse_color = data.material->diffuse_color;
+    lub.diffuse_color = material->diffuse_color;
 
     _local_uniform_buffers[current_frame]->load_data(&lub, offset, size);
 
@@ -287,7 +289,7 @@ void VulkanMaterialShader::update_object_state(
 
         switch (_sampler_uses[i]) {
         case TextureUse::MapDiffuse:
-            texture = data.material->diffuse_map().texture;
+            texture = material->diffuse_map().texture;
             break;
 
         default:
@@ -361,6 +363,7 @@ void VulkanMaterialShader::release_resource(Material* const material) {
     MaterialInstanceState& state = _instance_states[material->internal_id.value()];
 
     // Release object descriptor sets.
+    _device->handle().waitIdle();
     try {
         _device->handle().freeDescriptorSets(_local_descriptor_pool, state.descriptor_sets);
     } catch (vk::SystemError e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
@@ -374,7 +377,7 @@ void VulkanMaterialShader::release_resource(Material* const material) {
 
     material->internal_id.reset();
 
-    // TODO: add the object_id to the free list
+    // TODO: add the material_id to the free list
 }
 
 // ////////////////////////////////////// //

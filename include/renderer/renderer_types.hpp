@@ -1,7 +1,7 @@
 #pragma once
 
 #include "math_libs.hpp"
-#include "resources/material.hpp"
+#include "resources/geometry.hpp"
 
 // Vertex
 struct Vertex {
@@ -37,5 +37,5 @@ struct LocalUniformObject {
 
 struct GeometryRenderData {
     glm::mat4 model;
-    Material* material;
+    Geometry* geometry;
 };

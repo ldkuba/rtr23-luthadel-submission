@@ -1,11 +1,5 @@
 #include "renderer/vulkan/vulkan_backend.hpp"
 
-// TODO: TEMP MODEL LOADING LIBS
-#define TINYOBJLOADER_IMPLEMENTATION
-#include <tiny_obj_loader.h>
-#include <unordered_map>
-
-
 VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback_function(
     VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
     VkDebugUtilsMessageTypeFlagsEXT message_type,
@@ -68,14 +62,8 @@ VulkanBackend::VulkanBackend(Platform::Surface* surface) : RendererBackend(surfa
         _swapchain->msaa_samples
     );
 
-    // TODO: TEMP MODEL LOADING CODE
-    load_model();
-
-    // TODO: TEMP VERTEX BUFFER CODE
-    create_vertex_buffer();
-
-    // TODO: TEMP INDEX BUFFER CODE
-    create_index_buffer();
+    // TODO: TEMP VERTEX & INDEX BUFFER CODE
+    create_buffers();
 
     // TODO: TEMP COMMAND CODE
     _command_buffers = _command_pool->allocate_command_buffers(VulkanSettings::max_frames_in_flight);
@@ -245,37 +233,43 @@ void VulkanBackend::update_global_state(
     _material_shader->bind_descriptor_set(command_buffer, _current_frame);
 }
 
-void VulkanBackend::update_object(
+void VulkanBackend::draw_geometry(
     const GeometryRenderData data
 ) {
-    if (!data.material->internal_id.has_value()) {
-        Logger::error(RENDERER_VULKAN_LOG, "Material not created. Id unknown.");
+    if (!data.geometry || !data.geometry->internal_id.has_value())
         return;
-    }
-    try {
-        _material_shader->update_object_state(data, _current_frame);
-    } catch (std::runtime_error e) {
-        Logger::error(RENDERER_VULKAN_LOG, e.what());
-        return;
-    }
 
+    auto buffer_data = _geometries[data.geometry->internal_id.value()];
     auto command_buffer = _command_buffers[_current_frame];
 
+    // TODO: CHECK CURRENT SHADER (MAYBE WE NEED TO CALL _material_shader->use())
+
+    // Upload data
+    _material_shader->update_object_state(data, _current_frame);
+
     // Bind object
-    _material_shader->bind_object(command_buffer, _current_frame, data.material->internal_id.value());
+    _material_shader->bind_material(command_buffer, _current_frame,
+        data.geometry->material()->internal_id.value());
 
     // Bind vertex buffer
     std::vector<vk::Buffer>vertex_buffers = { _vertex_buffer->handle };
-    std::vector<vk::DeviceSize> offsets = { 0 };
+    std::vector<vk::DeviceSize> offsets = { buffer_data.vertex_offset };
     command_buffer.bindVertexBuffers(0, vertex_buffers, offsets);
 
-    // Bind index buffer
-    command_buffer.bindIndexBuffer(_index_buffer->handle, 0, vk::IndexType::eUint32);
+    // Issue draw command
+    if (buffer_data.index_count > 0) {
+        // Bind index buffer
+        command_buffer.bindIndexBuffer(_index_buffer->handle, buffer_data.index_offset, vk::IndexType::eUint32);
 
-    // Draw command
-    command_buffer.drawIndexed(static_cast<uint32>(indices.size()), 1, 0, 0, 0);
+        // Draw command indexed
+        command_buffer.drawIndexed(buffer_data.index_count, 1, 0, 0, 0);
+    } else {
+        // Draw command non-indexed
+        command_buffer.draw(buffer_data.vertex_count, 1, 0, 0);
+    }
 }
 
+// Textures
 void VulkanBackend::create_texture(Texture* texture, const byte* const data) {
     Logger::trace(RENDERER_VULKAN_LOG, "Creating texture.");
 
@@ -381,6 +375,7 @@ void VulkanBackend::destroy_texture(Texture* texture) {
     Logger::trace(RENDERER_VULKAN_LOG, "Texture destroyed.");
 }
 
+// Material
 void VulkanBackend::create_material(Material* const material) {
     if (!material) {
         Logger::error(RENDERER_VULKAN_LOG,
@@ -406,6 +401,105 @@ void VulkanBackend::destroy_material(Material* const material) {
     }
     _material_shader->release_resource(material);
     Logger::trace(RENDERER_VULKAN_LOG, "Material destroyed.");
+}
+
+// Geometry
+void VulkanBackend::create_geometry(
+    Geometry* geometry,
+    const std::vector<Vertex> vertices,
+    const std::vector<uint32> indices
+) {
+    if (!geometry) {
+        Logger::error(RENDERER_VULKAN_LOG,
+            "Method create_geometry called with nullptr. Creation failed.");
+        return;
+    }
+
+    if (vertices.size() < 1) {
+        Logger::error(RENDERER_VULKAN_LOG, "No vertex data passed.");
+        return;
+    }
+
+    auto is_reupload = geometry->internal_id.has_value();
+    VulkanGeometryData old_data;
+
+    VulkanGeometryData* internal_data = nullptr;
+    if (is_reupload) {
+        internal_data = &_geometries[geometry->internal_id.value()];
+        old_data.vertex_count = internal_data->vertex_count;
+        old_data.vertex_size = internal_data->vertex_size;
+        old_data.vertex_offset = internal_data->vertex_offset;
+        old_data.index_count = internal_data->index_count;
+        old_data.index_size = internal_data->index_size;
+        old_data.index_offset = internal_data->index_offset;
+    } else {
+        uint id = generate_geometry_id();
+        geometry->internal_id = id;
+        internal_data = &_geometries[id];
+    }
+
+    if (internal_data == nullptr)
+        Logger::fatal(RENDERER_VULKAN_LOG, "Geometry internal data somehow nullptr.");
+
+    // Upload vertex data
+    static uint32 geometry_vertex_offset = 0; // TODO: TEMP
+    static uint32 geometry_index_offset = 0;  // TODO: TEMP
+    vk::DeviceSize buffer_size = sizeof(vertices[0]) * vertices.size();
+    vk::DeviceSize buffer_offset = geometry_vertex_offset;
+
+    internal_data->vertex_count = vertices.size();
+    internal_data->vertex_size = buffer_size;
+    internal_data->vertex_offset = buffer_offset;
+
+    upload_data_to_buffer(
+        vertices.data(),
+        buffer_size,
+        buffer_offset,
+        _vertex_buffer
+    );
+    geometry_vertex_offset += buffer_size;
+
+    // Upload index data
+    if (indices.size() > 0) {
+        buffer_size = sizeof(indices[0]) * indices.size();
+        buffer_offset = geometry_index_offset;
+
+        internal_data->index_count = indices.size();
+        internal_data->index_size = buffer_size;
+        internal_data->index_offset = buffer_offset;
+
+        upload_data_to_buffer(
+            indices.data(),
+            buffer_size,
+            buffer_offset,
+            _index_buffer
+        );
+        geometry_index_offset += buffer_size;
+    }
+
+    if (is_reupload) {
+        // TODO: FREE VERTEX & INDEX DATA
+    }
+}
+
+void VulkanBackend::destroy_geometry(Geometry* geometry) {
+    if (!geometry) {
+        Logger::warning(RENDERER_VULKAN_LOG,
+            "Method destroy_geometry called with nullptr. Nothing was done.");
+        return;
+    }
+    if (!geometry->internal_id.has_value()) {
+        Logger::warning(RENDERER_VULKAN_LOG,
+            "Method destroy_geometry called for a geometry which was already ",
+            "destroyed. Nothing was done.");
+        return;
+    }
+
+    auto& internal_data = _geometries[geometry->internal_id.value()];
+
+    // TODO: FREE VERTEX & INDEX DATA
+
+    _geometries.erase(geometry->internal_id.value());
 }
 
 // /////////////////////////////// //
@@ -513,6 +607,36 @@ vk::DebugUtilsMessengerCreateInfoEXT VulkanBackend::debug_messenger_create_info(
     return create_info;
 }
 
+// SYNCH
+void VulkanBackend::create_sync_objects() {
+    Logger::trace(RENDERER_VULKAN_LOG, "Creating synchronization objects.");
+
+    _semaphores_image_available.resize(VulkanSettings::max_frames_in_flight);
+    _semaphores_render_finished.resize(VulkanSettings::max_frames_in_flight);
+    _fences_in_flight.resize(VulkanSettings::max_frames_in_flight);
+
+    // Create synchronization objects
+    vk::SemaphoreCreateInfo semaphore_info{};
+    vk::FenceCreateInfo fence_info{};
+    // Fence becomes signaled on initialization
+    fence_info.setFlags(vk::FenceCreateFlagBits::eSignaled);
+
+    try {
+        for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++) {
+            _semaphores_image_available[i] = _device->handle().createSemaphore(semaphore_info, _allocator);
+            _semaphores_render_finished[i] = _device->handle().createSemaphore(semaphore_info, _allocator);
+            _fences_in_flight[i] = _device->handle().createFence(fence_info, _allocator);
+        }
+    } catch (vk::SystemError e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
+
+    Logger::trace(RENDERER_VULKAN_LOG, "All synchronization objects created.");
+}
+
+uint32 VulkanBackend::generate_geometry_id() {
+    static uint32 id = 0;
+    return id++;
+}
+
 // /////////////////////////////// //
 // VULKAN BACKEND HELPER FUNCTIONS //
 // /////////////////////////////// //
@@ -548,137 +672,52 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback_function(
 
 /// TODO: TEMP CODE BELOW
 
-// SYNCH
-void VulkanBackend::create_sync_objects() {
-    Logger::trace(RENDERER_VULKAN_LOG, "Creating synchronization objects.");
-
-    _semaphores_image_available.resize(VulkanSettings::max_frames_in_flight);
-    _semaphores_render_finished.resize(VulkanSettings::max_frames_in_flight);
-    _fences_in_flight.resize(VulkanSettings::max_frames_in_flight);
-
-    // Create synchronization objects
-    vk::SemaphoreCreateInfo semaphore_info{};
-    vk::FenceCreateInfo fence_info{};
-    // Fence becomes signaled on initialization
-    fence_info.setFlags(vk::FenceCreateFlagBits::eSignaled);
-
-    try {
-        for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++) {
-            _semaphores_image_available[i] = _device->handle().createSemaphore(semaphore_info, _allocator);
-            _semaphores_render_finished[i] = _device->handle().createSemaphore(semaphore_info, _allocator);
-            _fences_in_flight[i] = _device->handle().createFence(fence_info, _allocator);
-        }
-    } catch (vk::SystemError e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
-
-    Logger::trace(RENDERER_VULKAN_LOG, "All synchronization objects created.");
-}
-
-// VERTEX BUFFER
-void VulkanBackend::create_vertex_buffer() {
-    vk::DeviceSize buffer_size = sizeof(vertices[0]) * vertices.size();
-
-    // Create staging buffer
-    auto staging_buffer = new VulkanBuffer(_device, _allocator);
-    staging_buffer->create(
-        buffer_size,
-        vk::BufferUsageFlagBits::eTransferSrc,
-        vk::MemoryPropertyFlagBits::eHostVisible |
-        vk::MemoryPropertyFlagBits::eHostCoherent
-    );
-
-    // Fill created memory with data
-    staging_buffer->load_data(vertices.data(), 0, buffer_size);
-
+void VulkanBackend::create_buffers() {
     // Create vertex buffer
+    // TODO: NOT LIKE THIS
+    vk::DeviceSize vertex_buffer_size = sizeof(Vertex) * 1024 * 1024;
     _vertex_buffer = new VulkanBuffer(_device, _allocator);
     _vertex_buffer->create(
-        buffer_size,
+        vertex_buffer_size,
         vk::BufferUsageFlagBits::eTransferDst |
         vk::BufferUsageFlagBits::eVertexBuffer,
         vk::MemoryPropertyFlagBits::eDeviceLocal
     );
 
-    auto command_buffer = _command_pool->begin_single_time_commands();
-    staging_buffer->copy_data_to_buffer(command_buffer, _vertex_buffer->handle, 0, 0, buffer_size);
-    _command_pool->end_single_time_commands(command_buffer);
-
-    // Cleanup
-    delete staging_buffer;
+    // Create index buffer
+    vk::DeviceSize index_buffer_size = sizeof(uint32) * 1024 * 1024;
+    _index_buffer = new VulkanBuffer(_device, _allocator);
+    _index_buffer->create(
+        index_buffer_size,
+        vk::BufferUsageFlagBits::eTransferDst |
+        vk::BufferUsageFlagBits::eIndexBuffer,
+        vk::MemoryPropertyFlagBits::eDeviceLocal
+    );
 }
 
-// INDEX BUFFER
-void VulkanBackend::create_index_buffer() {
-    vk::DeviceSize buffer_size = sizeof(indices[0]) * indices.size();
-
+void VulkanBackend::upload_data_to_buffer(
+    const void* data,
+    vk::DeviceSize size,
+    vk::DeviceSize offset,
+    VulkanBuffer* buffer
+) {
     // Create staging buffer
     auto staging_buffer = new VulkanBuffer(_device, _allocator);
     staging_buffer->create(
-        buffer_size,
+        size,
         vk::BufferUsageFlagBits::eTransferSrc,
         vk::MemoryPropertyFlagBits::eHostVisible |
         vk::MemoryPropertyFlagBits::eHostCoherent
     );
 
     // Fill created memory with data
-    staging_buffer->load_data(indices.data(), 0, buffer_size);
-
-    // Create index buffer
-    _index_buffer = new VulkanBuffer(_device, _allocator);
-    _index_buffer->create(
-        buffer_size,
-        vk::BufferUsageFlagBits::eTransferDst |
-        vk::BufferUsageFlagBits::eIndexBuffer,
-        vk::MemoryPropertyFlagBits::eDeviceLocal
-    );
+    staging_buffer->load_data(data, 0, size);
 
     auto command_buffer = _command_pool->begin_single_time_commands();
-    staging_buffer->copy_data_to_buffer(command_buffer, _index_buffer->handle, 0, 0, buffer_size);
+    staging_buffer->copy_data_to_buffer(command_buffer, buffer->handle, 0, offset, size);
     _command_pool->end_single_time_commands(command_buffer);
 
     // Cleanup
     delete staging_buffer;
-}
-
-// MODEL LOADING
-void VulkanBackend::load_model() {
-    // Load model
-    tinyobj::ObjReader reader;
-    if (!reader.ParseFromFile(model_path))
-        throw std::runtime_error("");
-
-    if (!reader.Warning().empty())
-        Logger::warning("TinyObjReader :: ", reader.Warning());
-
-    auto& attributes = reader.GetAttrib();
-    auto& shapes = reader.GetShapes();
-    auto& materials = reader.GetMaterials();
-
-    // Loop over shapes
-    std::unordered_map<Vertex, uint32> unique_vertices = {};
-    for (const auto& shape : shapes) {
-        for (const auto& index : shape.mesh.indices) {
-            Vertex vertex{};
-
-            vertex.position = {
-                attributes.vertices[3 * index.vertex_index + 0],
-                attributes.vertices[3 * index.vertex_index + 1],
-                attributes.vertices[3 * index.vertex_index + 2]
-            };
-
-            vertex.texture_coord = {
-                attributes.texcoords[2 * index.texcoord_index + 0],
-                1.0f - attributes.texcoords[2 * index.texcoord_index + 1]
-            };
-
-            vertex.color = { 1.0f,1.0f,1.0f };
-
-            if (unique_vertices.count(vertex) == 0) {
-                unique_vertices[vertex] = static_cast   <uint32>(vertices.size());
-                vertices.push_back(vertex);
-            }
-
-            indices.push_back(unique_vertices[vertex]);
-        }
-    }
 }
 // TODO: TEMP CODE END

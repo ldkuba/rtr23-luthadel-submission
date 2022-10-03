@@ -30,7 +30,7 @@ MaterialSystem::~MaterialSystem() {
 // MATERIAL SYSTEM PUBLIC METHODS //
 // ////////////////////////////// //
 
-#define MATERIAL_FOLDER "./assets/textures/"
+#define MATERIAL_FOLDER "./assets/materials/"
 #include "file_system.hpp"
 
 #define M_SETTING_version "version"
@@ -42,7 +42,7 @@ Material* MaterialSystem::acquire(const String name) {
     // TODO: TEMP CODE BEGIN
     // === Material configuration ===
     String mat_name;
-    bool mat_auto_release;
+    bool mat_auto_release = true;
     glm::vec4 mat_diffuse_color;
     String mat_diffuse_map_name;
 
@@ -147,11 +147,10 @@ Material* MaterialSystem::acquire(
     auto ref = _registered_materials[s];
 
     if (ref.handle == nullptr) {
-        ref.handle = new Material(
+        ref.handle = crete_material(
             name,
-            diffuse_color,
             diffuse_map_name,
-            _texture_system
+            diffuse_color
         );
         ref.handle->id = (uint64) ref.handle;
         ref.auto_release = auto_release;
@@ -196,11 +195,41 @@ void MaterialSystem::release(const String name) {
 void MaterialSystem::create_default_material() {
     _default_material = new Material(
         _default_material_name,
-        glm::vec4(1.0f),
-        _texture_system->default_texture()->name,
-        _texture_system,
-        true
+        glm::vec4(1.0f)
     );
+    TextureMap diffuse_map = { _texture_system->default_texture, TextureUse::MapDiffuse };
+    _default_material->diffuse_map = diffuse_map;
+
+    // TODO: Set other maps
+
     // Upload material to GPU
     _renderer->create_material(_default_material);
+}
+
+Material* MaterialSystem::crete_material(
+    const String name,
+    const String diffuse_material_name,
+    const glm::vec4 diffuse_color
+) {
+    auto material = new Material(
+        name,
+        diffuse_color
+    );
+
+    TextureMap diffuse_map;
+    if (diffuse_material_name.length() > 0) {
+        diffuse_map.use = TextureUse::MapDiffuse;
+        Logger::debug(diffuse_material_name);
+        diffuse_map.texture = _texture_system->acquire(diffuse_material_name, true);
+    } else {
+        diffuse_map.use = TextureUse::Unknown;
+        diffuse_map.texture = nullptr;
+    }
+    material->diffuse_map = diffuse_map;
+    // TODO: Set other maps
+
+    // Upload material to GPU
+    _renderer->create_material(material);
+
+    return material;
 }

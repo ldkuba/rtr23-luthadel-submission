@@ -1,6 +1,6 @@
 #include "systems/texture_system.hpp"
 
-#define TEXTURE_SYS_LOG "MaterialSystem :: "
+#define TEXTURE_SYS_LOG "TextureSystem :: "
 
 void create_default_textures();
 void destroy_default_textures();

@@ -63,3 +63,13 @@ struct VulkanTextureData : public InternalTextureData {
     VulkanImage* image;
     vk::Sampler sampler;
 };
+
+struct VulkanGeometryData {
+    uint32 vertex_count;
+    uint32 vertex_size;
+    uint32 vertex_offset;
+    uint32 index_count;
+    uint32 index_size;
+    uint32 index_offset;
+};
+
