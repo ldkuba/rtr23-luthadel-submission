@@ -1,0 +1,85 @@
+#include "resources/loaders/image_loader.hpp"
+
+#include "systems/resource_system.hpp"
+#include "resources/image.hpp"
+
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+
+// Constructor & Destructor
+ImageLoader::ImageLoader() {
+    _type = ResourceType::Image;
+    _type_path = "textures";
+}
+ImageLoader::~ImageLoader() {}
+
+// /////////////////////////// //
+// IMAGE LOADER PUBLIC METHODS //
+// /////////////////////////// //
+
+Resource* ImageLoader::load(const String name) {
+    // If name is not provided with an extension use default extension
+    String file_name = name;
+    if (file_name.split('.').size() < 2)
+        file_name = file_name + ".png";
+
+    // Compute full path
+    String file_path = ResourceSystem::base_path + "/" + _type_path + "/" + file_name;
+
+    // Required channel cont
+    const uint32 req_channel_count = 4;
+
+    // Load image
+    int32 image_width, image_height, image_channels;
+    stbi_uc* image_pixels = stbi_load(
+        file_path.c_str(),
+        &image_width, &image_height, &image_channels,
+        req_channel_count
+    );
+
+    if (!image_pixels) {
+        throw std::runtime_error("Failed to load texture image.");
+        stbi_image_free(image_pixels);
+    }
+
+    uint64 total_size = image_width * image_height * req_channel_count;
+
+    // Check for transparency
+    auto has_transparency = false;
+    if (image_channels > 3) {
+        for (uint64 i = 3; i < total_size; i += req_channel_count) {
+            if (image_pixels[i] < (stbi_uc) 255) {
+                has_transparency = true;
+                break;
+            }
+        }
+    }
+
+    Image* image = new Image(
+        name,
+        image_width,
+        image_height,
+        req_channel_count,
+        (byte*) image_pixels
+    );
+    image->full_path = file_path;
+    image->loader_type = ResourceType::Image;
+    return image;
+}
+void ImageLoader::unload(Resource* resource) {
+    if (!resource) {
+        Logger::warning(RESOURCE_LOG, "Image unload method called with nullptr. ",
+            "Nothing was done");
+        return;
+    }
+
+    if (resource->loader_type().compare_ci(ResourceType::Image) != 0) {
+        Logger::error(RESOURCE_LOG, "Wrong loader type used for image unloading.");
+        return;
+    }
+
+    Image* res = (Image*) resource;
+    res->~Image();
+
+    delete resource;
+}

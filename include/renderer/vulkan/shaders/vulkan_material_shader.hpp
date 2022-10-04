@@ -5,7 +5,7 @@
 #include "renderer/vulkan/vulkan_settings.hpp"
 #include "renderer/renderer_types.hpp"
 
-#include <map>
+#include <unordered_map>
 
 class VulkanMaterialShader : public VulkanShader {
 public:
@@ -74,7 +74,7 @@ private:
     vk::DescriptorSetLayout _local_descriptor_set_layout;
     std::vector<VulkanBuffer*> _local_uniform_buffers;
 
-    std::map<int, MaterialInstanceState> _instance_states;
+    std::unordered_map<uint32, MaterialInstanceState> _instance_states;
     TextureUse _sampler_uses[_material_sampler_count];
 
     void create_global_descriptor_sets();

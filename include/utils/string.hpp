@@ -37,3 +37,11 @@ public:
     float64 parse_as_float64();
     float128 parse_as_float128();
 };
+
+namespace std {
+    template<> struct hash<String> {
+        size_t operator()(String const& str) const {
+            return hash<string>()(str);
+        }
+    };
+}

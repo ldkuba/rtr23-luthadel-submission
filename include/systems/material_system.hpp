@@ -33,7 +33,7 @@ private:
     const String _default_material_name = "default";
 
     Material* _default_material = nullptr;
-    std::map<const String, MaterialRef> _registered_materials;
+    std::unordered_map<String, MaterialRef> _registered_materials = {};
 
     void create_default_material();
 

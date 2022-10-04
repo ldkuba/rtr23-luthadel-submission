@@ -1,12 +1,17 @@
 #include "systems/texture_system.hpp"
 
+#include "resources/image.hpp"
+
 #define TEXTURE_SYS_LOG "TextureSystem :: "
 
 void create_default_textures();
 void destroy_default_textures();
 
 // Constructor & Destructor
-TextureSystem::TextureSystem(Renderer* const renderer) : _renderer(renderer) {
+TextureSystem::TextureSystem(
+    Renderer* const renderer,
+    ResourceSystem* const resource_system
+) : _renderer(renderer), _resource_system(resource_system) {
     Logger::trace(TEXTURE_SYS_LOG, "Creating texture system.");
 
     if (_max_texture_count == 0)
@@ -50,14 +55,21 @@ Texture* TextureSystem::acquire(const String name, const bool auto_release) {
     auto ref = _registered_textures[s];
 
     if (ref.handle == nullptr) {
-        byte* pixel_data;
-        ref.handle = new Texture(name, "png", pixel_data);
+        auto image = static_cast<Image*>
+            (_resource_system->load(name, ResourceType::Image));
+        ref.handle = new Texture(
+            name,
+            image->width,
+            image->height,
+            image->channel_count,
+            image->has_transparency()
+        );
         ref.handle->id = (uint64) ref.handle;
         ref.auto_release = auto_release;
         ref.reference_count = 0;
 
         // Upload texture to GPU
-        _renderer->create_texture(ref.handle, pixel_data);
+        _renderer->create_texture(ref.handle, image->pixels);
     }
     ref.reference_count++;
 
@@ -111,10 +123,10 @@ void TextureSystem::create_default_textures() {
     }
 
     _default_texture = new Texture(
+        _default_texture_name,
         texture_dimension,
         texture_dimension,
         channels,
-        _default_texture_name,
         false
     );
     _default_texture->id = 0;

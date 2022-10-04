@@ -36,7 +36,7 @@ private:
 
     Geometry* _default_geometry = nullptr;
 
-    std::map<uint32, GeometryRef> _registered_geometries;
+    std::unordered_map<uint32, GeometryRef> _registered_geometries = {};
 
     void create_default_geometry();
 };

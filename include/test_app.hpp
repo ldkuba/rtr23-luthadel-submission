@@ -18,7 +18,8 @@ private:
     Platform::Surface* _app_surface = Platform::Surface::get_instance(800, 600, std::string(APP_NAME));
     Renderer _app_renderer{ RendererBackendType::Vulkan, _app_surface };
 
-    TextureSystem _texture_system{ &_app_renderer };
+    ResourceSystem _resource_system{};
+    TextureSystem _texture_system{ &_app_renderer, &_resource_system };
     MaterialSystem _material_system{ &_app_renderer, &_texture_system };
     GeometrySystem _geometry_system{ &_app_renderer, &_material_system };
 

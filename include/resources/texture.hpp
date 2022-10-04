@@ -1,9 +1,6 @@
 #pragma once
 
-#include "string.hpp"
-#include "property.hpp"
-
-#include <optional>
+#include "resource.hpp"
 
 struct InternalTextureData {};
 
@@ -12,10 +9,8 @@ enum TextureUse {
     MapDiffuse
 };
 
-class Texture {
+class Texture : public Resource {
 public:
-    /// @brief Unique texture identifier
-    std::optional<uint64> id;
     /// @brief Texture width in pixels
     Property<int32> width{ Get { return _width; } };
     /// @brief Texture height in pixels
@@ -24,8 +19,6 @@ public:
     Property<int32> channel_count{ Get { return _channel_count; } };
     /// @brief Total texture data size in bytes
     Property<uint64> total_size{ Get { return _total_size; } };
-    /// @brief Texture name
-    Property<String> name{ Get { return _name; } };
     /// @brief True if texture uses any transparency
     Property<bool> has_transparency{ Get { return _has_transparency; } };
     /// @brief Pointer to internal texture data managed by the renderer
@@ -35,16 +28,11 @@ public:
     };
 
     Texture(
+        const String name,
         const int32 width,
         const int32 height,
         const int32 channel_count,
-        const String name,
         const bool has_transparency
-    );
-    Texture(
-        const String& name,
-        const String& extension,
-        byte*& out_data
     );
     ~Texture() {}
 
@@ -54,7 +42,6 @@ private:
     int32 _width;
     int32 _height;
     int32 _channel_count;
-    String _name;
     bool _has_transparency;
     uint64 _total_size;
     InternalTextureData* _internal_data;

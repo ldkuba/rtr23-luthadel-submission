@@ -1,16 +1,17 @@
 #pragma once
 
-#include <map>
+#include <unordered_map>
 
 #include "resources/texture.hpp"
 #include "renderer/renderer.hpp"
+#include "resource_system.hpp"
 
 class TextureSystem {
 public:
     /// @brief pinter to the default texture
     Property<Texture*> default_texture{ Get { return _default_texture; } };
 
-    TextureSystem(Renderer* const renderer);
+    TextureSystem(Renderer* const renderer, ResourceSystem* const resource_system);
     ~TextureSystem();
 
     /// @brief Acquire texture resource from texture system. Texture system will load 
@@ -35,12 +36,13 @@ private:
     };
 
     Renderer* _renderer;
+    ResourceSystem* _resource_system;
 
     const uint64 _max_texture_count = 1024;
     const String _default_texture_name = "default";
 
     Texture* _default_texture = nullptr;
-    std::map<const String, TextureRef> _registered_textures;
+    std::unordered_map<String, TextureRef> _registered_textures = {};
 
     void create_default_textures();
     void destroy_default_textures();

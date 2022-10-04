@@ -7,6 +7,8 @@
 #include "vulkan_command_pool.hpp"
 #include "shaders/vulkan_material_shader.hpp"
 
+#include <map>
+
 class VulkanBackend : public RendererBackend {
 public:
     VulkanBackend(Platform::Surface* surface);

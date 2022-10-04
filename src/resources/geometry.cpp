@@ -1,4 +1,4 @@
 #include "resources/geometry.hpp"
 
-Geometry::Geometry(String name) : _name(name) {}
+Geometry::Geometry(String name) : Resource(name) {}
 Geometry::~Geometry() {}

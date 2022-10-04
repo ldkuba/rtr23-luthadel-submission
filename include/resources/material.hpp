@@ -8,11 +8,9 @@ struct TextureMap {
     TextureUse use;
 };
 
-class Material {
+class Material : public Resource {
 public:
-    std::optional<uint64> id;
     std::optional<uint64> internal_id;
-    Property<String> name{ Get { return _name; } };
     Property<glm::vec4> diffuse_color{ Get { return _diffuse_color; } };
     Property<TextureMap> diffuse_map{
         Get { return _diffuse_map; },
@@ -28,7 +26,6 @@ public:
     const static uint32 max_name_length = 256;
 
 private:
-    String _name;
     glm::vec4 _diffuse_color;
     TextureMap _diffuse_map;
 };
