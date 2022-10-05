@@ -70,6 +70,9 @@ Texture* TextureSystem::acquire(const String name, const bool auto_release) {
 
         // Upload texture to GPU
         _renderer->create_texture(ref.handle, image->pixels);
+
+        // Release resources
+        _resource_system->unload(image);
     }
     ref.reference_count++;
 

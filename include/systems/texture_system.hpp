@@ -14,6 +14,11 @@ public:
     TextureSystem(Renderer* const renderer, ResourceSystem* const resource_system);
     ~TextureSystem();
 
+    // Prevent accidental copying
+    TextureSystem(TextureSystem const&) = delete;
+    TextureSystem& operator = (TextureSystem const&) = delete;
+
+
     /// @brief Acquire texture resource from texture system. Texture system will load 
     /// the texture from the appropriate location if it's unavailable.
     /// @param name Name of the requested texture

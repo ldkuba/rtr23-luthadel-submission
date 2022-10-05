@@ -20,7 +20,7 @@ private:
 
     ResourceSystem _resource_system{};
     TextureSystem _texture_system{ &_app_renderer, &_resource_system };
-    MaterialSystem _material_system{ &_app_renderer, &_texture_system };
+    MaterialSystem _material_system{ &_app_renderer, &_resource_system, &_texture_system };
     GeometrySystem _geometry_system{ &_app_renderer, &_material_system };
 
     float32 calculate_delta_time();

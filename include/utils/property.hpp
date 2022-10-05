@@ -23,10 +23,11 @@ public:
     ) : _getter{ std::move(get_fn) }, _setter{ std::move(set_fn) } {}
 
     Property() = delete;
-    Property(Property<T> const&) = delete;
+    // TODO: Probable error causes, should deal with them.
+    // Property<T>(Property<T> const&) = delete;
     Property<T>& operator = (Property<T> const&) = delete;
-    Property(Property<T>&&) = delete;
-    Property<T>& operator = (Property<T>&&) = delete;
+    // Property(Property<T>&&) = delete;
+    // Property<T>& operator = (Property<T>&&) = delete;
 
     operator T const& () const {
         return _getter();

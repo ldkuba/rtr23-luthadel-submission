@@ -3,6 +3,7 @@
 #include "logger.hpp"
 
 #include "resources/loaders/image_loader.hpp"
+#include "resources/loaders/material_loader.hpp"
 
 #define RESOURCE_SYS_LOG "ResourceSystem :: "
 
@@ -10,8 +11,9 @@
 ResourceSystem::ResourceSystem() {
 
     // Auto-register known loaders
-    ImageLoader* loader = new ImageLoader();
-    register_loader(loader);
+    ResourceLoader* loader;
+    loader = new ImageLoader(); register_loader(loader);
+    loader = new MaterialLoader(); register_loader(loader);
 
     Logger::trace(RESOURCE_SYS_LOG, "Resource system initialized.");
 }

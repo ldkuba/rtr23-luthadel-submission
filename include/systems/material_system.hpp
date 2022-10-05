@@ -7,16 +7,19 @@ class MaterialSystem {
 public:
     Property<Material*> default_material{ Get { return _default_material; } };
 
-    MaterialSystem(Renderer* const renderer, TextureSystem* const texture_system);
+    MaterialSystem(
+        Renderer* const renderer,
+        ResourceSystem* const resource_system,
+        TextureSystem* const texture_system
+    );
     ~MaterialSystem();
 
+    // Prevent accidental copying
+    MaterialSystem(MaterialSystem const&) = delete;
+    MaterialSystem& operator = (MaterialSystem const&) = delete;
+
     Material* acquire(const String name);
-    Material* acquire(
-        const String name,
-        const bool auto_release,
-        const glm::vec4 diffuse_color,
-        const String diffuse_map_name
-    );
+    Material* acquire(const MaterialConfig config);
     void release(const String name);
 
 private:
@@ -27,6 +30,7 @@ private:
     };
 
     Renderer* _renderer;
+    ResourceSystem* _resource_system;
     TextureSystem* _texture_system;
 
     const uint64 _max_material_count = 1024;

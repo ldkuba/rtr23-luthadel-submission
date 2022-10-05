@@ -22,6 +22,7 @@ Resource* ImageLoader::load(const String name) {
     String file_name = name;
     if (file_name.split('.').size() < 2)
         file_name = file_name + ".png";
+    file_name.to_lower();
 
     // Compute full path
     String file_path = ResourceSystem::base_path + "/" + _type_path + "/" + file_name;
@@ -67,19 +68,8 @@ Resource* ImageLoader::load(const String name) {
     return image;
 }
 void ImageLoader::unload(Resource* resource) {
-    if (!resource) {
-        Logger::warning(RESOURCE_LOG, "Image unload method called with nullptr. ",
-            "Nothing was done");
-        return;
-    }
-
-    if (resource->loader_type().compare_ci(ResourceType::Image) != 0) {
-        Logger::error(RESOURCE_LOG, "Wrong loader type used for image unloading.");
-        return;
-    }
+    CAN_UNLOAD(Image, resource);
 
     Image* res = (Image*) resource;
-    res->~Image();
-
-    delete resource;
+    delete res;
 }

@@ -9,6 +9,10 @@ public:
     GeometrySystem(Renderer* const renderer, MaterialSystem* const material_system);
     ~GeometrySystem();
 
+    // Prevent accidental copying
+    GeometrySystem(GeometrySystem const&) = delete;
+    GeometrySystem& operator = (GeometrySystem const&) = delete;
+
     Geometry* acquire(const uint32 id);
     Geometry* acquire(
         const std::vector<Vertex> vertices,

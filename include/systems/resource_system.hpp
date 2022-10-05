@@ -14,6 +14,10 @@ public:
     ResourceSystem();
     ~ResourceSystem();
 
+    // Prevent accidental copying
+    ResourceSystem(ResourceSystem const&) = delete;
+    ResourceSystem& operator = (ResourceSystem const&) = delete;
+
     void register_loader(ResourceLoader* const loader);
 
     Resource* load(const String name, const String type);

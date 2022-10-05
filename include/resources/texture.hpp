@@ -9,8 +9,12 @@ enum TextureUse {
     MapDiffuse
 };
 
-class Texture : public Resource {
+class Texture {
 public:
+    /// @brief Unique texture id
+    std::optional<uint64> id;
+    /// @brief Texture name
+    Property<String> name{ Get { return _name; } };
     /// @brief Texture width in pixels
     Property<int32> width{ Get { return _width; } };
     /// @brief Texture height in pixels
@@ -39,6 +43,7 @@ public:
     const static uint32 max_name_length = 256;
 
 private:
+    String _name = "";
     int32 _width;
     int32 _height;
     int32 _channel_count;
