@@ -2,11 +2,15 @@
 
 #define RENDERER_LOG "Renderer :: "
 
-Renderer::Renderer(RendererBackendType backend_type, Platform::Surface* surface) {
+Renderer::Renderer(
+    const RendererBackendType backend_type,
+    Platform::Surface* const surface,
+    ResourceSystem* const resource_system
+) : _resource_system(resource_system) {
     surface->resize_event.subscribe<Renderer>(this, &Renderer::on_resize);
     switch (backend_type) {
     case Vulkan:
-        _backend = new VulkanBackend(surface);
+        _backend = new VulkanBackend(surface, resource_system);
         return;
 
     default:

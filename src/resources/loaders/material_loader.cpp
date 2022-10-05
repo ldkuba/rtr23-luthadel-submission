@@ -34,7 +34,10 @@ Resource* MaterialLoader::load(const String name) {
     std::vector<String> material_settings;
     try {
         material_settings = FileSystem::read_file_lines(file_path);
-    } catch (FileSystemException e) { Logger::fatal(RESOURCE_LOG, e.what()); }
+    } catch (const FileSystemException& e) {
+        Logger::error(RESOURCE_LOG, e.what());
+        throw std::runtime_error(e.what());
+    }
 
     // Parse loaded config
     uint32 line_number = 1;

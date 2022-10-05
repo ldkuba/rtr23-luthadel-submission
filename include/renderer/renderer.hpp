@@ -1,3 +1,6 @@
+#ifndef __RENDERER_H__
+#define __RENDERER_H__
+
 #pragma once
 
 #include "renderer/vulkan/vulkan_backend.hpp"
@@ -8,8 +11,17 @@ enum RendererBackendType {
 
 class Renderer {
 public:
-    Renderer(RendererBackendType backend_type, Platform::Surface* surface);
+    Renderer(
+        const RendererBackendType backend_type,
+        Platform::Surface* const surface,
+        ResourceSystem* const resource_system
+    );
     ~Renderer();
+
+    // Prevent accidental copying
+    Renderer(Renderer const&) = delete;
+    Renderer& operator = (Renderer const&) = delete;
+
 
     // TODO: TEMP TEST CODE
     Geometry* current_geometry = nullptr;
@@ -32,6 +44,7 @@ public:
 
 private:
     RendererBackend* _backend = nullptr;
+    ResourceSystem* _resource_system = nullptr;
 
     float32 _near_plane = 0.01f;
     float32 _far_plane = 1000.0f;
@@ -39,3 +52,4 @@ private:
     glm::mat4 _view =
         glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 };
+#endif // __RENDERER_H__

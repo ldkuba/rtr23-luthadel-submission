@@ -8,7 +8,10 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback_function(
 );
 
 
-VulkanBackend::VulkanBackend(Platform::Surface* surface) : RendererBackend(surface) {
+VulkanBackend::VulkanBackend(
+    Platform::Surface* const surface,
+    ResourceSystem* const resource_system
+) : RendererBackend(surface, resource_system) {
     // Create instance
     _vulkan_instance = create_vulkan_instance();
 
@@ -59,7 +62,8 @@ VulkanBackend::VulkanBackend(Platform::Surface* surface) : RendererBackend(surfa
         _device,
         _allocator,
         _render_pass->handle,
-        _swapchain->msaa_samples
+        _swapchain->msaa_samples,
+        _resource_system
     );
 
     // TODO: TEMP VERTEX & INDEX BUFFER CODE

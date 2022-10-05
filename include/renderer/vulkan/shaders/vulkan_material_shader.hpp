@@ -1,9 +1,14 @@
+#ifndef __VULKAN_MATERIAL_SHADER_H__
+#define __VULKAN_MATERIAL_SHADER_H__
+
 #pragma once
 
 #include "math_libs.hpp"
 #include "vulkan_shader.hpp"
 #include "renderer/vulkan/vulkan_settings.hpp"
 #include "renderer/renderer_types.hpp"
+
+#include "systems/resource_system.hpp"
 
 #include <unordered_map>
 
@@ -13,7 +18,8 @@ public:
         const VulkanDevice* const device,
         const vk::AllocationCallbacks* const allocator,
         const vk::RenderPass render_pass,
-        const vk::SampleCountFlagBits number_of_msaa_samples
+        const vk::SampleCountFlagBits number_of_msaa_samples,
+        ResourceSystem* resource_system // TODO: most likely temporary
     );
     ~VulkanMaterialShader();
 
@@ -80,3 +86,4 @@ private:
     void create_global_descriptor_sets();
     uint32 get_next_available_ubo_index();
 };
+#endif // __VULKAN_MATERIAL_SHADER_H__

@@ -1,14 +1,26 @@
+#ifndef __RENDERER_BACKEND_H__
+#define __RENDERER_BACKEND_H__
+
 #pragma once
 
 #include "platform/platform.hpp"
 #include "math_libs.hpp"
 
+#include "systems/resource_system.hpp"
 #include "resources/material.hpp"
 
 class RendererBackend {
 public:
-    RendererBackend(Platform::Surface* surface) {}
+    RendererBackend(
+        Platform::Surface* const surface,
+        ResourceSystem* const resource_system
+    ) : _resource_system(resource_system) {}
     ~RendererBackend() {}
+
+    // Prevent accidental copying
+    RendererBackend(RendererBackend const&) = delete;
+    RendererBackend& operator = (RendererBackend const&) = delete;
+
 
     void increment_frame_number() { _frame_number++; }
     virtual void resized(const uint32 width, const uint32 height) {}
@@ -38,6 +50,11 @@ public:
     ) {}
     virtual void destroy_geometry(Geometry* geometry) {}
 
+protected:
+    ResourceSystem* _resource_system;
+
 private:
     uint64 _frame_number = 0;
 };
+
+#endif // __RENDERER_BACKEND_H__

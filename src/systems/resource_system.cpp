@@ -4,6 +4,7 @@
 
 #include "resources/loaders/image_loader.hpp"
 #include "resources/loaders/material_loader.hpp"
+#include "resources/loaders/binary_loader.hpp"
 
 #define RESOURCE_SYS_LOG "ResourceSystem :: "
 
@@ -14,6 +15,7 @@ ResourceSystem::ResourceSystem() {
     ResourceLoader* loader;
     loader = new ImageLoader(); register_loader(loader);
     loader = new MaterialLoader(); register_loader(loader);
+    loader = new BinaryLoader(); register_loader(loader);
 
     Logger::trace(RESOURCE_SYS_LOG, "Resource system initialized.");
 }

@@ -1,14 +1,15 @@
 #include "renderer/vulkan/shaders/vulkan_material_shader.hpp"
 
 #include "renderer/renderer_types.hpp"
-#include "file_system.hpp"
+#include "resources/datapack.hpp"
 
 // Constructor & Destructor
 VulkanMaterialShader::VulkanMaterialShader(
     const VulkanDevice* const device,
     const vk::AllocationCallbacks* const allocator,
     const vk::RenderPass render_pass,
-    const vk::SampleCountFlagBits number_of_msaa_samples
+    const vk::SampleCountFlagBits number_of_msaa_samples,
+    ResourceSystem* resource_system
 ) : VulkanShader(device, allocator) {
     Logger::trace(RENDERER_VULKAN_LOG, "Creating material shader.");
 
@@ -16,11 +17,20 @@ VulkanMaterialShader::VulkanMaterialShader(
     vk::ShaderModule vertex_shader_module;
     vk::ShaderModule fragment_shader_module;
     try {
-        auto vertex_code = FileSystem::read_file_bytes("assets/shaders/builtin.material_shader.vert.spv");
-        auto fragment_code = FileSystem::read_file_bytes("assets/shaders/builtin.material_shader.frag.spv");
-        vertex_shader_module = create_shader_module(vertex_code);
-        fragment_shader_module = create_shader_module(fragment_code);
-    } catch (FileSystemException e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
+        // Load raw binary data
+        auto vertex_code = (ByteArrayData*) resource_system->load(
+            "shaders/builtin.material_shader.vert.spv", ResourceType::Binary);
+        auto fragment_code = (ByteArrayData*) resource_system->load(
+            "shaders/builtin.material_shader.frag.spv", ResourceType::Binary);
+
+        // Create shader modules
+        vertex_shader_module = create_shader_module(vertex_code->data);
+        fragment_shader_module = create_shader_module(fragment_code->data);
+
+        // Release resources
+        resource_system->unload(vertex_code);
+        resource_system->unload(fragment_code);
+    } catch (std::runtime_error e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
 
     // === Shader stages ===
     std::vector<vk::PipelineShaderStageCreateInfo> shader_stages(2);

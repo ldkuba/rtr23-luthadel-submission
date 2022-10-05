@@ -1,3 +1,6 @@
+#ifndef __RENDERER_TYPES_H__
+#define __RENDERER_TYPES_H__
+
 #pragma once
 
 #include "math_libs.hpp"
@@ -39,3 +42,4 @@ struct GeometryRenderData {
     glm::mat4 model;
     Geometry* geometry;
 };
+#endif // __RENDERER_TYPES_H__

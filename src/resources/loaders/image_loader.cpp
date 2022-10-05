@@ -39,8 +39,10 @@ Resource* ImageLoader::load(const String name) {
     );
 
     if (!image_pixels) {
-        throw std::runtime_error("Failed to load texture image.");
         stbi_image_free(image_pixels);
+        String error_message = "Failed to load texture image.";
+        Logger::error(RESOURCE_LOG, error_message);
+        throw std::runtime_error(error_message);
     }
 
     uint64 total_size = image_width * image_height * req_channel_count;

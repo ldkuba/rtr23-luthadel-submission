@@ -11,7 +11,10 @@
 
 class VulkanBackend : public RendererBackend {
 public:
-    VulkanBackend(Platform::Surface* surface);
+    VulkanBackend(
+        Platform::Surface* const surface,
+        ResourceSystem* const resource_system
+    );
     ~VulkanBackend();
 
     void resized(const uint32 width, const uint32 height);
