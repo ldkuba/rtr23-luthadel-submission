@@ -58,19 +58,22 @@ public:
         const uint32 current_frame
     );
 
-    /// @brief 
-    /// @param data 
-    /// @param current_frame 
-    void update_object_state(
-        const GeometryRenderData data,
-        uint32 current_frame
+    void set_model(
+        const glm::mat4 model,
+        const uint64 obj_id,
+        const uint32 current_frame
+    );
+
+    void apply_material(
+        const Material* const material,
+        const uint32 current_frame
     );
 
     void acquire_resource(Material* const);
     void release_resource(Material* const);
 
 private:
-    static const uint32 _material_descriptor_count = 2;
+    static const uint32 _material_descriptor_count = 3;
     static const uint32 _material_sampler_count = 1;
     struct DescriptorState {
         std::array<std::optional<uint32>,

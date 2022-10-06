@@ -6,6 +6,7 @@ VulkanDescriptor::VulkanDescriptor(
     const vk::AllocationCallbacks* const allocator
 ) : _device(device), _allocator(allocator) {}
 VulkanDescriptor::~VulkanDescriptor() {
+    Logger::debug("WAITING ON A CRASH.");
     for (uint32 i = 0; i < _descriptor_infos.size(); i++) {
         if (_descriptors[i] == nullptr) continue;
         switch (_descriptor_infos[i].type) {

@@ -62,7 +62,12 @@ VulkanMaterialShader::VulkanMaterialShader(
     local_descriptor->add_uniform_buffer(
         vk::ShaderStageFlagBits::eVertex,
         VulkanSettings::max_material_count,
-        VulkanSettings::max_material_count * sizeof(LocalUniformObject)
+        VulkanSettings::max_material_count * sizeof(LocalUniformObjectV)
+    );
+    local_descriptor->add_uniform_buffer(
+        vk::ShaderStageFlagBits::eFragment,
+        VulkanSettings::max_material_count,
+        VulkanSettings::max_material_count * sizeof(LocalUniformObjectF)
     );
     local_descriptor->add_image_sampler(
         vk::ShaderStageFlagBits::eFragment,
@@ -173,39 +178,79 @@ void VulkanMaterialShader::update_global_state(
     descriptors()[0]->get_buffer(0, current_frame)->load_data(&ubo, 0, sizeof(ubo));
 }
 
-void VulkanMaterialShader::update_object_state(
-    const GeometryRenderData data,
-    uint32 current_frame
+void VulkanMaterialShader::set_model(
+    const glm::mat4 model,
+    const uint64 obj_id,
+    const uint32 current_frame
 ) {
-    Material* material = data.geometry->material;
+    uint32 size = sizeof(LocalUniformObjectV);
+    uint64 offset = sizeof(LocalUniformObjectV) * obj_id;
+    LocalUniformObjectV lub;
 
-    // Obtain material data.
-    MaterialInstanceState object_state = _instance_states[material->internal_id.value()];
-    if (object_state.allocated == false) {
-        Logger::error(RENDERER_VULKAN_LOG, "Requested object is not allocated.");
-        return;
-    }
-    vk::DescriptorSet object_descriptor_set = object_state.descriptor_sets[current_frame];
-
-    // Load data to buffer
-    uint32 size = sizeof(LocalUniformObject);
-    uint64 offset = sizeof(LocalUniformObject) * material->internal_id.value();
-    LocalUniformObject lub;
-
-    lub.model = data.model;
-    lub.diffuse_color = material->diffuse_color;
+    lub.model = model;
 
     // Get local uniform buffer (located at set=1, binding=0)
     auto uniform_buffer = descriptors()[1]->get_buffer(0, current_frame);
+
+    MaterialInstanceState material_state = _instance_states[obj_id];
+    if (material_state.descriptor_states[0].ids[current_frame].has_value() == false) {
+        vk::DescriptorBufferInfo buffer_info = {};
+        buffer_info.setBuffer(uniform_buffer->handle);
+        buffer_info.setOffset(offset);
+        buffer_info.setRange(size);
+
+        vk::WriteDescriptorSet descriptor_write = {};
+        descriptor_write.setDstSet(material_state.descriptor_sets[current_frame]);
+        descriptor_write.setDstBinding(0);
+        descriptor_write.setDstArrayElement(0);
+        descriptor_write.setDescriptorType(vk::DescriptorType::eUniformBuffer);
+        descriptor_write.setDescriptorCount(1);
+        descriptor_write.setPBufferInfo(&buffer_info);
+
+        _device->handle().updateDescriptorSets(1, &descriptor_write, 0, nullptr);
+
+        material_state.descriptor_states[0].ids[current_frame] = 0;
+    }
+
+    uniform_buffer->load_data(&lub, offset, size);
+}
+
+void VulkanMaterialShader::apply_material(
+    const Material* const material,
+    const uint32 current_frame
+) {
+    if (!material || !material->internal_id.has_value()) {
+        Logger::error(RENDERER_VULKAN_LOG,
+            "Application of a non-existant material attempted. Nothing was done.");
+        return;
+    }
+
+    // Obtain material data.
+    MaterialInstanceState material_state = _instance_states[material->internal_id.value()];
+    if (material_state.allocated == false) {
+        Logger::error(RENDERER_VULKAN_LOG, "Requested material is not allocated.");
+        return;
+    }
+    vk::DescriptorSet object_descriptor_set = material_state.descriptor_sets[current_frame];
+
+    // Load data to buffer
+    uint32 size = sizeof(LocalUniformObjectF);
+    uint64 offset = sizeof(LocalUniformObjectF) * material->internal_id.value();
+    LocalUniformObjectF lub;
+
+    lub.diffuse_color = material->diffuse_color;
+
+    // Get local uniform buffer (located at set=1, binding=1)
+    auto uniform_buffer = descriptors()[1]->get_buffer(1, current_frame);
     uniform_buffer->load_data(&lub, offset, size);
 
     // Update descriptor set if needed
     // Combined descriptor
     std::vector<vk::WriteDescriptorSet> descriptor_writes{};
-    uint32 descriptor_index = 0;
+    uint32 descriptor_index = 1;
 
     // Uniform buffer
-    if (object_state.descriptor_states[0].ids[current_frame].has_value() == false) {
+    if (material_state.descriptor_states[descriptor_index].ids[current_frame].has_value() == false) {
         vk::DescriptorBufferInfo buffer_info = {};
         buffer_info.setBuffer(uniform_buffer->handle);
         buffer_info.setOffset(offset);
@@ -220,7 +265,7 @@ void VulkanMaterialShader::update_object_state(
         descriptor_write.setPBufferInfo(&buffer_info);
         descriptor_writes.push_back(descriptor_write);
 
-        object_state.descriptor_states[0].ids[current_frame] = 0;
+        material_state.descriptor_states[descriptor_index].ids[current_frame] = 0;
     }
     descriptor_index++;
 
@@ -238,7 +283,7 @@ void VulkanMaterialShader::update_object_state(
             break;
         }
 
-        auto& descriptor_id = object_state.descriptor_states[descriptor_index].ids[current_frame];
+        auto& descriptor_id = material_state.descriptor_states[descriptor_index].ids[current_frame];
 
         // If the texture hasn't been loaded yet, use the default.
         if (texture == nullptr || !texture->id.has_value()) {

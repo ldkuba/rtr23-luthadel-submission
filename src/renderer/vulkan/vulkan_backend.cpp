@@ -252,7 +252,9 @@ void VulkanBackend::draw_geometry(
     // TODO: CHECK CURRENT SHADER (MAYBE WE NEED TO CALL _material_shader->use())
 
     // Upload data
-    _material_shader->update_object_state(data, _current_frame);
+    uint64 obj_id = data.geometry->material()->internal_id.value(); // TODO: TEMP
+    _material_shader->set_model(data.model, obj_id, _current_frame);
+    _material_shader->apply_material(data.geometry->material, _current_frame);
 
     // Bind object
     _material_shader->bind_material(command_buffer, _current_frame,

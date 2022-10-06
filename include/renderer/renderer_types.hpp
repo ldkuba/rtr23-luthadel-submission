@@ -32,8 +32,11 @@ struct GlobalUniformObject {
     alignas(16) glm::mat4 project;
 };
 
-struct LocalUniformObject {
+struct LocalUniformObjectV {
     alignas(16) glm::mat4 model;
+};
+
+struct LocalUniformObjectF {
     alignas(16) glm::vec4 diffuse_color;
 };
 
