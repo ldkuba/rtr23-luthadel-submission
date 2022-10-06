@@ -15,7 +15,7 @@ public:
         Platform::Surface* const surface,
         ResourceSystem* const resource_system
     ) : _resource_system(resource_system) {}
-    ~RendererBackend() {}
+    virtual ~RendererBackend() {}
 
     // Prevent accidental copying
     RendererBackend(RendererBackend const&) = delete;

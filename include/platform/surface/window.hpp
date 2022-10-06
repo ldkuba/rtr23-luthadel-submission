@@ -1,3 +1,6 @@
+#ifndef __WINDOW_H__
+#define __WINDOW_H__
+
 #pragma once
 
 #include "platform/platform.hpp"
@@ -35,3 +38,4 @@ public:
 };
 
 #endif
+#endif // __WINDOW_H__

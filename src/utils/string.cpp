@@ -158,3 +158,21 @@ T parse_int(const char* s, const uint32 n, const T max) {
         return -parse_uint<T>(s + 1, n - 1, max - 1);
     return parse_uint<T>(s, n, max);
 }
+
+// String builder specializations
+template<>
+void String::add_to_string<char*>(String& out_string, char* component) {
+    out_string += String(component);
+}
+template<>
+void String::add_to_string<const char*>(String& out_string, const char* component) {
+    out_string += String(component);
+}
+template<>
+void String::add_to_string<std::string>(String& out_string, std::string component) {
+    out_string += component;
+}
+template<>
+void String::add_to_string<String>(String& out_string, String component) {
+    out_string += component;
+}

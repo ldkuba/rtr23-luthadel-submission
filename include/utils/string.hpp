@@ -11,14 +11,27 @@ public:
     String(const std::string& __str) : std::string(__str) {}
     ~String();
 
+    // String builder
+    template<typename... Args>
+    static String build(Args... message) {
+        String result = "";
+        (add_to_string(result, message), ...);
+        return result;
+    }
+
+    // Transform
     void to_lower();
     void to_upper();
 
+    // Trim
     void trim_left();
     void trim_right();
     void trim();
 
+    // Comparison
     int32 compare_ci(const String& other) const;
+
+    // Split
     std::vector<String> split(const String delimiter) const;
     std::vector<String> split(const char delimiter) const;
 
@@ -36,6 +49,13 @@ public:
     float32 parse_as_float32();
     float64 parse_as_float64();
     float128 parse_as_float128();
+
+private:
+    // String builder
+    template<typename T>
+    static void add_to_string(String& out_string, T component) {
+        out_string += std::to_string(component);
+    }
 };
 
 namespace std {
@@ -45,3 +65,12 @@ namespace std {
         }
     };
 }
+
+template<>
+void String::add_to_string<char*>(String& out_string, char* component);
+template<>
+void String::add_to_string<const char*>(String& out_string, const char* component);
+template<>
+void String::add_to_string<std::string>(String& out_string, std::string component);
+template<>
+void String::add_to_string<String>(String& out_string, String component);

@@ -49,37 +49,26 @@ VulkanMaterialShader::VulkanMaterialShader(
 
     // === Create descriptor pools and set layouts ===
     // Global descriptor
-    std::vector<DescriptorInfo> global_descriptor_infos(1);
-    global_descriptor_infos[0] = {
-        vk::DescriptorType::eUniformBuffer,
+    auto global_descriptor = new VulkanDescriptor(_device, _allocator);
+    global_descriptor->add_uniform_buffer(
         vk::ShaderStageFlagBits::eVertex,
-        VulkanSettings::max_frames_in_flight
-    };
-
-    _global_descriptor_set_layout = create_descriptor_set_layout(global_descriptor_infos);
-    _global_descriptor_pool =
-        create_descriptor_pool(global_descriptor_infos, VulkanSettings::max_frames_in_flight);
+        VulkanSettings::max_frames_in_flight,
+        sizeof(GlobalUniformObject)
+    );
+    add_descriptor(global_descriptor, VulkanSettings::max_frames_in_flight);
 
     // Local descriptor
-    std::vector<DescriptorInfo> local_descriptor_infos(2);
-    local_descriptor_infos[0] = {
-        vk::DescriptorType::eUniformBuffer,
+    auto local_descriptor = new VulkanDescriptor(_device, _allocator);
+    local_descriptor->add_uniform_buffer(
         vk::ShaderStageFlagBits::eVertex,
-        VulkanSettings::max_material_count
-    };
-    local_descriptor_infos[1] = {
-        vk::DescriptorType::eCombinedImageSampler,
+        VulkanSettings::max_material_count,
+        VulkanSettings::max_material_count * sizeof(LocalUniformObject)
+    );
+    local_descriptor->add_image_sampler(
         vk::ShaderStageFlagBits::eFragment,
         _material_sampler_count * VulkanSettings::max_material_count
-    };
-
-    _local_descriptor_set_layout = create_descriptor_set_layout(local_descriptor_infos);
-    _local_descriptor_pool = create_descriptor_pool(
-        local_descriptor_infos,
-        VulkanSettings::max_material_count,
-        true
     );
-
+    add_descriptor(local_descriptor, VulkanSettings::max_material_count, true);
     _sampler_uses[0] = TextureUse::MapDiffuse;
 
     // === Vertex input state info ===
@@ -112,22 +101,10 @@ VulkanMaterialShader::VulkanMaterialShader(
     vertex_input_info.setVertexBindingDescriptions(binding_descriptions);
     vertex_input_info.setVertexAttributeDescriptions(attribute_descriptions);
 
-    // === Pipeline layout info ===
-    vk::PipelineLayoutCreateInfo layout_info{};
-    std::vector<vk::DescriptorSetLayout> description_set_layouts{
-        _global_descriptor_set_layout,
-        _local_descriptor_set_layout
-    };
-    // Used for UNIFORM values
-    layout_info.setSetLayouts(description_set_layouts); // Layout of used descriptor sets
-    layout_info.setPushConstantRangeCount(0);           // Push constant ranges used
-    layout_info.setPPushConstantRanges(nullptr);
-
     // === Create pipeline ===
     create_pipeline(
         shader_stages,
         vertex_input_info,
-        layout_info,
         render_pass,
         number_of_msaa_samples
     );
@@ -136,60 +113,14 @@ VulkanMaterialShader::VulkanMaterialShader(
     _device->handle().destroyShaderModule(vertex_shader_module, _allocator);
     _device->handle().destroyShaderModule(fragment_shader_module, _allocator);
 
-    // === Create uniform buffers ===
-    vk::DeviceSize buffer_size;
-
-    // Global ubo
-    buffer_size = sizeof(GlobalUniformObject);
-    _global_uniform_buffers.resize(VulkanSettings::max_frames_in_flight);
-    for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++) {
-        _global_uniform_buffers[i] = new VulkanBuffer(_device, _allocator);
-        _global_uniform_buffers[i]->create(
-            buffer_size,
-            vk::BufferUsageFlagBits::eUniformBuffer,
-            vk::MemoryPropertyFlagBits::eHostVisible |
-            vk::MemoryPropertyFlagBits::eHostCoherent
-        );
-    }
-
+    // === Create global descriptor sets ===
     create_global_descriptor_sets();
-
-    // Local ubo
-    buffer_size = VulkanSettings::max_material_count * sizeof(LocalUniformObject);
-    _local_uniform_buffers.resize(VulkanSettings::max_frames_in_flight);
-    for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++) {
-        _local_uniform_buffers[i] = new VulkanBuffer(_device, _allocator);
-        _local_uniform_buffers[i]->create(
-            buffer_size,
-            vk::BufferUsageFlagBits::eUniformBuffer,
-            vk::MemoryPropertyFlagBits::eHostVisible |
-            vk::MemoryPropertyFlagBits::eHostCoherent
-        );
-    }
 
     Logger::trace(RENDERER_VULKAN_LOG, "Material shader created.");
 }
 
 VulkanMaterialShader::~VulkanMaterialShader() {
-    // Uniforms
-    for (uint32 i = 0; i < _global_uniform_buffers.size(); i++)
-        delete _global_uniform_buffers[i];
-    for (uint32 i = 0; i < _local_uniform_buffers.size(); i++)
-        delete _local_uniform_buffers[i];
-
-    // Descriptors
-    if (_global_descriptor_pool)
-        _device->handle().destroyDescriptorPool(_global_descriptor_pool, _allocator);
-    if (_global_descriptor_set_layout)
-        _device->handle().destroyDescriptorSetLayout(_global_descriptor_set_layout, _allocator);
-    if (_local_descriptor_pool)
-        _device->handle().destroyDescriptorPool(_local_descriptor_pool, _allocator);
-    if (_local_descriptor_set_layout)
-        _device->handle().destroyDescriptorSetLayout(_local_descriptor_set_layout, _allocator);
-
-    // Pipeline
-    _device->handle().destroyPipeline(_pipeline, _allocator);
-    _device->handle().destroyPipelineLayout(_pipeline_layout, _allocator);
+    Logger::trace(RENDERER_VULKAN_LOG, "Material shader destroyed.");
 }
 
 // ///////////////////////////////////// //
@@ -200,7 +131,7 @@ void VulkanMaterialShader::use(const vk::CommandBuffer& command_buffer) {
     command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, _pipeline);
 }
 
-void VulkanMaterialShader::bind_descriptor_set(
+void VulkanMaterialShader::bind_global_description_set(
     const vk::CommandBuffer& command_buffer,
     const uint32 current_frame
 ) {
@@ -234,14 +165,12 @@ void VulkanMaterialShader::update_global_state(
     const uint32 current_frame
 ) {
     // Define ubo transformations
-    static float32 rotation = 0.0f;
-    rotation += 0.01f;
     GlobalUniformObject ubo{};
     ubo.view = view;
     ubo.project = projection;
 
     // Copy ubo data to the buffer
-    _global_uniform_buffers[current_frame]->load_data(&ubo, 0, sizeof(ubo));
+    descriptors()[0]->get_buffer(0, current_frame)->load_data(&ubo, 0, sizeof(ubo));
 }
 
 void VulkanMaterialShader::update_object_state(
@@ -266,7 +195,9 @@ void VulkanMaterialShader::update_object_state(
     lub.model = data.model;
     lub.diffuse_color = material->diffuse_color;
 
-    _local_uniform_buffers[current_frame]->load_data(&lub, offset, size);
+    // Get local uniform buffer (located at set=1, binding=0)
+    auto uniform_buffer = descriptors()[1]->get_buffer(0, current_frame);
+    uniform_buffer->load_data(&lub, offset, size);
 
     // Update descriptor set if needed
     // Combined descriptor
@@ -276,7 +207,7 @@ void VulkanMaterialShader::update_object_state(
     // Uniform buffer
     if (object_state.descriptor_states[0].ids[current_frame].has_value() == false) {
         vk::DescriptorBufferInfo buffer_info = {};
-        buffer_info.setBuffer(_local_uniform_buffers[current_frame]->handle);
+        buffer_info.setBuffer(uniform_buffer->handle);
         buffer_info.setOffset(offset);
         buffer_info.setRange(size);
 
@@ -355,11 +286,14 @@ void VulkanMaterialShader::acquire_resource(Material* const material) {
         }
     }
 
+    // Local descriptor is at set=1
+    auto local_descriptor = descriptors()[1];
+
     // Allocate descriptor sets.
     std::vector<vk::DescriptorSetLayout> layouts(
-        VulkanSettings::max_frames_in_flight, _local_descriptor_set_layout);
+        VulkanSettings::max_frames_in_flight, local_descriptor->set_layout);
     vk::DescriptorSetAllocateInfo allocation_info{};
-    allocation_info.setDescriptorPool(_local_descriptor_pool);
+    allocation_info.setDescriptorPool(local_descriptor->pool);
     allocation_info.setSetLayouts(layouts);
 
     try {
@@ -372,10 +306,13 @@ void VulkanMaterialShader::release_resource(Material* const material) {
     if (!material->internal_id.has_value()) return;
     MaterialInstanceState& state = _instance_states[material->internal_id.value()];
 
+    // Local descriptor is at set=1
+    auto local_descriptor = descriptors()[1];
+
     // Release object descriptor sets.
     _device->handle().waitIdle();
     try {
-        _device->handle().freeDescriptorSets(_local_descriptor_pool, state.descriptor_sets);
+        _device->handle().freeDescriptorSets(local_descriptor->pool, state.descriptor_sets);
     } catch (vk::SystemError e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
 
     // Reset object descriptor info
@@ -395,10 +332,13 @@ void VulkanMaterialShader::release_resource(Material* const material) {
 // ////////////////////////////////////// //
 
 void VulkanMaterialShader::create_global_descriptor_sets() {
+    // Global descriptor is at set=0
+    auto global_descriptor = descriptors()[0];
+
     std::vector<vk::DescriptorSetLayout> layouts(
-        VulkanSettings::max_frames_in_flight, _global_descriptor_set_layout);
+        VulkanSettings::max_frames_in_flight, global_descriptor->set_layout);
     vk::DescriptorSetAllocateInfo allocation_info{};
-    allocation_info.setDescriptorPool(_global_descriptor_pool);
+    allocation_info.setDescriptorPool(global_descriptor->pool);
     allocation_info.setSetLayouts(layouts);
 
     try {
@@ -410,7 +350,7 @@ void VulkanMaterialShader::create_global_descriptor_sets() {
         std::array<vk::WriteDescriptorSet, 1> descriptor_writes{};
 
         vk::DescriptorBufferInfo buffer_info = {};
-        buffer_info.setBuffer(_global_uniform_buffers[i]->handle);
+        buffer_info.setBuffer(global_descriptor->get_buffer(0, i)->handle);
         buffer_info.setOffset(0);
         buffer_info.setRange(sizeof(GlobalUniformObject));
 

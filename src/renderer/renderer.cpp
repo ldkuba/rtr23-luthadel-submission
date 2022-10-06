@@ -17,7 +17,9 @@ Renderer::Renderer(
         break;
     }
 }
-Renderer::~Renderer() {}
+Renderer::~Renderer() {
+    delete _backend;
+}
 
 void Renderer::on_resize(const uint32 width, const uint32 height) {
     _projection = glm::perspective(glm::radians(45.0f), (float32) width / height, _near_plane, _far_plane);

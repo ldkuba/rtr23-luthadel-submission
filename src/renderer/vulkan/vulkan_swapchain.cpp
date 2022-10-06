@@ -30,9 +30,7 @@ VulkanSwapchain::VulkanSwapchain(
     Logger::trace(RENDERER_VULKAN_LOG, "Swapchain created.");
 
     // Create vulkan images
-    _depth_image = new VulkanImage(_device, _allocator);
     create_depth_resources();
-    _color_image = new VulkanImage(_device, _allocator);
     create_color_resource();
 }
 
@@ -215,8 +213,8 @@ void VulkanSwapchain::create() {
 
 void VulkanSwapchain::destroy() {
     // Destroy image resources
-    _color_image->~VulkanImage();
-    _depth_image->~VulkanImage();
+    delete _color_image;
+    delete _depth_image;
 
     // Destroy framebuffers
     for (auto framebuffer : _framebuffers)
@@ -247,6 +245,7 @@ void VulkanSwapchain::recreate() {
 void VulkanSwapchain::create_color_resource() {
     vk::Format color_format = _format;
 
+    _color_image = new VulkanImage(_device, _allocator);
     _color_image->create(
         _extent.width, _extent.height, 1,
         _msaa_samples,
@@ -260,6 +259,7 @@ void VulkanSwapchain::create_color_resource() {
 void VulkanSwapchain::create_depth_resources() {
     auto depth_format = find_depth_format();
 
+    _depth_image = new VulkanImage(_device, _allocator);
     _depth_image->create(
         _extent.width, _extent.height, 1,
         _msaa_samples,

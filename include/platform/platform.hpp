@@ -1,3 +1,6 @@
+#ifndef __PLATFORM_H__
+#define __PLATFORM_H__
+
 #pragma once
 
 #include <vector>
@@ -14,7 +17,11 @@ public:
     Platform();
     ~Platform();
 
+    /// @brief Get current internal clock time in seconds
+    /// @return Time in seconds
     static float64 get_absolute_time();
+    /// @brief Suspends the application process for the specified amount of time
+    /// @param ms Time to sleep in miliseconds
     static void sleep(uint64 ms);
 
     // TODO: Separate platform code from knowing about renderers
@@ -35,7 +42,7 @@ public:
     protected:
         Surface() {}
     public:
-        ~Surface() {}
+        virtual ~Surface() {}
         Event<void, uint32, uint32> resize_event;
 
         static Surface* get_instance(uint32 width, uint32 height, std::string name);
@@ -62,3 +69,5 @@ public:
     // };
 
 };
+
+#endif // __PLATFORM_H__

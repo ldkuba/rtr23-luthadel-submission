@@ -11,24 +11,10 @@
 #include "platform/platform.hpp"
 
 class Logger {
-private:
-
-    template<typename T>
-    static void logger_output_one(uint32 kind, T message) {
-        Platform::Console::write(std::to_string(message), kind, false);
-    }
-
-    template<typename... Args>
-    static void logger_output(std::string initial, uint32 kind, Args... message) {
-        Platform::Console::write(initial + " :: ", kind, false);
-        (logger_output_one(kind, message), ...);
-        Platform::Console::write("");
-    }
-
-
 public:
-    Logger();
-    ~Logger();
+
+    Logger() {}
+    ~Logger() {}
 
     /**
      * @brief Logs given fatal error message.
@@ -39,7 +25,8 @@ public:
      */
     template<typename... Args>
     static void fatal(Args... message) {
-        logger_output(std::string("FATAL ERROR"), 1, message...);
+        auto full_message = String::build(std::string("FATAL ERROR"), " :: ", message...);
+        Platform::Console::write(full_message, 1, true);
         exit(EXIT_FAILURE);
     }
     /**
@@ -51,7 +38,8 @@ public:
      */
     template<typename... Args>
     static void error(Args... message) {
-        logger_output(std::string("ERR"), 2, message...);
+        auto full_message = String::build(std::string("ERR"), " :: ", message...);
+        Platform::Console::write(full_message, 2, true);
     }
     /**
      * @brief Logs given warning message if LOG_WARNING_ENABLED is set to one.
@@ -63,7 +51,8 @@ public:
     template<typename... Args>
     static void warning(Args... message) {
 #if LOG_WARNING_ENABLED
-        logger_output(std::string("WAR"), 3, message...);
+        auto full_message = String::build(std::string("WAR"), " :: ", message...);
+        Platform::Console::write(full_message, 3, true);
 #endif
     }
 
@@ -77,7 +66,8 @@ public:
     template<typename... Args>
     static void log(Args... message) {
 #if LOG_INFO_ENABLED
-        logger_output(std::string("INF"), 4, message...);
+        auto full_message = String::build(std::string("INF"), " :: ", message...);
+        Platform::Console::write(full_message, 4, true);
 #endif
     }
     /**
@@ -90,7 +80,8 @@ public:
     template<typename... Args>
     static void debug(Args... message) {
 #if LOG_DEBUG_ENABLED
-        logger_output(std::string("DEB"), 5, message...);
+        auto full_message = String::build(std::string("DEB"), " :: ", message...);
+        Platform::Console::write(full_message, 5, true);
 #endif
     }
     /**
@@ -103,14 +94,8 @@ public:
     template<typename... Args>
     static void trace(Args... message) {
 #if LOG_VERBOSE_ENABLED
-        logger_output(std::string("VER"), 0, message...);
+        auto full_message = String::build(std::string("VER"), " :: ", message...);
+        Platform::Console::write(full_message, 0, true);
 #endif
     }
 };
-
-template<>
-void Logger::logger_output_one<const char*>(uint32 kind, const char* message);
-template<>
-void Logger::logger_output_one<std::string>(uint32 kind, std::string message);
-template<>
-void Logger::logger_output_one<String>(uint32 kind, String message);

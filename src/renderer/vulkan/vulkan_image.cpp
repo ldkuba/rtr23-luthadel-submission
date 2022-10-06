@@ -1,12 +1,12 @@
 #include "renderer/vulkan/vulkan_image.hpp"
 
-// #define TRACE_FILE
+// #define TRACE_FILE_VULKAN_IMAGE
 
 VulkanImage::~VulkanImage() {
     if (_handle) _device->handle().destroyImage(_handle, _allocator);
     if (_memory) _device->handle().freeMemory(_memory, _allocator);
     if (_has_view) _device->handle().destroyImageView(view, _allocator);
-#ifdef TRACE_FILE
+#ifdef TRACE_FILE_VULKAN_IMAGE
     Logger::trace(RENDERER_VULKAN_LOG, "Image destroyed.");
 #endif
 }
@@ -84,7 +84,7 @@ void VulkanImage::create(
     const vk::MemoryPropertyFlags properties,
     const vk::ImageAspectFlags aspect_flags
 ) {
-#ifdef TRACE_FILE
+#ifdef TRACE_FILE_VULKAN_IMAGE
     Logger::trace(RENDERER_VULKAN_LOG, "Creating image.");
 #endif
 
@@ -107,7 +107,7 @@ void VulkanImage::create(
         aspect_flags
     );
 
-#ifdef TRACE_FILE
+#ifdef TRACE_FILE_VULKAN_IMAGE
     Logger::trace(RENDERER_VULKAN_LOG, "Image created.");
 #endif
 }
@@ -118,14 +118,14 @@ void VulkanImage::create(
     const vk::Format format,
     const vk::ImageAspectFlags aspect_flags
 ) {
-#ifdef TRACE_FILE
+#ifdef TRACE_FILE_VULKAN_IMAGE
     Logger::trace(RENDERER_VULKAN_LOG, "Creating image.");
 #endif
 
     handle = image;
     create_view(mip_levels, format, aspect_flags);
 
-#ifdef TRACE_FILE
+#ifdef TRACE_FILE_VULKAN_IMAGE
     Logger::trace(RENDERER_VULKAN_LOG, "Image created.");
 #endif
 }

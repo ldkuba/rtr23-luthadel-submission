@@ -29,7 +29,7 @@ public:
     Property<String> type{ Get{ return _type; } };
 
     ResourceLoader() {}
-    ~ResourceLoader() {}
+    virtual ~ResourceLoader() {}
 
     virtual Resource* load(const String name) { return nullptr; }
     virtual void unload(Resource* resource) {}

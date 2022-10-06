@@ -16,7 +16,7 @@ MaterialSystem::MaterialSystem(
     Logger::trace(MATERIAL_SYS_LOG, "Material system created.");
 }
 MaterialSystem::~MaterialSystem() {
-    for (auto material : _registered_materials) {
+    for (auto& material : _registered_materials) {
         _renderer->destroy_material(material.second.handle);
         delete material.second.handle;
     }
@@ -72,7 +72,7 @@ Material* MaterialSystem::acquire(const MaterialConfig config) {
         return _default_material;
     }
 
-    auto ref = _registered_materials[name];
+    auto& ref = _registered_materials[name];
     if (ref.handle == nullptr) {
         ref.handle = crete_material(
             name,

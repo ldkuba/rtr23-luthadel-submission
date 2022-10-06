@@ -50,8 +50,6 @@ void TestApplication::run() {
 
         _app_renderer.draw_frame(delta_time);
     }
-
-    _app_renderer.~Renderer();
 }
 
 float32 TestApplication::calculate_delta_time() {

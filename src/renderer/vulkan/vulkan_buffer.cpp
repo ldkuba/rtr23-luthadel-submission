@@ -1,12 +1,12 @@
 #include "renderer/vulkan/vulkan_buffer.hpp"
 
-// #define TRACE_FILE
+// #define TRACE_FILE_VULKAN_BUFFER
 
 VulkanBuffer::~VulkanBuffer() {
     if (_handle) _device->handle().destroyBuffer(_handle, _allocator);
     if (_memory) _device->handle().freeMemory(_memory, _allocator);
 
-#ifdef TRACE_FILE
+#ifdef TRACE_FILE_VULKAN_BUFFER
     Logger::trace(RENDERER_VULKAN_LOG, "Buffer destroyed.");
 #endif
 }
@@ -21,7 +21,7 @@ void VulkanBuffer::create(
     const vk::MemoryPropertyFlags properties,
     const bool bind_on_create
 ) {
-#ifdef TRACE_FILE
+#ifdef TRACE_FILE_VULKAN_BUFFER
     Logger::trace(RENDERER_VULKAN_LOG, "Creating buffer.");
 #endif
 
@@ -38,7 +38,7 @@ void VulkanBuffer::create(
     // Bind allocated memory to the buffer if required
     if (bind_on_create) _device->handle().bindBufferMemory(_handle, _memory, 0);
 
-#ifdef TRACE_FILE
+#ifdef TRACE_FILE_VULKAN_BUFFER
     Logger::trace(RENDERER_VULKAN_LOG, "Buffer created.");
 #endif
 }
@@ -72,7 +72,7 @@ void VulkanBuffer::resize(
     _handle = new_handle;
     _memory = new_memory;
 
-#ifdef TRACE_FILE
+#ifdef TRACE_FILE_VULKAN_BUFFER
     Logger::trace(RENDERER_VULKAN_LOG, "Buffer resized.");
 #endif
 }

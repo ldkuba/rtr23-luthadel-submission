@@ -103,7 +103,10 @@ VulkanBackend::~VulkanBackend() {
     }
     Logger::trace(RENDERER_VULKAN_LOG, "Synchronization objects destroyed.");
 
+
     delete _device;
+
+    _vulkan_instance.destroySurfaceKHR(_vulkan_surface);
 
     if (VulkanSettings::enable_validation_layers) {
         _vulkan_instance.destroyDebugUtilsMessengerEXT(_debug_messenger, _allocator,
@@ -234,7 +237,7 @@ void VulkanBackend::update_global_state(
 
     // Bind material shader
     _material_shader->use(command_buffer);
-    _material_shader->bind_descriptor_set(command_buffer, _current_frame);
+    _material_shader->bind_global_description_set(command_buffer, _current_frame);
 }
 
 void VulkanBackend::draw_geometry(

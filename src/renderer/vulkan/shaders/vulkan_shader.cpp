@@ -4,7 +4,13 @@ VulkanShader::VulkanShader(
     const VulkanDevice* const device,
     const vk::AllocationCallbacks* const allocator
 ) : _device(device), _allocator(allocator) {}
-VulkanShader::~VulkanShader() {}
+VulkanShader::~VulkanShader() {
+    for (uint32 i = 0; i < _descriptors.size(); i++) {
+        delete _descriptors[i];
+    }
+    _device->handle().destroyPipeline(_pipeline, _allocator);
+    _device->handle().destroyPipelineLayout(_pipeline_layout, _allocator);
+}
 
 // /////////////////////////////// //
 // VULKAN SHADER PROTECTED METHODS //
@@ -20,7 +26,6 @@ vk::ShaderModule VulkanShader::create_shader_module(const std::vector<byte> code
 void VulkanShader::create_pipeline(
     const std::vector<vk::PipelineShaderStageCreateInfo>& shader_stages,
     const vk::PipelineVertexInputStateCreateInfo& vertex_input_info,
-    const vk::PipelineLayoutCreateInfo& layout_info,
     const vk::RenderPass render_pass,
     const vk::SampleCountFlagBits number_of_msaa_samples,
     const bool is_wire_frame
@@ -138,6 +143,15 @@ void VulkanShader::create_pipeline(
     dynamic_state_info.setDynamicStates(dynamic_states);
 
     // === Create pipeline layout ===
+    std::vector<vk::DescriptorSetLayout> description_set_layouts;
+    for (auto descriptor : _descriptors)
+        description_set_layouts.push_back(descriptor->set_layout);
+
+    vk::PipelineLayoutCreateInfo layout_info{};
+    layout_info.setSetLayouts(description_set_layouts); // Layout of used descriptor sets
+    layout_info.setPushConstantRangeCount(0);           // Push constant ranges used
+    layout_info.setPPushConstantRanges(nullptr);
+
     try {
         _pipeline_layout = _device->handle().createPipelineLayout(layout_info, _allocator);
     } catch (vk::SystemError e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
@@ -175,48 +189,12 @@ void VulkanShader::create_pipeline(
     } catch (vk::SystemError e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
 }
 
-vk::DescriptorPool VulkanShader::create_descriptor_pool(
-    const std::vector<DescriptorInfo>& descriptor_info,
+
+void VulkanShader::add_descriptor(
+    VulkanDescriptor* const descriptor,
     const uint32 max_sets,
     const bool can_free
-) const {
-    std::vector<vk::DescriptorPoolSize> pool_sizes(descriptor_info.size());
-    for (uint32 i = 0; i < descriptor_info.size(); i++) {
-        pool_sizes[i].setType(descriptor_info[i].type);
-        pool_sizes[i].setDescriptorCount(descriptor_info[i].count);
-    }
-
-    vk::DescriptorPoolCreateInfo create_info{};
-    create_info.setPoolSizes(pool_sizes);
-    create_info.setMaxSets(max_sets);
-    if (can_free) // Allows explicit call of free commands on descriptor pools
-        create_info.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
-
-    vk::DescriptorPool descriptor_pool;
-    try {
-        descriptor_pool = _device->handle().createDescriptorPool(create_info, _allocator);
-    } catch (vk::SystemError e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
-    return descriptor_pool;
-}
-
-vk::DescriptorSetLayout VulkanShader::create_descriptor_set_layout(
-    const std::vector<DescriptorInfo>& descriptor_info
-) const {
-    std::vector<vk::DescriptorSetLayoutBinding> bindings(descriptor_info.size());
-    for (uint32 i = 0; i < descriptor_info.size(); i++) {
-        bindings[i].setBinding(i);
-        bindings[i].setDescriptorCount(1);
-        bindings[i].setDescriptorType(descriptor_info[i].type);
-        bindings[i].setStageFlags(descriptor_info[i].shader_stage);
-        bindings[i].setPImmutableSamplers(nullptr);
-    }
-
-    vk::DescriptorSetLayoutCreateInfo layout_info{};
-    layout_info.setBindings(bindings);
-
-    vk::DescriptorSetLayout descriptor_set_layout;
-    try {
-        descriptor_set_layout = _device->handle().createDescriptorSetLayout(layout_info, _allocator);
-    } catch (vk::SystemError e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
-    return descriptor_set_layout;
+) {
+    descriptor->create_bindings(max_sets, can_free);
+    _descriptors.push_back(descriptor);
 }

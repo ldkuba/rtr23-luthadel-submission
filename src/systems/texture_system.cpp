@@ -21,7 +21,7 @@ TextureSystem::TextureSystem(
     Logger::trace(TEXTURE_SYS_LOG, "Texture system created.");
 }
 TextureSystem::~TextureSystem() {
-    for (auto texture : _registered_textures) {
+    for (auto& texture : _registered_textures) {
         _renderer->destroy_texture(texture.second.handle);
         delete texture.second.handle;
     }
@@ -52,7 +52,7 @@ Texture* TextureSystem::acquire(const String name, const bool auto_release) {
     }
 
     String s = name; s.to_lower();
-    auto ref = _registered_textures[s];
+    auto& ref = _registered_textures[s];
 
     if (ref.handle == nullptr) {
         auto image = static_cast<Image*>

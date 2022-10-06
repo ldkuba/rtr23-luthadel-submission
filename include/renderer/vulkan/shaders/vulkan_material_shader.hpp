@@ -5,12 +5,9 @@
 
 #include "math_libs.hpp"
 #include "vulkan_shader.hpp"
-#include "renderer/vulkan/vulkan_settings.hpp"
 #include "renderer/renderer_types.hpp"
 
 #include "systems/resource_system.hpp"
-
-#include <unordered_map>
 
 class VulkanMaterialShader : public VulkanShader {
 public:
@@ -24,23 +21,34 @@ public:
     ~VulkanMaterialShader();
 
     /// @brief Select shader for rendering
-    /// @param command_buffer Buffer to store bind commands
+    /// @param command_buffer Buffer to store shader bind commands
     void use(const vk::CommandBuffer& command_buffer);
 
-    /// @brief Bind descriptor sets specific to this shader
-    /// @param command_buffer Buffer to store bind command
+    /// @brief Bind global ubo data for rendering
+    /// @param command_buffer Buffer to store descriptor set bind command
     /// @param current_frame Frame on which to use UBO buffer
-    void bind_descriptor_set(
+    void bind_global_description_set(
         const vk::CommandBuffer& command_buffer,
         const uint32 current_frame
     );
 
+    /// @brief Bind material ubo data for rendering
+    /// @param command_buffer Buffer to store material bind command
+    /// @param current_frame Frame on which to use UBO buffer
+    /// @param material_id Id of a material we wish to bind
     void bind_material(
         const vk::CommandBuffer& command_buffer,
         const uint32 current_frame,
-        const uint32 object_id
+        const uint32 material_id
     );
 
+    /// @brief Update global ubo data
+    /// @param projection Projection matrix
+    /// @param view View matrix
+    /// @param view_position View position
+    /// @param ambient_color Ambient color
+    /// @param mode Rendering mode
+    /// @param current_frame Currently rendered frame
     void update_global_state(
         const glm::mat4 projection,
         const glm::mat4 view,
@@ -49,6 +57,10 @@ public:
         const int32 mode,
         const uint32 current_frame
     );
+
+    /// @brief 
+    /// @param data 
+    /// @param current_frame 
     void update_object_state(
         const GeometryRenderData data,
         uint32 current_frame
@@ -71,15 +83,7 @@ private:
             VulkanMaterialShader::_material_descriptor_count> descriptor_states;
     };
 
-    vk::DescriptorPool _global_descriptor_pool;
-    vk::DescriptorSetLayout _global_descriptor_set_layout;
     std::vector<vk::DescriptorSet> _global_descriptor_sets;
-    std::vector<VulkanBuffer*> _global_uniform_buffers;
-
-    vk::DescriptorPool _local_descriptor_pool;
-    vk::DescriptorSetLayout _local_descriptor_set_layout;
-    std::vector<VulkanBuffer*> _local_uniform_buffers;
-
     std::unordered_map<uint32, MaterialInstanceState> _instance_states;
     TextureUse _sampler_uses[_material_sampler_count];
 

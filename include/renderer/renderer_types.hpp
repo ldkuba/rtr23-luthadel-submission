@@ -3,7 +3,6 @@
 
 #pragma once
 
-#include "math_libs.hpp"
 #include "resources/geometry.hpp"
 
 // Vertex
