@@ -58,22 +58,24 @@ VulkanMaterialShader::VulkanMaterialShader(
     add_descriptor(global_descriptor, VulkanSettings::max_frames_in_flight);
 
     // Local descriptor
+    uint32 total_entity_count =
+        VulkanSettings::max_material_count * VulkanSettings::max_frames_in_flight;
     auto local_descriptor = new VulkanDescriptor(_device, _allocator);
     local_descriptor->add_uniform_buffer(
         vk::ShaderStageFlagBits::eVertex,
-        VulkanSettings::max_material_count,
-        VulkanSettings::max_material_count * sizeof(LocalUniformObjectV)
+        total_entity_count,
+        total_entity_count * sizeof(LocalUniformObjectV)
     );
     local_descriptor->add_uniform_buffer(
         vk::ShaderStageFlagBits::eFragment,
-        VulkanSettings::max_material_count,
-        VulkanSettings::max_material_count * sizeof(LocalUniformObjectF)
+        total_entity_count,
+        total_entity_count * sizeof(LocalUniformObjectF)
     );
     local_descriptor->add_image_sampler(
         vk::ShaderStageFlagBits::eFragment,
-        _material_sampler_count * VulkanSettings::max_material_count
+        total_entity_count * _material_sampler_count
     );
-    add_descriptor(local_descriptor, VulkanSettings::max_material_count, true);
+    add_descriptor(local_descriptor, total_entity_count, true);
     _sampler_uses[0] = TextureUse::MapDiffuse;
 
     // === Vertex input state info ===

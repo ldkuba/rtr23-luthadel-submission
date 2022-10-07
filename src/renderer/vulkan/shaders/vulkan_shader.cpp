@@ -195,6 +195,6 @@ void VulkanShader::add_descriptor(
     const uint32 max_sets,
     const bool can_free
 ) {
-    descriptor->create_bindings(max_sets, can_free);
+    descriptor->create_pool_and_layout(max_sets, can_free);
     _descriptors.push_back(descriptor);
 }

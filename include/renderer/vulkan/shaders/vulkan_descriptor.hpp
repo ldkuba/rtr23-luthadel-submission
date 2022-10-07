@@ -41,7 +41,9 @@ private:
     };
 
 public:
+    /// @brief vk::DescriptorPool instance
     Property<vk::DescriptorPool> pool{ Get { return _pool; } };
+    /// @brief vk::DescriptorSetLayout instance
     Property<vk::DescriptorSetLayout> set_layout{ Get { return _set_layout; } };
 
     VulkanDescriptor(
@@ -50,21 +52,39 @@ public:
     );
     ~VulkanDescriptor();
 
-    void add_uniform_buffer(
+    /// @brief Adds a uniform buffer binding
+    /// @param shader_stage Stages which will use this binding
+    /// @param count Total descriptor count of this type that can be allocated.
+    /// Note: This maximum applies across all sets
+    /// @param buffer_size Total uniform buffer size in bytes
+    /// @returns Descriptors binding index
+    uint32 add_uniform_buffer(
         const vk::ShaderStageFlagBits shader_stage,
         const uint32 count,
         const vk::DeviceSize buffer_size
     );
-    void add_image_sampler(
+    /// @brief Adds a Combined image sampler binding
+    /// @param shader_stage Stages which will use this binding
+    /// @param count Total descriptor count of this type that can be allocated.
+    /// Note: This maximum applies across all sets
+    /// @returns Descriptors binding index
+    uint32 add_image_sampler(
         const vk::ShaderStageFlagBits shader_stage,
         const uint32 count
     );
-    void create_bindings(
+    /// @brief Creates descriptor pool and set layout with all the added bindings
+    /// @param max_sets Maximum to the number of descriptor sets that can be allocated
+    /// @param can_free Allows explicit call of free commands on descriptors if true
+    void create_pool_and_layout(
         const uint32 max_sets,
         const bool can_free
     );
 
-    VulkanBuffer* get_buffer(const uint32 binding, const uint32 frame) const;
+    /// @brief Get the descriptors uniform buffer
+    /// @param binding Binding index of the requested uniform buffer 
+    /// @param index Index into the requested uniform buffer array
+    /// @returns VulkanBuffer*
+    VulkanBuffer* get_buffer(const uint32 binding, const uint32 index) const;
 
 private:
     const VulkanDevice* _device;
