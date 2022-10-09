@@ -2,37 +2,43 @@
 
 // Constructor & Destructor
 VulkanRenderPass::VulkanRenderPass(
-    const vk::Device* const device,
+    const vk::Device* const              device,
     const vk::AllocationCallbacks* const allocator,
-    VulkanSwapchain* const swapchain
-) : _device(device), _swapchain(swapchain), _allocator(allocator) {
+    VulkanSwapchain* const               swapchain
+)
+    : _device(device), _swapchain(swapchain), _allocator(allocator) {
     Logger::trace(RENDERER_VULKAN_LOG, "Creating render pass.");
 
     // Get all attachment descriptions from swapchain
     // Color attachment
     vk::AttachmentDescription color_attachment =
         _swapchain->get_color_attachment();
-    vk::AttachmentReference color_attachment_ref{};
+    vk::AttachmentReference color_attachment_ref {};
     color_attachment_ref.setLayout(vk::ImageLayout::eColorAttachmentOptimal);
     color_attachment_ref.setAttachment(0);
 
     // Depth attachment
     vk::AttachmentDescription depth_attachment =
         _swapchain->get_depth_attachment();
-    vk::AttachmentReference depth_attachment_ref{};
-    depth_attachment_ref.setLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+    vk::AttachmentReference depth_attachment_ref {};
+    depth_attachment_ref.setLayout(
+        vk::ImageLayout::eDepthStencilAttachmentOptimal
+    );
     depth_attachment_ref.setAttachment(1);
 
     // Resolve attachment
     vk::AttachmentDescription color_attachment_resolve =
         _swapchain->get_color_attachment_resolve();
-    vk::AttachmentReference color_attachment_resolve_ref{};
-    color_attachment_resolve_ref.setLayout(vk::ImageLayout::eColorAttachmentOptimal);
+    vk::AttachmentReference color_attachment_resolve_ref {};
+    color_attachment_resolve_ref.setLayout(
+        vk::ImageLayout::eColorAttachmentOptimal
+    );
     color_attachment_resolve_ref.setAttachment(2);
 
     // Subpass
-    vk::SubpassDescription subpass{};
-    subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics); // Used for Graphics or Compute
+    vk::SubpassDescription subpass {};
+    subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics
+    ); // Used for Graphics or Compute
     subpass.setColorAttachmentCount(1);
     subpass.setPColorAttachments(&color_attachment_ref);
     subpass.setPDepthStencilAttachment(&depth_attachment_ref);
@@ -41,40 +47,44 @@ VulkanRenderPass::VulkanRenderPass(
 
     // Subpass dependencies
     // Controls image layout transitions between subpasses
-    vk::SubpassDependency dependency{};
-    dependency.setSrcSubpass(VK_SUBPASS_EXTERNAL); // Refers to the implicit subpass before current render pass
+    vk::SubpassDependency dependency {};
+    dependency.setSrcSubpass(VK_SUBPASS_EXTERNAL
+    ); // Refers to the implicit subpass before current render pass
     dependency.setDstSubpass(0); // Subpass at index 0 (the only one)
     // Operations to wait on before transitioning (Memory access we want)
     dependency.setSrcAccessMask(vk::AccessFlagBits::eNone);
     // Operations that wait for transition (Memory access we want)
     dependency.setDstAccessMask(
         vk::AccessFlagBits::eColorAttachmentWrite |
-        vk::AccessFlagBits::eDepthStencilAttachmentWrite);
+        vk::AccessFlagBits::eDepthStencilAttachmentWrite
+    );
     // Stages at which the above mentioned operations occur
     dependency.setSrcStageMask(
         vk::PipelineStageFlagBits::eColorAttachmentOutput |
-        vk::PipelineStageFlagBits::eEarlyFragmentTests);
+        vk::PipelineStageFlagBits::eEarlyFragmentTests
+    );
     dependency.setDstStageMask(
         vk::PipelineStageFlagBits::eColorAttachmentOutput |
-        vk::PipelineStageFlagBits::eEarlyFragmentTests);
+        vk::PipelineStageFlagBits::eEarlyFragmentTests
+    );
 
     // Create render pass
     std::array<vk::AttachmentDescription, 3> attachments = {
-        color_attachment,
-        depth_attachment,
-        color_attachment_resolve
+        color_attachment, depth_attachment, color_attachment_resolve
     };
-    std::array<vk::SubpassDescription, 1> subpasses = { subpass };
-    std::array<vk::SubpassDependency, 1> dependencies = { dependency };
+    std::array<vk::SubpassDescription, 1> subpasses    = { subpass };
+    std::array<vk::SubpassDependency, 1>  dependencies = { dependency };
 
-    vk::RenderPassCreateInfo create_info{};
+    vk::RenderPassCreateInfo create_info {};
     create_info.setAttachments(attachments);
     create_info.setSubpasses(subpasses);
     create_info.setDependencies(dependencies);
 
     try {
         _handle = _device->createRenderPass(create_info, _allocator);
-    } catch (vk::SystemError e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
+    } catch (vk::SystemError e) {
+        Logger::fatal(RENDERER_VULKAN_LOG, e.what());
+    }
 
     Logger::trace(RENDERER_VULKAN_LOG, "Render pass created.");
 }
@@ -88,17 +98,17 @@ VulkanRenderPass::~VulkanRenderPass() {
 // ///////////////////////////////// //
 
 void VulkanRenderPass::begin(
-    const vk::CommandBuffer& command_buffer,
-    const vk::Framebuffer& framebuffer
+    const vk::CommandBuffer& command_buffer, const vk::Framebuffer& framebuffer
 ) {
-    // Default background values of color and depth stencil for rendered area of the render pass
-    std::array<float32, 4> clear_color = { 0.0f, 0.0f, 0.0f, 1.0f };
-    std::array<vk::ClearValue, 2>clear_values{};
+    // Default background values of color and depth stencil for rendered area of
+    // the render pass
+    std::array<float32, 4>        clear_color = { 0.0f, 0.0f, 0.0f, 1.0f };
+    std::array<vk::ClearValue, 2> clear_values {};
     clear_values[0].setColor({ clear_color });
     clear_values[1].setDepthStencil({ 1.0f, 0 });
 
     // Begin render pass
-    vk::RenderPassBeginInfo render_pass_begin_info{};
+    vk::RenderPassBeginInfo render_pass_begin_info {};
     render_pass_begin_info.setRenderPass(handle);
     render_pass_begin_info.setFramebuffer(framebuffer);
     render_pass_begin_info.setClearValues(clear_values);
@@ -106,11 +116,11 @@ void VulkanRenderPass::begin(
     render_pass_begin_info.renderArea.setOffset({ 0, 0 });
     render_pass_begin_info.renderArea.setExtent(_swapchain->extent);
 
-    command_buffer.beginRenderPass(render_pass_begin_info, vk::SubpassContents::eInline);
+    command_buffer.beginRenderPass(
+        render_pass_begin_info, vk::SubpassContents::eInline
+    );
 }
 
-void VulkanRenderPass::end(
-    const vk::CommandBuffer& command_buffer
-) {
+void VulkanRenderPass::end(const vk::CommandBuffer& command_buffer) {
     command_buffer.endRenderPass();
 }

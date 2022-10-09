@@ -1,8 +1,6 @@
 #pragma once
 
-#include "renderer/renderer_types.hpp"
 #include "renderer/renderer_backend.hpp"
-#include "vulkan_settings.hpp"
 #include "vulkan_render_pass.hpp"
 #include "vulkan_command_pool.hpp"
 #include "shaders/vulkan_material_shader.hpp"
@@ -10,10 +8,9 @@
 #include <map>
 
 class VulkanBackend : public RendererBackend {
-public:
+  public:
     VulkanBackend(
-        Platform::Surface* const surface,
-        ResourceSystem* const resource_system
+        Platform::Surface* const surface, ResourceSystem* const resource_system
     );
     ~VulkanBackend();
 
@@ -25,7 +22,7 @@ public:
         const glm::mat4 view,
         const glm::vec3 view_position,
         const glm::vec4 ambient_color,
-        const int32 mode
+        const int32     mode
     );
     void draw_geometry(const GeometryRenderData data);
 
@@ -36,20 +33,20 @@ public:
     void destroy_material(Material* const material);
 
     void create_geometry(
-        Geometry* geometry,
+        Geometry*                 geometry,
         const std::vector<Vertex> vertices,
         const std::vector<uint32> indices
     );
     void destroy_geometry(Geometry* geometry);
 
-private:
+  private:
     // TODO: Custom allocator
     const vk::AllocationCallbacks* const _allocator = nullptr;
 
-    vk::Instance _vulkan_instance;
+    vk::Instance               _vulkan_instance;
     vk::DebugUtilsMessengerEXT _debug_messenger;
 
-    vk::Instance create_vulkan_instance() const;
+    vk::Instance               create_vulkan_instance() const;
     vk::DebugUtilsMessengerEXT setup_debug_messenger() const;
 
     bool all_validation_layers_are_available() const;
@@ -61,7 +58,7 @@ private:
     // Synchronization objects
     std::vector<vk::Semaphore> _semaphores_image_available;
     std::vector<vk::Semaphore> _semaphores_render_finished;
-    std::vector<vk::Fence> _fences_in_flight;
+    std::vector<vk::Fence>     _fences_in_flight;
 
     void create_sync_objects();
 
@@ -70,8 +67,8 @@ private:
 
     // SWAPCHAIN CODE
     VulkanSwapchain* _swapchain;
-    uint32 _current_frame = 0;
-    uint32 _current_image = 0;
+    uint32           _current_frame = 0;
+    uint32           _current_image = 0;
 
     // RENDER PASS
     VulkanRenderPass* _render_pass;
@@ -85,7 +82,7 @@ private:
     uint32 generate_geometry_id();
 
     // TODO: TEMP COMMAND CODE
-    VulkanCommandPool* _command_pool;
+    VulkanCommandPool*             _command_pool;
     std::vector<vk::CommandBuffer> _command_buffers;
 
     // TODO: TEMP BUFFER CODE
@@ -94,9 +91,9 @@ private:
 
     void create_buffers();
     void upload_data_to_buffer(
-        const void* data,
+        const void*    data,
         vk::DeviceSize size,
         vk::DeviceSize offset,
-        VulkanBuffer* buffer
+        VulkanBuffer*  buffer
     );
 };

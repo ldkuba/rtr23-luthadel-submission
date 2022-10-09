@@ -53,6 +53,7 @@ _deps
 # VS CODDE #
 ############
 .vscode/
+.cache/
 
 #########
 # Other #

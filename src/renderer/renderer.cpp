@@ -4,37 +4,39 @@
 
 Renderer::Renderer(
     const RendererBackendType backend_type,
-    Platform::Surface* const surface,
-    ResourceSystem* const resource_system
-) : _resource_system(resource_system) {
+    Platform::Surface* const  surface,
+    ResourceSystem* const     resource_system
+)
+    : _resource_system(resource_system) {
     surface->resize_event.subscribe<Renderer>(this, &Renderer::on_resize);
     switch (backend_type) {
-    case Vulkan:
-        _backend = new VulkanBackend(surface, resource_system);
-        return;
+    case Vulkan: _backend = new VulkanBackend(surface, resource_system); return;
 
-    default:
-        break;
+    default: break;
     }
 }
-Renderer::~Renderer() {
-    delete _backend;
-}
+Renderer::~Renderer() { delete _backend; }
 
 void Renderer::on_resize(const uint32 width, const uint32 height) {
-    _projection = glm::perspective(glm::radians(45.0f), (float32) width / height, _near_plane, _far_plane);
+    _projection = glm::perspective(
+        glm::radians(45.0f), (float32) width / height, _near_plane, _far_plane
+    );
     _backend->resized(width, height);
 }
 bool Renderer::draw_frame(const float32 delta_time) {
     if (_backend->begin_frame(delta_time)) {
         // Update global state
-        _backend->update_global_state(_projection, _view, glm::vec3(0.0), glm::vec4(1.0), 0);
+        _backend->update_global_state(
+            _projection, _view, glm::vec3(0.0), glm::vec4(1.0), 0
+        );
 
         // TODO: Temp code; update one and only object
         static float rotation = 0.0f;
         rotation += 50.0f * delta_time;
         GeometryRenderData data = {};
-        data.model = glm::rotate(glm::mat4(1.0f), glm::radians(rotation), glm::vec3(0.0f, 0.0f, 1.0f));
+        data.model              = glm::rotate(
+            glm::mat4(1.0f), glm::radians(rotation), glm::vec3(0.0f, 0.0f, 1.0f)
+        );
         data.geometry = current_geometry;
 
         _backend->draw_geometry(data);
@@ -71,7 +73,7 @@ void Renderer::destroy_material(Material* const material) {
 }
 
 void Renderer::create_geometry(
-    Geometry* geometry,
+    Geometry*                 geometry,
     const std::vector<Vertex> vertices,
     const std::vector<uint32> indices
 ) {
@@ -82,5 +84,4 @@ void Renderer::create_geometry(
 void Renderer::destroy_geometry(Geometry* geometry) {
     _backend->destroy_geometry(geometry);
     Logger::trace(RENDERER_LOG, "Geometry destroyed.");
-
 }

@@ -5,25 +5,32 @@
 #include "systems/geometry_system.hpp"
 
 // TODO: TEMP
-void load_model(std::vector<Vertex>& out_vertices, std::vector<uint32>& out_indices);
+void load_model(
+    std::vector<Vertex>& out_vertices, std::vector<uint32>& out_indices
+);
 
 class TestApplication {
-public:
+  public:
     TestApplication();
     ~TestApplication();
 
     void run();
 
-private:
-    Platform::Surface* _app_surface = Platform::Surface::get_instance(800, 600, std::string(APP_NAME));
+  private:
+    Platform::Surface* _app_surface =
+        Platform::Surface::get_instance(800, 600, std::string(APP_NAME));
 
-    ResourceSystem _resource_system{};
+    ResourceSystem _resource_system {};
 
-    Renderer _app_renderer{ RendererBackendType::Vulkan, _app_surface, &_resource_system };
+    Renderer _app_renderer { RendererBackendType::Vulkan,
+                             _app_surface,
+                             &_resource_system };
 
-    TextureSystem _texture_system{ &_app_renderer, &_resource_system };
-    MaterialSystem _material_system{ &_app_renderer, &_resource_system, &_texture_system };
-    GeometrySystem _geometry_system{ &_app_renderer, &_material_system };
+    TextureSystem  _texture_system { &_app_renderer, &_resource_system };
+    MaterialSystem _material_system { &_app_renderer,
+                                      &_resource_system,
+                                      &_texture_system };
+    GeometrySystem _geometry_system { &_app_renderer, &_material_system };
 
     float32 calculate_delta_time();
 };
@@ -34,13 +41,10 @@ TestApplication::~TestApplication() {}
 
 void TestApplication::run() {
     std::vector<Vertex> vertices = {};
-    std::vector<uint32> indices = {};
+    std::vector<uint32> indices  = {};
     load_model(vertices, indices);
     _app_renderer.current_geometry = _geometry_system.acquire(
-        vertices,
-        indices,
-        "viking_room",
-        "viking_room"
+        vertices, indices, "viking_room", "viking_room"
     );
 
     while (!_app_surface->should_close()) {
@@ -53,10 +57,10 @@ void TestApplication::run() {
 }
 
 float32 TestApplication::calculate_delta_time() {
-    static auto start_time = Platform::get_absolute_time();
-    auto current_time = Platform::get_absolute_time();
-    auto delta_time = current_time - start_time;
-    start_time = current_time;
+    static auto start_time   = Platform::get_absolute_time();
+    auto        current_time = Platform::get_absolute_time();
+    auto        delta_time   = current_time - start_time;
+    start_time               = current_time;
     return delta_time;
 }
 
@@ -65,24 +69,26 @@ float32 TestApplication::calculate_delta_time() {
 #include <tiny_obj_loader.h>
 #include <unordered_map>
 
-void load_model(std::vector<Vertex>& out_vertices, std::vector<uint32>& out_indices) {
+void load_model(
+    std::vector<Vertex>& out_vertices, std::vector<uint32>& out_indices
+) {
     // Load model
     tinyobj::ObjReader reader;
-    if (!reader.ParseFromFile(model_path))
+    if (!reader.ParseFromFile("../assets/models/viking_room.obj"))
         throw std::runtime_error("");
 
     if (!reader.Warning().empty())
         Logger::warning("TinyObjReader :: ", reader.Warning());
 
     auto& attributes = reader.GetAttrib();
-    auto& shapes = reader.GetShapes();
-    auto& materials = reader.GetMaterials();
+    auto& shapes     = reader.GetShapes();
+    auto& materials  = reader.GetMaterials();
 
     // Loop over shapes
     std::unordered_map<Vertex, uint32> unique_vertices = {};
     for (const auto& shape : shapes) {
         for (const auto& index : shape.mesh.indices) {
-            Vertex vertex{};
+            Vertex vertex {};
 
             vertex.position = {
                 attributes.vertices[3 * index.vertex_index + 0],
@@ -95,10 +101,11 @@ void load_model(std::vector<Vertex>& out_vertices, std::vector<uint32>& out_indi
                 1.0f - attributes.texcoords[2 * index.texcoord_index + 1]
             };
 
-            vertex.color = { 1.0f,1.0f,1.0f };
+            vertex.color = { 1.0f, 1.0f, 1.0f };
 
             if (unique_vertices.count(vertex) == 0) {
-                unique_vertices[vertex] = static_cast<uint32>(out_vertices.size());
+                unique_vertices[vertex] =
+                    static_cast<uint32>(out_vertices.size());
                 out_vertices.push_back(vertex);
             }
 

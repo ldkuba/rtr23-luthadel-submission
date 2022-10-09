@@ -1,32 +1,32 @@
-#ifndef __IMAGE_H__
-#define __IMAGE_H__
-
 #pragma once
 
 #include "resource.hpp"
 
 class Image : public Resource {
-public:
-    Property<uint32> width{ Get { return _width; } };
-    Property<uint32> height{ Get { return _height; } };
-    Property<uint8> channel_count{ Get { return _channel_count; } };
-    Property<const byte*> pixels{ Get { return _pixels; } };
+  public:
+    Property<uint32> width {
+        Get { return _width; }
+    };
+    Property<uint32> height {
+        Get { return _height; }
+    };
+    Property<uint8> channel_count {
+        Get { return _channel_count; }
+    };
+    Property<const byte*> pixels {
+        Get { return _pixels; }
+    };
 
     Image(
-        const String name,
-        const uint32 width,
-        const uint32 height,
-        const uint8 channel_count,
+        const String      name,
+        const uint32      width,
+        const uint32      height,
+        const uint8       channel_count,
         const byte* const pixels
-    ) :
-        Resource(name),
-        _width(width),
-        _height(height),
-        _channel_count(channel_count),
-        _pixels(pixels) {}
-    ~Image() {
-        delete _pixels;
-    }
+    )
+        : Resource(name), _width(width), _height(height),
+          _channel_count(channel_count), _pixels(pixels) {}
+    ~Image() { delete _pixels; }
 
     bool has_transparency() {
         if (_channel_count < 4) return false;
@@ -38,11 +38,9 @@ public:
         return false;
     }
 
-private:
-    uint32 _width;
-    uint32 _height;
-    uint8 _channel_count;
+  private:
+    uint32      _width;
+    uint32      _height;
+    uint8       _channel_count;
     const byte* _pixels;
 };
-
-#endif // __IMAGE_H__

@@ -6,7 +6,7 @@
 
 // Constructor & Destructor
 BinaryLoader::BinaryLoader() {
-    _type = ResourceType::Binary;
+    _type      = ResourceType::Binary;
     _type_path = "";
 }
 BinaryLoader::~BinaryLoader() {}
@@ -17,7 +17,8 @@ BinaryLoader::~BinaryLoader() {}
 
 Resource* BinaryLoader::load(const String name) {
     // Construct full path
-    String file_path = ResourceSystem::base_path + "/" + _type_path + "/" + name;
+    String file_path =
+        ResourceSystem::base_path + "/" + _type_path + "/" + name;
 
     // Read all data
     std::vector<byte> data;
@@ -29,11 +30,8 @@ Resource* BinaryLoader::load(const String name) {
     }
 
     // Return byte data
-    auto byte_data = new ByteArrayData(
-        name,
-        data
-    );
-    byte_data->full_path = file_path;
+    auto byte_data         = new ByteArrayData(name, data);
+    byte_data->full_path   = file_path;
     byte_data->loader_type = ResourceType::Binary;
 
     return byte_data;

@@ -1,19 +1,14 @@
-#ifndef __BINARY_LOADER_H__
-#define __BINARY_LOADER_H__
-
 #pragma once
 
 #include "resource_loader.hpp"
 
 class BinaryLoader : public ResourceLoader {
-public:
+  public:
     BinaryLoader();
     ~BinaryLoader();
 
     Resource* load(const String name);
-    void unload(Resource* resource);
+    void      unload(Resource* resource);
 
-private:
+  private:
 };
-
-#endif // __BINARY_LOADER_H__

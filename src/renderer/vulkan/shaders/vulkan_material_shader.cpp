@@ -1,16 +1,16 @@
 #include "renderer/vulkan/shaders/vulkan_material_shader.hpp"
 
-#include "renderer/renderer_types.hpp"
 #include "resources/datapack.hpp"
 
 // Constructor & Destructor
 VulkanMaterialShader::VulkanMaterialShader(
-    const VulkanDevice* const device,
+    const VulkanDevice* const            device,
     const vk::AllocationCallbacks* const allocator,
-    const vk::RenderPass render_pass,
-    const vk::SampleCountFlagBits number_of_msaa_samples,
-    ResourceSystem* resource_system
-) : VulkanShader(device, allocator) {
+    const vk::RenderPass                 render_pass,
+    const vk::SampleCountFlagBits        number_of_msaa_samples,
+    ResourceSystem*                      resource_system
+)
+    : VulkanShader(device, allocator) {
     Logger::trace(RENDERER_VULKAN_LOG, "Creating material shader.");
 
     // === Create shader modules ===
@@ -19,27 +19,33 @@ VulkanMaterialShader::VulkanMaterialShader(
     try {
         // Load raw binary data
         auto vertex_code = (ByteArrayData*) resource_system->load(
-            "shaders/builtin.material_shader.vert.spv", ResourceType::Binary);
+            "shaders/builtin.material_shader.vert.spv", ResourceType::Binary
+        );
         auto fragment_code = (ByteArrayData*) resource_system->load(
-            "shaders/builtin.material_shader.frag.spv", ResourceType::Binary);
+            "shaders/builtin.material_shader.frag.spv", ResourceType::Binary
+        );
 
         // Create shader modules
-        vertex_shader_module = create_shader_module(vertex_code->data);
+        vertex_shader_module   = create_shader_module(vertex_code->data);
         fragment_shader_module = create_shader_module(fragment_code->data);
 
         // Release resources
         resource_system->unload(vertex_code);
         resource_system->unload(fragment_code);
-    } catch (std::runtime_error e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
+    } catch (std::runtime_error e) {
+        Logger::fatal(RENDERER_VULKAN_LOG, e.what());
+    }
 
     // === Shader stages ===
     std::vector<vk::PipelineShaderStageCreateInfo> shader_stages(2);
 
     // Vertex shader stage
     shader_stages[0].setStage(vk::ShaderStageFlagBits::eVertex);
-    shader_stages[0].setModule(vertex_shader_module); // Shader module containing the code
-    shader_stages[0].setPName("main");                // Function to invoke as an entrypoint
-    shader_stages[0].setPSpecializationInfo(nullptr); // Initial shader constants
+    shader_stages[0].setModule(vertex_shader_module
+    );                                 // Shader module containing the code
+    shader_stages[0].setPName("main"); // Function to invoke as an entrypoint
+    shader_stages[0].setPSpecializationInfo(nullptr
+    ); // Initial shader constants
 
     // Fragment shader stage
     shader_stages[1].setStage(vk::ShaderStageFlagBits::eFragment);
@@ -58,8 +64,8 @@ VulkanMaterialShader::VulkanMaterialShader(
     add_descriptor(global_descriptor, VulkanSettings::max_frames_in_flight);
 
     // Local descriptor
-    uint32 total_entity_count =
-        VulkanSettings::max_material_count * VulkanSettings::max_frames_in_flight;
+    uint32 total_entity_count = VulkanSettings::max_material_count *
+                                VulkanSettings::max_frames_in_flight;
     auto local_descriptor = new VulkanDescriptor(_device, _allocator);
     local_descriptor->add_uniform_buffer(
         vk::ShaderStageFlagBits::eVertex,
@@ -103,17 +109,14 @@ VulkanMaterialShader::VulkanMaterialShader(
     attribute_descriptions[2].setFormat(vk::Format::eR32G32Sfloat);
     attribute_descriptions[2].setOffset(offsetof(Vertex, texture_coord));
 
-    vk::PipelineVertexInputStateCreateInfo vertex_input_info{};
+    vk::PipelineVertexInputStateCreateInfo vertex_input_info {};
     vertex_input_info.setVertexBindingDescriptionCount(1);
     vertex_input_info.setVertexBindingDescriptions(binding_descriptions);
     vertex_input_info.setVertexAttributeDescriptions(attribute_descriptions);
 
     // === Create pipeline ===
     create_pipeline(
-        shader_stages,
-        vertex_input_info,
-        render_pass,
-        number_of_msaa_samples
+        shader_stages, vertex_input_info, render_pass, number_of_msaa_samples
     );
 
     // === Free unused objects ===
@@ -139,27 +142,32 @@ void VulkanMaterialShader::use(const vk::CommandBuffer& command_buffer) {
 }
 
 void VulkanMaterialShader::bind_global_description_set(
-    const vk::CommandBuffer& command_buffer,
-    const uint32 current_frame
+    const vk::CommandBuffer& command_buffer, const uint32 current_frame
 ) {
     command_buffer.bindDescriptorSets(
         vk::PipelineBindPoint::eGraphics,
-        _pipeline_layout, 0,
-        1, &_global_descriptor_sets[current_frame],
-        0, nullptr
+        _pipeline_layout,
+        0,
+        1,
+        &_global_descriptor_sets[current_frame],
+        0,
+        nullptr
     );
 }
 
 void VulkanMaterialShader::bind_material(
     const vk::CommandBuffer& command_buffer,
-    const uint32 current_frame,
-    const uint32 material_id
+    const uint32             current_frame,
+    const uint32             material_id
 ) {
     command_buffer.bindDescriptorSets(
         vk::PipelineBindPoint::eGraphics,
-        _pipeline_layout, 1,
-        1, &_instance_states[material_id].descriptor_sets[current_frame],
-        0, nullptr
+        _pipeline_layout,
+        1,
+        1,
+        &_instance_states[material_id].descriptor_sets[current_frame],
+        0,
+        nullptr
     );
 }
 
@@ -168,25 +176,25 @@ void VulkanMaterialShader::update_global_state(
     const glm::mat4 view,
     const glm::vec3 view_position,
     const glm::vec4 ambient_color,
-    const int32 mode,
-    const uint32 current_frame
+    const int32     mode,
+    const uint32    current_frame
 ) {
     // Define ubo transformations
-    GlobalUniformObject ubo{};
-    ubo.view = view;
+    GlobalUniformObject ubo {};
+    ubo.view    = view;
     ubo.project = projection;
 
     // Copy ubo data to the buffer
-    descriptors()[0]->get_buffer(0, current_frame)->load_data(&ubo, 0, sizeof(ubo));
+    descriptors()[0]
+        ->get_buffer(0, current_frame)
+        ->load_data(&ubo, 0, sizeof(ubo));
 }
 
 void VulkanMaterialShader::set_model(
-    const glm::mat4 model,
-    const uint64 obj_id,
-    const uint32 current_frame
+    const glm::mat4 model, const uint64 obj_id, const uint32 current_frame
 ) {
-    uint32 size = sizeof(LocalUniformObjectV);
-    uint64 offset = sizeof(LocalUniformObjectV) * obj_id;
+    uint32              size   = sizeof(LocalUniformObjectV);
+    uint64              offset = sizeof(LocalUniformObjectV) * obj_id;
     LocalUniformObjectV lub;
 
     lub.model = model;
@@ -195,21 +203,25 @@ void VulkanMaterialShader::set_model(
     auto uniform_buffer = descriptors()[1]->get_buffer(0, current_frame);
 
     MaterialInstanceState material_state = _instance_states[obj_id];
-    if (material_state.descriptor_states[0].ids[current_frame].has_value() == false) {
+    if (material_state.descriptor_states[0].ids[current_frame].has_value() ==
+        false) {
         vk::DescriptorBufferInfo buffer_info = {};
         buffer_info.setBuffer(uniform_buffer->handle);
         buffer_info.setOffset(offset);
         buffer_info.setRange(size);
 
         vk::WriteDescriptorSet descriptor_write = {};
-        descriptor_write.setDstSet(material_state.descriptor_sets[current_frame]);
+        descriptor_write.setDstSet(material_state.descriptor_sets[current_frame]
+        );
         descriptor_write.setDstBinding(0);
         descriptor_write.setDstArrayElement(0);
         descriptor_write.setDescriptorType(vk::DescriptorType::eUniformBuffer);
         descriptor_write.setDescriptorCount(1);
         descriptor_write.setPBufferInfo(&buffer_info);
 
-        _device->handle().updateDescriptorSets(1, &descriptor_write, 0, nullptr);
+        _device->handle().updateDescriptorSets(
+            1, &descriptor_write, 0, nullptr
+        );
 
         material_state.descriptor_states[0].ids[current_frame] = 0;
     }
@@ -218,25 +230,31 @@ void VulkanMaterialShader::set_model(
 }
 
 void VulkanMaterialShader::apply_material(
-    const Material* const material,
-    const uint32 current_frame
+    const Material* const material, const uint32 current_frame
 ) {
     if (!material || !material->internal_id.has_value()) {
-        Logger::error(RENDERER_VULKAN_LOG,
-            "Application of a non-existant material attempted. Nothing was done.");
+        Logger::error(
+            RENDERER_VULKAN_LOG,
+            "Application of a non-existant material attempted. Nothing was "
+            "done."
+        );
         return;
     }
 
     // Obtain material data.
-    MaterialInstanceState material_state = _instance_states[material->internal_id.value()];
+    MaterialInstanceState material_state =
+        _instance_states[material->internal_id.value()];
     if (material_state.allocated == false) {
-        Logger::error(RENDERER_VULKAN_LOG, "Requested material is not allocated.");
+        Logger::error(
+            RENDERER_VULKAN_LOG, "Requested material is not allocated."
+        );
         return;
     }
-    vk::DescriptorSet object_descriptor_set = material_state.descriptor_sets[current_frame];
+    vk::DescriptorSet object_descriptor_set =
+        material_state.descriptor_sets[current_frame];
 
     // Load data to buffer
-    uint32 size = sizeof(LocalUniformObjectF);
+    uint32 size   = sizeof(LocalUniformObjectF);
     uint64 offset = sizeof(LocalUniformObjectF) * material->internal_id.value();
     LocalUniformObjectF lub;
 
@@ -248,11 +266,13 @@ void VulkanMaterialShader::apply_material(
 
     // Update descriptor set if needed
     // Combined descriptor
-    std::vector<vk::WriteDescriptorSet> descriptor_writes{};
-    uint32 descriptor_index = 1;
+    std::vector<vk::WriteDescriptorSet> descriptor_writes {};
+    uint32                              descriptor_index = 1;
 
     // Uniform buffer
-    if (material_state.descriptor_states[descriptor_index].ids[current_frame].has_value() == false) {
+    if (material_state.descriptor_states[descriptor_index]
+            .ids[current_frame]
+            .has_value() == false) {
         vk::DescriptorBufferInfo buffer_info = {};
         buffer_info.setBuffer(uniform_buffer->handle);
         buffer_info.setOffset(offset);
@@ -267,7 +287,8 @@ void VulkanMaterialShader::apply_material(
         descriptor_write.setPBufferInfo(&buffer_info);
         descriptor_writes.push_back(descriptor_write);
 
-        material_state.descriptor_states[descriptor_index].ids[current_frame] = 0;
+        material_state.descriptor_states[descriptor_index].ids[current_frame] =
+            0;
     }
     descriptor_index++;
 
@@ -281,11 +302,14 @@ void VulkanMaterialShader::apply_material(
             break;
 
         default:
-            Logger::fatal(RENDERER_VULKAN_LOG, "Unable to bind sampler to a known use.");
+            Logger::fatal(
+                RENDERER_VULKAN_LOG, "Unable to bind sampler to a known use."
+            );
             break;
         }
 
-        auto& descriptor_id = material_state.descriptor_states[descriptor_index].ids[current_frame];
+        auto& descriptor_id = material_state.descriptor_states[descriptor_index]
+                                  .ids[current_frame];
 
         // If the texture hasn't been loaded yet, use the default.
         if (texture == nullptr || !texture->id.has_value()) {
@@ -294,7 +318,8 @@ void VulkanMaterialShader::apply_material(
         }
 
         // Update sampler if needed
-        if (!descriptor_id.has_value() || descriptor_id.value() != texture->id) {
+        if (!descriptor_id.has_value() ||
+            descriptor_id.value() != texture->id) {
             VulkanTextureData* texture_data =
                 reinterpret_cast<VulkanTextureData*>(texture->internal_data());
 
@@ -307,7 +332,9 @@ void VulkanMaterialShader::apply_material(
             descriptor_write.setDstSet(object_descriptor_set);
             descriptor_write.setDstBinding(descriptor_index);
             descriptor_write.setDstArrayElement(0);
-            descriptor_write.setDescriptorType(vk::DescriptorType::eCombinedImageSampler);
+            descriptor_write.setDescriptorType(
+                vk::DescriptorType::eCombinedImageSampler
+            );
             descriptor_write.setDescriptorCount(1);
             descriptor_write.setPImageInfo(&image_info);
             descriptor_writes.push_back(descriptor_write);
@@ -326,7 +353,8 @@ void VulkanMaterialShader::acquire_resource(Material* const material) {
     material->internal_id = get_next_available_ubo_index();
 
     // Reset object descriptor info
-    MaterialInstanceState& state = _instance_states[material->internal_id.value()];
+    MaterialInstanceState& state =
+        _instance_states[material->internal_id.value()];
     for (auto descriptor_state : state.descriptor_states) {
         for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++) {
             descriptor_state.ids[i].reset();
@@ -338,20 +366,25 @@ void VulkanMaterialShader::acquire_resource(Material* const material) {
 
     // Allocate descriptor sets.
     std::vector<vk::DescriptorSetLayout> layouts(
-        VulkanSettings::max_frames_in_flight, local_descriptor->set_layout);
-    vk::DescriptorSetAllocateInfo allocation_info{};
+        VulkanSettings::max_frames_in_flight, local_descriptor->set_layout
+    );
+    vk::DescriptorSetAllocateInfo allocation_info {};
     allocation_info.setDescriptorPool(local_descriptor->pool);
     allocation_info.setSetLayouts(layouts);
 
     try {
-        state.descriptor_sets = _device->handle().allocateDescriptorSets(allocation_info);
-    } catch (vk::SystemError e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
+        state.descriptor_sets =
+            _device->handle().allocateDescriptorSets(allocation_info);
+    } catch (vk::SystemError e) {
+        Logger::fatal(RENDERER_VULKAN_LOG, e.what());
+    }
     state.allocated = true;
 }
 
 void VulkanMaterialShader::release_resource(Material* const material) {
     if (!material->internal_id.has_value()) return;
-    MaterialInstanceState& state = _instance_states[material->internal_id.value()];
+    MaterialInstanceState& state =
+        _instance_states[material->internal_id.value()];
 
     // Local descriptor is at set=1
     auto local_descriptor = descriptors()[1];
@@ -359,8 +392,12 @@ void VulkanMaterialShader::release_resource(Material* const material) {
     // Release object descriptor sets.
     _device->handle().waitIdle();
     try {
-        _device->handle().freeDescriptorSets(local_descriptor->pool, state.descriptor_sets);
-    } catch (vk::SystemError e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
+        _device->handle().freeDescriptorSets(
+            local_descriptor->pool, state.descriptor_sets
+        );
+    } catch (vk::SystemError e) {
+        Logger::fatal(RENDERER_VULKAN_LOG, e.what());
+    }
 
     // Reset object descriptor info
     for (auto descriptor_state : state.descriptor_states) {
@@ -383,18 +420,22 @@ void VulkanMaterialShader::create_global_descriptor_sets() {
     auto global_descriptor = descriptors()[0];
 
     std::vector<vk::DescriptorSetLayout> layouts(
-        VulkanSettings::max_frames_in_flight, global_descriptor->set_layout);
-    vk::DescriptorSetAllocateInfo allocation_info{};
+        VulkanSettings::max_frames_in_flight, global_descriptor->set_layout
+    );
+    vk::DescriptorSetAllocateInfo allocation_info {};
     allocation_info.setDescriptorPool(global_descriptor->pool);
     allocation_info.setSetLayouts(layouts);
 
     try {
-        _global_descriptor_sets = _device->handle().allocateDescriptorSets(allocation_info);
-    } catch (vk::SystemError e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
+        _global_descriptor_sets =
+            _device->handle().allocateDescriptorSets(allocation_info);
+    } catch (vk::SystemError e) {
+        Logger::fatal(RENDERER_VULKAN_LOG, e.what());
+    }
 
     for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++) {
         // Combined descriptor
-        std::array<vk::WriteDescriptorSet, 1> descriptor_writes{};
+        std::array<vk::WriteDescriptorSet, 1> descriptor_writes {};
 
         vk::DescriptorBufferInfo buffer_info = {};
         buffer_info.setBuffer(global_descriptor->get_buffer(0, i)->handle);
@@ -404,7 +445,9 @@ void VulkanMaterialShader::create_global_descriptor_sets() {
         descriptor_writes[0].setDstSet(_global_descriptor_sets[i]);
         descriptor_writes[0].setDstBinding(0);
         descriptor_writes[0].setDstArrayElement(0);
-        descriptor_writes[0].setDescriptorType(vk::DescriptorType::eUniformBuffer);
+        descriptor_writes[0].setDescriptorType(
+            vk::DescriptorType::eUniformBuffer
+        );
         descriptor_writes[0].setDescriptorCount(1);
         descriptor_writes[0].setPBufferInfo(&buffer_info);
 

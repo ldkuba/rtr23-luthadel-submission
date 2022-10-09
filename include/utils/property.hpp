@@ -1,5 +1,7 @@
 #pragma once
 
+#include "string.hpp"
+
 #include <functional>
 #include <utility>
 
@@ -8,44 +10,37 @@
 
 template<class T>
 class Property {
-private:
+  private:
     class PropertyException {
-    public:
+      public:
         PropertyException(const String message) {}
         ~PropertyException() {}
     };
 
-public:
+  public:
     Property(
-        const std::function<T const& ()> get_fn,
-        const std::function<void(T)> set_fn
-        = [](auto&& value) { throw PropertyException("This property cannot be changed."); }
-    ) : _getter{ std::move(get_fn) }, _setter{ std::move(set_fn) } {}
+        const std::function<T const&()> get_fn,
+        const std::function<void(T)>    set_fn =
+            [](auto&& value) {
+                throw PropertyException("This property cannot be changed.");
+            }
+    )
+        : _getter { std::move(get_fn) }, _setter { std::move(set_fn) } {}
 
-    Property() = delete;
+    Property()                                 = delete;
+    Property<T>& operator=(Property<T> const&) = delete;
     // TODO: Probable error causes, should deal with them.
     // Property<T>(Property<T> const&) = delete;
-    Property<T>& operator = (Property<T> const&) = delete;
     // Property(Property<T>&&) = delete;
     // Property<T>& operator = (Property<T>&&) = delete;
 
-    operator T const& () const {
-        return _getter();
-    }
+    operator T const&() const { return _getter(); }
 
-    void operator=(T const& value) {
-        _setter(value);
-    }
+    void     operator=(T const& value) { _setter(value); }
+    void     operator=(T&& value) { _setter(std::move(value)); }
+    T const& operator()() const { return _getter(); }
 
-    void operator=(T&& value) {
-        _setter(std::move(value));
-    }
-
-    T const& operator () () const {
-        return _getter();
-    }
-
-private:
-    const std::function<T const& ()> _getter;
-    const std::function<void(T)> _setter;
+  private:
+    const std::function<T const&()> _getter;
+    const std::function<void(T)>    _setter;
 };

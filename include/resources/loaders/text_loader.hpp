@@ -3,13 +3,12 @@
 #include "resource_loader.hpp"
 
 class TextLoader : public ResourceLoader {
-public:
+  public:
     TextLoader();
     ~TextLoader();
 
     Resource* load(const String name);
-    void unload(Resource* resource);
+    void      unload(Resource* resource);
 
-private:
-
+  private:
 };

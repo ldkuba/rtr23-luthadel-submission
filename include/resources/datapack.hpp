@@ -3,7 +3,7 @@
 #include "resource.hpp"
 
 class ByteArrayData : public Resource {
-public:
+  public:
     const std::vector<byte> data;
 
     ByteArrayData(const String name, const std::vector<byte> data)
@@ -11,9 +11,8 @@ public:
     ~ByteArrayData() {}
 };
 
-
 class TextData : public Resource {
-public:
+  public:
     const String data;
 
     TextData(const String name, const String data)

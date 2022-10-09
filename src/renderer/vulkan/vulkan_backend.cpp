@@ -1,17 +1,17 @@
 #include "renderer/vulkan/vulkan_backend.hpp"
 
 VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback_function(
-    VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
-    VkDebugUtilsMessageTypeFlagsEXT message_type,
+    VkDebugUtilsMessageSeverityFlagBitsEXT      message_severity,
+    VkDebugUtilsMessageTypeFlagsEXT             message_type,
     const VkDebugUtilsMessengerCallbackDataEXT* callback_data,
-    void* user_data
+    void*                                       user_data
 );
 
-
+// Constructor
 VulkanBackend::VulkanBackend(
-    Platform::Surface* const surface,
-    ResourceSystem* const resource_system
-) : RendererBackend(surface, resource_system) {
+    Platform::Surface* const surface, ResourceSystem* const resource_system
+)
+    : RendererBackend(surface, resource_system) {
     // Create instance
     _vulkan_instance = create_vulkan_instance();
 
@@ -20,15 +20,14 @@ VulkanBackend::VulkanBackend(
 
     // Get vulkan surface
     try {
-        _vulkan_surface = surface->get_vulkan_surface(_vulkan_instance, _allocator);
-    } catch (std::runtime_error e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
+        _vulkan_surface =
+            surface->get_vulkan_surface(_vulkan_instance, _allocator);
+    } catch (std::runtime_error e) {
+        Logger::fatal(RENDERER_VULKAN_LOG, e.what());
+    }
 
     // Create device
-    _device = new VulkanDevice(
-        _vulkan_instance,
-        _vulkan_surface,
-        _allocator
-    );
+    _device = new VulkanDevice(_vulkan_instance, _vulkan_surface, _allocator);
 
     // Create swapchain
     _swapchain = new VulkanSwapchain(
@@ -40,11 +39,8 @@ VulkanBackend::VulkanBackend(
     );
 
     // Create render pass
-    _render_pass = new VulkanRenderPass(
-        &_device->handle(),
-        _allocator,
-        _swapchain
-    );
+    _render_pass =
+        new VulkanRenderPass(&_device->handle(), _allocator, _swapchain);
 
     // Initialize framebuffers
     _swapchain->initialize_framebuffers(&_render_pass->handle());
@@ -70,52 +66,61 @@ VulkanBackend::VulkanBackend(
     create_buffers();
 
     // TODO: TEMP COMMAND CODE
-    _command_buffers = _command_pool->allocate_command_buffers(VulkanSettings::max_frames_in_flight);
+    _command_buffers = _command_pool->allocate_command_buffers(
+        VulkanSettings::max_frames_in_flight
+    );
 
     // Synchronization
     create_sync_objects();
 }
-
+// Destructor
 VulkanBackend::~VulkanBackend() {
     _device->handle().waitIdle();
 
     // Swapchain
     delete _swapchain;
 
-
-    // TODO: TEMP INDEX BUFFER CODE
+    // TODO: TEMP VERTEX & INDEX BUFFER CODE
     delete _index_buffer;
-
-
-    // TODO: TEMP VERTEX BUFFER CODE
     delete _vertex_buffer;
 
-
+    // Shader
     delete _material_shader;
+    // Render pass
     delete _render_pass;
+    // Command pool
     delete _command_pool;
 
     // Synchronization code
     for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++) {
-        _device->handle().destroySemaphore(_semaphores_image_available[i], _allocator);
-        _device->handle().destroySemaphore(_semaphores_render_finished[i], _allocator);
+        _device->handle().destroySemaphore(
+            _semaphores_image_available[i], _allocator
+        );
+        _device->handle().destroySemaphore(
+            _semaphores_render_finished[i], _allocator
+        );
         _device->handle().destroyFence(_fences_in_flight[i], _allocator);
     }
     Logger::trace(RENDERER_VULKAN_LOG, "Synchronization objects destroyed.");
 
-
+    // Device
     delete _device;
-
+    // Surface
     _vulkan_instance.destroySurfaceKHR(_vulkan_surface);
-
+    // Validation layer
     if (VulkanSettings::enable_validation_layers) {
-        _vulkan_instance.destroyDebugUtilsMessengerEXT(_debug_messenger, _allocator,
-            vk::DispatchLoaderDynamic{ _vulkan_instance, vkGetInstanceProcAddr });
+        _vulkan_instance.destroyDebugUtilsMessengerEXT(
+            _debug_messenger,
+            _allocator,
+            vk::DispatchLoaderDynamic { _vulkan_instance,
+                                        vkGetInstanceProcAddr }
+        );
         Logger::trace(RENDERER_VULKAN_LOG, "Debug messenger destroyed.");
     }
+    // instance
     _vulkan_instance.destroy(_allocator);
-    Logger::trace(RENDERER_VULKAN_LOG, "Vulkan instance destroyed.");
 
+    Logger::trace(RENDERER_VULKAN_LOG, "Vulkan instance destroyed.");
 }
 
 // ////////////////////////////// //
@@ -123,9 +128,7 @@ VulkanBackend::~VulkanBackend() {
 // ////////////////////////////// //
 
 void VulkanBackend::resized(const uint32 width, const uint32 height) {
-    if (_swapchain != nullptr) {
-        _swapchain->change_extent(width, height);
-    }
+    if (_swapchain != nullptr) _swapchain->change_extent(width, height);
 }
 
 bool VulkanBackend::begin_frame(const float32 delta_time) {
@@ -134,25 +137,33 @@ bool VulkanBackend::begin_frame(const float32 delta_time) {
     try {
         auto result = _device->handle().waitForFences(fences, true, UINT64_MAX);
         if (result != vk::Result::eSuccess) {
-            Logger::warning(RENDERER_VULKAN_LOG, "End of frame fence timed-out.");
+            Logger::warning(
+                RENDERER_VULKAN_LOG, "End of frame fence timed-out."
+            );
             return false;
         }
-    } catch (const vk::SystemError& e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
+    } catch (const vk::SystemError& e) {
+        Logger::fatal(RENDERER_VULKAN_LOG, e.what());
+    }
 
     // Acquire next swapchain image index
-    _current_image = _swapchain->acquire_next_image_index(_semaphores_image_available[_current_frame]);
+    _current_image = _swapchain->acquire_next_image_index(
+        _semaphores_image_available[_current_frame]
+    );
 
     // Reset fence
     try {
         _device->handle().resetFences(fences);
-    } catch (const vk::SystemError& e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
+    } catch (const vk::SystemError& e) {
+        Logger::fatal(RENDERER_VULKAN_LOG, e.what());
+    }
 
     // Begin recording commands
     auto command_buffer = _command_buffers[_current_frame];
     command_buffer.reset();
 
     // Begin recoding
-    vk::CommandBufferBeginInfo begin_info{};
+    vk::CommandBufferBeginInfo begin_info {};
     begin_info.setPInheritanceInfo(nullptr);
 
     command_buffer.begin(begin_info);
@@ -163,7 +174,7 @@ bool VulkanBackend::begin_frame(const float32 delta_time) {
 
     // Set dynamic states
     // Viewport
-    vk::Viewport viewport{};
+    vk::Viewport viewport {};
     viewport.setX(0.0f);
     viewport.setY(static_cast<float32>(_swapchain->extent().height));
     viewport.setWidth(static_cast<float32>(_swapchain->extent().width));
@@ -174,7 +185,7 @@ bool VulkanBackend::begin_frame(const float32 delta_time) {
     command_buffer.setViewport(0, 1, &viewport);
 
     // Scissors
-    vk::Rect2D scissor{};
+    vk::Rect2D scissor {};
     scissor.setOffset({ 0, 0 });
     scissor.setExtent(_swapchain->extent);
 
@@ -193,27 +204,38 @@ bool VulkanBackend::end_frame(const float32 delta_time) {
     command_buffer.end();
 
     // Submit command buffer
-    vk::PipelineStageFlags wait_stages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
-    std::vector<vk::Semaphore> wait_semaphores = { _semaphores_image_available[_current_frame] };
-    std::vector<vk::Semaphore> signal_semaphores = { _semaphores_render_finished[_current_frame] };
+    vk::PipelineStageFlags wait_stages[] = {
+        vk::PipelineStageFlagBits::eColorAttachmentOutput
+    };
+    std::vector<vk::Semaphore> wait_semaphores = {
+        _semaphores_image_available[_current_frame]
+    };
+    std::vector<vk::Semaphore> signal_semaphores = {
+        _semaphores_render_finished[_current_frame]
+    };
 
-    vk::SubmitInfo submit_info{};
+    vk::SubmitInfo submit_info {};
     submit_info.setPWaitDstStageMask(wait_stages);
     submit_info.setWaitSemaphores(wait_semaphores);
     submit_info.setSignalSemaphores(signal_semaphores);
     submit_info.setCommandBufferCount(1);
-    submit_info.setPCommandBuffers(&_command_buffers[_current_frame]);
+    submit_info.setPCommandBuffers(&command_buffer);
     std::array<vk::SubmitInfo, 1> submits = { submit_info };
 
     try {
-        _device->graphics_queue.submit(submits, _fences_in_flight[_current_frame]);
-    } catch (const vk::SystemError& e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
+        _device->graphics_queue.submit(
+            submits, _fences_in_flight[_current_frame]
+        );
+    } catch (const vk::SystemError& e) {
+        Logger::fatal(RENDERER_VULKAN_LOG, e.what());
+    }
 
     // Present swapchain
     _swapchain->present(_current_image, signal_semaphores);
 
     // Advance current frame
-    _current_frame = (_current_frame + 1) % VulkanSettings::max_frames_in_flight;
+    _current_frame =
+        (_current_frame + 1) % VulkanSettings::max_frames_in_flight;
     return true;
 }
 
@@ -222,54 +244,55 @@ void VulkanBackend::update_global_state(
     const glm::mat4 view,
     const glm::vec3 view_position,
     const glm::vec4 ambient_color,
-    const int32 mode
+    const int32     mode
 ) {
     _material_shader->update_global_state(
-        projection,
-        view,
-        view_position,
-        ambient_color,
-        mode,
-        _current_frame
+        projection, view, view_position, ambient_color, mode, _current_frame
     );
 
     auto command_buffer = _command_buffers[_current_frame];
 
     // Bind material shader
     _material_shader->use(command_buffer);
-    _material_shader->bind_global_description_set(command_buffer, _current_frame);
+    _material_shader->bind_global_description_set(
+        command_buffer, _current_frame
+    );
 }
 
-void VulkanBackend::draw_geometry(
-    const GeometryRenderData data
-) {
-    if (!data.geometry || !data.geometry->internal_id.has_value())
-        return;
+void VulkanBackend::draw_geometry(const GeometryRenderData data) {
+    // Check if geometry data is valid
+    if (!data.geometry || !data.geometry->internal_id.has_value()) return;
 
-    auto buffer_data = _geometries[data.geometry->internal_id.value()];
+    auto buffer_data    = _geometries[data.geometry->internal_id.value()];
     auto command_buffer = _command_buffers[_current_frame];
 
-    // TODO: CHECK CURRENT SHADER (MAYBE WE NEED TO CALL _material_shader->use())
+    // TODO: CHECK CURRENT SHADER (MAYBE WE NEED TO CALL
+    // _material_shader->use())
 
     // Upload data
-    uint64 obj_id = data.geometry->material()->internal_id.value(); // TODO: TEMP
-    _material_shader->set_model(data.model, obj_id, _current_frame);
+    uint64 material_id =
+        data.geometry->material()->internal_id.value(); // TODO: TEMP
+    _material_shader->set_model(data.model, material_id, _current_frame);
     _material_shader->apply_material(data.geometry->material, _current_frame);
 
     // Bind object
-    _material_shader->bind_material(command_buffer, _current_frame,
-        data.geometry->material()->internal_id.value());
+    _material_shader->bind_material(
+        command_buffer, _current_frame, material_id
+    );
 
     // Bind vertex buffer
-    std::vector<vk::Buffer>vertex_buffers = { _vertex_buffer->handle };
-    std::vector<vk::DeviceSize> offsets = { buffer_data.vertex_offset };
+    std::vector<vk::Buffer>     vertex_buffers = { _vertex_buffer->handle };
+    std::vector<vk::DeviceSize> offsets        = { buffer_data.vertex_offset };
     command_buffer.bindVertexBuffers(0, vertex_buffers, offsets);
 
     // Issue draw command
     if (buffer_data.index_count > 0) {
         // Bind index buffer
-        command_buffer.bindIndexBuffer(_index_buffer->handle, buffer_data.index_offset, vk::IndexType::eUint32);
-
+        command_buffer.bindIndexBuffer(
+            _index_buffer->handle,
+            buffer_data.index_offset,
+            vk::IndexType::eUint32 // TODO: Might need to be configurable
+        );
         // Draw command indexed
         command_buffer.drawIndexed(buffer_data.index_count, 1, 0, 0, 0);
     } else {
@@ -283,7 +306,9 @@ void VulkanBackend::create_texture(Texture* texture, const byte* const data) {
     Logger::trace(RENDERER_VULKAN_LOG, "Creating texture.");
 
     // Calculate mip levels
-    auto mip_levels = std::floor(std::log2(std::max(texture->width(), texture->height()))) + 1;
+    auto mip_levels =
+        std::floor(std::log2(std::max(texture->width(), texture->height()))) +
+        1;
 
     // Image format
     // NOTE: assumes 8 bits per channel
@@ -295,7 +320,7 @@ void VulkanBackend::create_texture(Texture* texture, const byte* const data) {
         texture->total_size,
         vk::BufferUsageFlagBits::eTransferSrc,
         vk::MemoryPropertyFlagBits::eHostVisible |
-        vk::MemoryPropertyFlagBits::eHostCoherent
+            vk::MemoryPropertyFlagBits::eHostCoherent
     );
 
     // Fill created memory with data
@@ -305,13 +330,15 @@ void VulkanBackend::create_texture(Texture* texture, const byte* const data) {
     // NOTE: Lots of assumptions here
     auto texture_image = new VulkanImage(_device, _allocator);
     texture_image->create(
-        texture->width, texture->height, mip_levels,
+        texture->width,
+        texture->height,
+        mip_levels,
         vk::SampleCountFlagBits::e1,
         texture_format,
         vk::ImageTiling::eOptimal,
         vk::ImageUsageFlagBits::eTransferSrc |
-        vk::ImageUsageFlagBits::eTransferDst |
-        vk::ImageUsageFlagBits::eSampled,
+            vk::ImageUsageFlagBits::eTransferDst |
+            vk::ImageUsageFlagBits::eSampled,
         vk::MemoryPropertyFlagBits::eDeviceLocal,
         vk::ImageAspectFlagBits::eColor
     );
@@ -324,22 +351,23 @@ void VulkanBackend::create_texture(Texture* texture, const byte* const data) {
             vk::ImageLayout::eUndefined,
             vk::ImageLayout::eTransferDstOptimal
         );
-    } catch (std::invalid_argument e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
+    } catch (std::invalid_argument e) {
+        Logger::fatal(RENDERER_VULKAN_LOG, e.what());
+    }
 
     // Copy buffer data to image
     staging_buffer->copy_data_to_image(command_buffer, texture_image);
 
-    // Generate mipmaps, this also transitions image to a layout optimal for sampling
-    texture_image->generate_mipmaps(
-        command_buffer
-    );
+    // Generate mipmaps, this also transitions image to a layout optimal for
+    // sampling
+    texture_image->generate_mipmaps(command_buffer);
     _command_pool->end_single_time_commands(command_buffer);
 
     // Cleanup
     delete staging_buffer;
 
     // TODO: CREATE SAMPLER
-    vk::SamplerCreateInfo sampler_info{};
+    vk::SamplerCreateInfo sampler_info {};
     sampler_info.setAddressModeU(vk::SamplerAddressMode::eRepeat);
     sampler_info.setAddressModeV(vk::SamplerAddressMode::eRepeat);
     sampler_info.setAddressModeW(vk::SamplerAddressMode::eRepeat);
@@ -359,14 +387,17 @@ void VulkanBackend::create_texture(Texture* texture, const byte* const data) {
 
     vk::Sampler texture_sampler;
     try {
-        texture_sampler = _device->handle().createSampler(sampler_info, _allocator);
-    } catch (vk::SystemError e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
+        texture_sampler =
+            _device->handle().createSampler(sampler_info, _allocator);
+    } catch (vk::SystemError e) {
+        Logger::fatal(RENDERER_VULKAN_LOG, e.what());
+    }
 
     // Save internal data
     VulkanTextureData* vulkan_texture_data = new VulkanTextureData();
-    vulkan_texture_data->image = texture_image;
-    vulkan_texture_data->sampler = texture_sampler;
-    texture->internal_data = vulkan_texture_data;
+    vulkan_texture_data->image             = texture_image;
+    vulkan_texture_data->sampler           = texture_sampler;
+    texture->internal_data                 = vulkan_texture_data;
 
     Logger::trace(RENDERER_VULKAN_LOG, "Texture created.");
 }
@@ -376,10 +407,8 @@ void VulkanBackend::destroy_texture(Texture* texture) {
     auto data = reinterpret_cast<VulkanTextureData*>(texture->internal_data());
 
     _device->handle().waitIdle();
-    if (data->image)
-        delete data->image;
-    if (data->sampler)
-        _device->handle().destroySampler(data->sampler);
+    if (data->image) delete data->image;
+    if (data->sampler) _device->handle().destroySampler(data->sampler);
 
     Logger::trace(RENDERER_VULKAN_LOG, "Texture destroyed.");
 }
@@ -387,8 +416,10 @@ void VulkanBackend::destroy_texture(Texture* texture) {
 // Material
 void VulkanBackend::create_material(Material* const material) {
     if (!material) {
-        Logger::error(RENDERER_VULKAN_LOG,
-            "Method create_material called with nullptr. Creation failed.");
+        Logger::error(
+            RENDERER_VULKAN_LOG,
+            "Method create_material called with nullptr. Creation failed."
+        );
         return;
     }
 
@@ -398,14 +429,18 @@ void VulkanBackend::create_material(Material* const material) {
 }
 void VulkanBackend::destroy_material(Material* const material) {
     if (!material) {
-        Logger::warning(RENDERER_VULKAN_LOG,
-            "Method destroy_material called with nullptr. Nothing was done.");
+        Logger::warning(
+            RENDERER_VULKAN_LOG,
+            "Method destroy_material called with nullptr. Nothing was done."
+        );
         return;
     }
     if (!material->internal_id.has_value()) {
-        Logger::warning(RENDERER_VULKAN_LOG,
+        Logger::warning(
+            RENDERER_VULKAN_LOG,
             "Method destroy_material called for a material which was already ",
-            "destroyed. Nothing was done.");
+            "destroyed. Nothing was done."
+        );
         return;
     }
     _material_shader->release_resource(material);
@@ -414,13 +449,15 @@ void VulkanBackend::destroy_material(Material* const material) {
 
 // Geometry
 void VulkanBackend::create_geometry(
-    Geometry* geometry,
+    Geometry*                 geometry,
     const std::vector<Vertex> vertices,
     const std::vector<uint32> indices
 ) {
     if (!geometry) {
-        Logger::error(RENDERER_VULKAN_LOG,
-            "Method create_geometry called with nullptr. Creation failed.");
+        Logger::error(
+            RENDERER_VULKAN_LOG,
+            "Method create_geometry called with nullptr. Creation failed."
+        );
         return;
     }
 
@@ -429,59 +466,55 @@ void VulkanBackend::create_geometry(
         return;
     }
 
-    auto is_reupload = geometry->internal_id.has_value();
+    auto               is_reupload = geometry->internal_id.has_value();
     VulkanGeometryData old_data;
 
     VulkanGeometryData* internal_data = nullptr;
     if (is_reupload) {
-        internal_data = &_geometries[geometry->internal_id.value()];
-        old_data.vertex_count = internal_data->vertex_count;
-        old_data.vertex_size = internal_data->vertex_size;
+        internal_data          = &_geometries[geometry->internal_id.value()];
+        old_data.vertex_count  = internal_data->vertex_count;
+        old_data.vertex_size   = internal_data->vertex_size;
         old_data.vertex_offset = internal_data->vertex_offset;
-        old_data.index_count = internal_data->index_count;
-        old_data.index_size = internal_data->index_size;
-        old_data.index_offset = internal_data->index_offset;
+        old_data.index_count   = internal_data->index_count;
+        old_data.index_size    = internal_data->index_size;
+        old_data.index_offset  = internal_data->index_offset;
     } else {
-        uint id = generate_geometry_id();
+        uint id               = generate_geometry_id();
         geometry->internal_id = id;
-        internal_data = &_geometries[id];
+        internal_data         = &_geometries[id];
     }
 
     if (internal_data == nullptr)
-        Logger::fatal(RENDERER_VULKAN_LOG, "Geometry internal data somehow nullptr.");
+        Logger::fatal(
+            RENDERER_VULKAN_LOG, "Geometry internal data somehow nullptr."
+        );
 
     // Upload vertex data
-    static uint32 geometry_vertex_offset = 0; // TODO: TEMP
-    static uint32 geometry_index_offset = 0;  // TODO: TEMP
-    vk::DeviceSize buffer_size = sizeof(vertices[0]) * vertices.size();
+    static uint32  geometry_vertex_offset = 0; // TODO: TEMP
+    static uint32  geometry_index_offset  = 0; // TODO: TEMP
+    vk::DeviceSize buffer_size   = sizeof(vertices[0]) * vertices.size();
     vk::DeviceSize buffer_offset = geometry_vertex_offset;
 
-    internal_data->vertex_count = vertices.size();
-    internal_data->vertex_size = buffer_size;
+    internal_data->vertex_count  = vertices.size();
+    internal_data->vertex_size   = buffer_size;
     internal_data->vertex_offset = buffer_offset;
 
     upload_data_to_buffer(
-        vertices.data(),
-        buffer_size,
-        buffer_offset,
-        _vertex_buffer
+        vertices.data(), buffer_size, buffer_offset, _vertex_buffer
     );
     geometry_vertex_offset += buffer_size;
 
     // Upload index data
     if (indices.size() > 0) {
-        buffer_size = sizeof(indices[0]) * indices.size();
+        buffer_size   = sizeof(indices[0]) * indices.size();
         buffer_offset = geometry_index_offset;
 
-        internal_data->index_count = indices.size();
-        internal_data->index_size = buffer_size;
+        internal_data->index_count  = indices.size();
+        internal_data->index_size   = buffer_size;
         internal_data->index_offset = buffer_offset;
 
         upload_data_to_buffer(
-            indices.data(),
-            buffer_size,
-            buffer_offset,
-            _index_buffer
+            indices.data(), buffer_size, buffer_offset, _index_buffer
         );
         geometry_index_offset += buffer_size;
     }
@@ -490,17 +523,20 @@ void VulkanBackend::create_geometry(
         // TODO: FREE VERTEX & INDEX DATA
     }
 }
-
 void VulkanBackend::destroy_geometry(Geometry* geometry) {
     if (!geometry) {
-        Logger::warning(RENDERER_VULKAN_LOG,
-            "Method destroy_geometry called with nullptr. Nothing was done.");
+        Logger::warning(
+            RENDERER_VULKAN_LOG,
+            "Method destroy_geometry called with nullptr. Nothing was done."
+        );
         return;
     }
     if (!geometry->internal_id.has_value()) {
-        Logger::warning(RENDERER_VULKAN_LOG,
+        Logger::warning(
+            RENDERER_VULKAN_LOG,
             "Method destroy_geometry called for a geometry which was already ",
-            "destroyed. Nothing was done.");
+            "destroyed. Nothing was done."
+        );
         return;
     }
 
@@ -518,19 +554,24 @@ void VulkanBackend::destroy_geometry(Geometry* geometry) {
 vk::Instance VulkanBackend::create_vulkan_instance() const {
     Logger::trace(RENDERER_VULKAN_LOG, "Creating a vulkan instance.");
 
-    if (VulkanSettings::enable_validation_layers && !all_validation_layers_are_available())
-        Logger::fatal(RENDERER_VULKAN_LOG, "Validation layer was requested, but not available.");
+    if (VulkanSettings::enable_validation_layers &&
+        !all_validation_layers_are_available())
+        Logger::fatal(
+            RENDERER_VULKAN_LOG,
+            "Validation layer was requested, but not available."
+        );
 
     // Optional application info
-    vk::ApplicationInfo app_info{};
-    app_info.setPApplicationName(APP_NAME);                   // Application name
-    app_info.setApplicationVersion(1);                        // Application version
-    app_info.setPEngineName(ENGINE_NAME);                     // Engine name
-    app_info.setEngineVersion(1);                             // Engine version
-    app_info.setApiVersion(VulkanSettings::vulkan_version);   // Set vulkan version
+    vk::ApplicationInfo app_info {};
+    app_info.setPApplicationName(APP_NAME); // Application name
+    app_info.setApplicationVersion(1);      // Application version
+    app_info.setPEngineName(ENGINE_NAME);   // Engine name
+    app_info.setEngineVersion(1);           // Engine version
+    app_info.setApiVersion(VulkanSettings::vulkan_version
+    ); // Set vulkan version
 
     // Mandatory vulkan info info
-    vk::InstanceCreateInfo create_info{};
+    vk::InstanceCreateInfo create_info {};
     create_info.setPApplicationInfo(&app_info);
 
     // Specifying required extensions:
@@ -546,7 +587,9 @@ vk::Instance VulkanBackend::create_vulkan_instance() const {
     vk::DebugUtilsMessengerCreateInfoEXT debug_create_info;
     if (VulkanSettings::enable_validation_layers) {
         debug_create_info = debug_messenger_create_info();
-        create_info.setPNext((vk::DebugUtilsMessengerCreateInfoEXT*) &debug_create_info);
+        create_info.setPNext(
+            (vk::DebugUtilsMessengerCreateInfoEXT*) &debug_create_info
+        );
         create_info.setPEnabledLayerNames(VulkanSettings::validation_layers);
     }
 
@@ -554,13 +597,16 @@ vk::Instance VulkanBackend::create_vulkan_instance() const {
     vk::Instance instance;
     try {
         instance = vk::createInstance(create_info, _allocator);
-    } catch (const vk::SystemError& e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
+    } catch (const vk::SystemError& e) {
+        Logger::fatal(RENDERER_VULKAN_LOG, e.what());
+    }
 
 #define PRINT_EXTENSIONS 0
 #if PRINT_EXTENSIONS
     // Get extension data
     auto extensions = vk::enumerateInstanceExtensionProperties();
-    for (const auto& extension : extensions) std::cout << '\t' << extension.extensionName << '\n';
+    for (const auto& extension : extensions)
+        std::cout << '\t' << extension.extensionName << '\n';
 #endif
 
     Logger::trace(RENDERER_VULKAN_LOG, "Vulkan instance created.");
@@ -575,13 +621,18 @@ vk::DebugUtilsMessengerEXT VulkanBackend::setup_debug_messenger() const {
     auto create_info = debug_messenger_create_info();
 
     // Dispatcher needed for vulkan extension functions
-    auto dispatcher = vk::DispatchLoaderDynamic{ _vulkan_instance, vkGetInstanceProcAddr };
+    auto dispatcher =
+        vk::DispatchLoaderDynamic { _vulkan_instance, vkGetInstanceProcAddr };
 
     // Create debugger
     vk::DebugUtilsMessengerEXT messenger;
     try {
-        messenger = _vulkan_instance.createDebugUtilsMessengerEXT(create_info, _allocator, dispatcher);
-    } catch (const vk::SystemError& e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
+        messenger = _vulkan_instance.createDebugUtilsMessengerEXT(
+            create_info, _allocator, dispatcher
+        );
+    } catch (const vk::SystemError& e) {
+        Logger::fatal(RENDERER_VULKAN_LOG, e.what());
+    }
 
     Logger::trace(RENDERER_VULKAN_LOG, "Debug messenger created.");
     return messenger;
@@ -599,19 +650,24 @@ bool VulkanBackend::all_validation_layers_are_available() const {
                 break;
             }
         }
-        if (validation_layer_available == false)
-            return false;
+        if (validation_layer_available == false) return false;
     }
 
     return true;
 }
 
-vk::DebugUtilsMessengerCreateInfoEXT VulkanBackend::debug_messenger_create_info() const {
-    vk::DebugUtilsMessengerCreateInfoEXT create_info{};
-    create_info.setMessageSeverity(VulkanSettings::enabled_message_security_levels); // Severity levels enabled
-    create_info.setMessageType(VulkanSettings::enabled_message_types);               // Message types enabled
-    create_info.setPfnUserCallback(debug_callback_function); // User defined debug callback
-    create_info.setPUserData(nullptr);                       // (Optional) Additional user data (can be anything)
+vk::DebugUtilsMessengerCreateInfoEXT VulkanBackend::debug_messenger_create_info(
+) const {
+    vk::DebugUtilsMessengerCreateInfoEXT create_info {};
+    create_info.setMessageSeverity(
+        VulkanSettings::enabled_message_security_levels
+    ); // Severity levels enabled
+    create_info.setMessageType(VulkanSettings::enabled_message_types
+    ); // Message types enabled
+    create_info.setPfnUserCallback(debug_callback_function
+    ); // User defined debug callback
+    create_info.setPUserData(nullptr
+    ); // (Optional) Additional user data (can be anything)
 
     return create_info;
 }
@@ -625,18 +681,23 @@ void VulkanBackend::create_sync_objects() {
     _fences_in_flight.resize(VulkanSettings::max_frames_in_flight);
 
     // Create synchronization objects
-    vk::SemaphoreCreateInfo semaphore_info{};
-    vk::FenceCreateInfo fence_info{};
+    vk::SemaphoreCreateInfo semaphore_info {};
+    vk::FenceCreateInfo     fence_info {};
     // Fence becomes signaled on initialization
     fence_info.setFlags(vk::FenceCreateFlagBits::eSignaled);
 
     try {
         for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++) {
-            _semaphores_image_available[i] = _device->handle().createSemaphore(semaphore_info, _allocator);
-            _semaphores_render_finished[i] = _device->handle().createSemaphore(semaphore_info, _allocator);
-            _fences_in_flight[i] = _device->handle().createFence(fence_info, _allocator);
+            _semaphores_image_available[i] =
+                _device->handle().createSemaphore(semaphore_info, _allocator);
+            _semaphores_render_finished[i] =
+                _device->handle().createSemaphore(semaphore_info, _allocator);
+            _fences_in_flight[i] =
+                _device->handle().createFence(fence_info, _allocator);
         }
-    } catch (vk::SystemError e) { Logger::fatal(RENDERER_VULKAN_LOG, e.what()); }
+    } catch (vk::SystemError e) {
+        Logger::fatal(RENDERER_VULKAN_LOG, e.what());
+    }
 
     Logger::trace(RENDERER_VULKAN_LOG, "All synchronization objects created.");
 }
@@ -651,10 +712,10 @@ uint32 VulkanBackend::generate_geometry_id() {
 // /////////////////////////////// //
 
 VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback_function(
-    VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
-    VkDebugUtilsMessageTypeFlagsEXT message_type,
+    VkDebugUtilsMessageSeverityFlagBitsEXT      message_severity,
+    VkDebugUtilsMessageTypeFlagsEXT             message_type,
     const VkDebugUtilsMessengerCallbackDataEXT* callback_data,
-    void* user_data
+    void*                                       user_data
 ) {
     switch (message_severity) {
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
@@ -669,11 +730,9 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback_function(
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
         if (message_type == VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT)
             Logger::fatal("VULKAN :: ", callback_data->pMessage);
-        else
-            Logger::error("VULKAN :: ", callback_data->pMessage);
+        else Logger::error("VULKAN :: ", callback_data->pMessage);
         break;
-    default:
-        break;
+    default: break;
     }
 
     return VK_FALSE;
@@ -685,30 +744,30 @@ void VulkanBackend::create_buffers() {
     // Create vertex buffer
     // TODO: NOT LIKE THIS
     vk::DeviceSize vertex_buffer_size = sizeof(Vertex) * 1024 * 1024;
-    _vertex_buffer = new VulkanBuffer(_device, _allocator);
+    _vertex_buffer                    = new VulkanBuffer(_device, _allocator);
     _vertex_buffer->create(
         vertex_buffer_size,
         vk::BufferUsageFlagBits::eTransferDst |
-        vk::BufferUsageFlagBits::eVertexBuffer,
+            vk::BufferUsageFlagBits::eVertexBuffer,
         vk::MemoryPropertyFlagBits::eDeviceLocal
     );
 
     // Create index buffer
     vk::DeviceSize index_buffer_size = sizeof(uint32) * 1024 * 1024;
-    _index_buffer = new VulkanBuffer(_device, _allocator);
+    _index_buffer                    = new VulkanBuffer(_device, _allocator);
     _index_buffer->create(
         index_buffer_size,
         vk::BufferUsageFlagBits::eTransferDst |
-        vk::BufferUsageFlagBits::eIndexBuffer,
+            vk::BufferUsageFlagBits::eIndexBuffer,
         vk::MemoryPropertyFlagBits::eDeviceLocal
     );
 }
 
 void VulkanBackend::upload_data_to_buffer(
-    const void* data,
+    const void*    data,
     vk::DeviceSize size,
     vk::DeviceSize offset,
-    VulkanBuffer* buffer
+    VulkanBuffer*  buffer
 ) {
     // Create staging buffer
     auto staging_buffer = new VulkanBuffer(_device, _allocator);
@@ -716,14 +775,16 @@ void VulkanBackend::upload_data_to_buffer(
         size,
         vk::BufferUsageFlagBits::eTransferSrc,
         vk::MemoryPropertyFlagBits::eHostVisible |
-        vk::MemoryPropertyFlagBits::eHostCoherent
+            vk::MemoryPropertyFlagBits::eHostCoherent
     );
 
     // Fill created memory with data
     staging_buffer->load_data(data, 0, size);
 
     auto command_buffer = _command_pool->begin_single_time_commands();
-    staging_buffer->copy_data_to_buffer(command_buffer, buffer->handle, 0, offset, size);
+    staging_buffer->copy_data_to_buffer(
+        command_buffer, buffer->handle, 0, offset, size
+    );
     _command_pool->end_single_time_commands(command_buffer);
 
     // Cleanup

@@ -6,7 +6,7 @@
 
 // Constructor & Destructor
 TextLoader::TextLoader() {
-    _type = ResourceType::Text;
+    _type      = ResourceType::Text;
     _type_path = "";
 }
 TextLoader::~TextLoader() {}
@@ -17,24 +17,22 @@ TextLoader::~TextLoader() {}
 
 Resource* TextLoader::load(const String name) {
     // Construct full path
-    String file_path = ResourceSystem::base_path + "/" + _type_path + "/" + name;
+    String file_path =
+        ResourceSystem::base_path + "/" + _type_path + "/" + name;
 
     // Read all data
     String data;
     try {
         auto raw_data = FileSystem::read_file_bytes(file_path);
-        data = String((const char*) raw_data.data());
+        data          = String((const char*) raw_data.data());
     } catch (const FileSystemException& e) {
         Logger::error(RESOURCE_LOG, e.what());
         throw std::runtime_error(e.what());
     }
 
     // Return byte data
-    auto text_data = new TextData(
-        name,
-        data
-    );
-    text_data->full_path = file_path;
+    auto text_data         = new TextData(name, data);
+    text_data->full_path   = file_path;
     text_data->loader_type = ResourceType::Text;
 
     return text_data;

@@ -6,12 +6,12 @@
 #include "logger.hpp"
 
 class VulkanCommandPool {
-public:
+  public:
     VulkanCommandPool(
-        const vk::Device* const device,
+        const vk::Device* const              device,
         const vk::AllocationCallbacks* const allocator,
-        const vk::Queue* const queue,
-        const uint32 queue_index
+        const vk::Queue* const               queue,
+        const uint32                         queue_index
     );
     ~VulkanCommandPool();
 
@@ -23,15 +23,15 @@ public:
     /// @param primary Specify whether created buffers are primary buffers
     /// @returns Created and allocated buffers
     std::vector<vk::CommandBuffer> allocate_command_buffers(
-        const uint32 size,
-        const bool primary = true
+        const uint32 size, const bool primary = true
     ) const;
     /// @brief Returns command buffer to the pool
     /// @param command_buffer Buffer to free
     void free_command_buffer(vk::CommandBuffer& command_buffer) const;
     /// @brief Returns command buffers to the pool
     /// @param command_buffers Buffers to free
-    void free_command_buffers(std::vector<vk::CommandBuffer>& command_buffers) const;
+    void free_command_buffers(std::vector<vk::CommandBuffer>& command_buffers
+    ) const;
 
     /// @brief Allocate and begin a single use buffer
     /// @returns Created buffer
@@ -40,10 +40,10 @@ public:
     /// @param command_buffer Buffer to free
     void end_single_time_commands(vk::CommandBuffer& command_buffer) const;
 
-private:
-    const vk::Device* _device;
+  private:
+    const vk::Device*                    _device;
     const vk::AllocationCallbacks* const _allocator;
-    const vk::Queue* const _queue;
+    const vk::Queue* const               _queue;
 
     vk::CommandPool _command_pool;
 };

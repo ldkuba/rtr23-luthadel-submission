@@ -3,11 +3,11 @@
 #include "material.hpp"
 
 class Geometry : public Resource {
-public:
+  public:
     std::optional<uint64> internal_id;
-    Property<Material*> material{
-        Get { return _material; },
-        Set { _material = value; }
+    Property<Material*>   material {
+        Get { return _material; }
+        , Set { _material = value; }
     };
 
     Geometry(String name);
@@ -15,6 +15,6 @@ public:
 
     const static uint32 max_name_length = 256;
 
-private:
+  private:
     Material* _material = nullptr;
 };

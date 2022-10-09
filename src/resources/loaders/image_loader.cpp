@@ -8,7 +8,7 @@
 
 // Constructor & Destructor
 ImageLoader::ImageLoader() {
-    _type = ResourceType::Image;
+    _type      = ResourceType::Image;
     _type_path = "textures";
 }
 ImageLoader::~ImageLoader() {}
@@ -20,21 +20,23 @@ ImageLoader::~ImageLoader() {}
 Resource* ImageLoader::load(const String name) {
     // If name is not provided with an extension use default extension
     String file_name = name;
-    if (file_name.split('.').size() < 2)
-        file_name = file_name + ".png";
+    if (file_name.split('.').size() < 2) file_name = file_name + ".png";
     file_name.to_lower();
 
     // Compute full path
-    String file_path = ResourceSystem::base_path + "/" + _type_path + "/" + file_name;
+    String file_path =
+        ResourceSystem::base_path + "/" + _type_path + "/" + file_name;
 
     // Required channel cont
     const uint32 req_channel_count = 4;
 
     // Load image
-    int32 image_width, image_height, image_channels;
+    int32    image_width, image_height, image_channels;
     stbi_uc* image_pixels = stbi_load(
         file_path.c_str(),
-        &image_width, &image_height, &image_channels,
+        &image_width,
+        &image_height,
+        &image_channels,
         req_channel_count
     );
 
@@ -59,13 +61,9 @@ Resource* ImageLoader::load(const String name) {
     }
 
     Image* image = new Image(
-        name,
-        image_width,
-        image_height,
-        req_channel_count,
-        (byte*) image_pixels
+        name, image_width, image_height, req_channel_count, (byte*) image_pixels
     );
-    image->full_path = file_path;
+    image->full_path   = file_path;
     image->loader_type = ResourceType::Image;
     return image;
 }

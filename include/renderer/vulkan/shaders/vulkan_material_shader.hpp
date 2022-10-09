@@ -1,6 +1,3 @@
-#ifndef __VULKAN_MATERIAL_SHADER_H__
-#define __VULKAN_MATERIAL_SHADER_H__
-
 #pragma once
 
 #include "math_libs.hpp"
@@ -10,12 +7,12 @@
 #include "systems/resource_system.hpp"
 
 class VulkanMaterialShader : public VulkanShader {
-public:
+  public:
     VulkanMaterialShader(
-        const VulkanDevice* const device,
+        const VulkanDevice* const            device,
         const vk::AllocationCallbacks* const allocator,
-        const vk::RenderPass render_pass,
-        const vk::SampleCountFlagBits number_of_msaa_samples,
+        const vk::RenderPass                 render_pass,
+        const vk::SampleCountFlagBits        number_of_msaa_samples,
         ResourceSystem* resource_system // TODO: most likely temporary
     );
     ~VulkanMaterialShader();
@@ -28,8 +25,7 @@ public:
     /// @param command_buffer Buffer to store descriptor set bind command
     /// @param current_frame Frame on which to use UBO buffer
     void bind_global_description_set(
-        const vk::CommandBuffer& command_buffer,
-        const uint32 current_frame
+        const vk::CommandBuffer& command_buffer, const uint32 current_frame
     );
 
     /// @brief Bind material ubo data for rendering
@@ -38,8 +34,8 @@ public:
     /// @param material_id Id of a material we wish to bind
     void bind_material(
         const vk::CommandBuffer& command_buffer,
-        const uint32 current_frame,
-        const uint32 material_id
+        const uint32             current_frame,
+        const uint32             material_id
     );
 
     /// @brief Update global ubo data
@@ -54,43 +50,41 @@ public:
         const glm::mat4 view,
         const glm::vec3 view_position,
         const glm::vec4 ambient_color,
-        const int32 mode,
-        const uint32 current_frame
+        const int32     mode,
+        const uint32    current_frame
     );
 
     void set_model(
-        const glm::mat4 model,
-        const uint64 obj_id,
-        const uint32 current_frame
+        const glm::mat4 model, const uint64 obj_id, const uint32 current_frame
     );
 
     void apply_material(
-        const Material* const material,
-        const uint32 current_frame
+        const Material* const material, const uint32 current_frame
     );
 
     void acquire_resource(Material* const);
     void release_resource(Material* const);
 
-private:
+  private:
     static const uint32 _material_descriptor_count = 3;
-    static const uint32 _material_sampler_count = 1;
+    static const uint32 _material_sampler_count    = 1;
     struct DescriptorState {
-        std::array<std::optional<uint32>,
-            VulkanSettings::max_frames_in_flight> ids;
+        std::array<std::optional<uint32>, VulkanSettings::max_frames_in_flight>
+            ids;
     };
     struct MaterialInstanceState {
-        bool allocated = false;
+        bool                           allocated = false;
         std::vector<vk::DescriptorSet> descriptor_sets;
-        std::array<DescriptorState,
-            VulkanMaterialShader::_material_descriptor_count> descriptor_states;
+        std::array<
+            DescriptorState,
+            VulkanMaterialShader::_material_descriptor_count>
+            descriptor_states;
     };
 
-    std::vector<vk::DescriptorSet> _global_descriptor_sets;
+    std::vector<vk::DescriptorSet>                    _global_descriptor_sets;
     std::unordered_map<uint32, MaterialInstanceState> _instance_states;
     TextureUse _sampler_uses[_material_sampler_count];
 
-    void create_global_descriptor_sets();
+    void   create_global_descriptor_sets();
     uint32 get_next_available_ubo_index();
 };
-#endif // __VULKAN_MATERIAL_SHADER_H__

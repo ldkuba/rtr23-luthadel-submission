@@ -1,6 +1,3 @@
-#ifndef __PLATFORM_H__
-#define __PLATFORM_H__
-
 #pragma once
 
 #include <vector>
@@ -12,8 +9,8 @@
 #include "event.hpp"
 
 class Platform {
-private:
-public:
+  private:
+  public:
     Platform();
     ~Platform();
 
@@ -22,35 +19,41 @@ public:
     static float64 get_absolute_time();
     /// @brief Suspends the application process for the specified amount of time
     /// @param ms Time to sleep in miliseconds
-    static void sleep(uint64 ms);
+    static void    sleep(uint64 ms);
 
     // TODO: Separate platform code from knowing about renderers
     static const std::vector<const char*> get_required_vulkan_extensions();
 
     class Console {
-    private:
-    public:
+      private:
+      public:
         Console();
         ~Console();
 
-        static void write(std::string message, uint32 kind = 0, bool new_line = true);
+        static void write(
+            std::string message, uint32 kind = 0, bool new_line = true
+        );
         static std::string read();
     };
 
     class Surface {
-    private:
-    protected:
+      private:
+      protected:
         Surface() {}
-    public:
+
+      public:
         virtual ~Surface() {}
         Event<void, uint32, uint32> resize_event;
 
-        static Surface* get_instance(uint32 width, uint32 height, std::string name);
+        static Surface* get_instance(
+            uint32 width, uint32 height, std::string name
+        );
 
         // Vulkan functions
         virtual vk::SurfaceKHR get_vulkan_surface(
-            const vk::Instance& vulkan_instance,
-            const vk::AllocationCallbacks* const allocator) const {
+            const vk::Instance&                  vulkan_instance,
+            const vk::AllocationCallbacks* const allocator
+        ) const {
             return vk::SurfaceKHR();
         }
 
@@ -67,7 +70,4 @@ public:
     //     FileSystem() {};
     //     ~FileSystem() {};
     // };
-
 };
-
-#endif // __PLATFORM_H__
