@@ -4,6 +4,7 @@
 
 class GeometrySystem {
   public:
+    /// @brief Default fallback geometry
     Property<Geometry*> default_geometry {
         Get { return _default_geometry; }
     };
@@ -17,7 +18,24 @@ class GeometrySystem {
     GeometrySystem(GeometrySystem const&)            = delete;
     GeometrySystem& operator=(GeometrySystem const&) = delete;
 
+    /**
+     * @brief Acquire already loaded geometry resource.
+     *
+     * @param id Requested geometry id
+     * @return Geometry*
+     */
     Geometry* acquire(const uint32 id);
+    /**
+     * @brief Creates new geometry resource and load its material
+     *
+     * @param vertices Vertex data
+     * @param indices Index data
+     * @param name Geometry's name
+     * @param material_name Material to be loaded
+     * @param auto_release If enabled geometry system will automaticaly release
+     * the geometry resource from memory if no references to it are detected.
+     * @returns Created geometry resource
+     */
     Geometry* acquire(
         const std::vector<Vertex> vertices,
         const std::vector<uint32> indices,
@@ -25,6 +43,12 @@ class GeometrySystem {
         const String              material_name,
         bool                      auto_release = true
     );
+    /**
+     * @brief Releases geometry resource. Geometry system will automatically
+     * release this geometry from memory if no other references to it are
+     * detected and auto release flag is set to true.
+     * @param geometry Geometry to release
+     */
     void release(Geometry* geometry);
 
   private:

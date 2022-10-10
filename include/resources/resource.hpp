@@ -8,18 +8,23 @@
 
 class Resource {
   public:
-    /// @brief Unique texture identifier
+    /// @brief Unique resource identifier
     std::optional<uint64> id;
-    /// @brief ...
+    /// @brief Resource name
     Property<String>      name {
         Get { return _name; }
     };
-    /// @brief ...
+    /// @brief Full resource file path
     Property<String> full_path {
         Get { return _full_path; }
-        , Set { _full_path = value; }
+        , Set {
+            if (_full_path == "") _full_path = value;
+            else
+                Logger::error("Resource :: File path cannot be set after "
+                              "initialization.");
+        }
     };
-    /// @brief ...
+    /// @brief Loader used for loading this resource
     Property<String> loader_type {
         Get { return _loader_type; }
         , Set {

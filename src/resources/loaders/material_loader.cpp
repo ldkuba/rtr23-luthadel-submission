@@ -4,10 +4,12 @@
 #include "resources/material.hpp"
 #include "file_system.hpp"
 
-#define M_SETTING_version "version"
-#define M_SETTING_name "name"
-#define M_SETTING_diffuse_color "diffuse_color"
-#define M_SETTING_diffuse_map_name "diffuse_map_name"
+struct MSVars {
+    constexpr static const char* const version          = "version";
+    constexpr static const char* const name             = "name";
+    constexpr static const char* const diffuse_color    = "diffuse_color";
+    constexpr static const char* const diffuse_map_name = "diffuse_map_name";
+};
 
 // Constructor & Destructor
 MaterialLoader::MaterialLoader() {
@@ -48,17 +50,16 @@ Resource* MaterialLoader::load(const String name) {
 
         // Skip blank and comment lines
         if (setting_line.length() < 1 || setting_line[0] == '#') {
-            continue;
             line_number++;
+            continue;
         }
 
-        // Split line by = int a var/value pair
+        // Split line by = into a var/value pair
         auto setting = setting_line.split('=');
         if (setting.size() != 2) {
             Logger::warning(
                 RESOURCE_LOG,
-                "Potential formatting issue ",
-                "with the number of = tokens found. ",
+                "Potential formatting issue with the number of = tokens found. "
                 "Skipping line ",
                 line_number,
                 " of file ",
@@ -70,15 +71,16 @@ Resource* MaterialLoader::load(const String name) {
         }
 
         auto setting_var = setting[0];
+        auto setting_val = setting[1];
+
         setting_var.trim();
         setting_var.to_lower();
-        auto setting_val = setting[1];
         setting_val.trim();
 
         // Process variable and its argument
-        if (setting_var.compare(M_SETTING_version) == 0) {
+        if (setting_var.compare(MSVars::version) == 0) {
             // TODO: Versions
-        } else if (setting_var.compare(M_SETTING_name) == 0) {
+        } else if (setting_var.compare(MSVars::name) == 0) {
             if (setting_val.length() > Material::max_name_length)
                 Logger::warning(
                     RESOURCE_LOG,
@@ -93,12 +95,32 @@ Resource* MaterialLoader::load(const String name) {
                     " characters)."
                 );
             else mat_name = setting_val;
-        } else if (setting_var.compare(M_SETTING_diffuse_map_name) == 0) {
+        } else if (setting_var.compare(MSVars::diffuse_map_name) == 0) {
             mat_diffuse_map_name = setting_val;
-        } else if (setting_var.compare(M_SETTING_diffuse_color) == 0) {
+        } else if (setting_var.compare(MSVars::diffuse_color) == 0) {
             // Parse vec4
             auto str_floats = setting_val.split(' ');
-            if (str_floats.size() != 4) {
+            // Check vector dim size
+            if (str_floats.size() == 4) {
+                try {
+                    // convert to float
+                    std::vector<float32> floats(str_floats.size());
+                    for (uint32 i = 0; i < str_floats.size(); i++)
+                        floats[i] = str_floats[i].parse_as_float32();
+                    // Assign to diffuse color
+                    mat_diffuse_color =
+                        glm::vec4(floats[0], floats[1], floats[2], floats[3]);
+                } catch (std::invalid_argument e) {
+                    Logger::warning(
+                        RESOURCE_LOG,
+                        "Couldn't parse vec4 at line ",
+                        line_number,
+                        " of file ",
+                        file_path,
+                        ". Couldn't parse floats."
+                    );
+                }
+            } else {
                 Logger::warning(
                     RESOURCE_LOG,
                     "Couldn't parse vec4 at line ",
@@ -108,23 +130,6 @@ Resource* MaterialLoader::load(const String name) {
                     ". Wrong argument count."
                 );
             }
-            std::vector<float32> floats(str_floats.size());
-            try {
-                for (uint32 i = 0; i < str_floats.size(); i++)
-                    floats[i] = str_floats[i].parse_as_float32();
-            } catch (std::invalid_argument e) {
-                Logger::warning(
-                    RESOURCE_LOG,
-                    "Couldn't parse vec4 at line ",
-                    line_number,
-                    " of file ",
-                    file_path,
-                    ". Couldn't parse floats."
-                );
-            }
-            // Assign to diffuse color
-            mat_diffuse_color =
-                glm::vec4(floats[0], floats[1], floats[2], floats[3]);
         } else {
             Logger::warning(
                 RESOURCE_LOG,
@@ -137,7 +142,6 @@ Resource* MaterialLoader::load(const String name) {
                 "."
             );
         }
-
         line_number++;
     }
 

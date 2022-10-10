@@ -4,6 +4,7 @@
 
 class ByteArrayData : public Resource {
   public:
+    /// @brief Binary data
     const std::vector<byte> data;
 
     ByteArrayData(const String name, const std::vector<byte> data)
@@ -13,6 +14,7 @@ class ByteArrayData : public Resource {
 
 class TextData : public Resource {
   public:
+    /// @brief Text data
     const String data;
 
     TextData(const String name, const String data)

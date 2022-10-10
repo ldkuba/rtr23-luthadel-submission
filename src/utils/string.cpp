@@ -8,6 +8,25 @@ T parse_uint(const char* s, const uint32 n, const T max);
 template<typename T>
 T parse_int(const char* s, const uint32 n, const T max);
 
+// Additional to_string conversions
+namespace std {
+string to_string(const uint128& in) {
+    uint8   digit = in % 10;
+    uint128 num   = in / 10;
+    string  res   = to_string(digit);
+    while (num != 0) {
+        digit = num % 10;
+        num   = num / 10;
+        res   = to_string(digit) + res;
+    }
+    return res;
+}
+string to_string(const int128& in) {
+    if (in > 0) return to_string((uint128) in);
+    return "-" + to_string((uint128) -in);
+}
+} // namespace std
+
 // Constructor & Destructor
 String::String() {}
 String::~String() {}
@@ -18,14 +37,20 @@ String::~String() {}
 
 // Character transforms
 void String::to_lower() {
-    std::transform(this->cbegin(), this->cend(),
+    std::transform(
+        this->cbegin(),
+        this->cend(),
         this->begin(), // write to the same location
-        [](uchar c) { return std::tolower(c); });
+        [](uchar c) { return std::tolower(c); }
+    );
 }
 void String::to_upper() {
-    std::transform(this->cbegin(), this->cend(),
+    std::transform(
+        this->cbegin(),
+        this->cend(),
         this->begin(), // write to the same location
-        [](uchar c) { return std::toupper(c); });
+        [](uchar c) { return std::toupper(c); }
+    );
 }
 
 // Trim methods
@@ -44,31 +69,37 @@ void String::trim() {
 
 // Compare methods
 int32 String::compare_ci(const String& other) const {
-    String a = *this; a.to_lower();
-    String b = other; b.to_lower();
+    String a = *this;
+    a.to_lower();
+    String b = other;
+    b.to_lower();
     return a.compare(b);
 }
 
 // Split methods
 std::vector<String> String::split(const String delimiter) const {
-    std::size_t pos = 0;
-    std::size_t next = 0;
+    std::size_t         pos  = 0;
+    std::size_t         next = 0;
     std::vector<String> fields;
     while (next != std::string::npos) {
-        next = this->find_first_of(delimiter, pos);
-        String field = next == std::string::npos ? this->substr(pos) : this->substr(pos, next - pos);
+        next         = this->find_first_of(delimiter, pos);
+        String field = next == std::string::npos
+                           ? this->substr(pos)
+                           : this->substr(pos, next - pos);
         fields.push_back(field);
         pos = next + 1;
     }
     return fields;
 }
 std::vector<String> String::split(const char delimiter) const {
-    std::size_t pos = 0;
-    std::size_t next = 0;
+    std::size_t         pos  = 0;
+    std::size_t         next = 0;
     std::vector<String> fields;
     while (next != std::string::npos) {
-        next = this->find_first_of(delimiter, pos);
-        String field = next == std::string::npos ? this->substr(pos) : this->substr(pos, next - pos);
+        next         = this->find_first_of(delimiter, pos);
+        String field = next == std::string::npos
+                           ? this->substr(pos)
+                           : this->substr(pos, next - pos);
         fields.push_back(field);
         pos = next + 1;
     }
@@ -91,7 +122,8 @@ uint64 String::parse_as_uint64() {
 uint128 String::parse_as_uint128() {
     if (length() > 39)
         throw std::invalid_argument("String couldn't be parsed.");
-    Logger::warning("Correct conversion to uint128 is not guaranteed, overflow may still occur.");
+    Logger::warning("Correct conversion to uint128 is not guaranteed, overflow "
+                    "may still occur.");
     return parse_uint<uint128>(data(), length(), UINT128_MAX);
 }
 int8 String::parse_as_int8() {
@@ -110,21 +142,21 @@ int128 String::parse_as_int128() {
     return parse_int<uint128>(data(), length(), INT128_MAX);
 }
 float32 String::parse_as_float32() {
-    size_t ending;
+    size_t  ending;
     float32 result = std::stof(*this, &ending);
     if (size() - ending != 0)
         throw std::invalid_argument("String couldn't be parsed.");
     return result;
 }
 float64 String::parse_as_float64() {
-    size_t ending;
+    size_t  ending;
     float64 result = std::stod(*this, &ending);
     if (size() - ending != 0)
         throw std::invalid_argument("String couldn't be parsed.");
     return result;
 }
 float128 String::parse_as_float128() {
-    size_t ending;
+    size_t   ending;
     float128 result = std::stold(*this, &ending);
     if (size() - ending != 0)
         throw std::invalid_argument("String couldn't be parsed.");
@@ -137,12 +169,11 @@ float128 String::parse_as_float128() {
 
 template<typename T>
 T parse_uint(const char* s, const uint32 n, const T max) {
-    T result = 0;
-    uint128 power = 1;
+    T       result = 0;
+    uint128 power  = 1;
     for (int32 i = n - 1; i >= 0; i--) {
         uint32 digit = s[i] - '0';
-        if (digit / 10 != 0)
-            return -1;
+        if (digit / 10 != 0) return -1;
 
         if (max - result < power * digit)
             throw std::invalid_argument("String couldn't be parsed.");
@@ -154,8 +185,7 @@ T parse_uint(const char* s, const uint32 n, const T max) {
 }
 template<typename T>
 T parse_int(const char* s, const uint32 n, const T max) {
-    if (s[0] == '-')
-        return -parse_uint<T>(s + 1, n - 1, max - 1);
+    if (s[0] == '-') return -parse_uint<T>(s + 1, n - 1, max - 1);
     return parse_uint<T>(s, n, max);
 }
 
@@ -165,11 +195,15 @@ void String::add_to_string<char*>(String& out_string, char* component) {
     out_string += String(component);
 }
 template<>
-void String::add_to_string<const char*>(String& out_string, const char* component) {
+void String::add_to_string<const char*>(
+    String& out_string, const char* component
+) {
     out_string += String(component);
 }
 template<>
-void String::add_to_string<std::string>(String& out_string, std::string component) {
+void String::add_to_string<std::string>(
+    String& out_string, std::string component
+) {
     out_string += component;
 }
 template<>

@@ -4,15 +4,19 @@
 
 class Image : public Resource {
   public:
+    /// @brief Image width in pixels
     Property<uint32> width {
         Get { return _width; }
     };
+    /// @brief Image height in pixels
     Property<uint32> height {
         Get { return _height; }
     };
+    /// @brief Image channel count
     Property<uint8> channel_count {
         Get { return _channel_count; }
     };
+    /// @brief Raw image pixel data
     Property<const byte*> pixels {
         Get { return _pixels; }
     };
@@ -28,6 +32,12 @@ class Image : public Resource {
           _channel_count(channel_count), _pixels(pixels) {}
     ~Image() { delete _pixels; }
 
+    /**
+     * @brief Check for image transparency
+     *
+     * @return true If image has transparency
+     * @return false Otherwise
+     */
     bool has_transparency() {
         if (_channel_count < 4) return false;
 

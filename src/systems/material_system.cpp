@@ -21,10 +21,8 @@ MaterialSystem::MaterialSystem(
     Logger::trace(MATERIAL_SYS_LOG, "Material system created.");
 }
 MaterialSystem::~MaterialSystem() {
-    for (auto& material : _registered_materials) {
-        _renderer->destroy_material(material.second.handle);
-        delete material.second.handle;
-    }
+    for (auto& material : _registered_materials)
+        destroy_material(material.second.handle);
     _registered_materials.clear();
     _renderer->destroy_material(_default_material);
     delete _default_material;
@@ -39,6 +37,21 @@ MaterialSystem::~MaterialSystem() {
 Material* MaterialSystem::acquire(const String name) {
     Logger::trace(MATERIAL_SYS_LOG, "Material requested.");
 
+    // Check name validity
+    if (name.length() > Material::max_name_length) {
+        Logger::error(
+            MATERIAL_SYS_LOG,
+            "Material couldn't be acquired. ",
+            "Maximum name length of a material is ",
+            Material::max_name_length,
+            " characters but ",
+            name.length(),
+            " character long name was passed. ",
+            "Default material acquired instead."
+        );
+        Logger::trace(MATERIAL_SYS_LOG, "Default material acquired.");
+        return _default_material;
+    }
     if (name.compare_ci(_default_material_name) == 0) {
         return _default_material;
         Logger::trace(MATERIAL_SYS_LOG, "Default material acquired.");
@@ -49,6 +62,7 @@ Material* MaterialSystem::acquire(const String name) {
     auto ref = _registered_materials.find(s);
 
     if (ref == _registered_materials.end()) {
+        // No material under this name found; load form resource system
         MaterialConfig* material_config = static_cast<MaterialConfig*>(
             _resource_system->load(name, ResourceType::Material)
         );
@@ -65,6 +79,7 @@ Material* MaterialSystem::acquire(const String name) {
 Material* MaterialSystem::acquire(const MaterialConfig config) {
     Logger::trace(MATERIAL_SYS_LOG, "Material requested.");
 
+    // Check name validity
     String name = config.name;
     name.to_lower();
     if (name.length() > Material::max_name_length) {
@@ -86,16 +101,15 @@ Material* MaterialSystem::acquire(const MaterialConfig config) {
         return _default_material;
     }
 
+    // Get reference
     auto& ref = _registered_materials[name];
     if (ref.handle == nullptr) {
+        // Material was just added
         ref.handle =
             crete_material(name, config.diffuse_map_name, config.diffuse_color);
         ref.handle->id      = (uint64) ref.handle;
         ref.auto_release    = config.auto_release;
         ref.reference_count = 0;
-
-        // Upload material to GPU
-        _renderer->create_material(ref.handle);
     }
     ref.reference_count++;
 
@@ -121,11 +135,10 @@ void MaterialSystem::release(const String name) {
         return;
     }
     ref->second.reference_count--;
+
+    // Release resource if it isn't needed
     if (ref->second.reference_count == 0 && ref->second.auto_release == true) {
-        String texture_name = ref->second.handle->diffuse_map().texture->name;
-        _texture_system->release(texture_name);
-        _renderer->destroy_material(ref->second.handle);
-        delete ref->second.handle;
+        destroy_material(ref->second.handle);
         _registered_materials.erase(s);
     }
 
@@ -155,12 +168,13 @@ Material* MaterialSystem::crete_material(
 ) {
     auto material = new Material(name, diffuse_color);
 
-    TextureMap diffuse_map;
+    TextureMap diffuse_map = {};
     if (diffuse_material_name.length() > 0) {
         diffuse_map.use = TextureUse::MapDiffuse;
         diffuse_map.texture =
             _texture_system->acquire(diffuse_material_name, true);
     } else {
+        // Note: Not needed. Set explicit for readability
         diffuse_map.use     = TextureUse::Unknown;
         diffuse_map.texture = nullptr;
     }
@@ -171,4 +185,11 @@ Material* MaterialSystem::crete_material(
     _renderer->create_material(material);
 
     return material;
+}
+
+void MaterialSystem::destroy_material(Material* material) {
+    String texture_name = material->diffuse_map().texture->name;
+    _texture_system->release(texture_name);
+    _renderer->destroy_material(material);
+    delete material;
 }

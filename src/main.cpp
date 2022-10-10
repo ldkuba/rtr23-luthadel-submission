@@ -10,7 +10,7 @@
 
 int main(int, char**) {
 
-    TestApplication app{};
+    TestApplication app {};
 
 #ifdef NDEBUG
     Logger::debug("MODE is RELEASE");
@@ -20,9 +20,7 @@ int main(int, char**) {
 
     try {
         app.run();
-    } catch (const std::exception& e) {
-        Logger::fatal(e.what());
-    }
+    } catch (const std::exception& e) { Logger::fatal(e.what()); }
 
     return EXIT_SUCCESS;
 }

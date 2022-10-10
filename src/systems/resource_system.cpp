@@ -8,7 +8,6 @@
 
 // Constructor & Destructor
 ResourceSystem::ResourceSystem() {
-
     // Auto-register known loaders
     ResourceLoader* loader;
     loader = new ImageLoader();
@@ -51,9 +50,9 @@ void ResourceSystem::register_loader(ResourceLoader* const loader) {
 
     Logger::trace(
         RESOURCE_SYS_LOG,
-        "Resource loader ",
+        "Resource loader \"",
         loader_type,
-        " was successfully registered."
+        "\" was successfully registered."
     );
 }
 
@@ -63,11 +62,11 @@ Resource* ResourceSystem::load(const String name, const String type) {
     if (loader == _registered_loaders.end()) {
         Logger::error(
             RESOURCE_SYS_LOG,
-            "No resource loader of type ",
+            "No resource loader of type \"",
             type,
-            " was found. Resource ",
+            "\" was found. Resource \"",
             name,
-            " was unable to be loaded."
+            "\" was unable to be loaded."
         );
         return nullptr;
     }

@@ -30,7 +30,7 @@ Resource* TextLoader::load(const String name) {
         throw std::runtime_error(e.what());
     }
 
-    // Return byte data
+    // Return text data
     auto text_data         = new TextData(name, data);
     text_data->full_path   = file_path;
     text_data->loader_type = ResourceType::Text;

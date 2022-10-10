@@ -27,14 +27,19 @@ class MaterialConfig : public Resource {
 
 class Material {
   public:
+    /// @brief Unique identifier
     std::optional<uint64> id;
+    /// @brief Id used by the Renderer
     std::optional<uint64> internal_id;
+    /// @brief Material name
     Property<String>      name {
         Get { return _name; }
     };
+    /// @brief Material's diffuse color
     Property<glm::vec4> diffuse_color {
         Get { return _diffuse_color; }
     };
+    /// @brief Material's diffuse map
     Property<TextureMap> diffuse_map {
         Get { return _diffuse_map; }
         , Set { _diffuse_map = value; }

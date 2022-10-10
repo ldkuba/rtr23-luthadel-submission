@@ -40,6 +40,7 @@ TextureSystem::~TextureSystem() {
 Texture* TextureSystem::acquire(const String name, const bool auto_release) {
     Logger::trace(TEXTURE_SYS_LOG, "Texture requested.");
 
+    // Check name validity
     if (name.length() > Texture::max_name_length) {
         Logger::error(
             TEXTURE_SYS_LOG,
@@ -48,25 +49,26 @@ Texture* TextureSystem::acquire(const String name, const bool auto_release) {
             Texture::max_name_length,
             " characters but ",
             name.length(),
-            " character long name was passed. ",
-            "Default texture acquired instead."
+            " character long name was passed. Default texture acquired instead."
         );
         return _default_texture;
     }
     if (name.compare_ci(_default_texture_name) == 0) {
         Logger::warning(
             TEXTURE_SYS_LOG,
-            "To acquire the default texture from ",
-            "texture system use default_texture property instead."
+            "To acquire the default texture from texture system use "
+            "default_texture property instead."
         );
         return _default_texture;
     }
 
+    // Get reference
     String s = name;
     s.to_lower();
     auto& ref = _registered_textures[s];
 
     if (ref.handle == nullptr) {
+        // Texture was just added
         auto image = static_cast<Image*>(
             _resource_system->load(name, ResourceType::Image)
         );
@@ -110,6 +112,8 @@ void TextureSystem::release(const String name) {
         return;
     }
     ref->second.reference_count--;
+
+    // Release resource if it isn't needed
     if (ref->second.reference_count == 0 && ref->second.auto_release == true) {
         _renderer->destroy_texture(ref->second.handle);
         delete ref->second.handle;

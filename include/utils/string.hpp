@@ -4,6 +4,12 @@
 #include <vector>
 #include "defines.hpp"
 
+// Additional to_string conversions
+namespace std {
+string to_string(const uint128& in);
+string to_string(const int128& in);
+} // namespace std
+
 class String : public std::string {
   public:
     using std::string::string;
@@ -12,6 +18,12 @@ class String : public std::string {
     ~String();
 
     // String builder
+    /**
+     * @brief Concatenates argument list into one string string object.
+     * Non-string objects will automaticaly be converted to their string form
+     * via std::to_string where applicable.
+     * @returns Concatenated string
+     */
     template<typename... Args>
     static String build(Args... message) {
         String result = "";
@@ -20,34 +32,135 @@ class String : public std::string {
     }
 
     // Transform
+    /// @brief Transform all string characters to lowercase (inplace)
     void to_lower();
+    /// @brief Transform all string characters to uppercase (inplace)
     void to_upper();
 
     // Trim
+    /// @brief Removes all white-space characters from left side (Inplace)
     void trim_left();
+    /// @brief Removes all white-space characters from right side (Inplace)
     void trim_right();
+    /// @brief Removes all white-space characters from both sides (Inplace)
     void trim();
 
     // Comparison
+    /**
+     *  @brief  Compare two strings; case insensitive.
+     *  @param other  String to compare against.
+     *  @return  Integer < 0, 0, or > 0.
+     *
+     * Returns an integer < 0 if this string is ordered before @a other, 0 if
+     * their values are equivalent, or > 0 if this string is ordered after
+     * @a other. Determines the effective length rlen of the strings to compare
+     * as the smallest of size() and str.size(). The function then compares the
+     * two strings by calling traits::compare(data(), str.data(),rlen). If the
+     * result of the comparison is nonzero returns it, otherwise the shorter one
+     * is ordered first.
+     */
     int32 compare_ci(const String& other) const;
 
     // Split
+    /**
+     * @brief Splits string into substrings
+     * @param delimiter Token to split by
+     * @return std::vector of strings
+     */
     std::vector<String> split(const String delimiter) const;
+    /**
+     * @brief Splits string into substrings
+     * @param delimiter Token to split by
+     * @return std::vector of strings
+     */
     std::vector<String> split(const char delimiter) const;
 
     // Parsing
+    /**
+     * @brief Parses string as uint8
+     * @return uint8
+     * @throws std::invalid_argument If parse is impossible. Parse is also
+     * deemed impossible if overflow is detected.
+     */
     uint8    parse_as_uint8();
+    /**
+     * @brief Parses string as uint16
+     * @return uint16
+     * @throws std::invalid_argument If parse is impossible. Parse is also
+     * deemed impossible if overflow is detected.
+     */
     uint16   parse_as_uint16();
+    /**
+     * @brief Parses string as uint32
+     * @return uint32
+     * @throws std::invalid_argument If parse is impossible. Parse is also
+     * deemed impossible if overflow is detected.
+     */
     uint32   parse_as_uint32();
+    /**
+     * @brief Parses string as uint64
+     * @return uint64
+     * @throws std::invalid_argument If parse is impossible. Parse is also
+     * deemed impossible if overflow is detected.
+     */
     uint64   parse_as_uint64();
+    /**
+     * @brief Parses string as uint128
+     * @return uint128
+     * @throws std::invalid_argument If parse is impossible
+     */
     uint128  parse_as_uint128();
+    /**
+     * @brief Parses string as int8
+     * @return int8
+     * @throws std::invalid_argument If parse is impossible. Parse is also
+     * deemed impossible if overflow is detected.
+     */
     int8     parse_as_int8();
+    /**
+     * @brief Parses string as int16
+     * @return int16
+     * @throws std::invalid_argument If parse is impossible. Parse is also
+     * deemed impossible if overflow is detected.
+     */
     int16    parse_as_int16();
+    /**
+     * @brief Parses string as int32
+     * @return int32
+     * @throws std::invalid_argument If parse is impossible. Parse is also
+     * deemed impossible if overflow is detected.
+     */
     int32    parse_as_int32();
+    /**
+     * @brief Parses string as int64
+     * @return int64
+     * @throws std::invalid_argument If parse is impossible. Parse is also
+     * deemed impossible if overflow is detected.
+     */
     int64    parse_as_int64();
+    /**
+     * @brief Parses string as int128
+     * @return int128
+     * @throws std::invalid_argument If parse is impossible
+     */
     int128   parse_as_int128();
+    /**
+     * @brief Parses string as float32
+     * @return float32
+     * @throws std::invalid_argument If parse is impossible
+     */
     float32  parse_as_float32();
+    /**
+     * @brief Parses string as float64
+     * @return float64
+     * @throws std::invalid_argument If parse is impossible
+     */
     float64  parse_as_float64();
+    /**
+     * @brief Parses string as float128
+     * @return float128
+     * @throws std::invalid_argument If parse is impossible
+     */
     float128 parse_as_float128();
 
   private:

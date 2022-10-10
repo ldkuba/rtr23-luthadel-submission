@@ -46,7 +46,7 @@ Geometry* GeometrySystem::acquire(const uint32 id) {
     return ref->second.handle;
 }
 
-uint32    generate_id();
+uint32    generate_id(); // TODO: TEMP
 Geometry* GeometrySystem::acquire(
     const std::vector<Vertex> vertices,
     const std::vector<uint32> indices,
@@ -54,8 +54,10 @@ Geometry* GeometrySystem::acquire(
     const String              material_name,
     bool                      auto_release
 ) {
+    // Generate unique id
     auto id = generate_id();
 
+    // Register new slot
     auto& ref           = _registered_geometries[id];
     ref.auto_release    = auto_release;
     ref.reference_count = 1;
@@ -94,6 +96,7 @@ void GeometrySystem::release(Geometry* geometry) {
 
     if (ref.reference_count > 0) ref.reference_count--;
 
+    // Is the geometry still need, if not release it
     if (ref.auto_release && ref.reference_count < 1) {
         _material_system->release(ref.handle->material()->name);
         _renderer->destroy_geometry(ref.handle);

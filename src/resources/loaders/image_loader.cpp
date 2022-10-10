@@ -47,10 +47,9 @@ Resource* ImageLoader::load(const String name) {
         throw std::runtime_error(error_message);
     }
 
-    uint64 total_size = image_width * image_height * req_channel_count;
-
     // Check for transparency
-    auto has_transparency = false;
+    auto   has_transparency = false;
+    uint64 total_size       = image_width * image_height * req_channel_count;
     if (image_channels > 3) {
         for (uint64 i = 3; i < total_size; i += req_channel_count) {
             if (image_pixels[i] < (stbi_uc) 255) {
@@ -60,6 +59,7 @@ Resource* ImageLoader::load(const String name) {
         }
     }
 
+    // Return image data
     Image* image = new Image(
         name, image_width, image_height, req_channel_count, (byte*) image_pixels
     );

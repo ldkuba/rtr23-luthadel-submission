@@ -6,6 +6,7 @@
 
 class ResourceSystem {
   public:
+    /// @brief Base path to assets Folder
     static String base_path;
 
     ResourceSystem();
@@ -15,9 +16,23 @@ class ResourceSystem {
     ResourceSystem(ResourceSystem const&)            = delete;
     ResourceSystem& operator=(ResourceSystem const&) = delete;
 
+    /**
+     * @brief Register resource loader
+     * @param loader Resource loader to register
+     */
     void register_loader(ResourceLoader* const loader);
 
+    /**
+     * @brief Loads resource off disk
+     * @param name Name or relative path to the requested resource
+     * @param type Resource type / Name of the resource loader
+     * @return Resource*
+     */
     Resource* load(const String name, const String type);
+    /**
+     * @brief Unloads loaded resource
+     * @param resource Resource to unload
+     */
     void      unload(Resource* resource);
 
   private:

@@ -21,6 +21,7 @@ struct ResourceType {
 
 class ResourceLoader {
   public:
+    /// @brief Resource type loaded by this resource / Resource Loader type name
     Property<String> type {
         Get { return _type; }
     };
@@ -28,7 +29,19 @@ class ResourceLoader {
     ResourceLoader() {}
     virtual ~ResourceLoader() {}
 
+    /**
+     * @brief Loads requested resource from the asset folder
+     *
+     * @param name Resource name / file name
+     * @returns Requested Resource*
+     * @throws FileSystemException if load fails for some reason
+     */
     virtual Resource* load(const String name) { return nullptr; }
+    /**
+     * @brief Releases resource data
+     *
+     * @param resource Resource to be unloaded
+     */
     virtual void      unload(Resource* resource) {}
 
   protected:
