@@ -1,5 +1,7 @@
 #include "renderer/vulkan/vulkan_render_pass.hpp"
 
+#include "renderer/vulkan/vulkan_settings.hpp"
+
 // Constructor & Destructor
 VulkanRenderPass::VulkanRenderPass(
     const vk::Device* const              device,
@@ -7,19 +9,38 @@ VulkanRenderPass::VulkanRenderPass(
     VulkanSwapchain* const               swapchain
 )
     : _device(device), _swapchain(swapchain), _allocator(allocator) {
+
     Logger::trace(RENDERER_VULKAN_LOG, "Creating render pass.");
 
-    // Get all attachment descriptions from swapchain
+    // === Get all attachment descriptions ===
     // Color attachment
-    vk::AttachmentDescription color_attachment =
-        _swapchain->get_color_attachment();
+    vk::AttachmentDescription color_attachment {};
+    color_attachment.setFormat(_swapchain->get_color_attachment_format());
+    color_attachment.setSamples(_swapchain->msaa_samples);
+    color_attachment.setLoadOp(vk::AttachmentLoadOp::eClear);
+    color_attachment.setStoreOp(vk::AttachmentStoreOp::eStore);
+    color_attachment.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+    color_attachment.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
+    color_attachment.setInitialLayout(vk::ImageLayout::eUndefined);
+    color_attachment.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
+
     vk::AttachmentReference color_attachment_ref {};
     color_attachment_ref.setLayout(vk::ImageLayout::eColorAttachmentOptimal);
     color_attachment_ref.setAttachment(0);
 
     // Depth attachment
-    vk::AttachmentDescription depth_attachment =
-        _swapchain->get_depth_attachment();
+    vk::AttachmentDescription depth_attachment {};
+    depth_attachment.setFormat(_swapchain->get_depth_attachment_format());
+    depth_attachment.setSamples(_swapchain->msaa_samples);
+    depth_attachment.setLoadOp(vk::AttachmentLoadOp::eClear);
+    depth_attachment.setStoreOp(vk::AttachmentStoreOp::eDontCare);
+    depth_attachment.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+    depth_attachment.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
+    depth_attachment.setInitialLayout(vk::ImageLayout::eUndefined);
+    depth_attachment.setFinalLayout(
+        vk::ImageLayout::eDepthStencilAttachmentOptimal
+    );
+
     vk::AttachmentReference depth_attachment_ref {};
     depth_attachment_ref.setLayout(
         vk::ImageLayout::eDepthStencilAttachmentOptimal
@@ -27,30 +48,41 @@ VulkanRenderPass::VulkanRenderPass(
     depth_attachment_ref.setAttachment(1);
 
     // Resolve attachment
-    vk::AttachmentDescription color_attachment_resolve =
-        _swapchain->get_color_attachment_resolve();
+    vk::AttachmentDescription color_attachment_resolve {};
+    color_attachment_resolve.setFormat(_swapchain->get_color_attachment_format()
+    );
+    color_attachment_resolve.setSamples(vk::SampleCountFlagBits::e1);
+    color_attachment_resolve.setLoadOp(vk::AttachmentLoadOp::eDontCare);
+    color_attachment_resolve.setStoreOp(vk::AttachmentStoreOp::eStore);
+    color_attachment_resolve.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+    color_attachment_resolve.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare
+    );
+    color_attachment_resolve.setInitialLayout(vk::ImageLayout::eUndefined);
+    color_attachment_resolve.setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
+
     vk::AttachmentReference color_attachment_resolve_ref {};
     color_attachment_resolve_ref.setLayout(
         vk::ImageLayout::eColorAttachmentOptimal
     );
     color_attachment_resolve_ref.setAttachment(2);
 
-    // Subpass
+    // === Subpass ===
     vk::SubpassDescription subpass {};
-    subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics
-    ); // Used for Graphics or Compute
+    // Used for Graphics or Compute
+    subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
     subpass.setColorAttachmentCount(1);
     subpass.setPColorAttachments(&color_attachment_ref);
     subpass.setPDepthStencilAttachment(&depth_attachment_ref);
     subpass.setPResolveAttachments(&color_attachment_resolve_ref);
     // Preserve and input attachments not used
 
-    // Subpass dependencies
+    // === Subpass dependencies ===
     // Controls image layout transitions between subpasses
     vk::SubpassDependency dependency {};
-    dependency.setSrcSubpass(VK_SUBPASS_EXTERNAL
-    ); // Refers to the implicit subpass before current render pass
-    dependency.setDstSubpass(0); // Subpass at index 0 (the only one)
+    // Refers to the implicit subpass before current render pass
+    dependency.setSrcSubpass(VK_SUBPASS_EXTERNAL);
+    // Subpass at index 0 (the only one)
+    dependency.setDstSubpass(0);
     // Operations to wait on before transitioning (Memory access we want)
     dependency.setSrcAccessMask(vk::AccessFlagBits::eNone);
     // Operations that wait for transition (Memory access we want)
@@ -68,7 +100,7 @@ VulkanRenderPass::VulkanRenderPass(
         vk::PipelineStageFlagBits::eEarlyFragmentTests
     );
 
-    // Create render pass
+    // === Create render pass ===
     std::array<vk::AttachmentDescription, 3> attachments = {
         color_attachment, depth_attachment, color_attachment_resolve
     };
@@ -86,6 +118,9 @@ VulkanRenderPass::VulkanRenderPass(
         Logger::fatal(RENDERER_VULKAN_LOG, e.what());
     }
 
+    // === Create register framebuffers ===
+    _framebuffer_set_index = _swapchain->create_framebuffers(this, true, true);
+
     Logger::trace(RENDERER_VULKAN_LOG, "Render pass created.");
 }
 VulkanRenderPass::~VulkanRenderPass() {
@@ -97,9 +132,7 @@ VulkanRenderPass::~VulkanRenderPass() {
 // VULKAN RENDER PASS PUBLIC METHODS //
 // ///////////////////////////////// //
 
-void VulkanRenderPass::begin(
-    const vk::CommandBuffer& command_buffer, const vk::Framebuffer& framebuffer
-) {
+void VulkanRenderPass::begin(const vk::CommandBuffer& command_buffer) {
     // Default background values of color and depth stencil for rendered area of
     // the render pass
     std::array<float32, 4>        clear_color = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -107,10 +140,14 @@ void VulkanRenderPass::begin(
     clear_values[0].setColor({ clear_color });
     clear_values[1].setDepthStencil({ 1.0f, 0 });
 
+    // Get relevant framebuffer
+    auto framebuffer =
+        _swapchain->get_currently_used_framebuffer(_framebuffer_set_index);
+
     // Begin render pass
     vk::RenderPassBeginInfo render_pass_begin_info {};
     render_pass_begin_info.setRenderPass(handle);
-    render_pass_begin_info.setFramebuffer(framebuffer);
+    render_pass_begin_info.setFramebuffer(framebuffer->handle());
     render_pass_begin_info.setClearValues(clear_values);
     // Area of the surface to render to (here full surface)
     render_pass_begin_info.renderArea.setOffset({ 0, 0 });

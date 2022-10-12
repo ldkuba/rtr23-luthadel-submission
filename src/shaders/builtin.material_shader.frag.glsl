@@ -1,5 +1,4 @@
 #version 450
-#extension GL_ARB_separate_shader_objects:enable
 
 layout(set=1,binding=1)uniform local_uniform_buffer{
     vec4 diffuse_color;

@@ -19,10 +19,7 @@ class VulkanRenderPass {
     /// @brief Begin render pass
     /// @param command_buffer Buffer to store begin command
     /// @param framebuffer Relevant framebuffer
-    void begin(
-        const vk::CommandBuffer& command_buffer,
-        const vk::Framebuffer&   framebuffer
-    );
+    void begin(const vk::CommandBuffer& command_buffer);
     /// @brief End render pass
     /// @param command_buffer  Buffer to store end command
     void end(const vk::CommandBuffer& command_buffer);
@@ -33,4 +30,5 @@ class VulkanRenderPass {
     VulkanSwapchain* const               _swapchain;
 
     vk::RenderPass _handle;
+    uint32         _framebuffer_set_index;
 };

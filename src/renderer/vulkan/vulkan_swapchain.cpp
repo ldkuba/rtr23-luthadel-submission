@@ -12,6 +12,7 @@ VulkanSwapchain::VulkanSwapchain(
 )
     : _width(width), _height(height), _vulkan_surface(vulkan_surface),
       _device(device), _allocator(allocator) {
+
     // Set maximum MSAA samples
     auto count = _device->info().framebuffer_color_sample_counts &
                  _device->info().framebuffer_depth_sample_counts;
@@ -39,12 +40,19 @@ VulkanSwapchain::VulkanSwapchain(
     Logger::trace(RENDERER_VULKAN_LOG, "Swapchain created.");
 
     // Create vulkan images
+    find_depth_format();
     create_depth_resources();
     create_color_resource();
 }
 
 VulkanSwapchain::~VulkanSwapchain() {
     destroy();
+    for (auto& framebuffer_set : _framebuffer_sets) {
+        for (auto& framebuffer : framebuffer_set.framebuffers)
+            delete framebuffer;
+        framebuffer_set.framebuffers.clear();
+    }
+    _framebuffer_sets.clear();
     Logger::trace(RENDERER_VULKAN_LOG, "Swapchain destroyed.");
 }
 
@@ -58,62 +66,43 @@ void VulkanSwapchain::change_extent(const uint32 width, const uint32 height) {
     _should_resize = true;
 }
 
-void VulkanSwapchain::initialize_framebuffers(
-    const vk::RenderPass* const render_pass
+uint32 VulkanSwapchain::create_framebuffers(
+    const VulkanRenderPass* const render_pass,
+    bool                          multisampling,
+    bool                          depth_testing
 ) {
     Logger::trace(RENDERER_VULKAN_LOG, "Initializing framebuffers.");
-    _render_pass = render_pass; // Set render pass requirement
-    create_framebuffers();      // Create framebuffers
+
+    std::vector<VulkanFramebuffer*> framebuffers { _image_views.size() };
+    for (uint32 i = 0; i < framebuffers.size(); i++) {
+        std::vector<vk::ImageView> attachments {};
+        if (multisampling) attachments.push_back(_color_image->view());
+        if (depth_testing) attachments.push_back(_depth_image->view());
+        attachments.push_back(_image_views[i]);
+
+        framebuffers[i] = new VulkanFramebuffer(
+            &_device->handle(),
+            _allocator,
+            render_pass,
+            _extent.width,
+            _extent.height,
+            attachments
+        );
+    }
+    _framebuffer_sets.push_back({ framebuffers, multisampling, depth_testing });
+
     Logger::trace(RENDERER_VULKAN_LOG, "Framebuffers initialized.");
+    return _framebuffer_sets.size() - 1;
 }
 
-vk::AttachmentDescription VulkanSwapchain::get_depth_attachment() const {
-    vk::AttachmentDescription depth_attachment {};
-    depth_attachment.setFormat(find_depth_format());
-    depth_attachment.setSamples(_msaa_samples);
-    depth_attachment.setLoadOp(vk::AttachmentLoadOp::eClear);
-    depth_attachment.setStoreOp(vk::AttachmentStoreOp::eDontCare);
-    depth_attachment.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
-    depth_attachment.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
-    depth_attachment.setInitialLayout(vk::ImageLayout::eUndefined);
-    depth_attachment.setFinalLayout(
-        vk::ImageLayout::eDepthStencilAttachmentOptimal
-    );
-
-    return depth_attachment;
+vk::Format VulkanSwapchain::get_color_attachment_format() const {
+    return _format;
+}
+vk::Format VulkanSwapchain::get_depth_attachment_format() const {
+    return _depth_format;
 }
 
-vk::AttachmentDescription VulkanSwapchain::get_color_attachment() const {
-    vk::AttachmentDescription color_attachment {};
-    color_attachment.setFormat(_format);
-    color_attachment.setSamples(_msaa_samples);
-    color_attachment.setLoadOp(vk::AttachmentLoadOp::eClear);
-    color_attachment.setStoreOp(vk::AttachmentStoreOp::eStore);
-    color_attachment.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
-    color_attachment.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
-    color_attachment.setInitialLayout(vk::ImageLayout::eUndefined);
-    color_attachment.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
-
-    return color_attachment;
-}
-
-vk::AttachmentDescription VulkanSwapchain::get_color_attachment_resolve(
-) const {
-    vk::AttachmentDescription color_attachment_resolve {};
-    color_attachment_resolve.setFormat(_format);
-    color_attachment_resolve.setSamples(vk::SampleCountFlagBits::e1);
-    color_attachment_resolve.setLoadOp(vk::AttachmentLoadOp::eDontCare);
-    color_attachment_resolve.setStoreOp(vk::AttachmentStoreOp::eStore);
-    color_attachment_resolve.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
-    color_attachment_resolve.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare
-    );
-    color_attachment_resolve.setInitialLayout(vk::ImageLayout::eUndefined);
-    color_attachment_resolve.setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
-
-    return color_attachment_resolve;
-}
-
-uint32 VulkanSwapchain::acquire_next_image_index(
+void VulkanSwapchain::compute_next_image_index(
     const vk::Semaphore& signal_semaphore
 ) {
     // Obtain a swapchain image (next in queue for drawing)
@@ -127,28 +116,26 @@ uint32 VulkanSwapchain::acquire_next_image_index(
                 RENDERER_VULKAN_LOG,
                 "Swapchain image index acquisition timed-out."
             );
-        return obtained.value;
+        _current_image_index = obtained.value;
     } catch (const vk::SystemError& e) {
         Logger::fatal(RENDERER_VULKAN_LOG, e.what());
     }
-    return -1;
 }
 
 void VulkanSwapchain::present(
-    const uint32                      image_index,
     const std::vector<vk::Semaphore>& wait_for_semaphores
 ) {
     std::vector<vk::SwapchainKHR> swapchains = { _handle };
 
     // Present results
     vk::PresentInfoKHR present_info {};
-    present_info.setWaitSemaphores(wait_for_semaphores
-    ); // Semaphores to wait on before presenting
-    present_info.setSwapchains(swapchains); // List of presenting swapchains
-    present_info.setPImageIndices(&image_index
-    ); // Index of presenting image for each swapchain
-    // Check if presentation is successful for each swapchain (not needed, as
-    // there is only 1)
+    // Semaphores to wait on before presenting
+    present_info.setWaitSemaphores(wait_for_semaphores);
+    // List of presenting swapchains
+    present_info.setSwapchains(swapchains);
+    // Index of presenting image for each swapchain. Check if presentation is
+    // successful for each swapchain (not needed, as there is only 1)
+    present_info.setPImageIndices(&_current_image_index);
     present_info.setPResults(nullptr);
 
     try {
@@ -163,12 +150,20 @@ void VulkanSwapchain::present(
     }
 }
 
+VulkanFramebuffer* VulkanSwapchain::get_currently_used_framebuffer(
+    const uint32 index
+) {
+    if (index > _framebuffer_sets.size())
+        Logger::fatal(RENDERER_VULKAN_LOG, "Framebuffer index out of range.");
+    return _framebuffer_sets[index].framebuffers[_current_image_index];
+}
+
 // //////////////////////////////// //
 // VULKAN SWAPCHAIN PRIVATE METHODS //
 // //////////////////////////////// //
 
 void VulkanSwapchain::create() {
-    // Get swapchain details
+    // === Get swapchain details ===
     SwapchainSupportDetails swapchain_support =
         _device->info().get_swapchain_support_details(_vulkan_surface);
 
@@ -187,32 +182,35 @@ void VulkanSwapchain::create() {
     if (max_image_count != 0 && min_image_count > max_image_count)
         min_image_count = max_image_count;
 
-    // Create swapchain
+    // === Create swapchain ===
     vk::SwapchainCreateInfoKHR create_info {};
-    create_info.setSurface(_vulkan_surface
-    ); // Surface the swapchain will be tied to
-    create_info.setMinImageCount(min_image_count
-    );                                  // Number of swapchain images used
-    create_info.setImageExtent(extent); // Swapchain image dimensions
-    create_info.setImageFormat(surface_format.format); // Swapchain image format
-    create_info.setImageColorSpace(surface_format.colorSpace
-    ); // Swapchain image color space
+    // Surface the swapchain will be tied to
+    create_info.setSurface(_vulkan_surface);
+    // Number of swapchain images used
+    create_info.setMinImageCount(min_image_count);
+    // Swapchain image dimensions
+    create_info.setImageExtent(extent);
+    // Swapchain image format
+    create_info.setImageFormat(surface_format.format);
+    // Swapchain image color space
+    create_info.setImageColorSpace(surface_format.colorSpace);
     // Algorithm to be used to determine the order of image rendering and
     // presentation
     create_info.setPresentMode(presentation_mode);
-    create_info.setImageArrayLayers(1
-    ); // Amount of layers each image consists of
-    create_info.setImageUsage(vk::ImageUsageFlagBits::eColorAttachment
-    ); // Render to color buffer
+    // Amount of layers each image consists of
+    create_info.setImageArrayLayers(1);
+    // Render to color buffer
+    create_info.setImageUsage(vk::ImageUsageFlagBits::eColorAttachment);
     // Transform to be applied to image in swapchain (currentTransform for
     // selecting none)
     create_info.setPreTransform(swapchain_support.capabilities.currentTransform
     );
-    create_info.setCompositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque
-    );                            // Composite with the operating system
-    create_info.setClipped(true); // Clip object beyond screen
-    create_info.setOldSwapchain(VK_NULL_HANDLE
-    ); // TODO: More optimal swapchain recreation
+    // Composite with the operating system
+    create_info.setCompositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque);
+    // Clip object beyond screen
+    create_info.setClipped(true);
+    // TODO: More optimal swapchain recreation
+    create_info.setOldSwapchain(VK_NULL_HANDLE);
 
     // Specify how to handle swapchain images which are used across multiple
     // queue families The two interesting queues in this case are graphics and
@@ -239,7 +237,7 @@ void VulkanSwapchain::create() {
         Logger::fatal(RENDERER_VULKAN_LOG, e.what());
     }
 
-    // Remember swapchain format and extent
+    // === Remember swapchain format and extent ===
     _format       = surface_format.format;
     this->_extent = extent;
 
@@ -263,10 +261,6 @@ void VulkanSwapchain::destroy() {
     delete _color_image;
     delete _depth_image;
 
-    // Destroy framebuffers
-    for (auto framebuffer : _framebuffers)
-        _device->handle().destroyFramebuffer(framebuffer, _allocator);
-
     // Destroy image views
     for (auto image_view : _image_views)
         _device->handle().destroyImageView(image_view, _allocator);
@@ -286,19 +280,31 @@ void VulkanSwapchain::recreate() {
     create();
     create_color_resource();
     create_depth_resources();
-    create_framebuffers();
+
+    // Framebuffer recreation
+    for (auto& framebuffer_set : _framebuffer_sets) {
+        for (uint32 i = 0; i < framebuffer_set.framebuffers.size(); i++) {
+            std::vector<vk::ImageView> attachments {};
+            if (framebuffer_set.multisampling)
+                attachments.push_back(_color_image->view());
+            if (framebuffer_set.depth_testing)
+                attachments.push_back(_depth_image->view());
+            attachments.push_back(_image_views[i]);
+            framebuffer_set.framebuffers[i]->recreate(
+                _extent.width, _extent.height, attachments
+            );
+        }
+    }
 }
 
 void VulkanSwapchain::create_color_resource() {
-    vk::Format color_format = _format;
-
     _color_image = new VulkanImage(_device, _allocator);
     _color_image->create(
         _extent.width,
         _extent.height,
         1,
         _msaa_samples,
-        color_format,
+        _format,
         vk::ImageTiling::eOptimal,
         vk::ImageUsageFlagBits::eColorAttachment,
         vk::MemoryPropertyFlagBits::eDeviceLocal,
@@ -306,15 +312,13 @@ void VulkanSwapchain::create_color_resource() {
     );
 }
 void VulkanSwapchain::create_depth_resources() {
-    auto depth_format = find_depth_format();
-
     _depth_image = new VulkanImage(_device, _allocator);
     _depth_image->create(
         _extent.width,
         _extent.height,
         1,
         _msaa_samples,
-        depth_format,
+        _depth_format,
         vk::ImageTiling::eOptimal,
         vk::ImageUsageFlagBits::eDepthStencilAttachment,
         vk::MemoryPropertyFlagBits::eDeviceLocal,
@@ -322,7 +326,7 @@ void VulkanSwapchain::create_depth_resources() {
     );
 }
 
-vk::Format VulkanSwapchain::find_depth_format() const {
+void VulkanSwapchain::find_depth_format() {
     std::vector<vk::Format> candidates = { vk::Format::eD32Sfloat,
                                            vk::Format::eD32SfloatS8Uint,
                                            vk::Format::eD24UnormS8Uint };
@@ -336,41 +340,13 @@ vk::Format VulkanSwapchain::find_depth_format() const {
         auto properties = _device->info().get_format_properties(format);
         vk::FormatFeatureFlags supported_features;
         if (tiling == vk::ImageTiling::eLinear &&
-            (features & properties.linearTilingFeatures) == features)
-            return format;
-        else if (tiling == vk::ImageTiling::eOptimal && (features & properties.optimalTilingFeatures) == features)
-            return format;
-    }
-    Logger::fatal(RENDERER_VULKAN_LOG, "Failed to find supported format.");
-    return vk::Format();
-}
-
-void VulkanSwapchain::create_framebuffers() {
-    _framebuffers.resize(_image_views.size());
-
-    // Create a framebuffer for each swapchain image view
-    for (uint32 i = 0; i < _framebuffers.size(); i++) {
-        std::array<vk::ImageView, 3> attachments = { _color_image->view(),
-                                                     _depth_image->view(),
-                                                     _image_views[i] };
-
-        // Create framebuffer
-        vk::FramebufferCreateInfo framebuffer_info {};
-        framebuffer_info.setRenderPass(*_render_pass
-        ); // Render pass with which framebuffer need to be compatible
-        // List of objects bound to the corresponding attachment descriptions
-        // render pass
-        framebuffer_info.setAttachments(attachments);
-        framebuffer_info.setWidth(_extent.width);   // Framebuffer width
-        framebuffer_info.setHeight(_extent.height); // Framebuffer height
-        framebuffer_info.setLayers(1); // Number of layers in image array
-
-        try {
-            _framebuffers[i] = _device->handle().createFramebuffer(
-                framebuffer_info, _allocator
-            );
-        } catch (vk::SystemError e) {
-            Logger::fatal(RENDERER_VULKAN_LOG, e.what());
+            (features & properties.linearTilingFeatures) == features) {
+            _depth_format = format;
+            return;
+        } else if (tiling == vk::ImageTiling::eOptimal && (features & properties.optimalTilingFeatures) == features) {
+            _depth_format = format;
+            return;
         }
     }
+    Logger::fatal(RENDERER_VULKAN_LOG, "Failed to find supported format.");
 }

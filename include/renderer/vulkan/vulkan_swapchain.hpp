@@ -1,16 +1,13 @@
 #pragma once
 
 #include "vulkan_image.hpp"
+#include "vulkan_framebuffer.hpp"
 
 class VulkanSwapchain {
   public:
     /// @brief Swapchain image extent
     Property<vk::Extent2D> extent {
         Get { return _extent; }
-    };
-    /// @brief Framebuffers used for each swapchain image
-    Property<std::vector<vk::Framebuffer>> framebuffers {
-        Get { return _framebuffers; }
     };
     /// @brief Number of sampled used for Multisample anti-aliasing
     Property<vk::SampleCountFlagBits> msaa_samples {
@@ -29,32 +26,33 @@ class VulkanSwapchain {
     /// @brief Change swapchain image extent
     /// @param width New width
     /// @param height New height
-    void change_extent(const uint32 width, const uint32 height);
-    /// @brief Used for initial creation of framebuffers
+    void   change_extent(const uint32 width, const uint32 height);
+    /// @brief Create used framebuffers
     /// @param render_pass Render pass for which to create the framebuffers
-    void initialize_framebuffers(const vk::RenderPass* const render_pass);
+    /// @param multisampling If true enables multisampling
+    /// @param depth_testing If true enables depth testing
+    /// @returns Framebuffer set identifier
+    uint32 create_framebuffers(
+        const VulkanRenderPass* const render_pass,
+        bool                          multisampling,
+        bool                          depth_testing
+    );
 
-    /// @return Appropriately filled vk::AttachmentDescription object for depth
-    /// attachment
-    vk::AttachmentDescription get_depth_attachment() const;
-    /// @return Appropriately filled vk::AttachmentDescription object for color
-    /// attachment
-    vk::AttachmentDescription get_color_attachment() const;
-    /// @return Appropriately filled vk::AttachmentDescription object for color
-    /// attachment resolve
-    vk::AttachmentDescription get_color_attachment_resolve() const;
+    /// @return Format currently used by the color attachment
+    vk::Format get_color_attachment_format() const;
+    /// @return Format currently used by the depth attachment
+    vk::Format get_depth_attachment_format() const;
 
-    /// @brief Compute the index of the next swapchain image to be rendered to
+    /// @brief Compute the index of the next swapchain image for rendering
     /// @param signal_semaphore Semaphore to signal after acquisition
-    /// @return Index of next image to be rendered to
-    uint32 acquire_next_image_index(const vk::Semaphore& signal_semaphore);
+    void compute_next_image_index(const vk::Semaphore& signal_semaphore);
     /// @brief Present render results
     /// @param image_index Index of the image to present
     /// @param wait_for_semaphores Semaphores to wait on before presenting
-    void   present(
-          const uint32                      image_index,
-          const std::vector<vk::Semaphore>& wait_for_semaphores
-      );
+    void present(const std::vector<vk::Semaphore>& wait_for_semaphores);
+    /// @brief Get the framebuffer used in the current draw
+    /// @param index Framebuffer set identifier
+    VulkanFramebuffer* get_currently_used_framebuffer(const uint32 index);
 
   private:
     const VulkanDevice*                  _device;
@@ -65,10 +63,18 @@ class VulkanSwapchain {
     vk::SwapchainKHR           _handle;
     std::vector<vk::ImageView> _image_views;
     vk::Format                 _format;
+    vk::Format                 _depth_format;
+    vk::Extent2D               _extent;
+    vk::SampleCountFlagBits    _msaa_samples;
 
-    vk::Extent2D                 _extent;
-    std::vector<vk::Framebuffer> _framebuffers;
-    vk::SampleCountFlagBits      _msaa_samples;
+    uint32 _current_image_index = 0;
+
+    struct FramebufferRef {
+        std::vector<VulkanFramebuffer*> framebuffers = {};
+        bool                            multisampling;
+        bool                            depth_testing;
+    };
+    std::vector<FramebufferRef> _framebuffer_sets = {};
 
     uint32 _width;
     uint32 _height;
@@ -77,13 +83,12 @@ class VulkanSwapchain {
     void create();
     void destroy();
     void recreate();
-    void create_framebuffers();
 
     // Image resources
     VulkanImage* _depth_image;
     VulkanImage* _color_image;
 
-    void       create_color_resource();
-    void       create_depth_resources();
-    vk::Format find_depth_format() const;
+    void create_color_resource();
+    void create_depth_resources();
+    void find_depth_format();
 };

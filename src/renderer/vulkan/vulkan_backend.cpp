@@ -1,4 +1,5 @@
 #include "renderer/vulkan/vulkan_backend.hpp"
+#include "renderer/vulkan/vulkan_framebuffer.hpp"
 
 VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback_function(
     VkDebugUtilsMessageSeverityFlagBitsEXT      message_severity,
@@ -41,9 +42,6 @@ VulkanBackend::VulkanBackend(
     // Create render pass
     _render_pass =
         new VulkanRenderPass(&_device->handle(), _allocator, _swapchain);
-
-    // Initialize framebuffers
-    _swapchain->initialize_framebuffers(&_render_pass->handle());
 
     // Create command pool
     _command_pool = new VulkanCommandPool(
@@ -137,17 +135,15 @@ bool VulkanBackend::begin_frame(const float32 delta_time) {
     try {
         auto result = _device->handle().waitForFences(fences, true, UINT64_MAX);
         if (result != vk::Result::eSuccess) {
-            Logger::warning(
-                RENDERER_VULKAN_LOG, "End of frame fence timed-out."
-            );
+            Logger::error(RENDERER_VULKAN_LOG, "End of frame fence timed-out.");
             return false;
         }
     } catch (const vk::SystemError& e) {
         Logger::fatal(RENDERER_VULKAN_LOG, e.what());
     }
 
-    // Acquire next swapchain image index
-    _current_image = _swapchain->acquire_next_image_index(
+    // Compute next swapchain image index
+    _swapchain->compute_next_image_index(
         _semaphores_image_available[_current_frame]
     );
 
@@ -169,8 +165,7 @@ bool VulkanBackend::begin_frame(const float32 delta_time) {
     command_buffer.begin(begin_info);
 
     // Begin render pass
-    std::vector<vk::Framebuffer> framebuffers = _swapchain->framebuffers;
-    _render_pass->begin(command_buffer, framebuffers[_current_image]);
+    _render_pass->begin(command_buffer);
 
     // Set dynamic states
     // Viewport
@@ -231,7 +226,7 @@ bool VulkanBackend::end_frame(const float32 delta_time) {
     }
 
     // Present swapchain
-    _swapchain->present(_current_image, signal_semaphores);
+    _swapchain->present(signal_semaphores);
 
     // Advance current frame
     _current_frame =
@@ -675,10 +670,6 @@ vk::DebugUtilsMessengerCreateInfoEXT VulkanBackend::debug_messenger_create_info(
 // SYNCH
 void VulkanBackend::create_sync_objects() {
     Logger::trace(RENDERER_VULKAN_LOG, "Creating synchronization objects.");
-
-    _semaphores_image_available.resize(VulkanSettings::max_frames_in_flight);
-    _semaphores_render_finished.resize(VulkanSettings::max_frames_in_flight);
-    _fences_in_flight.resize(VulkanSettings::max_frames_in_flight);
 
     // Create synchronization objects
     vk::SemaphoreCreateInfo semaphore_info {};

@@ -56,9 +56,12 @@ class VulkanBackend : public RendererBackend {
     vk::SurfaceKHR _vulkan_surface;
 
     // Synchronization objects
-    std::vector<vk::Semaphore> _semaphores_image_available;
-    std::vector<vk::Semaphore> _semaphores_render_finished;
-    std::vector<vk::Fence>     _fences_in_flight;
+    std::array<vk::Semaphore, VulkanSettings::max_frames_in_flight>
+        _semaphores_image_available;
+    std::array<vk::Semaphore, VulkanSettings::max_frames_in_flight>
+        _semaphores_render_finished;
+    std::array<vk::Fence, VulkanSettings::max_frames_in_flight>
+        _fences_in_flight;
 
     void create_sync_objects();
 
@@ -68,12 +71,11 @@ class VulkanBackend : public RendererBackend {
     // SWAPCHAIN CODE
     VulkanSwapchain* _swapchain;
     uint32           _current_frame = 0;
-    uint32           _current_image = 0;
 
     // RENDER PASS
     VulkanRenderPass* _render_pass;
 
-    // OBJECT SHADER
+    // MATERIAL SHADER
     VulkanMaterialShader* _material_shader;
 
     // GEOMETRY CODE
