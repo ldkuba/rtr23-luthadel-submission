@@ -25,8 +25,12 @@ void Renderer::on_resize(const uint32 width, const uint32 height) {
 }
 bool Renderer::draw_frame(const float32 delta_time) {
     if (_backend->begin_frame(delta_time)) {
+
+        // === World shader ===
+        _backend->begin_render_pass(BuiltinRenderPass::World);
+
         // Update global state
-        _backend->update_global_state(
+        _backend->update_global_world_state(
             _projection, _view, glm::vec3(0.0), glm::vec4(1.0), 0
         );
 
@@ -41,6 +45,17 @@ bool Renderer::draw_frame(const float32 delta_time) {
 
         _backend->draw_geometry(data);
 
+        _backend->end_render_pass(BuiltinRenderPass::World);
+
+        // === UI changes ===
+        // _backend->begin_render_pass(BuiltinRenderPass::UI);
+
+        // // Update global state
+        // _backend->update_global_ui_state(_projection_ui, _view_ui, 0);
+
+        // _backend->end_render_pass(BuiltinRenderPass::UI);
+
+        // === END FRAME ===
         bool result = _backend->end_frame(delta_time);
         _backend->increment_frame_number();
         if (!result) {

@@ -4,6 +4,7 @@
 #include "vulkan_render_pass.hpp"
 #include "vulkan_command_pool.hpp"
 #include "shaders/vulkan_material_shader.hpp"
+#include "shaders/vulkan_ui_shader.hpp"
 
 #include <map>
 
@@ -15,15 +16,24 @@ class VulkanBackend : public RendererBackend {
     ~VulkanBackend();
 
     void resized(const uint32 width, const uint32 height);
+
     bool begin_frame(const float32 delta_time);
     bool end_frame(const float32 delta_time);
-    void update_global_state(
+
+    void begin_render_pass(uint8 render_pass_id);
+    void end_render_pass(uint8 render_pass_id);
+
+    void update_global_world_state(
         const glm::mat4 projection,
         const glm::mat4 view,
         const glm::vec3 view_position,
         const glm::vec4 ambient_color,
         const int32     mode
     );
+    void update_global_ui_state(
+        const glm::mat4 projection, const glm::mat4 view, const int32 mode
+    );
+
     void draw_geometry(const GeometryRenderData data);
 
     void create_texture(Texture* texture, const byte* const data);
@@ -73,10 +83,14 @@ class VulkanBackend : public RendererBackend {
     uint32           _current_frame = 0;
 
     // RENDER PASS
-    VulkanRenderPass* _render_pass;
+    VulkanRenderPass* _main_render_pass;
+    VulkanRenderPass* _ui_render_pass;
 
     // MATERIAL SHADER
     VulkanMaterialShader* _material_shader;
+
+    // UI SHADER
+    VulkanUIShader* _ui_shader;
 
     // GEOMETRY CODE
     std::map<uint32, VulkanGeometryData> _geometries;

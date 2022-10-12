@@ -90,4 +90,14 @@ class Renderer {
         glm::vec3(0.0f, 0.0f, 0.0f),
         glm::vec3(0.0f, 0.0f, 1.0f)
     );
+
+    // UI
+    glm::mat4 _projection_ui =
+        glm::ortho(0.0f, 800.f, 600.0f, 0.0f, -100.0f, 100.0f);
+    glm::mat4 _view_ui = glm::mat4(
+        glm::vec4(1.0f, 0.0f, 0.0f, 0.0f),
+        glm::vec4(0.0f, 1.0f, 0.0f, 0.0f),
+        glm::vec4(0.0f, 0.0f, 1.0f, 0.0f),
+        glm::vec4(0.0f, 0.0f, 0.0f, 1.0f)
+    );
 };

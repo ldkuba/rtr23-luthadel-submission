@@ -13,7 +13,8 @@ VulkanRenderPass::VulkanRenderPass(
     const bool                           multisampling
 )
     : _device(device), _swapchain(swapchain), _allocator(allocator),
-      _clear_color(clear_color), _clear_flags(clear_flags) {
+      _clear_color(clear_color), _clear_flags(clear_flags),
+      _multisampling_enabled(multisampling) {
 
     Logger::trace(RENDERER_VULKAN_LOG, "Creating render pass.");
 

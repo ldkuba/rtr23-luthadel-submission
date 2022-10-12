@@ -8,6 +8,7 @@
 #include <functional>
 
 #include "defines.hpp"
+#include "math_libs.hpp"
 
 struct QueueFamilyIndices {
     std::optional<uint32> graphics_family;
@@ -50,6 +51,7 @@ struct PhysicalDeviceInfo {
     std::function<vk::FormatProperties(const vk::Format)> get_format_properties;
 };
 
+// Texture data
 #include "resources/texture.hpp"
 
 class VulkanImage;

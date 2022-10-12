@@ -36,9 +36,9 @@ vk::ShaderModule VulkanShader::create_shader_module(const std::vector<byte> code
 void VulkanShader::create_pipeline(
     const std::vector<vk::PipelineShaderStageCreateInfo>& shader_stages,
     const vk::PipelineVertexInputStateCreateInfo&         vertex_input_info,
-    const vk::RenderPass                                  render_pass,
-    const vk::SampleCountFlagBits number_of_msaa_samples,
-    const bool                    is_wire_frame
+    const VulkanRenderPass* const                         render_pass,
+    const bool                                            depth_testing_enabled,
+    const bool                                            is_wire_frame
 ) {
     Logger::trace(RENDERER_VULKAN_LOG, "Creating graphics pipeline.");
 
@@ -86,37 +86,45 @@ void VulkanShader::create_pipeline(
     rasterization_info.setDepthBiasSlopeFactor(0.0f);
 
     // === Multisampling ===
+    auto multisampling_enabled =
+        render_pass->sample_count != vk::SampleCountFlagBits::e1;
     vk::PipelineMultisampleStateCreateInfo multisampling_info {};
     // Number of samples used for multisampling
-    multisampling_info.setRasterizationSamples(number_of_msaa_samples);
+    multisampling_info.setRasterizationSamples(render_pass->sample_count);
     // Is sample shading enabled
-    multisampling_info.setSampleShadingEnable(true);
+    multisampling_info.setSampleShadingEnable(multisampling_enabled);
     // Min fraction of samples used for sample shading; closer to one is
     // smoother
-    multisampling_info.setMinSampleShading(0.2f);
+    multisampling_info.setMinSampleShading(
+        (multisampling_enabled) ? 0.2f : 0.0f
+    );
     // Sample mask test
     multisampling_info.setPSampleMask(nullptr);
     multisampling_info.setAlphaToCoverageEnable(false);
     multisampling_info.setAlphaToOneEnable(false);
 
     // === Depth and stencil testing ===
-    vk::PipelineDepthStencilStateCreateInfo depth_stencil {};
-    depth_stencil.setDepthTestEnable(true); // Should depth testing be preformed
-    // Should depth buffer be updated with new depth values (depth values of
-    // fragments that passed the depth test)
-    depth_stencil.setDepthWriteEnable(true);
-    depth_stencil.setDepthCompareOp(vk::CompareOp::eLess
-    ); // Comparison operation preformed for depth test
-    depth_stencil.setDepthBoundsTestEnable(false
-    ); // Should depth bods test be preformed
-    depth_stencil.setMinDepthBounds(0.0f
-    ); // Minimum non-discarded fragment depth value
-    depth_stencil.setMaxDepthBounds(1.0f
-    ); // Maximum non-discarded fragment depth value
-    // Stencil buffer operations (here disabled)
-    depth_stencil.setStencilTestEnable(false);
-    depth_stencil.setFront({});
-    depth_stencil.setBack({});
+    vk::PipelineDepthStencilStateCreateInfo* depth_stencil {};
+    if (depth_testing_enabled) {
+        depth_stencil = new vk::PipelineDepthStencilStateCreateInfo();
+        // Should depth testing be preformed
+        depth_stencil->setDepthTestEnable(true);
+        // Should depth buffer be updated with new depth values (depth values of
+        // fragments that passed the depth test)
+        depth_stencil->setDepthWriteEnable(true);
+        // Comparison operation preformed for depth test
+        depth_stencil->setDepthCompareOp(vk::CompareOp::eLess);
+        // Should depth bods test be preformed
+        depth_stencil->setDepthBoundsTestEnable(false);
+        // Minimum non-discarded fragment depth value
+        depth_stencil->setMinDepthBounds(0.0f);
+        // Maximum non-discarded fragment depth value
+        depth_stencil->setMaxDepthBounds(1.0f);
+        // Stencil buffer operations (here disabled)
+        depth_stencil->setStencilTestEnable(false);
+        depth_stencil->setFront({});
+        depth_stencil->setBack({});
+    }
 
     // === Color blending ===
     std::array<vk::PipelineColorBlendAttachmentState, 1>
@@ -197,14 +205,14 @@ void VulkanShader::create_pipeline(
     create_info.setPViewportState(&viewport_state_info);
     create_info.setPRasterizationState(&rasterization_info);
     create_info.setPMultisampleState(&multisampling_info);
-    create_info.setPDepthStencilState(&depth_stencil);
+    create_info.setPDepthStencilState(depth_stencil);
     create_info.setPColorBlendState(&color_blend_state_info);
     create_info.setPDynamicState(&dynamic_state_info);
     create_info.setPTessellationState(nullptr); // TODO: Use tessellation
     // Pipeline layout handle
     create_info.setLayout(_pipeline_layout);
     // Render passes
-    create_info.setRenderPass(render_pass);
+    create_info.setRenderPass(render_pass->handle());
     create_info.setSubpass(0); // The index of the subpass in the render pass
                                // where this pipeline will be used
     // Pipeline derivation

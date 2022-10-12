@@ -24,6 +24,7 @@ class RendererBackend {
      * @param height New height in pixels
      */
     virtual void resized(const uint32 width, const uint32 height) {}
+
     /**
      * @brief Preform operations in preparation for frame rendering
      * @param delta_time Time in seconds since the last frame
@@ -38,8 +39,12 @@ class RendererBackend {
      * @return true Otherwise
      */
     virtual bool end_frame(const float32 delta_time) { return false; }
+
+    virtual void begin_render_pass(uint8 render_pass_id) {}
+    virtual void end_render_pass(uint8 render_pass_id) {}
+
     /**
-     * @brief Updates the global state of the renderer
+     * @brief Updates the global world state of the renderer
      * TODO:
      * @param projection
      * @param view
@@ -47,13 +52,24 @@ class RendererBackend {
      * @param ambient_color
      * @param mode
      */
-    virtual void update_global_state(
+    virtual void update_global_world_state(
         const glm::mat4 projection,
         const glm::mat4 view,
         const glm::vec3 view_position,
         const glm::vec4 ambient_color,
         const int32     mode
     ) {}
+    /**
+     * @brief Update global state of renderer UI
+     *
+     * @param projection
+     * @param view
+     * @param mode
+     */
+    virtual void update_global_ui_state(
+        const glm::mat4 projection, const glm::mat4 view, const int32 mode
+    ) {}
+
     /**
      * @brief Draw command for specified geometry
      * @param data Draw info

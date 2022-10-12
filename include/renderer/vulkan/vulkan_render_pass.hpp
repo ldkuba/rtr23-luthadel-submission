@@ -16,6 +16,14 @@ class VulkanRenderPass {
     Property<vk::RenderPass> handle {
         Get { return _handle; }
     };
+    /// @brief Number of sampled used for Multisample anti-aliasing
+    Property<vk::SampleCountFlagBits> sample_count {
+        Get {
+            if (_multisampling_enabled) return _swapchain->msaa_samples();
+            static auto one_sample = vk::SampleCountFlagBits::e1;
+            return one_sample;
+        }
+    };
 
     VulkanRenderPass(
         const vk::Device* const              device,
@@ -44,6 +52,7 @@ class VulkanRenderPass {
     vk::RenderPass _handle;
     uint32         _framebuffer_set_index;
 
+    bool                   _multisampling_enabled;
     bool                   _has_depth;
     std::array<float32, 4> _clear_color;
     uint8                  _clear_flags;

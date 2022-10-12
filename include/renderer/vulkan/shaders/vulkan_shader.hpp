@@ -1,6 +1,7 @@
 #pragma once
 
 #include "vulkan_descriptor.hpp"
+#include "../vulkan_render_pass.hpp"
 
 class VulkanShader {
   public:
@@ -30,10 +31,9 @@ class VulkanShader {
     void             create_pipeline(
                     const std::vector<vk::PipelineShaderStageCreateInfo>& shader_stages,
                     const vk::PipelineVertexInputStateCreateInfo&         vertex_input_info,
-                    const vk::RenderPass                                  render_pass,
-                    const vk::SampleCountFlagBits number_of_msaa_samples =
-                        vk::SampleCountFlagBits::e1,
-                    const bool is_wire_frame = false
+                    const VulkanRenderPass* const                         render_pass,
+                    const bool depth_testing_enabled = false,
+                    const bool is_wire_frame         = false
                 );
 
     void add_descriptor(

@@ -40,7 +40,7 @@ VulkanBackend::VulkanBackend(
     );
 
     // Create render pass
-    _render_pass = new VulkanRenderPass(
+    _main_render_pass = new VulkanRenderPass(
         &_device->handle(),
         _allocator,
         _swapchain,
@@ -49,6 +49,15 @@ VulkanBackend::VulkanBackend(
         RenderPassClearFlags::Color | RenderPassClearFlags::Depth |
             RenderPassClearFlags::Stencil,
         true // Multisampling
+    );
+    _ui_render_pass = new VulkanRenderPass(
+        &_device->handle(),
+        _allocator,
+        _swapchain,
+        { 0.0f, 0.0f, 0.0f, 0.0f }, // Clear color
+        RenderPassPosition::End,
+        RenderPassClearFlags::None,
+        false // Multisampling
     );
 
     // Create command pool
@@ -61,11 +70,7 @@ VulkanBackend::VulkanBackend(
 
     // Create material shader
     _material_shader = new VulkanMaterialShader(
-        _device,
-        _allocator,
-        _render_pass->handle,
-        _swapchain->msaa_samples,
-        _resource_system
+        _device, _allocator, _main_render_pass, _resource_system
     );
 
     // TODO: TEMP VERTEX & INDEX BUFFER CODE
@@ -92,8 +97,11 @@ VulkanBackend::~VulkanBackend() {
 
     // Shader
     delete _material_shader;
+
     // Render pass
-    delete _render_pass;
+    delete _ui_render_pass;
+    delete _main_render_pass;
+
     // Command pool
     delete _command_pool;
 
@@ -137,6 +145,7 @@ void VulkanBackend::resized(const uint32 width, const uint32 height) {
     if (_swapchain != nullptr) _swapchain->change_extent(width, height);
 }
 
+// Frame
 bool VulkanBackend::begin_frame(const float32 delta_time) {
     // Wait for previous frame to finish drawing
     std::vector<vk::Fence> fences = { _fences_in_flight[_current_frame] };
@@ -172,9 +181,6 @@ bool VulkanBackend::begin_frame(const float32 delta_time) {
 
     command_buffer.begin(begin_info);
 
-    // Begin render pass
-    _render_pass->begin(command_buffer);
-
     // Set dynamic states
     // Viewport
     vk::Viewport viewport {};
@@ -199,9 +205,6 @@ bool VulkanBackend::begin_frame(const float32 delta_time) {
 
 bool VulkanBackend::end_frame(const float32 delta_time) {
     auto command_buffer = _command_buffers[_current_frame];
-
-    // End render pass
-    _render_pass->end(command_buffer);
 
     // End recording
     command_buffer.end();
@@ -242,7 +245,55 @@ bool VulkanBackend::end_frame(const float32 delta_time) {
     return true;
 }
 
-void VulkanBackend::update_global_state(
+// Render pass
+void VulkanBackend::begin_render_pass(uint8 render_pass_id) {
+    auto command_buffer = _command_buffers[_current_frame];
+
+    // Begin render pass
+    switch (render_pass_id) {
+    case BuiltinRenderPass::World:
+        _main_render_pass->begin(command_buffer);
+        break;
+    case BuiltinRenderPass::UI: _ui_render_pass->begin(command_buffer); break;
+    default:
+        Logger::error(
+            RENDERER_VULKAN_LOG,
+            "Method begin_render_pass called on unrecognized render pass id: ",
+            render_pass_id,
+            "."
+        );
+        return;
+    }
+
+    // Use proper shader
+    switch (render_pass_id) {
+    case BuiltinRenderPass::World: _material_shader->use(command_buffer); break;
+    case BuiltinRenderPass::UI: _ui_shader->use(command_buffer); break;
+    default: return;
+    }
+}
+void VulkanBackend::end_render_pass(uint8 render_pass_id) {
+    auto command_buffer = _command_buffers[_current_frame];
+
+    // End render pass
+    switch (render_pass_id) {
+    case BuiltinRenderPass::World:
+        _main_render_pass->end(command_buffer);
+        break;
+    case BuiltinRenderPass::UI: _ui_render_pass->end(command_buffer); break;
+    default:
+        Logger::error(
+            RENDERER_VULKAN_LOG,
+            "Method end_render_pass called on unrecognized render pass id: ",
+            render_pass_id,
+            "."
+        );
+        return;
+    }
+}
+
+// State
+void VulkanBackend::update_global_world_state(
     const glm::mat4 projection,
     const glm::mat4 view,
     const glm::vec3 view_position,
@@ -256,10 +307,20 @@ void VulkanBackend::update_global_state(
     auto command_buffer = _command_buffers[_current_frame];
 
     // Bind material shader
-    _material_shader->use(command_buffer);
     _material_shader->bind_global_description_set(
         command_buffer, _current_frame
     );
+}
+
+void VulkanBackend::update_global_ui_state(
+    const glm::mat4 projection, const glm::mat4 view, const int32 mode
+) {
+    _ui_shader->update_global_state(projection, view, mode, _current_frame);
+
+    auto command_buffer = _command_buffers[_current_frame];
+
+    // Bind material shader
+    _ui_shader->bind_global_description_set(command_buffer, _current_frame);
 }
 
 void VulkanBackend::draw_geometry(const GeometryRenderData data) {

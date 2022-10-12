@@ -3,16 +3,28 @@
 #include "resources/geometry.hpp"
 
 // Vertex
-struct Vertex {
+struct Vertex3D {
     glm::vec3 position;
     glm::vec3 color;
     glm::vec2 texture_coord;
 
-    bool operator==(const Vertex& other) const {
+    bool operator==(const Vertex3D& other) const {
         return position == other.position &&
                texture_coord == other.texture_coord;
     }
 };
+
+struct Vertex2D {
+    glm::vec3 position;
+    glm::vec2 texture_coord;
+
+    bool operator==(const Vertex2D& other) const {
+        return position == other.position &&
+               texture_coord == other.texture_coord;
+    }
+};
+
+typedef Vertex3D Vertex;
 
 namespace std {
 template<>
@@ -26,19 +38,8 @@ struct hash<Vertex> {
 };
 } // namespace std
 
-// UBO
-struct GlobalUniformObject {
-    alignas(16) glm::mat4 view;
-    alignas(16) glm::mat4 project;
-};
-
-struct LocalUniformObjectV {
-    alignas(16) glm::mat4 model;
-};
-
-struct LocalUniformObjectF {
-    alignas(16) glm::vec4 diffuse_color;
-};
+// Render data
+enum BuiltinRenderPass : uint8 { World = 0x1, UI = 0x2 };
 
 struct GeometryRenderData {
     glm::mat4 model;

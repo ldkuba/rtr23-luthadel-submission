@@ -1,4 +1,4 @@
-#include "renderer/vulkan/shaders/vulkan_material_shader.hpp"
+#include "renderer/vulkan/shaders/vulkan_ui_shader.hpp"
 
 #include "resources/datapack.hpp"
 
@@ -17,14 +17,14 @@ struct InstanceFragmentUBO {
 };
 
 // Constructor & Destructor
-VulkanMaterialShader::VulkanMaterialShader(
+VulkanUIShader::VulkanUIShader(
     const VulkanDevice* const            device,
     const vk::AllocationCallbacks* const allocator,
     const VulkanRenderPass* const        render_pass,
     ResourceSystem*                      resource_system
 )
     : VulkanShader(device, allocator) {
-    Logger::trace(RENDERER_VULKAN_LOG, "Creating material shader.");
+    Logger::trace(RENDERER_VULKAN_LOG, "Creating UI shader.");
 
     // === Create shader modules ===
     vk::ShaderModule vertex_shader_module;
@@ -32,10 +32,10 @@ VulkanMaterialShader::VulkanMaterialShader(
     try {
         // Load raw binary data
         auto vertex_code = (ByteArrayData*) resource_system->load(
-            "shaders/builtin.material_shader.vert.spv", ResourceType::Binary
+            "shaders/builtin.ui_shader.vert.spv", ResourceType::Binary
         );
         auto fragment_code = (ByteArrayData*) resource_system->load(
-            "shaders/builtin.material_shader.frag.spv", ResourceType::Binary
+            "shaders/builtin.ui_shader.frag.spv", ResourceType::Binary
         );
 
         // Create shader modules
@@ -102,7 +102,7 @@ VulkanMaterialShader::VulkanMaterialShader(
     // Vertex bindings
     std::vector<vk::VertexInputBindingDescription> binding_descriptions(1);
     binding_descriptions[0].setBinding(0);
-    binding_descriptions[0].setStride(sizeof(Vertex));
+    binding_descriptions[0].setStride(sizeof(Vertex2D));
     binding_descriptions[0].setInputRate(vk::VertexInputRate::eVertex);
 
     // Vertex attributes
@@ -110,16 +110,11 @@ VulkanMaterialShader::VulkanMaterialShader(
     // Position
     attribute_descriptions[0].setBinding(0);
     attribute_descriptions[0].setLocation(0);
-    attribute_descriptions[0].setFormat(vk::Format::eR32G32B32Sfloat);
+    attribute_descriptions[0].setFormat(vk::Format::eR32G32Sfloat);
     attribute_descriptions[0].setOffset(offsetof(Vertex, position));
-    // Color
-    attribute_descriptions[1].setBinding(0);
-    attribute_descriptions[1].setLocation(1);
-    attribute_descriptions[1].setFormat(vk::Format::eR32G32B32Sfloat);
-    attribute_descriptions[1].setOffset(offsetof(Vertex, color));
     // Texture coordinates
     attribute_descriptions[2].setBinding(0);
-    attribute_descriptions[2].setLocation(2);
+    attribute_descriptions[2].setLocation(1);
     attribute_descriptions[2].setFormat(vk::Format::eR32G32Sfloat);
     attribute_descriptions[2].setOffset(offsetof(Vertex, texture_coord));
 
@@ -129,7 +124,7 @@ VulkanMaterialShader::VulkanMaterialShader(
     vertex_input_info.setVertexAttributeDescriptions(attribute_descriptions);
 
     // === Create pipeline ===
-    create_pipeline(shader_stages, vertex_input_info, render_pass, true);
+    create_pipeline(shader_stages, vertex_input_info, render_pass);
 
     // === Free unused objects ===
     _device->handle().destroyShaderModule(vertex_shader_module, _allocator);
@@ -138,22 +133,22 @@ VulkanMaterialShader::VulkanMaterialShader(
     // === Create global descriptor sets ===
     create_global_descriptor_sets();
 
-    Logger::trace(RENDERER_VULKAN_LOG, "Material shader created.");
+    Logger::trace(RENDERER_VULKAN_LOG, "UI shader created.");
 }
 
-VulkanMaterialShader::~VulkanMaterialShader() {
-    Logger::trace(RENDERER_VULKAN_LOG, "Material shader destroyed.");
+VulkanUIShader::~VulkanUIShader() {
+    Logger::trace(RENDERER_VULKAN_LOG, "UI shader destroyed.");
 }
 
-// ///////////////////////////////////// //
-// VULKAN MATERIAL SHADER PUBLIC METHODS //
-// ///////////////////////////////////// //
+// /////////////////////////////// //
+// VULKAN UI SHADER PUBLIC METHODS //
+// /////////////////////////////// //
 
-void VulkanMaterialShader::use(const vk::CommandBuffer& command_buffer) {
+void VulkanUIShader::use(const vk::CommandBuffer& command_buffer) {
     command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, _pipeline);
 }
 
-void VulkanMaterialShader::bind_global_description_set(
+void VulkanUIShader::bind_global_description_set(
     const vk::CommandBuffer& command_buffer, const uint32 current_frame
 ) {
     command_buffer.bindDescriptorSets(
@@ -167,7 +162,7 @@ void VulkanMaterialShader::bind_global_description_set(
     );
 }
 
-void VulkanMaterialShader::bind_material(
+void VulkanUIShader::bind_material(
     const vk::CommandBuffer& command_buffer,
     const uint32             current_frame,
     const uint32             material_id
@@ -183,11 +178,9 @@ void VulkanMaterialShader::bind_material(
     );
 }
 
-void VulkanMaterialShader::update_global_state(
+void VulkanUIShader::update_global_state(
     const glm::mat4 projection,
     const glm::mat4 view,
-    const glm::vec3 view_position,
-    const glm::vec4 ambient_color,
     const int32     mode,
     const uint32    current_frame
 ) {
@@ -202,7 +195,7 @@ void VulkanMaterialShader::update_global_state(
         ->load_data(&global_ubo, 0, sizeof(global_ubo));
 }
 
-void VulkanMaterialShader::set_model(
+void VulkanUIShader::set_model(
     const glm::mat4 model, const uint64 obj_id, const uint32 current_frame
 ) {
     uint32            size   = sizeof(InstanceVertexUBO);
@@ -241,7 +234,7 @@ void VulkanMaterialShader::set_model(
     uniform_buffer->load_data(&instance_ubo, offset, size);
 }
 
-void VulkanMaterialShader::apply_material(
+void VulkanUIShader::apply_material(
     const Material* const material, const uint32 current_frame
 ) {
     if (!material || !material->internal_id.has_value()) {
@@ -360,7 +353,7 @@ void VulkanMaterialShader::apply_material(
         _device->handle().updateDescriptorSets(descriptor_writes, nullptr);
 }
 
-void VulkanMaterialShader::acquire_resource(Material* const material) {
+void VulkanUIShader::acquire_resource(Material* const material) {
     // Acquire next object slot on gpu
     material->internal_id = get_next_available_ubo_index();
 
@@ -393,7 +386,7 @@ void VulkanMaterialShader::acquire_resource(Material* const material) {
     state.allocated = true;
 }
 
-void VulkanMaterialShader::release_resource(Material* const material) {
+void VulkanUIShader::release_resource(Material* const material) {
     if (!material->internal_id.has_value()) return;
     MaterialInstanceState& state =
         _instance_states[material->internal_id.value()];
@@ -423,11 +416,11 @@ void VulkanMaterialShader::release_resource(Material* const material) {
     // TODO: add the material_id to the free list
 }
 
-// ////////////////////////////////////// //
-// VULKAN MATERIAL SHADER PRIVATE METHODS //
-// ////////////////////////////////////// //
+// //////////////////////////////// //
+// VULKAN UI SHADER PRIVATE METHODS //
+// //////////////////////////////// //
 
-void VulkanMaterialShader::create_global_descriptor_sets() {
+void VulkanUIShader::create_global_descriptor_sets() {
     // Global descriptor is at set=0
     auto global_descriptor = descriptors()[0];
 
@@ -467,7 +460,7 @@ void VulkanMaterialShader::create_global_descriptor_sets() {
     }
 }
 
-uint32 VulkanMaterialShader::get_next_available_ubo_index() {
+uint32 VulkanUIShader::get_next_available_ubo_index() {
     static uint32 index = 0;
     return index++;
 }

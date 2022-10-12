@@ -5,15 +5,15 @@
 
 #include "systems/resource_system.hpp"
 
-class VulkanMaterialShader : public VulkanShader {
+class VulkanUIShader : public VulkanShader {
   public:
-    VulkanMaterialShader(
+    VulkanUIShader(
         const VulkanDevice* const            device,
         const vk::AllocationCallbacks* const allocator,
         const VulkanRenderPass* const        render_pass,
         ResourceSystem* resource_system // TODO: most likely temporary
     );
-    ~VulkanMaterialShader();
+    ~VulkanUIShader();
 
     /// @brief Select shader for rendering
     /// @param command_buffer Buffer to store shader bind commands
@@ -46,8 +46,6 @@ class VulkanMaterialShader : public VulkanShader {
     void update_global_state(
         const glm::mat4 projection,
         const glm::mat4 view,
-        const glm::vec3 view_position,
-        const glm::vec4 ambient_color,
         const int32     mode,
         const uint32    current_frame
     );
@@ -73,9 +71,7 @@ class VulkanMaterialShader : public VulkanShader {
     struct MaterialInstanceState {
         bool                           allocated = false;
         std::vector<vk::DescriptorSet> descriptor_sets;
-        std::array<
-            DescriptorState,
-            VulkanMaterialShader::_material_descriptor_count>
+        std::array<DescriptorState, VulkanUIShader::_material_descriptor_count>
             descriptor_states;
     };
 
