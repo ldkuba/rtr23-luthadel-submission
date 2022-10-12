@@ -2,6 +2,14 @@
 
 #include "vulkan_swapchain.hpp"
 
+enum RenderPassClearFlags : uint8 {
+    None    = 0x0,
+    Color   = 0x1,
+    Depth   = 0x2,
+    Stencil = 0x4
+};
+enum class RenderPassPosition { Beginning, Middle, End, Only };
+
 class VulkanRenderPass {
   public:
     /// @brief Handle to the vk::RenderPass object
@@ -12,7 +20,11 @@ class VulkanRenderPass {
     VulkanRenderPass(
         const vk::Device* const              device,
         const vk::AllocationCallbacks* const allocator,
-        VulkanSwapchain* const               swapchain
+        VulkanSwapchain* const               swapchain,
+        const std::array<float32, 4>         clear_color,
+        const RenderPassPosition             position,
+        const uint8                          clear_flags,
+        const bool                           multisampling
     );
     ~VulkanRenderPass();
 
@@ -31,4 +43,8 @@ class VulkanRenderPass {
 
     vk::RenderPass _handle;
     uint32         _framebuffer_set_index;
+
+    bool                   _has_depth;
+    std::array<float32, 4> _clear_color;
+    uint8                  _clear_flags;
 };

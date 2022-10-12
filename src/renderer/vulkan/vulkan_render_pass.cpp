@@ -6,74 +6,102 @@
 VulkanRenderPass::VulkanRenderPass(
     const vk::Device* const              device,
     const vk::AllocationCallbacks* const allocator,
-    VulkanSwapchain* const               swapchain
+    VulkanSwapchain* const               swapchain,
+    const std::array<float32, 4>         clear_color,
+    const RenderPassPosition             position,
+    const uint8                          clear_flags,
+    const bool                           multisampling
 )
-    : _device(device), _swapchain(swapchain), _allocator(allocator) {
+    : _device(device), _swapchain(swapchain), _allocator(allocator),
+      _clear_color(clear_color), _clear_flags(clear_flags) {
 
     Logger::trace(RENDERER_VULKAN_LOG, "Creating render pass.");
 
+    // Compute state
+    auto sample_count = (multisampling) ? _swapchain->msaa_samples
+                                        : vk::SampleCountFlagBits::e1;
+    _has_depth        = clear_flags & RenderPassClearFlags::Depth;
+
     // === Get all attachment descriptions ===
+    std::vector<vk::AttachmentDescription> attachments = {};
+
     // Color attachment
+    auto color_load_op = ((clear_flags & RenderPassClearFlags::Color) != 0)
+                             ? vk::AttachmentLoadOp::eClear
+                             : vk::AttachmentLoadOp::eLoad;
+    auto color_initial_layout = ((position == RenderPassPosition::Beginning ||
+                                  position == RenderPassPosition::Only))
+                                    ? vk::ImageLayout::eUndefined
+                                    : vk::ImageLayout::eColorAttachmentOptimal;
+    auto color_final_layout   = ((position == RenderPassPosition::End ||
+                                position == RenderPassPosition::Only) &&
+                               !multisampling)
+                                    ? vk::ImageLayout::ePresentSrcKHR
+                                    : vk::ImageLayout::eColorAttachmentOptimal;
+
     vk::AttachmentDescription color_attachment {};
     color_attachment.setFormat(_swapchain->get_color_attachment_format());
-    color_attachment.setSamples(_swapchain->msaa_samples);
-    color_attachment.setLoadOp(vk::AttachmentLoadOp::eClear);
+    color_attachment.setSamples(sample_count);
+    color_attachment.setLoadOp(color_load_op);
     color_attachment.setStoreOp(vk::AttachmentStoreOp::eStore);
     color_attachment.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
     color_attachment.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
-    color_attachment.setInitialLayout(vk::ImageLayout::eUndefined);
-    color_attachment.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
+    color_attachment.setInitialLayout(color_initial_layout);
+    color_attachment.setFinalLayout(color_final_layout);
 
-    vk::AttachmentReference color_attachment_ref {};
-    color_attachment_ref.setLayout(vk::ImageLayout::eColorAttachmentOptimal);
-    color_attachment_ref.setAttachment(0);
+    vk::AttachmentReference* color_attachment_ref = new vk::AttachmentReference(
+        attachments.size(), vk::ImageLayout::eColorAttachmentOptimal
+    );
+    attachments.push_back(color_attachment);
 
     // Depth attachment
-    vk::AttachmentDescription depth_attachment {};
-    depth_attachment.setFormat(_swapchain->get_depth_attachment_format());
-    depth_attachment.setSamples(_swapchain->msaa_samples);
-    depth_attachment.setLoadOp(vk::AttachmentLoadOp::eClear);
-    depth_attachment.setStoreOp(vk::AttachmentStoreOp::eDontCare);
-    depth_attachment.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
-    depth_attachment.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
-    depth_attachment.setInitialLayout(vk::ImageLayout::eUndefined);
-    depth_attachment.setFinalLayout(
-        vk::ImageLayout::eDepthStencilAttachmentOptimal
-    );
+    vk::AttachmentReference* depth_attachment_ref = nullptr;
+    if (_has_depth) {
+        vk::AttachmentDescription depth_attachment {};
+        depth_attachment.setFormat(_swapchain->get_depth_attachment_format());
+        depth_attachment.setSamples(sample_count);
+        depth_attachment.setLoadOp(vk::AttachmentLoadOp::eClear);
+        depth_attachment.setStoreOp(vk::AttachmentStoreOp::eDontCare);
+        depth_attachment.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+        depth_attachment.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
+        depth_attachment.setInitialLayout(vk::ImageLayout::eUndefined);
+        depth_attachment.setFinalLayout(
+            vk::ImageLayout::eDepthStencilAttachmentOptimal
+        );
 
-    vk::AttachmentReference depth_attachment_ref {};
-    depth_attachment_ref.setLayout(
-        vk::ImageLayout::eDepthStencilAttachmentOptimal
-    );
-    depth_attachment_ref.setAttachment(1);
+        depth_attachment_ref = new vk::AttachmentReference(
+            attachments.size(), vk::ImageLayout::eDepthStencilAttachmentOptimal
+        );
+        attachments.push_back(depth_attachment);
+    }
 
     // Resolve attachment
-    vk::AttachmentDescription color_attachment_resolve {};
-    color_attachment_resolve.setFormat(_swapchain->get_color_attachment_format()
-    );
-    color_attachment_resolve.setSamples(vk::SampleCountFlagBits::e1);
-    color_attachment_resolve.setLoadOp(vk::AttachmentLoadOp::eDontCare);
-    color_attachment_resolve.setStoreOp(vk::AttachmentStoreOp::eStore);
-    color_attachment_resolve.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
-    color_attachment_resolve.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare
-    );
-    color_attachment_resolve.setInitialLayout(vk::ImageLayout::eUndefined);
-    color_attachment_resolve.setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
+    vk::AttachmentReference* color_attachment_resolve_ref = nullptr;
+    if (multisampling) {
+        vk::AttachmentDescription resolve_attachment {};
+        resolve_attachment.setFormat(_swapchain->get_color_attachment_format());
+        resolve_attachment.setSamples(vk::SampleCountFlagBits::e1);
+        resolve_attachment.setLoadOp(vk::AttachmentLoadOp::eDontCare);
+        resolve_attachment.setStoreOp(vk::AttachmentStoreOp::eStore);
+        resolve_attachment.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+        resolve_attachment.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
+        resolve_attachment.setInitialLayout(vk::ImageLayout::eUndefined);
+        resolve_attachment.setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
 
-    vk::AttachmentReference color_attachment_resolve_ref {};
-    color_attachment_resolve_ref.setLayout(
-        vk::ImageLayout::eColorAttachmentOptimal
-    );
-    color_attachment_resolve_ref.setAttachment(2);
+        color_attachment_resolve_ref = new vk::AttachmentReference(
+            attachments.size(), vk::ImageLayout::eColorAttachmentOptimal
+        );
+        attachments.push_back(resolve_attachment);
+    }
 
     // === Subpass ===
     vk::SubpassDescription subpass {};
     // Used for Graphics or Compute
     subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
     subpass.setColorAttachmentCount(1);
-    subpass.setPColorAttachments(&color_attachment_ref);
-    subpass.setPDepthStencilAttachment(&depth_attachment_ref);
-    subpass.setPResolveAttachments(&color_attachment_resolve_ref);
+    subpass.setPColorAttachments(color_attachment_ref);
+    subpass.setPDepthStencilAttachment(depth_attachment_ref);
+    subpass.setPResolveAttachments(color_attachment_resolve_ref);
     // Preserve and input attachments not used
 
     // === Subpass dependencies ===
@@ -101,9 +129,6 @@ VulkanRenderPass::VulkanRenderPass(
     );
 
     // === Create render pass ===
-    std::array<vk::AttachmentDescription, 3> attachments = {
-        color_attachment, depth_attachment, color_attachment_resolve
-    };
     std::array<vk::SubpassDescription, 1> subpasses    = { subpass };
     std::array<vk::SubpassDependency, 1>  dependencies = { dependency };
 
@@ -119,7 +144,8 @@ VulkanRenderPass::VulkanRenderPass(
     }
 
     // === Create register framebuffers ===
-    _framebuffer_set_index = _swapchain->create_framebuffers(this, true, true);
+    _framebuffer_set_index =
+        _swapchain->create_framebuffers(this, multisampling, _has_depth);
 
     Logger::trace(RENDERER_VULKAN_LOG, "Render pass created.");
 }
@@ -135,10 +161,16 @@ VulkanRenderPass::~VulkanRenderPass() {
 void VulkanRenderPass::begin(const vk::CommandBuffer& command_buffer) {
     // Default background values of color and depth stencil for rendered area of
     // the render pass
-    std::array<float32, 4>        clear_color = { 0.0f, 0.0f, 0.0f, 1.0f };
-    std::array<vk::ClearValue, 2> clear_values {};
-    clear_values[0].setColor({ clear_color });
-    clear_values[1].setDepthStencil({ 1.0f, 0 });
+    std::vector<vk::ClearValue> clear_values { 1 };
+    if (_clear_flags & RenderPassClearFlags::Color)
+        clear_values[0].setColor({ _clear_color });
+    if (_has_depth) {
+        clear_values.push_back({});
+        if (_clear_flags & RenderPassClearFlags::Depth)
+            clear_values[1].depthStencil.setDepth(1.0f);
+        if (_clear_flags & RenderPassClearFlags::Stencil)
+            clear_values[1].depthStencil.setStencil(0);
+    }
 
     // Get relevant framebuffer
     auto framebuffer =

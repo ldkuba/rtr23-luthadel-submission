@@ -40,8 +40,16 @@ VulkanBackend::VulkanBackend(
     );
 
     // Create render pass
-    _render_pass =
-        new VulkanRenderPass(&_device->handle(), _allocator, _swapchain);
+    _render_pass = new VulkanRenderPass(
+        &_device->handle(),
+        _allocator,
+        _swapchain,
+        { 0.0f, 0.0f, 0.0f, 1.0f }, // Clear color
+        RenderPassPosition::Only,
+        RenderPassClearFlags::Color | RenderPassClearFlags::Depth |
+            RenderPassClearFlags::Stencil,
+        true // Multisampling
+    );
 
     // Create command pool
     _command_pool = new VulkanCommandPool(
