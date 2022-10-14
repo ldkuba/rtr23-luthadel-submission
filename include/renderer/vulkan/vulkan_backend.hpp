@@ -43,9 +43,14 @@ class VulkanBackend : public RendererBackend {
     void destroy_material(Material* const material);
 
     void create_geometry(
-        Geometry*                 geometry,
-        const std::vector<Vertex> vertices,
-        const std::vector<uint32> indices
+        Geometry*                  geometry,
+        const std::vector<Vertex>& vertices,
+        const std::vector<uint32>& indices
+    );
+    void create_geometry(
+        Geometry*                    geometry,
+        const std::vector<Vertex2D>& vertices,
+        const std::vector<uint32>&   indices
     );
     void destroy_geometry(Geometry* geometry);
 
@@ -111,5 +116,16 @@ class VulkanBackend : public RendererBackend {
         vk::DeviceSize size,
         vk::DeviceSize offset,
         VulkanBuffer*  buffer
+    );
+
+    // GEOMETRY
+    void create_geometry_internal(
+        Geometry*         geometry,
+        const uint32      vertex_size,
+        const uint32      vertex_count,
+        const void* const vertex_data,
+        const uint32      index_size,
+        const uint32      index_count,
+        const void* const index_data
     );
 };

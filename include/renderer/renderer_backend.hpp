@@ -111,9 +111,21 @@ class RendererBackend {
      * @param indices Array of index data used by the geometry
      */
     virtual void create_geometry(
-        Geometry*                 geometry,
-        const std::vector<Vertex> vertices,
-        const std::vector<uint32> indices
+        Geometry*                  geometry,
+        const std::vector<Vertex>& vertices,
+        const std::vector<uint32>& indices
+    ) {}
+    /**
+     * @brief Create a 2D geometry and upload its relevant data to the GPU
+     *
+     * @param geometry Geometry to be uploaded
+     * @param vertices Array of vertex data used by the geometry
+     * @param indices Array of index data used by the geometry
+     */
+    virtual void create_geometry(
+        Geometry*                    geometry,
+        const std::vector<Vertex2D>& vertices,
+        const std::vector<uint32>&   indices
     ) {}
     /**
      * @brief Destroy geometry and free its corresponding GPU resources

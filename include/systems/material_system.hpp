@@ -61,9 +61,10 @@ class MaterialSystem {
     void create_default_material();
 
     Material* crete_material(
-        const String    name,
-        const String    diffuse_material_name,
-        const glm::vec4 diffuse_color
+        const String       name,
+        const MaterialType type,
+        const String       diffuse_material_name,
+        const glm::vec4    diffuse_color
     );
     void destroy_material(Material* material);
 };

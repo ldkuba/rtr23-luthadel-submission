@@ -105,8 +105,9 @@ Material* MaterialSystem::acquire(const MaterialConfig config) {
     auto& ref = _registered_materials[name];
     if (ref.handle == nullptr) {
         // Material was just added
-        ref.handle =
-            crete_material(name, config.diffuse_map_name, config.diffuse_color);
+        ref.handle = crete_material(
+            name, config.type, config.diffuse_map_name, config.diffuse_color
+        );
         ref.handle->id      = (uint64) ref.handle;
         ref.auto_release    = config.auto_release;
         ref.reference_count = 0;
@@ -150,7 +151,9 @@ void MaterialSystem::release(const String name) {
 // /////////////////////////////// //
 
 void MaterialSystem::create_default_material() {
-    _default_material = new Material(_default_material_name, glm::vec4(1.0f));
+    _default_material = new Material(
+        _default_material_name, MaterialType::World, glm::vec4(1.0f)
+    );
     TextureMap diffuse_map         = { _texture_system->default_texture,
                                        TextureUse::MapDiffuse };
     _default_material->diffuse_map = diffuse_map;
@@ -162,11 +165,12 @@ void MaterialSystem::create_default_material() {
 }
 
 Material* MaterialSystem::crete_material(
-    const String    name,
-    const String    diffuse_material_name,
-    const glm::vec4 diffuse_color
+    const String       name,
+    const MaterialType type,
+    const String       diffuse_material_name,
+    const glm::vec4    diffuse_color
 ) {
-    auto material = new Material(name, diffuse_color);
+    auto material = new Material(name, type, diffuse_color);
 
     TextureMap diffuse_map = {};
     if (diffuse_material_name.length() > 0) {

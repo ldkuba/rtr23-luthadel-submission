@@ -15,5 +15,5 @@ layout(location=0)out vec2 frag_texture_coordinate;
 
 void main(){
     gl_Position=gub.project*gub.view*lub.model*vec4(in_position,1.);
-    frag_texture_coordinate=vec2(in_texture_coordinate.x,1.-in_texture_coordinate.y);
+    frag_texture_coordinate=in_texture_coordinate;
 }

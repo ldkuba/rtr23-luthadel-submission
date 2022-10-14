@@ -18,7 +18,9 @@ class Renderer {
     Renderer& operator=(Renderer const&) = delete;
 
     // TODO: TEMP TEST CODE
-    Geometry* current_geometry = nullptr;
+    Geometry* current_geometry    = nullptr;
+    Geometry* current_ui_geometry = nullptr;
+    // TODO: TEMP TEST CODE END
 
     /**
      * @brief Inform renderer of a surface resize event
@@ -61,14 +63,16 @@ class Renderer {
 
     /**
      * @brief Create a geometry and upload its relevant data to the GPU
+     * @tparam VertexType Vertex (Vertex3D) or Vertex2D
      * @param geometry Geometry to be uploaded
      * @param vertices Array of vertex data used by the geometry
      * @param indices Array of index data used by the geometry
      */
+    template<typename VertexType>
     void create_geometry(
-        Geometry*                 geometry,
-        const std::vector<Vertex> vertices,
-        const std::vector<uint32> indices
+        Geometry*                      geometry,
+        const std::vector<VertexType>& vertices,
+        const std::vector<uint32>&     indices
     );
     /**
      * @brief Destroy geometry and free its corresponding GPU resources
@@ -101,3 +105,15 @@ class Renderer {
         glm::vec4(0.0f, 0.0f, 0.0f, 1.0f)
     );
 };
+
+template<typename VertexType>
+void Renderer::create_geometry(
+    Geometry*                      geometry,
+    const std::vector<VertexType>& vertices,
+    const std::vector<uint32>&     indices
+) {
+    static const char* const RENDERER_LOG = "Renderer :: ";
+    Logger::trace(RENDERER_LOG, "Creating geometry.");
+    _backend->create_geometry(geometry, vertices, indices);
+    Logger::trace(RENDERER_LOG, "Geometry created.");
+}

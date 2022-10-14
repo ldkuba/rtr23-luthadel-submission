@@ -79,6 +79,11 @@ VulkanRenderPass::VulkanRenderPass(
     // Resolve attachment
     vk::AttachmentReference* color_attachment_resolve_ref = nullptr;
     if (multisampling) {
+        auto resolve_final_layout =
+            (position == RenderPassPosition::End ||
+             position == RenderPassPosition::Only)
+                ? vk::ImageLayout::ePresentSrcKHR
+                : vk::ImageLayout::eColorAttachmentOptimal;
         vk::AttachmentDescription resolve_attachment {};
         resolve_attachment.setFormat(_swapchain->get_color_attachment_format());
         resolve_attachment.setSamples(vk::SampleCountFlagBits::e1);
@@ -87,7 +92,7 @@ VulkanRenderPass::VulkanRenderPass(
         resolve_attachment.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
         resolve_attachment.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
         resolve_attachment.setInitialLayout(vk::ImageLayout::eUndefined);
-        resolve_attachment.setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
+        resolve_attachment.setFinalLayout(resolve_final_layout);
 
         color_attachment_resolve_ref = new vk::AttachmentReference(
             attachments.size(), vk::ImageLayout::eColorAttachmentOptimal

@@ -2,6 +2,7 @@
 
 #define GEOMETRY_SYS_LOG "GeometrySystem :: "
 
+// Constructor & Destructor
 GeometrySystem::GeometrySystem(
     Renderer* const renderer, MaterialSystem* const material_system
 )
@@ -13,7 +14,7 @@ GeometrySystem::GeometrySystem(
             GEOMETRY_SYS_LOG,
             "Const _max_geometry_count must be greater than 0."
         );
-    create_default_geometry();
+    create_default_geometries();
 
     Logger::trace(GEOMETRY_SYS_LOG, "Geometry system created.");
 }
@@ -44,37 +45,6 @@ Geometry* GeometrySystem::acquire(const uint32 id) {
     }
     ref->second.reference_count++;
     return ref->second.handle;
-}
-
-uint32    generate_id(); // TODO: TEMP
-Geometry* GeometrySystem::acquire(
-    const std::vector<Vertex> vertices,
-    const std::vector<uint32> indices,
-    const String              name,
-    const String              material_name,
-    bool                      auto_release
-) {
-    // Generate unique id
-    auto id = generate_id();
-
-    // Register new slot
-    auto& ref           = _registered_geometries[id];
-    ref.auto_release    = auto_release;
-    ref.reference_count = 1;
-
-    // Crete geometry
-    ref.handle     = new Geometry(name);
-    ref.handle->id = id;
-    _renderer->create_geometry(ref.handle, vertices, indices);
-
-    // Acquire material
-    if (material_name != "") {
-        ref.handle->material = _material_system->acquire(material_name);
-        if (!ref.handle->material)
-            ref.handle->material = _material_system->default_material();
-    }
-
-    return ref.handle;
 }
 
 void GeometrySystem::release(Geometry* geometry) {
@@ -111,13 +81,41 @@ void GeometrySystem::release(Geometry* geometry) {
 // GEOMETRY SYSTEM PRIVATE METHODS //
 // /////////////////////////////// //
 
-void GeometrySystem::create_default_geometry() {}
+void GeometrySystem::create_default_geometries() {
+    float f = 10.0f;
 
-// //////////////////////////////// //
-// GEOMETRY SYSTEM HELPER FUNCTIONS //
-// //////////////////////////////// //
+    // === Default for 3D ===
+    std::vector<Vertex> vertices = { { glm::vec3(-0.5f * f, -0.5f * f, 0.0f),
+                                       glm::vec3(0.0f),
+                                       glm::vec2(0.0f, 0.0f) },
+                                     { glm::vec3(0.5f * f, 0.5f * f, 0.0f),
+                                       glm::vec3(0.0f),
+                                       glm::vec2(1.0f, 1.0f) },
+                                     { glm::vec3(-0.5f * f, 0.5f * f, 0.0f),
+                                       glm::vec3(0.0f),
+                                       glm::vec2(0.0f, 1.0f) },
+                                     { glm::vec3(0.5f * f, -0.5f * f, 0.0f),
+                                       glm::vec3(0.0f),
+                                       glm::vec2(1.0f, 0.0f) } };
+    std::vector<uint32> indices  = { 0, 1, 2, 0, 3, 1 };
 
-uint32 generate_id() {
-    static uint32 id = 0;
-    return id++;
+    // Crete geometry
+    _default_geometry = new Geometry(_default_geometry_name);
+    _renderer->create_geometry(_default_geometry, vertices, indices);
+    _default_geometry->material = _material_system->default_material();
+
+    // === Default for 2D ===
+    std::vector<Vertex2D> vertices2d = {
+        { glm::vec2(-0.5f * f, -0.5f * f), glm::vec2(0.0f, 0.0f) },
+        { glm::vec2(0.5f * f, 0.5f * f), glm::vec2(1.0f, 1.0f) },
+        { glm::vec2(-0.5f * f, 0.5f * f), glm::vec2(0.0f, 1.0f) },
+        { glm::vec2(0.5f * f, -0.5f * f), glm::vec2(1.0f, 0.0f) }
+    };
+    // Note: counter clock-wise
+    std::vector<uint32> indices2d = { 2, 1, 0, 3, 0, 1 };
+
+    // Create 2D geometry
+    _default_2d_geometry = new Geometry(_default_geometry_name + "2d");
+    _renderer->create_geometry(_default_2d_geometry, vertices2d, indices2d);
+    _default_2d_geometry->material = _material_system->default_material();
 }

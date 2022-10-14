@@ -106,17 +106,17 @@ VulkanUIShader::VulkanUIShader(
     binding_descriptions[0].setInputRate(vk::VertexInputRate::eVertex);
 
     // Vertex attributes
-    std::vector<vk::VertexInputAttributeDescription> attribute_descriptions(3);
+    std::vector<vk::VertexInputAttributeDescription> attribute_descriptions(2);
     // Position
     attribute_descriptions[0].setBinding(0);
     attribute_descriptions[0].setLocation(0);
     attribute_descriptions[0].setFormat(vk::Format::eR32G32Sfloat);
-    attribute_descriptions[0].setOffset(offsetof(Vertex, position));
+    attribute_descriptions[0].setOffset(offsetof(Vertex2D, position));
     // Texture coordinates
-    attribute_descriptions[2].setBinding(0);
-    attribute_descriptions[2].setLocation(1);
-    attribute_descriptions[2].setFormat(vk::Format::eR32G32Sfloat);
-    attribute_descriptions[2].setOffset(offsetof(Vertex, texture_coord));
+    attribute_descriptions[1].setBinding(0);
+    attribute_descriptions[1].setLocation(1);
+    attribute_descriptions[1].setFormat(vk::Format::eR32G32Sfloat);
+    attribute_descriptions[1].setOffset(offsetof(Vertex2D, texture_coord));
 
     vk::PipelineVertexInputStateCreateInfo vertex_input_info {};
     vertex_input_info.setVertexBindingDescriptionCount(1);

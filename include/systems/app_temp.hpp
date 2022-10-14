@@ -4,7 +4,6 @@
 
 #include "systems/geometry_system.hpp"
 
-// TODO: TEMP
 void load_model(
     std::vector<Vertex>& out_vertices, std::vector<uint32>& out_indices
 );
@@ -34,17 +33,33 @@ class TestApplication {
 
     float32 calculate_delta_time();
 };
+// TODO: TEMP
+void load_model(
+    std::vector<Vertex>& out_vertices, std::vector<uint32>& out_indices
+);
 
-TestApplication::TestApplication() {}
+inline TestApplication::TestApplication() {}
 
-TestApplication::~TestApplication() {}
+inline TestApplication::~TestApplication() {}
 
-void TestApplication::run() {
+inline void TestApplication::run() {
     std::vector<Vertex> vertices = {};
     std::vector<uint32> indices  = {};
     load_model(vertices, indices);
     _app_renderer.current_geometry = _geometry_system.acquire(
-        vertices, indices, "viking_room", "viking_room"
+        "viking_room", vertices, indices, "viking_room"
+    );
+
+    float32               side       = 512.0f;
+    std::vector<Vertex2D> vertices2d = {
+        { glm::vec2(0.0f, 0.0f), glm::vec2(0.0f, 0.0f) },
+        { glm::vec2(side, side), glm::vec2(1.0f, 1.0f) },
+        { glm::vec2(0.0f, side), glm::vec2(0.0f, 1.0f) },
+        { glm::vec2(side, 0.0f), glm::vec2(1.0f, 0.0f) }
+    };
+    std::vector<uint32> indices2d     = { 2, 1, 0, 3, 0, 1 };
+    _app_renderer.current_ui_geometry = _geometry_system.acquire(
+        "ui", vertices2d, indices2d, "test_ui_material"
     );
 
     while (!_app_surface->should_close()) {
@@ -56,7 +71,7 @@ void TestApplication::run() {
     }
 }
 
-float32 TestApplication::calculate_delta_time() {
+inline float32 TestApplication::calculate_delta_time() {
     static auto start_time   = Platform::get_absolute_time();
     auto        current_time = Platform::get_absolute_time();
     auto        delta_time   = current_time - start_time;
@@ -69,7 +84,7 @@ float32 TestApplication::calculate_delta_time() {
 #include <tiny_obj_loader.h>
 #include <unordered_map>
 
-void load_model(
+inline void load_model(
     std::vector<Vertex>& out_vertices, std::vector<uint32>& out_indices
 ) {
     // Load model

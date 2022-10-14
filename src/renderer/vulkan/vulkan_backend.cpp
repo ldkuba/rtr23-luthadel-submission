@@ -45,7 +45,7 @@ VulkanBackend::VulkanBackend(
         _allocator,
         _swapchain,
         { 0.0f, 0.0f, 0.0f, 1.0f }, // Clear color
-        RenderPassPosition::Only,
+        RenderPassPosition::Beginning,
         RenderPassClearFlags::Color | RenderPassClearFlags::Depth |
             RenderPassClearFlags::Stencil,
         true // Multisampling
@@ -72,6 +72,9 @@ VulkanBackend::VulkanBackend(
     _material_shader = new VulkanMaterialShader(
         _device, _allocator, _main_render_pass, _resource_system
     );
+    _ui_shader = new VulkanUIShader(
+        _device, _allocator, _ui_render_pass, _resource_system
+    );
 
     // TODO: TEMP VERTEX & INDEX BUFFER CODE
     create_buffers();
@@ -97,6 +100,7 @@ VulkanBackend::~VulkanBackend() {
 
     // Shader
     delete _material_shader;
+    delete _ui_shader;
 
     // Render pass
     delete _ui_render_pass;
@@ -333,16 +337,32 @@ void VulkanBackend::draw_geometry(const GeometryRenderData data) {
     // TODO: CHECK CURRENT SHADER (MAYBE WE NEED TO CALL
     // _material_shader->use())
 
-    // Upload data
+    // Upload data & bind object
     uint64 material_id =
         data.geometry->material()->internal_id.value(); // TODO: TEMP
-    _material_shader->set_model(data.model, material_id, _current_frame);
-    _material_shader->apply_material(data.geometry->material, _current_frame);
 
-    // Bind object
-    _material_shader->bind_material(
-        command_buffer, _current_frame, material_id
-    );
+    switch (data.geometry->material()->type) {
+    case MaterialType::World:
+        _material_shader->set_model(data.model, material_id, _current_frame);
+        _material_shader->apply_material(
+            data.geometry->material, _current_frame
+        );
+        _material_shader->bind_material(
+            command_buffer, _current_frame, material_id
+        );
+        break;
+    case MaterialType::UI:
+        _ui_shader->set_model(data.model, material_id, _current_frame);
+        _ui_shader->apply_material(data.geometry->material, _current_frame);
+        _ui_shader->bind_material(command_buffer, _current_frame, material_id);
+        break;
+    default:
+        Logger::error(
+            RENDERER_VULKAN_LOG,
+            "Unknown material type. Couldn't destroy material."
+        );
+        return;
+    }
 
     // Bind vertex buffer
     std::vector<vk::Buffer>     vertex_buffers = { _vertex_buffer->handle };
@@ -488,7 +508,20 @@ void VulkanBackend::create_material(Material* const material) {
     }
 
     Logger::trace(RENDERER_VULKAN_LOG, "Creating material.");
-    _material_shader->acquire_resource(material);
+
+    switch (material->type) {
+    case MaterialType::World:
+        _material_shader->acquire_resource(material);
+        break;
+    case MaterialType::UI: _ui_shader->acquire_resource(material); break;
+    default:
+        Logger::error(
+            RENDERER_VULKAN_LOG,
+            "Unknown material type. Couldn't create material."
+        );
+        return;
+    }
+
     Logger::trace(RENDERER_VULKAN_LOG, "Material created.");
 }
 void VulkanBackend::destroy_material(Material* const material) {
@@ -507,85 +540,53 @@ void VulkanBackend::destroy_material(Material* const material) {
         );
         return;
     }
-    _material_shader->release_resource(material);
+
+    switch (material->type) {
+    case MaterialType::World:
+        _material_shader->release_resource(material);
+        break;
+    case MaterialType::UI: _ui_shader->release_resource(material); break;
+    default:
+        Logger::error(
+            RENDERER_VULKAN_LOG,
+            "Unknown material type. Couldn't destroy material."
+        );
+        return;
+    }
+
     Logger::trace(RENDERER_VULKAN_LOG, "Material destroyed.");
 }
 
 // Geometry
 void VulkanBackend::create_geometry(
-    Geometry*                 geometry,
-    const std::vector<Vertex> vertices,
-    const std::vector<uint32> indices
+    Geometry*                  geometry,
+    const std::vector<Vertex>& vertices,
+    const std::vector<uint32>& indices
 ) {
-    if (!geometry) {
-        Logger::error(
-            RENDERER_VULKAN_LOG,
-            "Method create_geometry called with nullptr. Creation failed."
-        );
-        return;
-    }
-
-    if (vertices.size() < 1) {
-        Logger::error(RENDERER_VULKAN_LOG, "No vertex data passed.");
-        return;
-    }
-
-    auto               is_reupload = geometry->internal_id.has_value();
-    VulkanGeometryData old_data;
-
-    VulkanGeometryData* internal_data = nullptr;
-    if (is_reupload) {
-        internal_data          = &_geometries[geometry->internal_id.value()];
-        old_data.vertex_count  = internal_data->vertex_count;
-        old_data.vertex_size   = internal_data->vertex_size;
-        old_data.vertex_offset = internal_data->vertex_offset;
-        old_data.index_count   = internal_data->index_count;
-        old_data.index_size    = internal_data->index_size;
-        old_data.index_offset  = internal_data->index_offset;
-    } else {
-        uint id               = generate_geometry_id();
-        geometry->internal_id = id;
-        internal_data         = &_geometries[id];
-    }
-
-    if (internal_data == nullptr)
-        Logger::fatal(
-            RENDERER_VULKAN_LOG, "Geometry internal data somehow nullptr."
-        );
-
-    // Upload vertex data
-    static uint32  geometry_vertex_offset = 0; // TODO: TEMP
-    static uint32  geometry_index_offset  = 0; // TODO: TEMP
-    vk::DeviceSize buffer_size   = sizeof(vertices[0]) * vertices.size();
-    vk::DeviceSize buffer_offset = geometry_vertex_offset;
-
-    internal_data->vertex_count  = vertices.size();
-    internal_data->vertex_size   = buffer_size;
-    internal_data->vertex_offset = buffer_offset;
-
-    upload_data_to_buffer(
-        vertices.data(), buffer_size, buffer_offset, _vertex_buffer
+    create_geometry_internal(
+        geometry,
+        sizeof(Vertex),
+        vertices.size(),
+        vertices.data(),
+        sizeof(uint32),
+        indices.size(),
+        indices.data()
     );
-    geometry_vertex_offset += buffer_size;
-
-    // Upload index data
-    if (indices.size() > 0) {
-        buffer_size   = sizeof(indices[0]) * indices.size();
-        buffer_offset = geometry_index_offset;
-
-        internal_data->index_count  = indices.size();
-        internal_data->index_size   = buffer_size;
-        internal_data->index_offset = buffer_offset;
-
-        upload_data_to_buffer(
-            indices.data(), buffer_size, buffer_offset, _index_buffer
-        );
-        geometry_index_offset += buffer_size;
-    }
-
-    if (is_reupload) {
-        // TODO: FREE VERTEX & INDEX DATA
-    }
+}
+void VulkanBackend::create_geometry(
+    Geometry*                    geometry,
+    const std::vector<Vertex2D>& vertices,
+    const std::vector<uint32>&   indices
+) {
+    create_geometry_internal(
+        geometry,
+        sizeof(Vertex2D),
+        vertices.size(),
+        vertices.data(),
+        sizeof(uint32),
+        indices.size(),
+        indices.data()
+    );
 }
 void VulkanBackend::destroy_geometry(Geometry* geometry) {
     if (!geometry) {
@@ -765,6 +766,86 @@ void VulkanBackend::create_sync_objects() {
 uint32 VulkanBackend::generate_geometry_id() {
     static uint32 id = 0;
     return id++;
+}
+
+void VulkanBackend::create_geometry_internal(
+    Geometry*         geometry,
+    const uint32      vertex_size,
+    const uint32      vertex_count,
+    const void* const vertex_data,
+    const uint32      index_size,
+    const uint32      index_count,
+    const void* const index_data
+) {
+    if (!geometry) {
+        Logger::error(
+            RENDERER_VULKAN_LOG,
+            "Method create_geometry called with nullptr. Creation failed."
+        );
+        return;
+    }
+
+    if (vertex_count < 1) {
+        Logger::error(RENDERER_VULKAN_LOG, "No vertex data passed.");
+        return;
+    }
+
+    auto               is_reupload = geometry->internal_id.has_value();
+    VulkanGeometryData old_data;
+
+    VulkanGeometryData* internal_data = nullptr;
+    if (is_reupload) {
+        internal_data          = &_geometries[geometry->internal_id.value()];
+        old_data.vertex_count  = internal_data->vertex_count;
+        old_data.vertex_size   = internal_data->vertex_size;
+        old_data.vertex_offset = internal_data->vertex_offset;
+        old_data.index_count   = internal_data->index_count;
+        old_data.index_size    = internal_data->index_size;
+        old_data.index_offset  = internal_data->index_offset;
+    } else {
+        uint id               = generate_geometry_id();
+        geometry->internal_id = id;
+        internal_data         = &_geometries[id];
+    }
+
+    if (internal_data == nullptr)
+        Logger::fatal(
+            RENDERER_VULKAN_LOG, "Geometry internal data somehow nullptr."
+        );
+
+    // Upload vertex data
+    static uint32  geometry_vertex_offset = 0; // TODO: TEMP
+    static uint32  geometry_index_offset  = 0; // TODO: TEMP
+    vk::DeviceSize buffer_size            = vertex_size * vertex_count;
+    vk::DeviceSize buffer_offset          = geometry_vertex_offset;
+
+    internal_data->vertex_count  = vertex_count;
+    internal_data->vertex_size   = vertex_size;
+    internal_data->vertex_offset = buffer_offset;
+
+    upload_data_to_buffer(
+        vertex_data, buffer_size, buffer_offset, _vertex_buffer
+    );
+    geometry_vertex_offset += buffer_size;
+
+    // Upload index data
+    if (index_count > 0) {
+        buffer_size   = index_size * index_count;
+        buffer_offset = geometry_index_offset;
+
+        internal_data->index_count  = index_count;
+        internal_data->index_size   = index_size;
+        internal_data->index_offset = buffer_offset;
+
+        upload_data_to_buffer(
+            index_data, buffer_size, buffer_offset, _index_buffer
+        );
+        geometry_index_offset += buffer_size;
+    }
+
+    if (is_reupload) {
+        // TODO: FREE VERTEX & INDEX DATA
+    }
 }
 
 // /////////////////////////////// //

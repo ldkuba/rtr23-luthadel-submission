@@ -15,7 +15,7 @@ struct Vertex3D {
 };
 
 struct Vertex2D {
-    glm::vec3 position;
+    glm::vec2 position;
     glm::vec2 texture_coord;
 
     bool operator==(const Vertex2D& other) const {

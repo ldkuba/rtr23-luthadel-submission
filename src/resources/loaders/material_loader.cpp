@@ -7,6 +7,7 @@
 struct MSVars {
     constexpr static const char* const version          = "version";
     constexpr static const char* const name             = "name";
+    constexpr static const char* const type             = "type";
     constexpr static const char* const diffuse_color    = "diffuse_color";
     constexpr static const char* const diffuse_map_name = "diffuse_map_name";
 };
@@ -24,10 +25,11 @@ MaterialLoader::~MaterialLoader() {}
 
 Resource* MaterialLoader::load(const String name) {
     // Material configuration defaults
-    String    mat_name             = name;
-    bool      mat_auto_release     = true;
-    glm::vec4 mat_diffuse_color    = glm::vec4(1.0f);
-    String    mat_diffuse_map_name = "";
+    String       mat_name             = name;
+    MaterialType mat_type             = MaterialType::World;
+    bool         mat_auto_release     = true;
+    glm::vec4    mat_diffuse_color    = glm::vec4(1.0f);
+    String       mat_diffuse_map_name = "";
 
     // Load material configuration from file
     String file_name = name + ".mat";
@@ -77,11 +79,16 @@ Resource* MaterialLoader::load(const String name) {
         setting_var.to_lower();
         setting_val.trim();
 
-        // Process variable and its argument
+        // === Process variable and its argument ===
+        // VERSION
         if (setting_var.compare(MSVars::version) == 0) {
             // TODO: Versions
-        } else if (setting_var.compare(MSVars::name) == 0) {
-            if (setting_val.length() > Material::max_name_length)
+        }
+        // NAME
+        else if (setting_var.compare(MSVars::name) == 0) {
+            if (setting_val.length() <= Material::max_name_length)
+                mat_name = setting_val;
+            else
                 Logger::warning(
                     RESOURCE_LOG,
                     "Couldn't load material name at line ",
@@ -94,10 +101,17 @@ Resource* MaterialLoader::load(const String name) {
                     Material::max_name_length,
                     " characters)."
                 );
-            else mat_name = setting_val;
-        } else if (setting_var.compare(MSVars::diffuse_map_name) == 0) {
+        }
+        // TYPE
+        else if (setting_var.compare(MSVars::type) == 0) {
+            if (setting_val.compare_ci("ui") == 0) mat_type = MaterialType::UI;
+        }
+        // DIFFUSE MAP NAME
+        else if (setting_var.compare(MSVars::diffuse_map_name) == 0) {
             mat_diffuse_map_name = setting_val;
-        } else if (setting_var.compare(MSVars::diffuse_color) == 0) {
+        }
+        // DIFFUSE COLOR
+        else if (setting_var.compare(MSVars::diffuse_color) == 0) {
             // Parse vec4
             auto str_floats = setting_val.split(' ');
             // Check vector dim size
@@ -130,7 +144,9 @@ Resource* MaterialLoader::load(const String name) {
                     ". Wrong argument count."
                 );
             }
-        } else {
+        }
+        // WRONG VAR
+        else {
             Logger::warning(
                 RESOURCE_LOG,
                 " Invalid variable : \"",
@@ -147,7 +163,11 @@ Resource* MaterialLoader::load(const String name) {
 
     // Create material config
     auto material_config = new MaterialConfig(
-        mat_name, mat_diffuse_map_name, mat_diffuse_color, mat_auto_release
+        mat_name,
+        mat_type,
+        mat_diffuse_map_name,
+        mat_diffuse_color,
+        mat_auto_release
     );
     material_config->full_path   = file_path;
     material_config->loader_type = ResourceType::Material;

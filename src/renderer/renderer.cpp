@@ -48,12 +48,17 @@ bool Renderer::draw_frame(const float32 delta_time) {
         _backend->end_render_pass(BuiltinRenderPass::World);
 
         // === UI changes ===
-        // _backend->begin_render_pass(BuiltinRenderPass::UI);
+        _backend->begin_render_pass(BuiltinRenderPass::UI);
 
-        // // Update global state
-        // _backend->update_global_ui_state(_projection_ui, _view_ui, 0);
+        // Update global state
+        _backend->update_global_ui_state(_projection_ui, _view_ui, 0);
 
-        // _backend->end_render_pass(BuiltinRenderPass::UI);
+        data          = {};
+        data.model    = glm::mat4(1.0f);
+        data.geometry = current_ui_geometry;
+        _backend->draw_geometry(data);
+
+        _backend->end_render_pass(BuiltinRenderPass::UI);
 
         // === END FRAME ===
         bool result = _backend->end_frame(delta_time);
@@ -87,15 +92,6 @@ void Renderer::destroy_material(Material* const material) {
     Logger::trace(RENDERER_LOG, "Material destroyed.");
 }
 
-void Renderer::create_geometry(
-    Geometry*                 geometry,
-    const std::vector<Vertex> vertices,
-    const std::vector<uint32> indices
-) {
-    Logger::trace(RENDERER_LOG, "Creating geometry.");
-    _backend->create_geometry(geometry, vertices, indices);
-    Logger::trace(RENDERER_LOG, "Geometry created.");
-}
 void Renderer::destroy_geometry(Geometry* geometry) {
     _backend->destroy_geometry(geometry);
     Logger::trace(RENDERER_LOG, "Geometry destroyed.");

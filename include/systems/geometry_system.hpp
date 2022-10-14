@@ -8,6 +8,10 @@ class GeometrySystem {
     Property<Geometry*> default_geometry {
         Get { return _default_geometry; }
     };
+    /// @brief Default fallback 2D geometry
+    Property<Geometry*> default_2d_geometry {
+        Get { return _default_2d_geometry; }
+    };
 
     GeometrySystem(
         Renderer* const renderer, MaterialSystem* const material_system
@@ -28,6 +32,7 @@ class GeometrySystem {
     /**
      * @brief Creates new geometry resource and load its material
      *
+     * @tparam VertexType Vertex (Vertex3D) or Vertex2D
      * @param vertices Vertex data
      * @param indices Index data
      * @param name Geometry's name
@@ -36,13 +41,15 @@ class GeometrySystem {
      * the geometry resource from memory if no references to it are detected.
      * @returns Created geometry resource
      */
+    template<typename VertexType>
     Geometry* acquire(
-        const std::vector<Vertex> vertices,
-        const std::vector<uint32> indices,
-        const String              name,
-        const String              material_name,
-        bool                      auto_release = true
+        const String                   name,
+        const std::vector<VertexType>& vertices,
+        const std::vector<uint32>&     indices,
+        const String                   material_name,
+        bool                           auto_release = true
     );
+
     /**
      * @brief Releases geometry resource. Geometry system will automatically
      * release this geometry from memory if no other references to it are
@@ -67,9 +74,45 @@ class GeometrySystem {
     const uint32 _max_geometry_count    = 1024 * 8;
     const String _default_geometry_name = "default";
 
-    Geometry* _default_geometry = nullptr;
+    Geometry* _default_geometry    = nullptr;
+    Geometry* _default_2d_geometry = nullptr;
 
     std::unordered_map<uint32, GeometryRef> _registered_geometries = {};
 
-    void create_default_geometry();
+    void create_default_geometries();
 };
+
+inline uint32 generate_id() { // TODO: TEMP
+    static uint32 id = 0;
+    return id++;
+}
+template<typename VertexType>
+Geometry* GeometrySystem::acquire(
+    const String                   name,
+    const std::vector<VertexType>& vertices,
+    const std::vector<uint32>&     indices,
+    const String                   material_name,
+    bool                           auto_release
+) {
+    // Generate unique id
+    auto id = generate_id();
+
+    // Register new slot
+    auto& ref           = _registered_geometries[id];
+    ref.auto_release    = auto_release;
+    ref.reference_count = 1;
+
+    // Crete geometry
+    ref.handle     = new Geometry(name);
+    ref.handle->id = id;
+    _renderer->create_geometry(ref.handle, vertices, indices);
+
+    // Acquire material
+    if (material_name != "") {
+        ref.handle->material = _material_system->acquire(material_name);
+        if (!ref.handle->material)
+            ref.handle->material = _material_system->default_material();
+    }
+
+    return ref.handle;
+}
