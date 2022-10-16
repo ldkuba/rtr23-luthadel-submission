@@ -28,12 +28,12 @@ class ResourceSystem {
      * @param type Resource type / Name of the resource loader
      * @return Resource*
      */
-    Resource* load(const String name, const String type);
+    Result<Resource*, RuntimeError> load(const String name, const String type);
     /**
      * @brief Unloads loaded resource
      * @param resource Resource to unload
      */
-    void      unload(Resource* resource);
+    void                            unload(Resource* resource);
 
   private:
     std::unordered_map<String, ResourceLoader*> _registered_loaders = {};

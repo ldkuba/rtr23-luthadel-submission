@@ -28,7 +28,7 @@ class VulkanDevice {
     /// @param properties Memory properties that need to be satisfied.
     /// @return Index of a memory type satisfying above specified conditions.
     /// @throws runtime_error If no suitable memory type is found.
-    uint32 find_memory_type(
+    Result<uint32, RuntimeError> find_memory_type(
         const uint32 type_filter, const vk::MemoryPropertyFlags properties
     ) const;
 

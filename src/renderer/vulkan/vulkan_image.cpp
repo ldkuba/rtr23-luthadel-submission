@@ -63,13 +63,12 @@ void VulkanImage::create(
     // Number of bytes to be allocated
     allocation_info.setAllocationSize(memory_requirements.size);
     // Type of memory we wish to allocate from
-    try {
-        allocation_info.setMemoryTypeIndex(_device->find_memory_type(
-            memory_requirements.memoryTypeBits, properties
-        ));
-    } catch (const std::runtime_error e) {
-        Logger::fatal(RENDERER_VULKAN_LOG, e.what());
-    }
+    auto memory_type = _device->find_memory_type(
+        memory_requirements.memoryTypeBits, properties
+    );
+    if (memory_type.has_error())
+        Logger::fatal(RENDERER_VULKAN_LOG, memory_type.error().what());
+    allocation_info.setMemoryTypeIndex(memory_type.value());
 
     try {
         _memory = _device->handle().allocateMemory(allocation_info, _allocator);
@@ -134,7 +133,7 @@ void VulkanImage::create(
 #endif
 }
 
-void VulkanImage::transition_image_layout(
+Result<void, InvalidArgument> VulkanImage::transition_image_layout(
     const vk::CommandBuffer& command_buffer,
     const vk::ImageLayout    old_layout,
     const vk::ImageLayout    new_layout
@@ -175,7 +174,7 @@ void VulkanImage::transition_image_layout(
 
         source_stage      = vk::PipelineStageFlagBits::eTransfer;
         destination_stage = vk::PipelineStageFlagBits::eFragmentShader;
-    } else throw std::invalid_argument("Unsupported layout transition.");
+    } else return Failure("Unsupported layout transition.");
 
     // Transition image layout with barrier
     command_buffer.pipelineBarrier(
@@ -189,6 +188,7 @@ void VulkanImage::transition_image_layout(
         1,
         &barrier
     );
+    return {};
 }
 
 void VulkanImage::generate_mipmaps(const vk::CommandBuffer& command_buffer

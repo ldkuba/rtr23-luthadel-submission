@@ -15,22 +15,20 @@ BinaryLoader::~BinaryLoader() {}
 // BINARY LOADER PUBLIC METHODS //
 // //////////////////////////// //
 
-Resource* BinaryLoader::load(const String name) {
+Result<Resource*, RuntimeError> BinaryLoader::load(const String name) {
     // Construct full path
     String file_path =
         ResourceSystem::base_path + "/" + _type_path + "/" + name;
 
     // Read all data
-    std::vector<byte> data;
-    try {
-        data = FileSystem::read_file_bytes(file_path);
-    } catch (const FileSystemException& e) {
-        Logger::error(RESOURCE_LOG, e.what());
-        throw std::runtime_error(e.what());
+    auto data = FileSystem::read_file_bytes(file_path);
+    if (data.has_error()) {
+        Logger::error(RESOURCE_LOG, data.error().what());
+        return Failure(data.error().what());
     }
 
     // Return byte data
-    auto byte_data         = new ByteArrayData(name, data);
+    auto byte_data         = new ByteArrayData(name, data.value());
     byte_data->full_path   = file_path;
     byte_data->loader_type = ResourceType::Binary;
 

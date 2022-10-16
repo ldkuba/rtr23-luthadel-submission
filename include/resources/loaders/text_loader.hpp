@@ -7,8 +7,8 @@ class TextLoader : public ResourceLoader {
     TextLoader();
     ~TextLoader();
 
-    Resource* load(const String name);
-    void      unload(Resource* resource);
+    Result<Resource*, RuntimeError> load(const String name);
+    void                            unload(Resource* resource);
 
   private:
 };

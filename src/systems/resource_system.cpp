@@ -56,7 +56,9 @@ void ResourceSystem::register_loader(ResourceLoader* const loader) {
     );
 }
 
-Resource* ResourceSystem::load(const String name, const String type) {
+Result<Resource*, RuntimeError> ResourceSystem::load(
+    const String name, const String type
+) {
     // Find loader of this type
     auto loader = _registered_loaders.find(type);
     if (loader == _registered_loaders.end()) {
@@ -68,7 +70,7 @@ Resource* ResourceSystem::load(const String name, const String type) {
             name,
             "\" was unable to be loaded."
         );
-        return nullptr;
+        return Failure("No resource.");
     }
 
     // Load

@@ -20,12 +20,10 @@ VulkanBackend::VulkanBackend(
     _debug_messenger = setup_debug_messenger();
 
     // Get vulkan surface
-    try {
-        _vulkan_surface =
-            surface->get_vulkan_surface(_vulkan_instance, _allocator);
-    } catch (std::runtime_error e) {
-        Logger::fatal(RENDERER_VULKAN_LOG, e.what());
-    }
+    auto result = surface->get_vulkan_surface(_vulkan_instance, _allocator);
+    if (result.has_error())
+        Logger::fatal(RENDERER_VULKAN_LOG, result.error().what());
+    _vulkan_surface = result.value();
 
     // Create device
     _device = new VulkanDevice(_vulkan_instance, _vulkan_surface, _allocator);
@@ -427,17 +425,16 @@ void VulkanBackend::create_texture(Texture* texture, const byte* const data) {
         vk::ImageAspectFlagBits::eColor
     );
 
-    // Transition image to a layout optimal for data transfer
     auto command_buffer = _command_pool->begin_single_time_commands();
-    try {
-        texture_image->transition_image_layout(
-            command_buffer,
-            vk::ImageLayout::eUndefined,
-            vk::ImageLayout::eTransferDstOptimal
-        );
-    } catch (std::invalid_argument e) {
-        Logger::fatal(RENDERER_VULKAN_LOG, e.what());
-    }
+
+    // Transition image to a layout optimal for data transfer
+    auto result = texture_image->transition_image_layout(
+        command_buffer,
+        vk::ImageLayout::eUndefined,
+        vk::ImageLayout::eTransferDstOptimal
+    );
+    if (result.has_error())
+        Logger::fatal(RENDERER_VULKAN_LOG, result.error().what());
 
     // Copy buffer data to image
     staging_buffer->copy_data_to_image(command_buffer, texture_image);

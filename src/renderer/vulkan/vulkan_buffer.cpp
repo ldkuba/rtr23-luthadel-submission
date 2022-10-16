@@ -159,13 +159,18 @@ vk::DeviceMemory VulkanBuffer::allocate_buffer_memory(
     auto memory_requirements =
         _device->handle().getBufferMemoryRequirements(buffer);
 
+    // Find memory type
+    auto memory_type = _device->find_memory_type(
+        memory_requirements.memoryTypeBits, properties
+    );
+    if (memory_type.has_error())
+        Logger::fatal(RENDERER_VULKAN_LOG, memory_type.error().what());
+
     vk::MemoryAllocateInfo allocation_info {};
     // Number of bytes to be allocated
     allocation_info.setAllocationSize(memory_requirements.size);
     // Type of memory we wish to allocate from
-    allocation_info.setMemoryTypeIndex(_device->find_memory_type(
-        memory_requirements.memoryTypeBits, properties
-    ));
+    allocation_info.setMemoryTypeIndex(memory_type.value());
 
     vk::DeviceMemory memory;
     try {

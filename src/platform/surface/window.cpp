@@ -44,7 +44,7 @@ void Window::framebuffer_resize_callback(
     surface->resize_event(width, height);
 }
 
-vk::SurfaceKHR Window::get_vulkan_surface(
+Result<vk::SurfaceKHR, RuntimeError> Window::get_vulkan_surface(
     const vk::Instance&                  vulkan_instance,
     const vk::AllocationCallbacks* const allocator
 ) const {
@@ -56,7 +56,7 @@ vk::SurfaceKHR Window::get_vulkan_surface(
         (VkSurfaceKHR*) &vulkan_surface
     ));
     if (result != vk::Result::eSuccess)
-        throw std::runtime_error("Failed to create window surface.");
+        return Failure("Failed to create window surface.");
     return vulkan_surface;
 }
 

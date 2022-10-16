@@ -79,7 +79,7 @@ VulkanDevice::~VulkanDevice() {
 // VULKAN DEVICE PUBLIC METHODS //
 // //////////////////////////// //
 
-uint32 VulkanDevice::find_memory_type(
+Result<uint32, RuntimeError> VulkanDevice::find_memory_type(
     const uint32 type_filter, const vk::MemoryPropertyFlags properties
 ) const {
     for (uint32 i = 0; i < _info.memory_types.size(); i++) {
@@ -87,8 +87,7 @@ uint32 VulkanDevice::find_memory_type(
             (_info.memory_types[i].propertyFlags & properties) == properties)
             return i;
     }
-
-    throw std::runtime_error("Failed to find suitable memory type.");
+    return Failure("Failed to find suitable memory type.");
 }
 
 // ///////////////////////////// //

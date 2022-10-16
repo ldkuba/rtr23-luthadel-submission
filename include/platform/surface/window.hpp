@@ -25,7 +25,7 @@ class Window : public Platform::Surface {
     Window(const Window&)            = delete;
     Window& operator=(const Window&) = delete;
 
-    vk::SurfaceKHR get_vulkan_surface(
+    Result<vk::SurfaceKHR, RuntimeError> get_vulkan_surface(
         const vk::Instance&                  vulkan_instance,
         const vk::AllocationCallbacks* const allocator
     ) const;

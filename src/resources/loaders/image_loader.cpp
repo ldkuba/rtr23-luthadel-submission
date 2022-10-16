@@ -17,7 +17,7 @@ ImageLoader::~ImageLoader() {}
 // IMAGE LOADER PUBLIC METHODS //
 // /////////////////////////// //
 
-Resource* ImageLoader::load(const String name) {
+Result<Resource*, RuntimeError> ImageLoader::load(const String name) {
     // If name is not provided with an extension use default extension
     String file_name = name;
     if (file_name.split('.').size() < 2) file_name = file_name + ".png";
@@ -44,7 +44,7 @@ Resource* ImageLoader::load(const String name) {
         stbi_image_free(image_pixels);
         String error_message = "Failed to load texture image.";
         Logger::error(RESOURCE_LOG, error_message);
-        throw std::runtime_error(error_message);
+        return Failure(error_message);
     }
 
     // Check for transparency

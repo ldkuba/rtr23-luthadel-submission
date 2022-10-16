@@ -65,34 +65,47 @@ Texture* TextureSystem::acquire(const String name, const bool auto_release) {
     // Get reference
     String s = name;
     s.to_lower();
-    auto& ref = _registered_textures[s];
+    auto ref = _registered_textures.find(s);
 
-    if (ref.handle == nullptr) {
-        // Texture was just added
-        auto image = static_cast<Image*>(
-            _resource_system->load(name, ResourceType::Image)
-        );
-        ref.handle = new Texture(
-            name,
-            image->width,
-            image->height,
-            image->channel_count,
-            image->has_transparency()
-        );
-        ref.handle->id      = (uint64) ref.handle;
-        ref.auto_release    = auto_release;
-        ref.reference_count = 0;
+    if (ref != _registered_textures.end()) {
+        ref->second.reference_count++;
 
-        // Upload texture to GPU
-        _renderer->create_texture(ref.handle, image->pixels);
-
-        // Release resources
-        _resource_system->unload(image);
+        Logger::trace(TEXTURE_SYS_LOG, "Texture acquired.");
+        return ref->second.handle;
     }
-    ref.reference_count++;
 
+    // Texture was just added, load from asset folder
+    auto result = _resource_system->load(name, ResourceType::Image);
+    if (result.has_error()) {
+        Logger::error(
+            TEXTURE_SYS_LOG, "Texture load failed. Returning default_texture."
+        );
+        return _default_texture;
+    }
+    auto image = (Image*) result.value();
+
+    auto texture_ref   = TextureRef();
+    texture_ref.handle = new Texture(
+        name,
+        image->width,
+        image->height,
+        image->channel_count,
+        image->has_transparency()
+    );
+    texture_ref.handle->id      = (uint64) texture_ref.handle;
+    texture_ref.auto_release    = auto_release;
+    texture_ref.reference_count = 1;
+
+    // Upload texture to GPU
+    _renderer->create_texture(texture_ref.handle, image->pixels);
+
+    // Release resources
+    _resource_system->unload(image);
+
+    // Cache
+    _registered_textures[s] = texture_ref;
     Logger::trace(TEXTURE_SYS_LOG, "Texture acquired.");
-    return ref.handle;
+    return texture_ref.handle;
 }
 
 void TextureSystem::release(const String name) {

@@ -99,9 +99,9 @@ class VulkanImage {
     /// will be submitted
     /// @param old_layout Currently active image layout
     /// @param new_layout Image layout to transition to
-    /// @throws std::invalid_argument Exception if invalid layout transition is
+    /// @throws InvalidArgument Exception if invalid layout transition is
     /// provided
-    void transition_image_layout(
+    Result<void, InvalidArgument> transition_image_layout(
         const vk::CommandBuffer& command_buffer,
         const vk::ImageLayout    old_layout,
         const vk::ImageLayout    new_layout

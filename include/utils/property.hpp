@@ -24,7 +24,7 @@ class Property {
             [](auto&& value) {
                 throw PropertyException("This property cannot be changed.");
             }
-    )
+    ) noexcept
         : _getter { std::move(get_fn) }, _setter { std::move(set_fn) } {}
 
     Property()                                 = delete;

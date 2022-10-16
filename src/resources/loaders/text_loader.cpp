@@ -15,20 +15,18 @@ TextLoader::~TextLoader() {}
 // TEXT LOADER PUBLIC METHODS //
 // ////////////////////////// //
 
-Resource* TextLoader::load(const String name) {
+Result<Resource*, RuntimeError> TextLoader::load(const String name) {
     // Construct full path
     String file_path =
         ResourceSystem::base_path + "/" + _type_path + "/" + name;
 
     // Read all data
-    String data;
-    try {
-        auto raw_data = FileSystem::read_file_bytes(file_path);
-        data          = String((const char*) raw_data.data());
-    } catch (const FileSystemException& e) {
-        Logger::error(RESOURCE_LOG, e.what());
-        throw std::runtime_error(e.what());
+    auto raw_data = FileSystem::read_file_bytes(file_path);
+    if (raw_data.has_error()) {
+        Logger::error(RESOURCE_LOG, raw_data.error().what());
+        return Failure(raw_data.error().what());
     }
+    String data = String((const char*) raw_data->data());
 
     // Return text data
     auto text_data         = new TextData(name, data);

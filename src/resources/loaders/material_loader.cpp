@@ -12,6 +12,8 @@ struct MSVars {
     constexpr static const char* const diffuse_map_name = "diffuse_map_name";
 };
 
+Result<glm::vec4, uint8> load_vector(const String vector_str);
+
 // Constructor & Destructor
 MaterialLoader::MaterialLoader() {
     _type      = ResourceType::Material;
@@ -23,7 +25,7 @@ MaterialLoader::~MaterialLoader() {}
 // MATERIAL LOADER PUBLIC METHODS //
 // ////////////////////////////// //
 
-Resource* MaterialLoader::load(const String name) {
+Result<Resource*, RuntimeError> MaterialLoader::load(const String name) {
     // Material configuration defaults
     String       mat_name             = name;
     MaterialType mat_type             = MaterialType::World;
@@ -37,17 +39,15 @@ Resource* MaterialLoader::load(const String name) {
     String file_path =
         ResourceSystem::base_path + "/" + _type_path + "/" + file_name;
 
-    std::vector<String> material_settings;
-    try {
-        material_settings = FileSystem::read_file_lines(file_path);
-    } catch (const FileSystemException& e) {
-        Logger::error(RESOURCE_LOG, e.what());
-        throw std::runtime_error(e.what());
+    auto material_settings = FileSystem::read_file_lines(file_path);
+    if (material_settings.has_error()) {
+        Logger::error(RESOURCE_LOG, material_settings.error().what());
+        return Failure(material_settings.error().what());
     }
 
     // Parse loaded config
     uint32 line_number = 1;
-    for (auto setting_line : material_settings) {
+    for (auto setting_line : material_settings.value()) {
         setting_line.trim();
 
         // Skip blank and comment lines
@@ -112,19 +112,19 @@ Resource* MaterialLoader::load(const String name) {
         }
         // DIFFUSE COLOR
         else if (setting_var.compare(MSVars::diffuse_color) == 0) {
-            // Parse vec4
-            auto str_floats = setting_val.split(' ');
-            // Check vector dim size
-            if (str_floats.size() == 4) {
-                try {
-                    // convert to float
-                    std::vector<float32> floats(str_floats.size());
-                    for (uint32 i = 0; i < str_floats.size(); i++)
-                        floats[i] = str_floats[i].parse_as_float32();
-                    // Assign to diffuse color
-                    mat_diffuse_color =
-                        glm::vec4(floats[0], floats[1], floats[2], floats[3]);
-                } catch (std::invalid_argument e) {
+            auto result = load_vector(setting_val);
+            match_error(result) {
+                Err(1) {
+                    Logger::warning(
+                        RESOURCE_LOG,
+                        "Couldn't parse vec4 at line ",
+                        line_number,
+                        " of file ",
+                        file_path,
+                        ". Wrong argument count."
+                    );
+                }
+                Err(2) {
                     Logger::warning(
                         RESOURCE_LOG,
                         "Couldn't parse vec4 at line ",
@@ -134,16 +134,8 @@ Resource* MaterialLoader::load(const String name) {
                         ". Couldn't parse floats."
                     );
                 }
-            } else {
-                Logger::warning(
-                    RESOURCE_LOG,
-                    "Couldn't parse vec4 at line ",
-                    line_number,
-                    " of file ",
-                    file_path,
-                    ". Wrong argument count."
-                );
             }
+            else { mat_diffuse_color = result.value(); }
         }
         // WRONG VAR
         else {
@@ -179,4 +171,24 @@ void MaterialLoader::unload(Resource* resource) {
 
     MaterialConfig* res = (MaterialConfig*) resource;
     delete res;
+}
+
+// //////////////////////////////// //
+// MATERIAL LOADER HELPER FUNCTIONS //
+// //////////////////////////////// //
+
+Result<glm::vec4, uint8> load_vector(const String vector_str) { // Parse vec4
+    auto str_floats = vector_str.split(' ');
+    // Check vector dim size
+    if (str_floats.size() != 4) return Failure(1);
+
+    // convert to float
+    std::vector<float32> floats(str_floats.size());
+    for (uint32 i = 0; i < str_floats.size(); i++) {
+        auto result = str_floats[i].parse_as_float32();
+        if (result.has_error()) return Failure(2);
+    }
+
+    // Assign to diffuse color
+    return glm::vec4(floats[0], floats[1], floats[2], floats[3]);
 }

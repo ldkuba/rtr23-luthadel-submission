@@ -2,7 +2,10 @@
 
 #include <string>
 #include <vector>
+
 #include "defines.hpp"
+#include "result.hpp"
+#include "error_types.hpp"
 
 // Additional to_string conversions
 namespace std {
@@ -13,9 +16,9 @@ string to_string(const int128& in);
 class String : public std::string {
   public:
     using std::string::string;
-    String();
-    String(const std::string& __str) : std::string(__str) {}
-    ~String();
+    String() noexcept;
+    String(const std::string& __str) noexcept : std::string(__str) {}
+    ~String() noexcept;
 
     // String builder
     /**
@@ -25,7 +28,7 @@ class String : public std::string {
      * @returns Concatenated string
      */
     template<typename... Args>
-    static String build(Args... message) {
+    static String build(Args... message) noexcept {
         String result = "";
         (add_to_string(result, message), ...);
         return result;
@@ -33,17 +36,17 @@ class String : public std::string {
 
     // Transform
     /// @brief Transform all string characters to lowercase (inplace)
-    void to_lower();
+    void to_lower() noexcept;
     /// @brief Transform all string characters to uppercase (inplace)
-    void to_upper();
+    void to_upper() noexcept;
 
     // Trim
     /// @brief Removes all white-space characters from left side (Inplace)
-    void trim_left();
+    void trim_left() noexcept;
     /// @brief Removes all white-space characters from right side (Inplace)
-    void trim_right();
+    void trim_right() noexcept;
     /// @brief Removes all white-space characters from both sides (Inplace)
-    void trim();
+    void trim() noexcept;
 
     // Comparison
     /**
@@ -82,91 +85,91 @@ class String : public std::string {
      * @throws std::invalid_argument If parse is impossible. Parse is also
      * deemed impossible if overflow is detected.
      */
-    uint8    parse_as_uint8();
+    Result<uint8, InvalidArgument>    parse_as_uint8();
     /**
      * @brief Parses string as uint16
      * @return uint16
      * @throws std::invalid_argument If parse is impossible. Parse is also
      * deemed impossible if overflow is detected.
      */
-    uint16   parse_as_uint16();
+    Result<uint16, InvalidArgument>   parse_as_uint16();
     /**
      * @brief Parses string as uint32
      * @return uint32
      * @throws std::invalid_argument If parse is impossible. Parse is also
      * deemed impossible if overflow is detected.
      */
-    uint32   parse_as_uint32();
+    Result<uint32, InvalidArgument>   parse_as_uint32();
     /**
      * @brief Parses string as uint64
      * @return uint64
      * @throws std::invalid_argument If parse is impossible. Parse is also
      * deemed impossible if overflow is detected.
      */
-    uint64   parse_as_uint64();
+    Result<uint64, InvalidArgument>   parse_as_uint64();
     /**
      * @brief Parses string as uint128
      * @return uint128
      * @throws std::invalid_argument If parse is impossible
      */
-    uint128  parse_as_uint128();
+    Result<uint128, InvalidArgument>  parse_as_uint128();
     /**
      * @brief Parses string as int8
      * @return int8
      * @throws std::invalid_argument If parse is impossible. Parse is also
      * deemed impossible if overflow is detected.
      */
-    int8     parse_as_int8();
+    Result<int8, InvalidArgument>     parse_as_int8();
     /**
      * @brief Parses string as int16
      * @return int16
      * @throws std::invalid_argument If parse is impossible. Parse is also
      * deemed impossible if overflow is detected.
      */
-    int16    parse_as_int16();
+    Result<int16, InvalidArgument>    parse_as_int16();
     /**
      * @brief Parses string as int32
      * @return int32
      * @throws std::invalid_argument If parse is impossible. Parse is also
      * deemed impossible if overflow is detected.
      */
-    int32    parse_as_int32();
+    Result<int32, InvalidArgument>    parse_as_int32();
     /**
      * @brief Parses string as int64
      * @return int64
      * @throws std::invalid_argument If parse is impossible. Parse is also
      * deemed impossible if overflow is detected.
      */
-    int64    parse_as_int64();
+    Result<int64, InvalidArgument>    parse_as_int64();
     /**
      * @brief Parses string as int128
      * @return int128
      * @throws std::invalid_argument If parse is impossible
      */
-    int128   parse_as_int128();
+    Result<int128, InvalidArgument>   parse_as_int128();
     /**
      * @brief Parses string as float32
      * @return float32
      * @throws std::invalid_argument If parse is impossible
      */
-    float32  parse_as_float32();
+    Result<float32, InvalidArgument>  parse_as_float32();
     /**
      * @brief Parses string as float64
      * @return float64
      * @throws std::invalid_argument If parse is impossible
      */
-    float64  parse_as_float64();
+    Result<float64, InvalidArgument>  parse_as_float64();
     /**
      * @brief Parses string as float128
      * @return float128
      * @throws std::invalid_argument If parse is impossible
      */
-    float128 parse_as_float128();
+    Result<float128, InvalidArgument> parse_as_float128();
 
   private:
     // String builder
     template<typename T>
-    static void add_to_string(String& out_string, T component) {
+    static void add_to_string(String& out_string, T component) noexcept {
         out_string += std::to_string(component);
     }
 };
@@ -179,14 +182,16 @@ struct hash<String> {
 } // namespace std
 
 template<>
-void String::add_to_string<char*>(String& out_string, char* component);
+void String::add_to_string<char*>(String& out_string, char* component) noexcept;
 template<>
 void String::add_to_string<const char*>(
     String& out_string, const char* component
-);
+) noexcept;
 template<>
 void String::add_to_string<std::string>(
     String& out_string, std::string component
-);
+) noexcept;
 template<>
-void String::add_to_string<String>(String& out_string, String component);
+void String::add_to_string<String>(
+    String& out_string, String component
+) noexcept;

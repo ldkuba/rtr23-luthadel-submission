@@ -7,6 +7,8 @@
 
 #include "defines.hpp"
 #include "event.hpp"
+#include "result.hpp"
+#include "error_types.hpp"
 
 class Platform {
   private:
@@ -50,7 +52,7 @@ class Platform {
         );
 
         // Vulkan functions
-        virtual vk::SurfaceKHR get_vulkan_surface(
+        virtual Result<vk::SurfaceKHR, RuntimeError> get_vulkan_surface(
             const vk::Instance&                  vulkan_instance,
             const vk::AllocationCallbacks* const allocator
         ) const {

@@ -61,20 +61,28 @@ Material* MaterialSystem::acquire(const String name) {
     s.to_lower();
     auto ref = _registered_materials.find(s);
 
-    if (ref == _registered_materials.end()) {
-        // No material under this name found; load form resource system
-        MaterialConfig* material_config = static_cast<MaterialConfig*>(
-            _resource_system->load(name, ResourceType::Material)
-        );
-        auto material = acquire(*material_config);
-        _resource_system->unload(material_config);
+    if (ref != _registered_materials.end()) {
+        ref->second.reference_count++;
         Logger::trace(MATERIAL_SYS_LOG, "Material acquired.");
-        return material;
+        return ref->second.handle;
     }
 
-    ref->second.reference_count++;
+    // No material under this name found; load form resource system
+    auto result = _resource_system->load(name, ResourceType::Material);
+    if (result.has_error()) {
+        Logger::error(
+            MATERIAL_SYS_LOG,
+            "Material load failed. Returning default_material."
+        );
+        return _default_material;
+    }
+    auto material_config = (MaterialConfig*) result.value();
+
+    auto material = acquire(*material_config);
+    _resource_system->unload(material_config);
+
     Logger::trace(MATERIAL_SYS_LOG, "Material acquired.");
-    return ref->second.handle;
+    return material;
 }
 Material* MaterialSystem::acquire(const MaterialConfig config) {
     Logger::trace(MATERIAL_SYS_LOG, "Material requested.");

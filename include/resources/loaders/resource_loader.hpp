@@ -1,6 +1,8 @@
 #pragma once
 
 #include "resources/resource.hpp"
+#include "result.hpp"
+#include "error_types.hpp"
 
 #define RESOURCE_LOG "ResourceLoader :: "
 
@@ -36,13 +38,15 @@ class ResourceLoader {
      * @returns Requested Resource*
      * @throws FileSystemException if load fails for some reason
      */
-    virtual Resource* load(const String name) { return nullptr; }
+    virtual Result<Resource*, RuntimeError> load(const String name) {
+        return nullptr;
+    }
     /**
      * @brief Releases resource data
      *
      * @param resource Resource to be unloaded
      */
-    virtual void      unload(Resource* resource) {}
+    virtual void unload(Resource* resource) {}
 
   protected:
     String _type_path;

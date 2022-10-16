@@ -7,8 +7,8 @@ class BinaryLoader : public ResourceLoader {
     BinaryLoader();
     ~BinaryLoader();
 
-    Resource* load(const String name);
-    void      unload(Resource* resource);
+    Result<Resource*, RuntimeError> load(const String name);
+    void                            unload(Resource* resource);
 
   private:
 };

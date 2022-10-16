@@ -4,11 +4,8 @@
 #include <fstream>
 
 #include "string.hpp"
-
-class FileSystemException : public std::runtime_error {
-  public:
-    using std::runtime_error::runtime_error;
-};
+#include "result.hpp"
+#include "error_types.hpp"
 
 class File {
   public:
@@ -27,7 +24,11 @@ class FileSystem {
     FileSystem();
     ~FileSystem();
 
-    static File                open(const String& file_path);
-    static std::vector<byte>   read_file_bytes(const String& file_path);
-    static std::vector<String> read_file_lines(const String& file_path);
+    static File open(const String& file_path);
+    static Result<std::vector<byte>, RuntimeError> read_file_bytes(
+        const String& file_path
+    );
+    static Result<std::vector<String>, RuntimeError> read_file_lines(
+        const String& file_path
+    );
 };

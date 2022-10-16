@@ -27,27 +27,31 @@ VulkanMaterialShader::VulkanMaterialShader(
     Logger::trace(RENDERER_VULKAN_LOG, "Creating material shader.");
 
     // === Create shader modules ===
-    vk::ShaderModule vertex_shader_module;
-    vk::ShaderModule fragment_shader_module;
-    try {
-        // Load raw binary data
-        auto vertex_code = (ByteArrayData*) resource_system->load(
-            "shaders/builtin.material_shader.vert.spv", ResourceType::Binary
-        );
-        auto fragment_code = (ByteArrayData*) resource_system->load(
-            "shaders/builtin.material_shader.frag.spv", ResourceType::Binary
-        );
+    // Load raw binary data
+    Result<Resource*, RuntimeError> result;
+    result = resource_system->load(
+        "shaders/builtin.material_shader.vert.spv", ResourceType::Binary
+    );
+    if (result.has_error())
+        Logger::fatal(RENDERER_VULKAN_LOG, result.error().what());
+    auto vertex_code = (ByteArrayData*) result.value();
 
-        // Create shader modules
-        vertex_shader_module   = create_shader_module(vertex_code->data);
-        fragment_shader_module = create_shader_module(fragment_code->data);
+    result = resource_system->load(
+        "shaders/builtin.material_shader.frag.spv", ResourceType::Binary
+    );
+    if (result.has_error())
+        Logger::fatal(RENDERER_VULKAN_LOG, result.error().what());
+    auto fragment_code = (ByteArrayData*) result.value();
 
-        // Release resources
-        resource_system->unload(vertex_code);
-        resource_system->unload(fragment_code);
-    } catch (std::runtime_error e) {
-        Logger::fatal(RENDERER_VULKAN_LOG, e.what());
-    }
+    // Create shader modules
+    vk::ShaderModule vertex_shader_module =
+        create_shader_module(vertex_code->data);
+    vk::ShaderModule fragment_shader_module =
+        create_shader_module(fragment_code->data);
+
+    // Release resources
+    resource_system->unload(vertex_code);
+    resource_system->unload(fragment_code);
 
     // === Shader stages ===
     std::vector<vk::PipelineShaderStageCreateInfo> shader_stages(2);
