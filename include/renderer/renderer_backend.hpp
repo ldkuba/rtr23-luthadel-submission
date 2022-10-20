@@ -31,14 +31,18 @@ class RendererBackend {
      * @return false If a problem is encountered during the method execution
      * @return true Otherwise
      */
-    virtual bool begin_frame(const float32 delta_time) { return false; }
+    virtual Result<void, RuntimeError> begin_frame(const float32 delta_time) {
+        return {};
+    }
     /**
      * @brief Complete all rendering operations for this frame
      * @param delta_time Time in seconds since the last frame
      * @return false If a problem is encountered during the method execution
      * @return true Otherwise
      */
-    virtual bool end_frame(const float32 delta_time) { return false; }
+    virtual Result<void, RuntimeError> end_frame(const float32 delta_time) {
+        return {};
+    }
 
     virtual void begin_render_pass(uint8 render_pass_id) {}
     virtual void end_render_pass(uint8 render_pass_id) {}

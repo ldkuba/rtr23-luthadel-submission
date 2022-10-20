@@ -3,6 +3,7 @@
 #include <vulkan/vulkan.hpp>
 #include <GLFW/glfw3.h>
 
+#include "memory_system.hpp"
 #include "systems/app_temp.hpp"
 
 // TODO: APPLICATION / ENGINE SPLIT
@@ -18,9 +19,7 @@ int main(int, char**) {
     Logger::debug("MODE is DEBUG");
 #endif
 
-    try {
-        app.run();
-    } catch (const std::exception& e) { Logger::fatal(e.what()); }
+    app.run();
 
     return EXIT_SUCCESS;
 }

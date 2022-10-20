@@ -53,7 +53,9 @@ void VulkanImage::create(
 
     try {
         _handle = _device->handle().createImage(image_info, _allocator);
-    } catch (vk::SystemError e) { Logger::log(RENDERER_VULKAN_LOG, e.what()); }
+    } catch (vk::SystemError e) {
+        Logger::fatal(RENDERER_VULKAN_LOG, e.what());
+    }
 
     // Allocate image memory
     auto memory_requirements =

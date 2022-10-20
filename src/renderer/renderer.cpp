@@ -23,53 +23,54 @@ void Renderer::on_resize(const uint32 width, const uint32 height) {
     );
     _backend->resized(width, height);
 }
-bool Renderer::draw_frame(const float32 delta_time) {
-    if (_backend->begin_frame(delta_time)) {
+Result<void, RuntimeError> Renderer::draw_frame(const float32 delta_time) {
+    auto result = _backend->begin_frame(delta_time);
+    if (result.has_error()) { return {}; }
 
-        // === World shader ===
-        _backend->begin_render_pass(BuiltinRenderPass::World);
+    // === World shader ===
+    _backend->begin_render_pass(BuiltinRenderPass::World);
 
-        // Update global state
-        _backend->update_global_world_state(
-            _projection, _view, glm::vec3(0.0), glm::vec4(1.0), 0
-        );
+    // Update global state
+    _backend->update_global_world_state(
+        _projection, _view, glm::vec3(0.0), glm::vec4(1.0), 0
+    );
 
-        // TODO: Temp code; update one and only object
-        static float rotation = 0.0f;
-        rotation += 50.0f * delta_time;
-        GeometryRenderData data = {};
-        data.model              = glm::rotate(
-            glm::mat4(1.0f), glm::radians(rotation), glm::vec3(0.0f, 0.0f, 1.0f)
-        );
-        data.geometry = current_geometry;
+    // TODO: Temp code; update one and only object
+    static float rotation = 0.0f;
+    rotation += 50.0f * delta_time;
+    GeometryRenderData data = {};
+    data.model              = glm::rotate(
+        glm::mat4(1.0f), glm::radians(rotation), glm::vec3(0.0f, 0.0f, 1.0f)
+    );
+    data.geometry = current_geometry;
 
-        _backend->draw_geometry(data);
+    _backend->draw_geometry(data);
 
-        _backend->end_render_pass(BuiltinRenderPass::World);
+    _backend->end_render_pass(BuiltinRenderPass::World);
 
-        // === UI changes ===
-        _backend->begin_render_pass(BuiltinRenderPass::UI);
+    // === UI changes ===
+    _backend->begin_render_pass(BuiltinRenderPass::UI);
 
-        // Update global state
-        _backend->update_global_ui_state(_projection_ui, _view_ui, 0);
+    // Update global state
+    _backend->update_global_ui_state(_projection_ui, _view_ui, 0);
 
-        data          = {};
-        data.model    = glm::mat4(1.0f);
-        data.geometry = current_ui_geometry;
-        _backend->draw_geometry(data);
+    data          = {};
+    data.model    = glm::mat4(1.0f);
+    data.geometry = current_ui_geometry;
+    _backend->draw_geometry(data);
 
-        _backend->end_render_pass(BuiltinRenderPass::UI);
+    _backend->end_render_pass(BuiltinRenderPass::UI);
 
-        // === END FRAME ===
-        bool result = _backend->end_frame(delta_time);
-        _backend->increment_frame_number();
-        if (!result) {
-            // TODO: error handling
-            return false;
-        }
+    // === END FRAME ===
+    result = _backend->end_frame(delta_time);
+    _backend->increment_frame_number();
+
+    if (result.has_error()) {
+        // TODO: error handling
+        return Failure(result.error());
     }
 
-    return true;
+    return {};
 }
 
 void Renderer::create_texture(Texture* texture, const byte* const data) {

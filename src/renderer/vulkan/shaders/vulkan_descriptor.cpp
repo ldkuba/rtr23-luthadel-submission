@@ -149,13 +149,12 @@ VulkanBuffer* VulkanDescriptor::get_buffer(
     const uint32 binding, const uint32 index
 ) const {
     if (_descriptor_infos[binding].type != vk::DescriptorType::eUniformBuffer) {
-        Logger::error(
+        Logger::fatal(
             RENDERER_VULKAN_LOG,
             "There is no buffer at binding ",
             binding,
             ". Value of nullptr returned."
         );
-        return nullptr;
     }
     auto buffer_descriptor = (BufferDescriptor*) _descriptors[binding];
     return buffer_descriptor->buffers[index];

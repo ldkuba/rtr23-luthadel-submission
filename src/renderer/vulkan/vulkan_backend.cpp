@@ -148,14 +148,15 @@ void VulkanBackend::resized(const uint32 width, const uint32 height) {
 }
 
 // Frame
-bool VulkanBackend::begin_frame(const float32 delta_time) {
+Result<void, RuntimeError> VulkanBackend::begin_frame(const float32 delta_time
+) {
     // Wait for previous frame to finish drawing
     std::vector<vk::Fence> fences = { _fences_in_flight[_current_frame] };
     try {
         auto result = _device->handle().waitForFences(fences, true, UINT64_MAX);
         if (result != vk::Result::eSuccess) {
             Logger::error(RENDERER_VULKAN_LOG, "End of frame fence timed-out.");
-            return false;
+            return Failure("Failed initialization failed.");
         }
     } catch (const vk::SystemError& e) {
         Logger::fatal(RENDERER_VULKAN_LOG, e.what());
@@ -202,10 +203,10 @@ bool VulkanBackend::begin_frame(const float32 delta_time) {
 
     command_buffer.setScissor(0, 1, &scissor);
 
-    return true;
+    return {};
 }
 
-bool VulkanBackend::end_frame(const float32 delta_time) {
+Result<void, RuntimeError> VulkanBackend::end_frame(const float32 delta_time) {
     auto command_buffer = _command_buffers[_current_frame];
 
     // End recording
@@ -244,7 +245,7 @@ bool VulkanBackend::end_frame(const float32 delta_time) {
     // Advance current frame
     _current_frame =
         (_current_frame + 1) % VulkanSettings::max_frames_in_flight;
-    return true;
+    return {};
 }
 
 // Render pass

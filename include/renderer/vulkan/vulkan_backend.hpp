@@ -17,8 +17,8 @@ class VulkanBackend : public RendererBackend {
 
     void resized(const uint32 width, const uint32 height);
 
-    bool begin_frame(const float32 delta_time);
-    bool end_frame(const float32 delta_time);
+    Result<void, RuntimeError> begin_frame(const float32 delta_time);
+    Result<void, RuntimeError> end_frame(const float32 delta_time);
 
     void begin_render_pass(uint8 render_pass_id);
     void end_render_pass(uint8 render_pass_id);

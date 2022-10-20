@@ -67,7 +67,10 @@ inline void TestApplication::run() {
 
         auto delta_time = calculate_delta_time();
 
-        _app_renderer.draw_frame(delta_time);
+        auto result = _app_renderer.draw_frame(delta_time);
+        if (result.has_error()) {
+            // Logger::error(result.error().what());
+        }
     }
 }
 

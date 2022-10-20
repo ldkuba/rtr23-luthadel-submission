@@ -3,6 +3,7 @@
 // Global settings
 #define ENGINE_NAME "Vulkan Engine"
 #define APP_NAME "Vulkan Engine"
+#define ENGINE_NAMESPACE engine_namespace
 
 // byte
 typedef char          byte;

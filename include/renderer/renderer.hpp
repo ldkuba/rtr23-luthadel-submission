@@ -36,7 +36,7 @@ class Renderer {
      * @return true If draw operation fully completes
      * @return false Otherwise
      */
-    bool draw_frame(const float32 delta_time);
+    Result<void, RuntimeError> draw_frame(const float32 delta_time);
 
     /**
      * @brief Create a texture and upload its relevant data to the GPU

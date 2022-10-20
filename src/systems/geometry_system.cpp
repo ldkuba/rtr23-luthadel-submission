@@ -39,9 +39,10 @@ Geometry* GeometrySystem::acquire(const uint32 id) {
     auto ref = _registered_geometries.find(id);
     if (ref == _registered_geometries.end()) {
         Logger::error(
-            GEOMETRY_SYS_LOG, "Invalid geometry requested. Return nullptr."
+            GEOMETRY_SYS_LOG,
+            "Invalid geometry requested. Default returned instead."
         );
-        return nullptr;
+        return _default_geometry;
     }
     ref->second.reference_count++;
     return ref->second.handle;
