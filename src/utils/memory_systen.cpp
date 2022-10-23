@@ -23,23 +23,29 @@ Allocator** MemorySystem::initialize_allocator_map() {
     FreeListAllocator* gpu_data_allocator = new FreeListAllocator(
         1024 * 1024, FreeListAllocator::PlacementPolicy::FindFirst
     );
+    FreeListAllocator* resource_allocator = new FreeListAllocator(
+        1024 * 1024, FreeListAllocator::PlacementPolicy::FindFirst
+    );
     LinearAllocator* init_allocator = new LinearAllocator(1024 * 1024);
 
     // Pools
     uint64 max_texture_count  = 1024;
     uint64 max_material_count = 1024;
 
+    uint64 texture_size  = sizeof(Texture) + MEMORY_PADDING;
+    uint64 material_size = sizeof(Material) + MEMORY_PADDING;
+
     PoolAllocator* texture_pool =
-        new PoolAllocator(max_texture_count * sizeof(Texture), sizeof(Texture));
-    PoolAllocator* material_pool = new PoolAllocator(
-        max_material_count * sizeof(Material), sizeof(Material)
-    );
+        new PoolAllocator(max_texture_count * texture_size, texture_size);
+    PoolAllocator* material_pool =
+        new PoolAllocator(max_material_count * material_size, material_size);
 
     // Initialize allocators
     unknown_allocator->init();
     temp_allocator->init();
     general_allocator->init();
     gpu_data_allocator->init();
+    resource_allocator->init();
     init_allocator->init();
     texture_pool->init();
     material_pool->init();
@@ -48,31 +54,32 @@ Allocator** MemorySystem::initialize_allocator_map() {
     allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Unknown] = unknown_allocator;
     allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Temp]    = temp_allocator;
 
-    allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Array]    = general_allocator;
-    allocator_map[(MEMORY_TAG_TYPE) MemoryTag::List]     = general_allocator;
-    allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Map]      = general_allocator;
-    allocator_map[(MEMORY_TAG_TYPE) MemoryTag::String]   = general_allocator;
-    allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Callback] = general_allocator;
-
+    allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Array]       = general_allocator;
+    allocator_map[(MEMORY_TAG_TYPE) MemoryTag::List]        = general_allocator;
+    allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Map]         = general_allocator;
+    allocator_map[(MEMORY_TAG_TYPE) MemoryTag::String]      = general_allocator;
+    allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Callback]    = general_allocator;
+    // Engine
     allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Application] = init_allocator;
     allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Surface]     = init_allocator;
     allocator_map[(MEMORY_TAG_TYPE) MemoryTag::System]      = init_allocator;
     allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Renderer]    = init_allocator;
-
+    // GPU local
     allocator_map[(MEMORY_TAG_TYPE) MemoryTag::GPUTexture] = gpu_data_allocator;
     allocator_map[(MEMORY_TAG_TYPE) MemoryTag::GPUBuffer]  = gpu_data_allocator;
-
-    allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Game]    = init_allocator;
-    allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Job]     = unknown_allocator;
-    allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Texture] = texture_pool;
+    // Resources
+    allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Resource]   = resource_allocator;
+    allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Texture]    = texture_pool;
     allocator_map[(MEMORY_TAG_TYPE) MemoryTag::MaterialInstance] =
         material_pool;
+    allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Geometry]   = unknown_allocator;
+    // Game
+    allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Game]       = init_allocator;
+    allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Job]        = unknown_allocator;
     allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Transform]  = unknown_allocator;
     allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Entity]     = unknown_allocator;
     allocator_map[(MEMORY_TAG_TYPE) MemoryTag::EntityNode] = unknown_allocator;
     allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Scene]      = unknown_allocator;
-    allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Resource]   = unknown_allocator;
-    allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Vulkan]     = unknown_allocator;
 
     return allocator_map;
 }

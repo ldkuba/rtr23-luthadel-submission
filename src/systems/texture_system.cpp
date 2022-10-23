@@ -85,7 +85,7 @@ Texture* TextureSystem::acquire(const String name, const bool auto_release) {
     auto image = (Image*) result.value();
 
     auto texture_ref   = TextureRef();
-    texture_ref.handle = new Texture(
+    texture_ref.handle = new (MemoryTag::Texture) Texture(
         name,
         image->width,
         image->height,
@@ -158,7 +158,7 @@ void TextureSystem::create_default_textures() {
         }
     }
 
-    _default_texture = new Texture(
+    _default_texture = new (MemoryTag::Texture) Texture(
         _default_texture_name,
         texture_dimension,
         texture_dimension,

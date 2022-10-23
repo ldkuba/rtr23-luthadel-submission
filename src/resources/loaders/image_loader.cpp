@@ -60,7 +60,7 @@ Result<Resource*, RuntimeError> ImageLoader::load(const String name) {
     }
 
     // Return image data
-    Image* image = new Image(
+    Image* image = new (MemoryTag::Resource) Image(
         name, image_width, image_height, req_channel_count, (byte*) image_pixels
     );
     image->full_path   = file_path;

@@ -101,7 +101,8 @@ void GeometrySystem::create_default_geometries() {
     Vector<uint32> indices  = { 0, 1, 2, 0, 3, 1 };
 
     // Crete geometry
-    _default_geometry = new Geometry(_default_geometry_name);
+    _default_geometry =
+        new (MemoryTag::Resource) Geometry(_default_geometry_name);
     _renderer->create_geometry(_default_geometry, vertices, indices);
     _default_geometry->material = _material_system->default_material();
 
@@ -116,7 +117,8 @@ void GeometrySystem::create_default_geometries() {
     Vector<uint32> indices2d = { 2, 1, 0, 3, 0, 1 };
 
     // Create 2D geometry
-    _default_2d_geometry = new Geometry(_default_geometry_name + "2d");
+    _default_2d_geometry =
+        new (MemoryTag::Resource) Geometry(_default_geometry_name + "2d");
     _renderer->create_geometry(_default_2d_geometry, vertices2d, indices2d);
     _default_2d_geometry->material = _material_system->default_material();
 }

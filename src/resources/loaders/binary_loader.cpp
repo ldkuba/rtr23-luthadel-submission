@@ -28,7 +28,8 @@ Result<Resource*, RuntimeError> BinaryLoader::load(const String name) {
     }
 
     // Return byte data
-    auto byte_data         = new ByteArrayData(name, data.value());
+    auto byte_data =
+        new (MemoryTag::Resource) ByteArrayData(name, data.value());
     byte_data->full_path   = file_path;
     byte_data->loader_type = ResourceType::Binary;
 

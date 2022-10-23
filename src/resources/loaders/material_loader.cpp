@@ -154,7 +154,7 @@ Result<Resource*, RuntimeError> MaterialLoader::load(const String name) {
     }
 
     // Create material config
-    auto material_config = new MaterialConfig(
+    auto material_config = new (MemoryTag::Resource) MaterialConfig(
         mat_name,
         mat_type,
         mat_diffuse_map_name,

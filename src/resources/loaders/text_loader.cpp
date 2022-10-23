@@ -29,7 +29,7 @@ Result<Resource*, RuntimeError> TextLoader::load(const String name) {
     String data = String((const char*) raw_data->data());
 
     // Return text data
-    auto text_data         = new TextData(name, data);
+    auto text_data         = new (MemoryTag::Resource) TextData(name, data);
     text_data->full_path   = file_path;
     text_data->loader_type = ResourceType::Text;
 

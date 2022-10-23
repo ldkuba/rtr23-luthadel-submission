@@ -103,7 +103,7 @@ Geometry* GeometrySystem::acquire(
     ref.reference_count = 1;
 
     // Crete geometry
-    ref.handle     = new Geometry(name);
+    ref.handle     = new (MemoryTag::Resource) Geometry(name);
     ref.handle->id = id;
     _renderer->create_geometry(ref.handle, vertices, indices);
 

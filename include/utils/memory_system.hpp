@@ -26,7 +26,7 @@ enum class MemoryTag : MEMORY_TAG_TYPE {
     Map,
     String,
     Callback,
-    // Engine allocations
+    // === Engine allocations ===
     Application,
     Surface,
     System,
@@ -34,25 +34,18 @@ enum class MemoryTag : MEMORY_TAG_TYPE {
     // Renderer
     GPUTexture,
     GPUBuffer,
-    // Game allocations
-    Game,
-    Job,
+    // Resources
+    Resource,
     Texture,
     MaterialInstance,
+    Geometry,
+    // === Game allocations ===
+    Game,
+    Job,
     Transform,
     Entity,
     EntityNode,
     Scene,
-    Resource,
-    Vulkan,
-    // "External" vulkan allocations, for reporting purposes only.
-    // VULKAN_EXT,
-    // DIRECT3D,
-    // OpenGL,
-    // Representation of GPU-local/vram
-    // GPU_LOCAL,
-    // BITMAP_FONT,
-    // SYSTEM_FONT,
 
     MAX_TAGS
 };

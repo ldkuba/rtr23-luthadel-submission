@@ -159,9 +159,8 @@ void MaterialSystem::release(const String name) {
 // /////////////////////////////// //
 
 void MaterialSystem::create_default_material() {
-    _default_material = new Material(
-        _default_material_name, MaterialType::World, glm::vec4(1.0f)
-    );
+    _default_material = new (MemoryTag::MaterialInstance)
+        Material(_default_material_name, MaterialType::World, glm::vec4(1.0f));
     TextureMap diffuse_map         = { _texture_system->default_texture,
                                        TextureUse::MapDiffuse };
     _default_material->diffuse_map = diffuse_map;
@@ -178,7 +177,8 @@ Material* MaterialSystem::crete_material(
     const String       diffuse_material_name,
     const glm::vec4    diffuse_color
 ) {
-    auto material = new Material(name, type, diffuse_color);
+    auto material =
+        new (MemoryTag::MaterialInstance) Material(name, type, diffuse_color);
 
     TextureMap diffuse_map = {};
     if (diffuse_material_name.length() > 0) {

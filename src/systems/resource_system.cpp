@@ -10,11 +10,11 @@
 ResourceSystem::ResourceSystem() {
     // Auto-register known loaders
     ResourceLoader* loader;
-    loader = new ImageLoader();
+    loader = new (MemoryTag::System) ImageLoader();
     register_loader(loader);
-    loader = new MaterialLoader();
+    loader = new (MemoryTag::System) MaterialLoader();
     register_loader(loader);
-    loader = new BinaryLoader();
+    loader = new (MemoryTag::System) BinaryLoader();
     register_loader(loader);
 
     Logger::trace(RESOURCE_SYS_LOG, "Resource system initialized.");
