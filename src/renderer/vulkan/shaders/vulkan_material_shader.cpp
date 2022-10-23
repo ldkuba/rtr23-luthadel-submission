@@ -73,7 +73,8 @@ VulkanMaterialShader::VulkanMaterialShader(
 
     // === Create descriptor pools and set layouts ===
     // Global descriptor
-    auto global_descriptor = new VulkanDescriptor(_device, _allocator);
+    auto global_descriptor =
+        new (MemoryTag::Renderer) VulkanDescriptor(_device, _allocator);
     global_descriptor->add_uniform_buffer(
         vk::ShaderStageFlagBits::eVertex,
         VulkanSettings::max_frames_in_flight,
@@ -84,7 +85,8 @@ VulkanMaterialShader::VulkanMaterialShader(
     // Local descriptor
     uint32 total_entity_count = VulkanSettings::max_material_count *
                                 VulkanSettings::max_frames_in_flight;
-    auto local_descriptor = new VulkanDescriptor(_device, _allocator);
+    auto local_descriptor =
+        new (MemoryTag::Renderer) VulkanDescriptor(_device, _allocator);
     local_descriptor->add_uniform_buffer(
         vk::ShaderStageFlagBits::eVertex,
         total_entity_count,

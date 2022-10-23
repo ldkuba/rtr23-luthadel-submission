@@ -10,7 +10,10 @@ Renderer::Renderer(
     : _resource_system(resource_system) {
     surface->resize_event.subscribe<Renderer>(this, &Renderer::on_resize);
     switch (backend_type) {
-    case Vulkan: _backend = new VulkanBackend(surface, resource_system); return;
+    case Vulkan:
+        _backend =
+            new (MemoryTag::Renderer) VulkanBackend(surface, resource_system);
+        return;
 
     default: break;
     }

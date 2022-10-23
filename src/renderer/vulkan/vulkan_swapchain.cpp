@@ -80,7 +80,7 @@ uint32 VulkanSwapchain::create_framebuffers(
         if (depth_testing) attachments.push_back(_depth_image->view());
         attachments.push_back(_image_views[i]);
 
-        framebuffers[i] = new VulkanFramebuffer(
+        framebuffers[i] = new (MemoryTag::GPUBuffer) VulkanFramebuffer(
             &_device->handle(),
             _allocator,
             render_pass,
@@ -298,7 +298,7 @@ void VulkanSwapchain::recreate() {
 }
 
 void VulkanSwapchain::create_color_resource() {
-    _color_image = new VulkanImage(_device, _allocator);
+    _color_image = new (MemoryTag::GPUTexture) VulkanImage(_device, _allocator);
     _color_image->create(
         _extent.width,
         _extent.height,
@@ -312,7 +312,7 @@ void VulkanSwapchain::create_color_resource() {
     );
 }
 void VulkanSwapchain::create_depth_resources() {
-    _depth_image = new VulkanImage(_device, _allocator);
+    _depth_image = new (MemoryTag::GPUTexture) VulkanImage(_device, _allocator);
     _depth_image->create(
         _extent.width,
         _extent.height,

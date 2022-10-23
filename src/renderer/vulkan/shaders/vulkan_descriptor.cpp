@@ -50,7 +50,8 @@ uint32 VulkanDescriptor::add_uniform_buffer(
         // Buffer descriptors are created as Host visible and Host coherent,
         // as they are expected to change ove time
         // TODO: Make also device local if possible to boost performance
-        uniform_buffer[i] = new VulkanBuffer(_device, _allocator);
+        uniform_buffer[i] =
+            new (MemoryTag::GPUBuffer) VulkanBuffer(_device, _allocator);
         uniform_buffer[i]->create(
             buffer_size,
             vk::BufferUsageFlagBits::eUniformBuffer,
@@ -60,7 +61,8 @@ uint32 VulkanDescriptor::add_uniform_buffer(
     }
 
     // Create actual descriptor
-    Descriptor* descriptor = new BufferDescriptor(uniform_buffer);
+    Descriptor* descriptor =
+        new (MemoryTag::GPUBuffer) BufferDescriptor(uniform_buffer);
     _descriptors.push_back(descriptor);
 
     return _descriptor_infos.size() - 1;
@@ -76,7 +78,7 @@ uint32 VulkanDescriptor::add_image_sampler(
     _descriptor_infos.push_back(info);
 
     // Create actual descriptor
-    Descriptor* descriptor = new SamplerDescriptor();
+    Descriptor* descriptor = new (MemoryTag::GPUTexture) SamplerDescriptor();
     _descriptors.push_back(descriptor);
 
     return _descriptor_infos.size() - 1;

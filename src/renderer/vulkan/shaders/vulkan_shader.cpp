@@ -106,7 +106,8 @@ void VulkanShader::create_pipeline(
     // === Depth and stencil testing ===
     vk::PipelineDepthStencilStateCreateInfo* depth_stencil {};
     if (depth_testing_enabled) {
-        depth_stencil = new vk::PipelineDepthStencilStateCreateInfo();
+        depth_stencil =
+            new (MemoryTag::Temp) vk::PipelineDepthStencilStateCreateInfo();
         // Should depth testing be preformed
         depth_stencil->setDepthTestEnable(true);
         // Should depth buffer be updated with new depth values (depth values of
@@ -233,6 +234,9 @@ void VulkanShader::create_pipeline(
     } catch (vk::SystemError e) {
         Logger::fatal(RENDERER_VULKAN_LOG, e.what());
     }
+
+    // Cleanup
+    if (depth_stencil) delete depth_stencil;
 }
 
 void VulkanShader::add_descriptor(

@@ -49,9 +49,10 @@ VulkanRenderPass::VulkanRenderPass(
     color_attachment.setInitialLayout(color_initial_layout);
     color_attachment.setFinalLayout(color_final_layout);
 
-    vk::AttachmentReference* color_attachment_ref = new vk::AttachmentReference(
-        attachments.size(), vk::ImageLayout::eColorAttachmentOptimal
-    );
+    vk::AttachmentReference* color_attachment_ref =
+        new (MemoryTag::Temp) vk::AttachmentReference(
+            attachments.size(), vk::ImageLayout::eColorAttachmentOptimal
+        );
     attachments.push_back(color_attachment);
 
     // Depth attachment
@@ -69,7 +70,7 @@ VulkanRenderPass::VulkanRenderPass(
             vk::ImageLayout::eDepthStencilAttachmentOptimal
         );
 
-        depth_attachment_ref = new vk::AttachmentReference(
+        depth_attachment_ref = new (MemoryTag::Temp) vk::AttachmentReference(
             attachments.size(), vk::ImageLayout::eDepthStencilAttachmentOptimal
         );
         attachments.push_back(depth_attachment);
@@ -93,9 +94,10 @@ VulkanRenderPass::VulkanRenderPass(
         resolve_attachment.setInitialLayout(vk::ImageLayout::eUndefined);
         resolve_attachment.setFinalLayout(resolve_final_layout);
 
-        color_attachment_resolve_ref = new vk::AttachmentReference(
-            attachments.size(), vk::ImageLayout::eColorAttachmentOptimal
-        );
+        color_attachment_resolve_ref =
+            new (MemoryTag::Temp) vk::AttachmentReference(
+                attachments.size(), vk::ImageLayout::eColorAttachmentOptimal
+            );
         attachments.push_back(resolve_attachment);
     }
 
@@ -147,6 +149,11 @@ VulkanRenderPass::VulkanRenderPass(
     } catch (vk::SystemError e) {
         Logger::fatal(RENDERER_VULKAN_LOG, e.what());
     }
+
+    // === Cleanup ===
+    if (color_attachment_ref) delete color_attachment_ref;
+    if (depth_attachment_ref) delete depth_attachment_ref;
+    if (color_attachment_resolve_ref) delete color_attachment_resolve_ref;
 
     // === Create register framebuffers ===
     _framebuffer_set_index =
