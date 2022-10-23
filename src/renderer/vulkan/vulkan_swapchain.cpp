@@ -122,9 +122,10 @@ void VulkanSwapchain::compute_next_image_index(
     }
 }
 
-void VulkanSwapchain::present(const Vector<vk::Semaphore>& wait_for_semaphores
+void VulkanSwapchain::present(
+    const vk::ArrayProxyNoTemporaries<vk::Semaphore>& wait_for_semaphores
 ) {
-    Vector<vk::SwapchainKHR> swapchains = { _handle };
+    std::array<vk::SwapchainKHR, 1> swapchains = { _handle };
 
     // Present results
     vk::PresentInfoKHR present_info {};

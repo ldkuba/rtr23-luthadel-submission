@@ -11,7 +11,7 @@
 
 int main(int, char**) {
 
-    TestApplication app {};
+    TestApplication* app = new (MemoryTag::Application) TestApplication {};
 
 #ifdef NDEBUG
     Logger::debug("MODE is RELEASE");
@@ -19,7 +19,10 @@ int main(int, char**) {
     Logger::debug("MODE is DEBUG");
 #endif
 
-    app.run();
+    app->run();
+
+    delete app;
+    MemorySystem::reset_memory(MemoryTag::Application);
 
     return EXIT_SUCCESS;
 }

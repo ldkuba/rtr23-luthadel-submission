@@ -151,7 +151,7 @@ void VulkanBackend::resized(const uint32 width, const uint32 height) {
 Result<void, RuntimeError> VulkanBackend::begin_frame(const float32 delta_time
 ) {
     // Wait for previous frame to finish drawing
-    Vector<vk::Fence> fences = { _fences_in_flight[_current_frame] };
+    std::array<vk::Fence, 1> fences = { _fences_in_flight[_current_frame] };
     try {
         auto result = _device->handle().waitForFences(fences, true, UINT64_MAX);
         if (result != vk::Result::eSuccess) {
@@ -216,10 +216,10 @@ Result<void, RuntimeError> VulkanBackend::end_frame(const float32 delta_time) {
     vk::PipelineStageFlags wait_stages[] = {
         vk::PipelineStageFlagBits::eColorAttachmentOutput
     };
-    Vector<vk::Semaphore> wait_semaphores = {
+    std::array<vk::Semaphore, 1> wait_semaphores = {
         _semaphores_image_available[_current_frame]
     };
-    Vector<vk::Semaphore> signal_semaphores = {
+    std::array<vk::Semaphore, 1> signal_semaphores = {
         _semaphores_render_finished[_current_frame]
     };
 
@@ -364,8 +364,8 @@ void VulkanBackend::draw_geometry(const GeometryRenderData data) {
     }
 
     // Bind vertex buffer
-    Vector<vk::Buffer>     vertex_buffers = { _vertex_buffer->handle };
-    Vector<vk::DeviceSize> offsets        = { buffer_data.vertex_offset };
+    std::array<vk::Buffer, 1>     vertex_buffers = { _vertex_buffer->handle };
+    std::array<vk::DeviceSize, 1> offsets = { buffer_data.vertex_offset };
     command_buffer.bindVertexBuffers(0, vertex_buffers, offsets);
 
     // Issue draw command

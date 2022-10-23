@@ -53,7 +53,5 @@ class VulkanRenderPass {
     uint32         _framebuffer_set_index;
 
     bool                   _multisampling_enabled;
-    bool                   _has_depth;
-    std::array<float32, 4> _clear_color;
-    uint8                  _clear_flags;
+    Vector<vk::ClearValue> _clear_values { 1 };
 };

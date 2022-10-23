@@ -13,7 +13,6 @@ VulkanRenderPass::VulkanRenderPass(
     const bool                           multisampling
 )
     : _device(device), _swapchain(swapchain), _allocator(allocator),
-      _clear_color(clear_color), _clear_flags(clear_flags),
       _multisampling_enabled(multisampling) {
 
     Logger::trace(RENDERER_VULKAN_LOG, "Creating render pass.");
@@ -21,7 +20,7 @@ VulkanRenderPass::VulkanRenderPass(
     // Compute state
     auto sample_count = (multisampling) ? _swapchain->msaa_samples
                                         : vk::SampleCountFlagBits::e1;
-    _has_depth        = clear_flags & RenderPassClearFlags::Depth;
+    auto has_depth    = clear_flags & RenderPassClearFlags::Depth;
 
     // === Get all attachment descriptions ===
     Vector<vk::AttachmentDescription> attachments = {};
@@ -57,7 +56,7 @@ VulkanRenderPass::VulkanRenderPass(
 
     // Depth attachment
     vk::AttachmentReference* depth_attachment_ref = nullptr;
-    if (_has_depth) {
+    if (has_depth) {
         vk::AttachmentDescription depth_attachment {};
         depth_attachment.setFormat(_swapchain->get_depth_attachment_format());
         depth_attachment.setSamples(sample_count);
@@ -151,7 +150,20 @@ VulkanRenderPass::VulkanRenderPass(
 
     // === Create register framebuffers ===
     _framebuffer_set_index =
-        _swapchain->create_framebuffers(this, multisampling, _has_depth);
+        _swapchain->create_framebuffers(this, multisampling, has_depth);
+
+    // === Compute default clear values ===
+    // Default background values of color and depth stencil for rendered area of
+    // the render pass
+    if (clear_flags & RenderPassClearFlags::Color)
+        _clear_values[0].setColor({ clear_color });
+    if (has_depth) {
+        _clear_values.push_back({});
+        if (clear_flags & RenderPassClearFlags::Depth)
+            _clear_values[1].depthStencil.setDepth(1.0f);
+        if (clear_flags & RenderPassClearFlags::Stencil)
+            _clear_values[1].depthStencil.setStencil(0);
+    }
 
     Logger::trace(RENDERER_VULKAN_LOG, "Render pass created.");
 }
@@ -165,19 +177,6 @@ VulkanRenderPass::~VulkanRenderPass() {
 // ///////////////////////////////// //
 
 void VulkanRenderPass::begin(const vk::CommandBuffer& command_buffer) {
-    // Default background values of color and depth stencil for rendered area of
-    // the render pass
-    Vector<vk::ClearValue> clear_values { 1 };
-    if (_clear_flags & RenderPassClearFlags::Color)
-        clear_values[0].setColor({ _clear_color });
-    if (_has_depth) {
-        clear_values.push_back({});
-        if (_clear_flags & RenderPassClearFlags::Depth)
-            clear_values[1].depthStencil.setDepth(1.0f);
-        if (_clear_flags & RenderPassClearFlags::Stencil)
-            clear_values[1].depthStencil.setStencil(0);
-    }
-
     // Get relevant framebuffer
     auto framebuffer =
         _swapchain->get_currently_used_framebuffer(_framebuffer_set_index);
@@ -186,7 +185,7 @@ void VulkanRenderPass::begin(const vk::CommandBuffer& command_buffer) {
     vk::RenderPassBeginInfo render_pass_begin_info {};
     render_pass_begin_info.setRenderPass(handle);
     render_pass_begin_info.setFramebuffer(framebuffer->handle());
-    render_pass_begin_info.setClearValues(clear_values);
+    render_pass_begin_info.setClearValues(_clear_values);
     // Area of the surface to render to (here full surface)
     render_pass_begin_info.renderArea.setOffset({ 0, 0 });
     render_pass_begin_info.renderArea.setExtent(_swapchain->extent);

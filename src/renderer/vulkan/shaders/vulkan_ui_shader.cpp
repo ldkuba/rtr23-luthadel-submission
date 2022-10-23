@@ -211,7 +211,7 @@ void VulkanUIShader::set_model(
     // Get local uniform buffer (located at set=1, binding=0)
     auto uniform_buffer = descriptors()[1]->get_buffer(0, current_frame);
 
-    MaterialInstanceState material_state = _instance_states[obj_id];
+    MaterialInstanceState& material_state = _instance_states[obj_id];
     if (material_state.descriptor_states[0].ids[current_frame].has_value() ==
         false) {
         vk::DescriptorBufferInfo buffer_info = {};
@@ -251,7 +251,7 @@ void VulkanUIShader::apply_material(
     }
 
     // Obtain material data.
-    MaterialInstanceState material_state =
+    MaterialInstanceState& material_state =
         _instance_states[material->internal_id.value()];
     if (material_state.allocated == false) {
         Logger::error(
@@ -275,8 +275,9 @@ void VulkanUIShader::apply_material(
 
     // Update descriptor set if needed
     // Combined descriptor
-    Vector<vk::WriteDescriptorSet> descriptor_writes {};
-    uint32                         descriptor_index = 1;
+    static Vector<vk::WriteDescriptorSet> descriptor_writes {};
+    descriptor_writes.clear();
+    uint32 descriptor_index = 1;
 
     // Uniform buffer
     if (material_state.descriptor_states[descriptor_index]

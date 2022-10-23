@@ -49,7 +49,9 @@ class VulkanSwapchain {
     /// @brief Present render results
     /// @param image_index Index of the image to present
     /// @param wait_for_semaphores Semaphores to wait on before presenting
-    void present(const Vector<vk::Semaphore>& wait_for_semaphores);
+    void present(
+        const vk::ArrayProxyNoTemporaries<vk::Semaphore>& wait_for_semaphores
+    );
     /// @brief Get the framebuffer used in the current draw
     /// @param index Framebuffer set identifier
     VulkanFramebuffer* get_currently_used_framebuffer(const uint32 index);

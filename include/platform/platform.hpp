@@ -24,7 +24,7 @@ class Platform {
     static void    sleep(uint64 ms);
 
     // TODO: Separate platform code from knowing about renderers
-    static const std::vector<const char*> get_required_vulkan_extensions();
+    static const Vector<const char*> get_required_vulkan_extensions();
 
     class Console {
       private:

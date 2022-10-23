@@ -27,6 +27,7 @@ enum class MemoryTag : MEMORY_TAG_TYPE {
     Callback,
     // Engine allocations
     Application,
+    Surface,
     System,
     Renderer,
     // Game allocations
@@ -67,6 +68,11 @@ class MemorySystem {
             exit(EXIT_FAILURE);
         }
         allocator->free(ptr);
+    }
+
+    static void reset_memory(const MemoryTag tag) {
+        auto allocator = _allocator_map[(MEMORY_TAG_TYPE) tag];
+        allocator->reset();
     }
 
   private:

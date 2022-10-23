@@ -36,7 +36,7 @@ void load_model(Vector<Vertex>& out_vertices, Vector<uint32>& out_indices);
 
 inline TestApplication::TestApplication() {}
 
-inline TestApplication::~TestApplication() {}
+inline TestApplication::~TestApplication() { delete _app_surface; }
 
 inline void TestApplication::run() {
     Vector<Vertex> vertices = {};
@@ -65,7 +65,8 @@ inline void TestApplication::run() {
 
         auto result = _app_renderer.draw_frame(delta_time);
         if (result.has_error()) {
-            // Logger::error(result.error().what());
+            // TODO: PROCESS ERROR
+            Logger::error(result.error().what());
         }
     }
 }

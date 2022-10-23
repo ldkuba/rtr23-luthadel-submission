@@ -3,18 +3,19 @@
 
 #    include "platform/surface/window.hpp"
 
+// Platform overloads
 Platform::Surface* Platform::Surface::get_instance(
     uint32 width, uint32 height, std::string name
 ) {
-    return new Window(width, height, name);
+    return new (MemoryTag::Surface) Window(width, height, name);
 }
-
-const std::vector<const char*> Platform::get_required_vulkan_extensions() {
+const Vector<const char*> Platform::get_required_vulkan_extensions() {
     uint32_t count;
     auto     extensions = glfwGetRequiredInstanceExtensions(&count);
-    return std::vector(extensions, extensions + count);
+    return Vector<const char*>(extensions, extensions + count);
 }
 
+// Constructor & Destructor
 Window::Window(int32 width, int32 height, std::string name)
     : _width(width), _height(height), _name(name) {
     // initialize GLFW with parameters
@@ -31,18 +32,14 @@ Window::Window(int32 width, int32 height, std::string name)
     glfwSetWindowUserPointer(_window, this);
     glfwSetFramebufferSizeCallback(_window, framebuffer_resize_callback);
 }
-
 Window::~Window() {
     glfwDestroyWindow(_window);
     glfwTerminate();
 }
 
-void Window::framebuffer_resize_callback(
-    GLFWwindow* window, int32 width, int32 height
-) {
-    auto surface = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
-    surface->resize_event(width, height);
-}
+// ///////////////////// //
+// WINDOW PUBLIC METHODS //
+// ///////////////////// //
 
 Result<vk::SurfaceKHR, RuntimeError> Window::get_vulkan_surface(
     const vk::Instance&                  vulkan_instance,
@@ -76,6 +73,17 @@ void Window::process_events() {
     if (glfwGetKey(_window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
         exit(EXIT_SUCCESS);
     }
+}
+
+// ////////////////////// //
+// WINDOW PRIVATE METHODS //
+// ////////////////////// //
+
+void Window::framebuffer_resize_callback(
+    GLFWwindow* window, int32 width, int32 height
+) {
+    auto surface = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
+    surface->resize_event(width, height);
 }
 
 #endif

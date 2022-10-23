@@ -35,6 +35,7 @@ void* LinearAllocator::allocate(const uint64 size, const uint64 alignment) {
 }
 
 void LinearAllocator::free(void* ptr) {
+    return;
     Logger::fatal(
         ALLOCATOR_LOG,
         "Cant free() linear allocator. Use reset() method instead."

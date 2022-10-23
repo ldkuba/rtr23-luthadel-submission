@@ -39,7 +39,8 @@ Allocator** MemorySystem::initialize_allocator_map() {
     material_pool->init();
 
     // Assign allocators
-    allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Unknown]  = unknown_allocator;
+    allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Unknown] = unknown_allocator;
+
     allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Array]    = general_allocator;
     allocator_map[(MEMORY_TAG_TYPE) MemoryTag::List]     = general_allocator;
     allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Map]      = general_allocator;
@@ -47,6 +48,7 @@ Allocator** MemorySystem::initialize_allocator_map() {
     allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Callback] = general_allocator;
 
     allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Application] = init_allocator;
+    allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Surface]     = init_allocator;
     allocator_map[(MEMORY_TAG_TYPE) MemoryTag::System]      = init_allocator;
     allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Renderer]    = init_allocator;
 
