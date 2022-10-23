@@ -137,7 +137,7 @@ vk::Device VulkanDevice::create_logical_device(
     float32 queue_priority = 1.0f;
 
     // Creation info for each queue used
-    std::vector<vk::DeviceQueueCreateInfo> queue_create_infos {};
+    Vector<vk::DeviceQueueCreateInfo> queue_create_infos {};
     for (auto queue_index : unique_indices) {
         vk::DeviceQueueCreateInfo queue_create_info;
         // TODO: more flexible queue count setting
@@ -323,10 +323,12 @@ SwapchainSupportDetails VulkanDevice::query_swapchain_support_details(
 
     support_details.capabilities =
         device.getSurfaceCapabilitiesKHR(surface); // Get surface capabilities
-    support_details.formats =
-        device.getSurfaceFormatsKHR(surface); // Get surface formats
-    support_details.presentation_modes =
-        device.getSurfacePresentModesKHR(surface); // Get present modes
+    auto x                  = device.getSurfaceFormatsKHR(surface);
+    support_details.formats = Vector(x);
+    // device.getSurfaceFormatsKHR(surface); // Get surface formats
+    auto y                  = device.getSurfacePresentModesKHR(surface);
+    support_details.presentation_modes = Vector(y);
+    // device.getSurfacePresentModesKHR(surface); // Get present modes
 
     return support_details;
 }

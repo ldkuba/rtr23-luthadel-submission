@@ -45,7 +45,7 @@ vk::CommandBuffer VulkanCommandPool::allocate_command_buffer(const bool primary
     return allocate_command_buffers(1, primary)[0];
 }
 
-std::vector<vk::CommandBuffer> VulkanCommandPool::allocate_command_buffers(
+Vector<vk::CommandBuffer> VulkanCommandPool::allocate_command_buffers(
     const uint32 size, const bool primary
 ) const {
     // Allocate command buffers from the pool
@@ -60,7 +60,7 @@ std::vector<vk::CommandBuffer> VulkanCommandPool::allocate_command_buffers(
                 : vk::CommandBufferLevel::eSecondary
     );
 
-    std::vector<vk::CommandBuffer> command_buffers;
+    Vector<vk::CommandBuffer> command_buffers;
     try {
         command_buffers = _device->allocateCommandBuffers(alloc_info);
     } catch (const vk::SystemError& e) {
@@ -76,7 +76,7 @@ void VulkanCommandPool::free_command_buffer(vk::CommandBuffer& command_buffer
 }
 
 void VulkanCommandPool::free_command_buffers(
-    std::vector<vk::CommandBuffer>& command_buffers
+    Vector<vk::CommandBuffer>& command_buffers
 ) const {
     _device->freeCommandBuffers(_command_pool, command_buffers);
     command_buffers.clear();

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <vector>
 #include <fstream>
 
 #include "string.hpp"
@@ -24,11 +23,11 @@ class FileSystem {
     FileSystem();
     ~FileSystem();
 
-    static File open(const String& file_path);
-    static Result<std::vector<byte>, RuntimeError> read_file_bytes(
+    static File                               open(const String& file_path);
+    static Result<Vector<byte>, RuntimeError> read_file_bytes(
         const String& file_path
     );
-    static Result<std::vector<String>, RuntimeError> read_file_lines(
+    static Result<Vector<String>, RuntimeError> read_file_lines(
         const String& file_path
     );
 };

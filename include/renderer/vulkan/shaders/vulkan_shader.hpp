@@ -20,18 +20,18 @@ class VulkanShader {
     const VulkanDevice*                  _device;
     const vk::AllocationCallbacks* const _allocator;
 
-    Property<std::vector<VulkanDescriptor*>> descriptors {
+    Property<Vector<VulkanDescriptor*>> descriptors {
         Get { return _descriptors; }
     };
 
     vk::Pipeline       _pipeline;
     vk::PipelineLayout _pipeline_layout;
 
-    vk::ShaderModule create_shader_module(const std::vector<byte> code) const;
+    vk::ShaderModule create_shader_module(const Vector<byte> code) const;
     void             create_pipeline(
-                    const std::vector<vk::PipelineShaderStageCreateInfo>& shader_stages,
-                    const vk::PipelineVertexInputStateCreateInfo&         vertex_input_info,
-                    const VulkanRenderPass* const                         render_pass,
+                    const Vector<vk::PipelineShaderStageCreateInfo>& shader_stages,
+                    const vk::PipelineVertexInputStateCreateInfo&    vertex_input_info,
+                    const VulkanRenderPass* const                    render_pass,
                     const bool depth_testing_enabled = false,
                     const bool is_wire_frame         = false
                 );
@@ -43,5 +43,5 @@ class VulkanShader {
     );
 
   private:
-    std::vector<VulkanDescriptor*> _descriptors;
+    Vector<VulkanDescriptor*> _descriptors;
 };

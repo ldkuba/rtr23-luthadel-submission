@@ -151,7 +151,7 @@ void VulkanBackend::resized(const uint32 width, const uint32 height) {
 Result<void, RuntimeError> VulkanBackend::begin_frame(const float32 delta_time
 ) {
     // Wait for previous frame to finish drawing
-    std::vector<vk::Fence> fences = { _fences_in_flight[_current_frame] };
+    Vector<vk::Fence> fences = { _fences_in_flight[_current_frame] };
     try {
         auto result = _device->handle().waitForFences(fences, true, UINT64_MAX);
         if (result != vk::Result::eSuccess) {
@@ -216,10 +216,10 @@ Result<void, RuntimeError> VulkanBackend::end_frame(const float32 delta_time) {
     vk::PipelineStageFlags wait_stages[] = {
         vk::PipelineStageFlagBits::eColorAttachmentOutput
     };
-    std::vector<vk::Semaphore> wait_semaphores = {
+    Vector<vk::Semaphore> wait_semaphores = {
         _semaphores_image_available[_current_frame]
     };
-    std::vector<vk::Semaphore> signal_semaphores = {
+    Vector<vk::Semaphore> signal_semaphores = {
         _semaphores_render_finished[_current_frame]
     };
 
@@ -364,8 +364,8 @@ void VulkanBackend::draw_geometry(const GeometryRenderData data) {
     }
 
     // Bind vertex buffer
-    std::vector<vk::Buffer>     vertex_buffers = { _vertex_buffer->handle };
-    std::vector<vk::DeviceSize> offsets        = { buffer_data.vertex_offset };
+    Vector<vk::Buffer>     vertex_buffers = { _vertex_buffer->handle };
+    Vector<vk::DeviceSize> offsets        = { buffer_data.vertex_offset };
     command_buffer.bindVertexBuffers(0, vertex_buffers, offsets);
 
     // Issue draw command
@@ -557,9 +557,9 @@ void VulkanBackend::destroy_material(Material* const material) {
 
 // Geometry
 void VulkanBackend::create_geometry(
-    Geometry*                  geometry,
-    const std::vector<Vertex>& vertices,
-    const std::vector<uint32>& indices
+    Geometry*             geometry,
+    const Vector<Vertex>& vertices,
+    const Vector<uint32>& indices
 ) {
     create_geometry_internal(
         geometry,
@@ -572,9 +572,9 @@ void VulkanBackend::create_geometry(
     );
 }
 void VulkanBackend::create_geometry(
-    Geometry*                    geometry,
-    const std::vector<Vertex2D>& vertices,
-    const std::vector<uint32>&   indices
+    Geometry*               geometry,
+    const Vector<Vertex2D>& vertices,
+    const Vector<uint32>&   indices
 ) {
     create_geometry_internal(
         geometry,

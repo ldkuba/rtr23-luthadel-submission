@@ -5,9 +5,9 @@
 class ByteArrayData : public Resource {
   public:
     /// @brief Binary data
-    const std::vector<byte> data;
+    const Vector<byte> data;
 
-    ByteArrayData(const String name, const std::vector<byte> data)
+    ByteArrayData(const String name, const Vector<byte> data)
         : Resource(name), data(data) {}
     ~ByteArrayData() {}
 };

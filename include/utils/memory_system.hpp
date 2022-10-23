@@ -6,7 +6,11 @@
 #include "memory_allocators/pool_allocator.hpp"
 #include "memory_allocators/free_list_allocator.hpp"
 
+#include <iostream>
 #include <type_traits>
+#include <memory>
+
+#define MEMORY_SYS_LOG "MemorySystem :: "
 
 #define MEMORY_TAG_TYPE uint8
 #define MEMORY_PADDING 8
@@ -20,6 +24,7 @@ enum class MemoryTag : MEMORY_TAG_TYPE {
     List,
     Map,
     String,
+    Callback,
     // Engine allocations
     Application,
     System,
@@ -47,27 +52,21 @@ enum class MemoryTag : MEMORY_TAG_TYPE {
     MAX_TAGS
 };
 
-#include "logger.hpp"
-
-#define MEMORY_SYS_LOG "MemorySystem :: "
-
 class MemorySystem {
   public:
 
     static void* allocate(uint64 size, const MemoryTag tag) {
-        Logger::debug("ALLOCATION ", (MEMORY_TAG_TYPE) tag);
         auto allocator = _allocator_map[(MEMORY_TAG_TYPE) tag];
         return allocator->allocate(size, MEMORY_PADDING);
     }
 
     static void deallocate(void* ptr, const MemoryTag tag) {
         auto allocator = _allocator_map[(MEMORY_TAG_TYPE) tag];
-        if (!allocator->owns(ptr))
-            Logger::fatal(MEMORY_SYS_LOG, "Wrong memory tag.");
+        if (!allocator->owns(ptr)) {
+            std::cout << MEMORY_SYS_LOG << "Wrong memory tag." << std::endl;
+            exit(EXIT_FAILURE);
+        }
         allocator->free(ptr);
-
-        if (tag != MemoryTag::Unknown)
-            Logger::debug("DEALLOCATION ", (MEMORY_TAG_TYPE) tag);
     }
 
   private:
@@ -107,16 +106,16 @@ struct TAllocator {
     bool operator!=(const TAllocator<U>&) const noexcept {
         return false;
     }
-    T*   allocate(const size_t n) const;
-    void deallocate(T* const p, size_t n) const noexcept;
+    T*   allocate(const std::size_t n) const;
+    void deallocate(T* const p, std::size_t n) const noexcept;
 };
 
 template<class T>
-T* TAllocator<T>::allocate(const size_t n) const {
+T* TAllocator<T>::allocate(const std::size_t n) const {
     return (T*) operator new(n * sizeof(T), this->tag);
 }
 template<class T>
-void TAllocator<T>::deallocate(T* const p, size_t) const noexcept {
+void TAllocator<T>::deallocate(T* const p, std::size_t) const noexcept {
     operator delete(p);
 }
 

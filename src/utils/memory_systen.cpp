@@ -39,11 +39,12 @@ Allocator** MemorySystem::initialize_allocator_map() {
     material_pool->init();
 
     // Assign allocators
-    allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Unknown] = unknown_allocator;
-    allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Array]   = general_allocator;
-    allocator_map[(MEMORY_TAG_TYPE) MemoryTag::List]    = general_allocator;
-    allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Map]     = general_allocator;
-    allocator_map[(MEMORY_TAG_TYPE) MemoryTag::String]  = general_allocator;
+    allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Unknown]  = unknown_allocator;
+    allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Array]    = general_allocator;
+    allocator_map[(MEMORY_TAG_TYPE) MemoryTag::List]     = general_allocator;
+    allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Map]      = general_allocator;
+    allocator_map[(MEMORY_TAG_TYPE) MemoryTag::String]   = general_allocator;
+    allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Callback] = general_allocator;
 
     allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Application] = init_allocator;
     allocator_map[(MEMORY_TAG_TYPE) MemoryTag::System]      = init_allocator;
@@ -88,9 +89,13 @@ void operator delete(void* p) noexcept {
     MemoryTag        tag     = (MemoryTag) ((*tag_ptr) >> 4);
 
     // If 4 bytes before p are 111 we are using custom allocator
-    uint8 tag_type = (*((uint8*) tag_ptr)) << 4;
+    uint8* tag_type_ptr = (uint8*) tag_ptr;
+    uint8  tag_type     = *tag_type_ptr << 4;
 
     // 240 = 11110000
     if (tag_type != 240) free(p);
-    else MemorySystem::deallocate(p, tag);
+    else {
+        *tag_type_ptr = 0;
+        MemorySystem::deallocate(tag_ptr, tag);
+    }
 }

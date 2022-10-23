@@ -18,14 +18,14 @@ class VulkanFramebuffer {
         const VulkanRenderPass* const        render_pass,
         const uint32                         width,
         const uint32                         height,
-        const std::vector<vk::ImageView>     attachments
+        const Vector<vk::ImageView>&         attachments
     );
     ~VulkanFramebuffer();
 
     void recreate(
-        const uint32                     width,
-        const uint32                     height,
-        const std::vector<vk::ImageView> attachments
+        const uint32                 width,
+        const uint32                 height,
+        const Vector<vk::ImageView>& attachments
     );
 
   private:
@@ -36,8 +36,8 @@ class VulkanFramebuffer {
     const VulkanRenderPass* _render_pass;
 
     void create(
-        const uint32                     width,
-        const uint32                     height,
-        const std::vector<vk::ImageView> attachments
+        const uint32                 width,
+        const uint32                 height,
+        const Vector<vk::ImageView>& attachments
     );
 };

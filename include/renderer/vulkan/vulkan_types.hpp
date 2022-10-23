@@ -9,6 +9,7 @@
 
 #include "defines.hpp"
 #include "math_libs.hpp"
+#include "vector.hpp"
 
 struct QueueFamilyIndices {
     std::optional<uint32> graphics_family;
@@ -21,9 +22,9 @@ struct QueueFamilyIndices {
 };
 
 struct SwapchainSupportDetails {
-    vk::SurfaceCapabilitiesKHR        capabilities;
-    std::vector<vk::SurfaceFormatKHR> formats;
-    std::vector<vk::PresentModeKHR>   presentation_modes;
+    vk::SurfaceCapabilitiesKHR   capabilities;
+    Vector<vk::SurfaceFormatKHR> formats;
+    Vector<vk::PresentModeKHR>   presentation_modes;
 
     vk::Extent2D get_extent(const uint32 width, const uint32 height) const;
     vk::SurfaceFormatKHR get_surface_format() const;
@@ -39,9 +40,9 @@ struct PhysicalDeviceInfo {
     vk::SampleCountFlags framebuffer_color_sample_counts;
     vk::SampleCountFlags framebuffer_depth_sample_counts;
 
-    std::vector<float32>        memory_size_in_gb;
-    std::vector<vk::MemoryType> memory_types;
-    std::vector<bool>           memory_is_local;
+    Vector<float32>        memory_size_in_gb;
+    Vector<vk::MemoryType> memory_types;
+    Vector<bool>           memory_is_local;
 
     // Swapchain
     std::function<SwapchainSupportDetails(const vk::SurfaceKHR&)>

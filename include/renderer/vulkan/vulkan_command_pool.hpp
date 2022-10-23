@@ -1,7 +1,6 @@
 #pragma once
 
 #include <vulkan/vulkan.hpp>
-#include <vector>
 
 #include "logger.hpp"
 
@@ -22,7 +21,7 @@ class VulkanCommandPool {
     /// @brief Allocate vulkan command buffers from the pool
     /// @param primary Specify whether created buffers are primary buffers
     /// @returns Created and allocated buffers
-    std::vector<vk::CommandBuffer> allocate_command_buffers(
+    Vector<vk::CommandBuffer> allocate_command_buffers(
         const uint32 size, const bool primary = true
     ) const;
     /// @brief Returns command buffer to the pool
@@ -30,8 +29,7 @@ class VulkanCommandPool {
     void free_command_buffer(vk::CommandBuffer& command_buffer) const;
     /// @brief Returns command buffers to the pool
     /// @param command_buffers Buffers to free
-    void free_command_buffers(std::vector<vk::CommandBuffer>& command_buffers
-    ) const;
+    void free_command_buffers(Vector<vk::CommandBuffer>& command_buffers) const;
 
     /// @brief Allocate and begin a single use buffer
     /// @returns Created buffer

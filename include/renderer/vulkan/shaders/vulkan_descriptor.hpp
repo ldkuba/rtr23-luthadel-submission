@@ -94,6 +94,6 @@ class VulkanDescriptor {
     vk::DescriptorPool      _pool;
     vk::DescriptorSetLayout _set_layout;
 
-    std::vector<DescriptorInfo> _descriptor_infos;
-    std::vector<Descriptor*>    _descriptors;
+    Vector<DescriptorInfo> _descriptor_infos;
+    Vector<Descriptor*>    _descriptors;
 };

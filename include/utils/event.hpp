@@ -1,13 +1,12 @@
 #pragma once
 
-#include <vector>
-
 #include "delegate.hpp"
+#include "vector.hpp"
 
 template<typename R, typename... Args>
 class Event {
   private:
-    std::vector<Delegate<R, Args...>*> _callbacks = {};
+    Vector<Delegate<R, Args...>*> _callbacks = {};
 
   public:
     Event() {}
@@ -37,7 +36,8 @@ class Event {
      * @param callback Called function
      */
     void subscribe(R (*callback)(Args...)) {
-        auto delegate = new DelegateFunction<R, Args...>(callback);
+        auto delegate =
+            new (MemoryTag::Callback) DelegateFunction<R, Args...>(callback);
         _callbacks.emplace_back(delegate);
     }
 
@@ -51,7 +51,8 @@ class Event {
      */
     template<typename T>
     bool unsubscribe(T* caller, R (T::*callback)(Args...)) {
-        auto delegate = new DelegateMethod<T, R, Args...>(caller, callback);
+        auto delegate = new (MemoryTag::Callback)
+            DelegateMethod<T, R, Args...>(caller, callback);
         return remove_delegate(_callbacks, delegate);
     }
 
@@ -64,7 +65,8 @@ class Event {
      * @return false - if no such function was found
      */
     bool unsubscribe(R (*callback)(Args...)) {
-        auto delegate = new DelegateFunction<R, Args...>(callback);
+        auto delegate =
+            new (MemoryTag::Callback) DelegateFunction<R, Args...>(callback);
         return remove_delegate(_callbacks, delegate);
     }
 
@@ -91,7 +93,7 @@ class Event {
 template<typename... Args>
 class Event<void, Args...> {
   private:
-    std::vector<Delegate<void, Args...>*> _callbacks = {};
+    Vector<Delegate<void, Args...>*> _callbacks = {};
 
   public:
     Event() {}
@@ -109,7 +111,8 @@ class Event<void, Args...> {
      */
     template<typename T>
     void subscribe(T* caller, void (T::*callback)(Args...)) {
-        auto delegate = new DelegateMethod<T, void, Args...>(caller, callback);
+        auto delegate = new (MemoryTag::Callback)
+            DelegateMethod<T, void, Args...>(caller, callback);
         _callbacks.emplace_back(delegate);
     }
     /**
@@ -121,7 +124,8 @@ class Event<void, Args...> {
      * @param callback Called function
      */
     void subscribe(void (*callback)(Args...)) {
-        auto delegate = new DelegateFunction<void, Args...>(callback);
+        auto delegate =
+            new (MemoryTag::Callback) DelegateFunction<void, Args...>(callback);
         _callbacks.emplace_back(delegate);
     }
 
@@ -135,7 +139,8 @@ class Event<void, Args...> {
      */
     template<typename T>
     bool unsubscribe(T* caller, void (T::*callback)(Args...)) {
-        auto delegate = new DelegateMethod<T, void, Args...>(caller, callback);
+        auto delegate = new (MemoryTag::Callback)
+            DelegateMethod<T, void, Args...>(caller, callback);
         return remove_delegate(_callbacks, delegate);
     }
 
@@ -148,7 +153,8 @@ class Event<void, Args...> {
      * @return false - if no such function was found
      */
     bool unsubscribe(void (*callback)(Args...)) {
-        auto delegate = new DelegateFunction<void, Args...>(callback);
+        auto delegate =
+            new (MemoryTag::Callback) DelegateFunction<void, Args...>(callback);
         return remove_delegate(_callbacks, delegate);
     }
 
@@ -170,7 +176,7 @@ class Event<void, Args...> {
 
 template<typename R, typename... Args>
 bool remove_delegate(
-    std::vector<Delegate<R, Args...>*> callbacks, Delegate<R, Args...>* delegate
+    Vector<Delegate<R, Args...>*> callbacks, Delegate<R, Args...>* delegate
 ) {
     auto iter = callbacks.begin();
     while (iter != callbacks.end()) {

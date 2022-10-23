@@ -1,11 +1,11 @@
 #pragma once
 
 #include <string>
-#include <vector>
 
 #include "defines.hpp"
 #include "result.hpp"
 #include "error_types.hpp"
+#include "vector.hpp"
 
 // Additional to_string conversions
 namespace std {
@@ -68,103 +68,108 @@ class String : public std::string {
     /**
      * @brief Splits string into substrings
      * @param delimiter Token to split by
-     * @return std::vector of strings
+     * @return Vector of strings
      */
-    std::vector<String> split(const String delimiter) const;
+    Vector<String> split(const String delimiter) const;
     /**
      * @brief Splits string into substrings
      * @param delimiter Token to split by
-     * @return std::vector of strings
+     * @return Vector of strings
      */
-    std::vector<String> split(const char delimiter) const;
+    Vector<String> split(const char delimiter) const;
 
     // Parsing
     /**
      * @brief Parses string as uint8
      * @return uint8
-     * @throws std::invalid_argument If parse is impossible. Parse is also
+     * @throws InvalidArgument error If parse is impossible. Parse is also
      * deemed impossible if overflow is detected.
      */
     Result<uint8, InvalidArgument>    parse_as_uint8();
     /**
      * @brief Parses string as uint16
      * @return uint16
-     * @throws std::invalid_argument If parse is impossible. Parse is also
+     * @throws InvalidArgument error If parse is impossible. Parse is also
      * deemed impossible if overflow is detected.
      */
     Result<uint16, InvalidArgument>   parse_as_uint16();
     /**
      * @brief Parses string as uint32
      * @return uint32
-     * @throws std::invalid_argument If parse is impossible. Parse is also
+     * @throws InvalidArgument error If parse is impossible. Parse is also
      * deemed impossible if overflow is detected.
      */
     Result<uint32, InvalidArgument>   parse_as_uint32();
     /**
      * @brief Parses string as uint64
      * @return uint64
-     * @throws std::invalid_argument If parse is impossible. Parse is also
+     * @throws InvalidArgument error If parse is impossible. Parse is also
      * deemed impossible if overflow is detected.
      */
     Result<uint64, InvalidArgument>   parse_as_uint64();
     /**
      * @brief Parses string as uint128
      * @return uint128
-     * @throws std::invalid_argument If parse is impossible
+     * @throws InvalidArgument error If parse is impossible
      */
     Result<uint128, InvalidArgument>  parse_as_uint128();
     /**
      * @brief Parses string as int8
      * @return int8
-     * @throws std::invalid_argument If parse is impossible. Parse is also
+     * @throws InvalidArgument error If parse is impossible. Parse is also
      * deemed impossible if overflow is detected.
      */
     Result<int8, InvalidArgument>     parse_as_int8();
     /**
      * @brief Parses string as int16
      * @return int16
-     * @throws std::invalid_argument If parse is impossible. Parse is also
+     * @throws InvalidArgument error If parse is impossible. Parse is also
      * deemed impossible if overflow is detected.
      */
     Result<int16, InvalidArgument>    parse_as_int16();
     /**
      * @brief Parses string as int32
      * @return int32
-     * @throws std::invalid_argument If parse is impossible. Parse is also
+     * @throws InvalidArgument error If parse is impossible. Parse is also
      * deemed impossible if overflow is detected.
      */
     Result<int32, InvalidArgument>    parse_as_int32();
     /**
      * @brief Parses string as int64
      * @return int64
-     * @throws std::invalid_argument If parse is impossible. Parse is also
+     * @throws InvalidArgument error If parse is impossible. Parse is also
      * deemed impossible if overflow is detected.
      */
     Result<int64, InvalidArgument>    parse_as_int64();
     /**
      * @brief Parses string as int128
      * @return int128
-     * @throws std::invalid_argument If parse is impossible
+     * @throws InvalidArgument error If parse is impossible
      */
     Result<int128, InvalidArgument>   parse_as_int128();
     /**
      * @brief Parses string as float32
      * @return float32
-     * @throws std::invalid_argument If parse is impossible
+     * @throws InvalidArgument error If parse is impossible
      */
     Result<float32, InvalidArgument>  parse_as_float32();
     /**
      * @brief Parses string as float64
      * @return float64
-     * @throws std::invalid_argument If parse is impossible
+     * @throws InvalidArgument error If parse is impossible
      */
     Result<float64, InvalidArgument>  parse_as_float64();
     /**
      * @brief Parses string as float128
      * @return float128
-     * @throws std::invalid_argument If parse is impossible
+     * @throws InvalidArgument error If parse is impossible
      */
     Result<float128, InvalidArgument> parse_as_float128();
+
+    // NEW
+    void* operator new(size_t size) {
+        return ::operator new(size, MemoryTag::String);
+    }
 
   private:
     // String builder

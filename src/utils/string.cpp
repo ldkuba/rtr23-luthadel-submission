@@ -81,10 +81,10 @@ int32 String::compare_ci(const String& other) const {
 }
 
 // Split methods
-std::vector<String> String::split(const String delimiter) const {
-    std::size_t         pos  = 0;
-    std::size_t         next = 0;
-    std::vector<String> fields;
+Vector<String> String::split(const String delimiter) const {
+    std::size_t    pos  = 0;
+    std::size_t    next = 0;
+    Vector<String> fields;
     while (next != std::string::npos) {
         next         = this->find_first_of(delimiter, pos);
         String field = next == std::string::npos
@@ -95,10 +95,10 @@ std::vector<String> String::split(const String delimiter) const {
     }
     return fields;
 }
-std::vector<String> String::split(const char delimiter) const {
-    std::size_t         pos  = 0;
-    std::size_t         next = 0;
-    std::vector<String> fields;
+Vector<String> String::split(const char delimiter) const {
+    std::size_t    pos  = 0;
+    std::size_t    next = 0;
+    Vector<String> fields;
     while (next != std::string::npos) {
         next         = this->find_first_of(delimiter, pos);
         String field = next == std::string::npos

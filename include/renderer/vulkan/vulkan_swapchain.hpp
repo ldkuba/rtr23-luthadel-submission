@@ -49,7 +49,7 @@ class VulkanSwapchain {
     /// @brief Present render results
     /// @param image_index Index of the image to present
     /// @param wait_for_semaphores Semaphores to wait on before presenting
-    void present(const std::vector<vk::Semaphore>& wait_for_semaphores);
+    void present(const Vector<vk::Semaphore>& wait_for_semaphores);
     /// @brief Get the framebuffer used in the current draw
     /// @param index Framebuffer set identifier
     VulkanFramebuffer* get_currently_used_framebuffer(const uint32 index);
@@ -60,21 +60,21 @@ class VulkanSwapchain {
     const vk::SurfaceKHR                 _vulkan_surface;
     const vk::RenderPass*                _render_pass;
 
-    vk::SwapchainKHR           _handle;
-    std::vector<vk::ImageView> _image_views;
-    vk::Format                 _format;
-    vk::Format                 _depth_format;
-    vk::Extent2D               _extent;
-    vk::SampleCountFlagBits    _msaa_samples;
+    vk::SwapchainKHR        _handle;
+    Vector<vk::ImageView>   _image_views;
+    vk::Format              _format;
+    vk::Format              _depth_format;
+    vk::Extent2D            _extent;
+    vk::SampleCountFlagBits _msaa_samples;
 
     uint32 _current_image_index = 0;
 
     struct FramebufferRef {
-        std::vector<VulkanFramebuffer*> framebuffers = {};
-        bool                            multisampling;
-        bool                            depth_testing;
+        Vector<VulkanFramebuffer*> framebuffers = {};
+        bool                       multisampling;
+        bool                       depth_testing;
     };
-    std::vector<FramebufferRef> _framebuffer_sets = {};
+    Vector<FramebufferRef> _framebuffer_sets = {};
 
     uint32 _width;
     uint32 _height;

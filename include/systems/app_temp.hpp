@@ -4,9 +4,7 @@
 
 #include "systems/geometry_system.hpp"
 
-void load_model(
-    std::vector<Vertex>& out_vertices, std::vector<uint32>& out_indices
-);
+void load_model(Vector<Vertex>& out_vertices, Vector<uint32>& out_indices);
 
 class TestApplication {
   public:
@@ -34,30 +32,28 @@ class TestApplication {
     float32 calculate_delta_time();
 };
 // TODO: TEMP
-void load_model(
-    std::vector<Vertex>& out_vertices, std::vector<uint32>& out_indices
-);
+void load_model(Vector<Vertex>& out_vertices, Vector<uint32>& out_indices);
 
 inline TestApplication::TestApplication() {}
 
 inline TestApplication::~TestApplication() {}
 
 inline void TestApplication::run() {
-    std::vector<Vertex> vertices = {};
-    std::vector<uint32> indices  = {};
+    Vector<Vertex> vertices = {};
+    Vector<uint32> indices  = {};
     load_model(vertices, indices);
     _app_renderer.current_geometry = _geometry_system.acquire(
         "viking_room", vertices, indices, "viking_room"
     );
 
-    float32               side       = 512.0f;
-    std::vector<Vertex2D> vertices2d = {
+    float32          side       = 512.0f;
+    Vector<Vertex2D> vertices2d = {
         { glm::vec2(0.0f, 0.0f), glm::vec2(0.0f, 0.0f) },
         { glm::vec2(side, side), glm::vec2(1.0f, 1.0f) },
         { glm::vec2(0.0f, side), glm::vec2(0.0f, 1.0f) },
         { glm::vec2(side, 0.0f), glm::vec2(1.0f, 0.0f) }
     };
-    std::vector<uint32> indices2d     = { 2, 1, 0, 3, 0, 1 };
+    Vector<uint32> indices2d          = { 2, 1, 0, 3, 0, 1 };
     _app_renderer.current_ui_geometry = _geometry_system.acquire(
         "ui", vertices2d, indices2d, "test_ui_material"
     );
@@ -88,7 +84,7 @@ inline float32 TestApplication::calculate_delta_time() {
 #include <unordered_map>
 
 inline void load_model(
-    std::vector<Vertex>& out_vertices, std::vector<uint32>& out_indices
+    Vector<Vertex>& out_vertices, Vector<uint32>& out_indices
 ) {
     // Load model
     tinyobj::ObjReader reader;

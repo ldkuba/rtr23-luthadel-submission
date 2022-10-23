@@ -1,9 +1,9 @@
 #pragma once
 
-#include <vector>
 #include <vulkan/vulkan.hpp>
 
 #include "defines.hpp"
+#include "vector.hpp"
 
 class VulkanSettings {
   public:

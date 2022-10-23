@@ -15,11 +15,15 @@ class Vector : public std::vector<Tp, TAllocator<Tp>> {
 
   public:
     using std::vector<Tp, TAllocator<Tp>>::vector;
+    using std::vector<Tp, TAllocator<Tp>>::reserve;
 
     /**
      *  @brief  Creates a %vector with no elements.
      */
-    Vector() : _base_class(t_allocator_type(MemoryTag::Array)) {}
+    Vector() : _base_class(t_allocator_type(MemoryTag::Array)) {
+        // Reserve at least 16 bytes
+        reserve(15 / sizeof(Tp) + 1);
+    }
 
     /**
      *  @brief  Creates a %vector with default constructed elements.
@@ -92,4 +96,58 @@ class Vector : public std::vector<Tp, TAllocator<Tp>> {
         const t_allocator_type& __a = t_allocator_type(MemoryTag::Array)
     )
         : _base_class(__first, __last, __a) {}
+
+    // Copy constructors
+    /**
+     *  @brief  %Vector copy constructor.
+     *  @param  __x  A %vector of identical element and allocator types.
+     *
+     *  All the elements of @a __x are copied, but any unused capacity in
+     *  @a __x  will not be copied
+     *  (i.e. capacity() == size() in the new %vector).
+     *
+     *  The newly-created %vector uses a copy of the allocator object used
+     *  by @a __x (unless the allocator traits dictate a different object).
+     */
+    Vector(const std::vector<Tp, t_allocator_type>& __x) : _base_class(__x) {}
+
+    Vector<Tp>& operator=(const std::vector<Tp>& __x) {
+        reserve(__x.size());
+        for (auto var : __x)
+            this->emplace_back(var);
+        return *this;
+    }
+
+    Vector(const std::vector<Tp>& __x) : Vector() {
+        reserve(__x.size());
+        for (auto var : __x)
+            this->emplace_back(var);
+    }
+
+    /**
+     *  @brief  %Vector move constructor.
+     *
+     *  The newly-created %vector contains the exact contents of the
+     *  moved instance.
+     *  The contents of the moved instance are a valid, but unspecified
+     *  %vector.
+     */
+    // Vector(std::vector<Tp, t_allocator_type>&&) noexcept = default;
+
+    /// Copy constructor with alternative allocator
+    Vector(
+        const std::vector<Tp, t_allocator_type>& __x,
+        const t_allocator_type&                  __a
+    )
+        : _base_class(__x, __a) {}
+
+    // /// Move constructor with alternative allocator
+    // Vector(std::vector<Tp>&& __rv, const t_allocator_type& __m) noexcept(
+    //     noexcept(vector(
+    //         std::declval<std::vector<Tp>&&>(),
+    //         std::declval<const t_allocator_type&>(),
+    //         std::declval<typename _TAlloc_traits::is_always_equal>()
+    //     ))
+    // )
+    //     : _base_class(__rv, __m) {}
 };

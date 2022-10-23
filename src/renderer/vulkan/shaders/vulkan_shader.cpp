@@ -17,7 +17,7 @@ VulkanShader::~VulkanShader() {
 // VULKAN SHADER PROTECTED METHODS //
 // /////////////////////////////// //
 
-vk::ShaderModule VulkanShader::create_shader_module(const std::vector<byte> code
+vk::ShaderModule VulkanShader::create_shader_module(const Vector<byte> code
 ) const {
     // Turns raw shader code into a shader module
     vk::ShaderModuleCreateInfo create_info {};
@@ -34,11 +34,11 @@ vk::ShaderModule VulkanShader::create_shader_module(const std::vector<byte> code
 }
 
 void VulkanShader::create_pipeline(
-    const std::vector<vk::PipelineShaderStageCreateInfo>& shader_stages,
-    const vk::PipelineVertexInputStateCreateInfo&         vertex_input_info,
-    const VulkanRenderPass* const                         render_pass,
-    const bool                                            depth_testing_enabled,
-    const bool                                            is_wire_frame
+    const Vector<vk::PipelineShaderStageCreateInfo>& shader_stages,
+    const vk::PipelineVertexInputStateCreateInfo&    vertex_input_info,
+    const VulkanRenderPass* const                    render_pass,
+    const bool                                       depth_testing_enabled,
+    const bool                                       is_wire_frame
 ) {
     Logger::trace(RENDERER_VULKAN_LOG, "Creating graphics pipeline.");
 
@@ -178,7 +178,7 @@ void VulkanShader::create_pipeline(
     dynamic_state_info.setDynamicStates(dynamic_states);
 
     // === Create pipeline layout ===
-    std::vector<vk::DescriptorSetLayout> description_set_layouts;
+    Vector<vk::DescriptorSetLayout> description_set_layouts;
     for (auto descriptor : _descriptors)
         description_set_layouts.push_back(descriptor->set_layout);
 

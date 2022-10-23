@@ -87,8 +87,7 @@ void VulkanDescriptor::create_pool_and_layout(
 ) {
     // === Create descriptor set layout ===
     // Setup bindings
-    std::vector<vk::DescriptorSetLayoutBinding> bindings(_descriptor_infos.size(
-    ));
+    Vector<vk::DescriptorSetLayoutBinding> bindings(_descriptor_infos.size());
     for (uint32 i = 0; i < _descriptor_infos.size(); i++) {
         // The binding number of the entry
         bindings[i].setBinding(i);
@@ -118,7 +117,7 @@ void VulkanDescriptor::create_pool_and_layout(
 
     // === Create descriptor pool ===
     // Setup pool sizes
-    std::vector<vk::DescriptorPoolSize> pool_sizes(_descriptor_infos.size());
+    Vector<vk::DescriptorPoolSize> pool_sizes(_descriptor_infos.size());
     for (uint32 i = 0; i < _descriptor_infos.size(); i++) {
         // Descriptor type
         pool_sizes[i].setType(_descriptor_infos[i].type);

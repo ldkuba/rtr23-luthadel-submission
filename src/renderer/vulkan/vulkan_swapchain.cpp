@@ -73,9 +73,9 @@ uint32 VulkanSwapchain::create_framebuffers(
 ) {
     Logger::trace(RENDERER_VULKAN_LOG, "Initializing framebuffers.");
 
-    std::vector<VulkanFramebuffer*> framebuffers { _image_views.size() };
+    Vector<VulkanFramebuffer*> framebuffers { _image_views.size() };
     for (uint32 i = 0; i < framebuffers.size(); i++) {
-        std::vector<vk::ImageView> attachments {};
+        Vector<vk::ImageView> attachments {};
         if (multisampling) attachments.push_back(_color_image->view());
         if (depth_testing) attachments.push_back(_depth_image->view());
         attachments.push_back(_image_views[i]);
@@ -122,10 +122,9 @@ void VulkanSwapchain::compute_next_image_index(
     }
 }
 
-void VulkanSwapchain::present(
-    const std::vector<vk::Semaphore>& wait_for_semaphores
+void VulkanSwapchain::present(const Vector<vk::Semaphore>& wait_for_semaphores
 ) {
-    std::vector<vk::SwapchainKHR> swapchains = { _handle };
+    Vector<vk::SwapchainKHR> swapchains = { _handle };
 
     // Present results
     vk::PresentInfoKHR present_info {};
@@ -284,7 +283,7 @@ void VulkanSwapchain::recreate() {
     // Framebuffer recreation
     for (auto& framebuffer_set : _framebuffer_sets) {
         for (uint32 i = 0; i < framebuffer_set.framebuffers.size(); i++) {
-            std::vector<vk::ImageView> attachments {};
+            Vector<vk::ImageView> attachments {};
             if (framebuffer_set.multisampling)
                 attachments.push_back(_color_image->view());
             if (framebuffer_set.depth_testing)
@@ -327,11 +326,11 @@ void VulkanSwapchain::create_depth_resources() {
 }
 
 void VulkanSwapchain::find_depth_format() {
-    std::vector<vk::Format> candidates = { vk::Format::eD32Sfloat,
-                                           vk::Format::eD32SfloatS8Uint,
-                                           vk::Format::eD24UnormS8Uint };
-    vk::ImageTiling         tiling     = vk::ImageTiling::eOptimal;
-    vk::FormatFeatureFlags  features =
+    Vector<vk::Format>     candidates = { vk::Format::eD32Sfloat,
+                                          vk::Format::eD32SfloatS8Uint,
+                                          vk::Format::eD24UnormS8Uint };
+    vk::ImageTiling        tiling     = vk::ImageTiling::eOptimal;
+    vk::FormatFeatureFlags features =
         vk::FormatFeatureFlagBits::eDepthStencilAttachment;
 
     // Find a format among the candidates that satisfies the tiling and feature

@@ -25,10 +25,10 @@ class Allocator {
     static const uint64 calculate_padding(
         const uint64 base_address, const uint64 alignment
     ) {
+        if (base_address % alignment == 0) return 0;
         const uint64 multiplier      = (base_address / alignment) + 1;
         const uint64 aligned_address = multiplier * alignment;
-        const uint64 padding         = aligned_address - base_address;
-        return padding;
+        return aligned_address - base_address;
     }
 
     static const uint64 calculate_padding_with_header(
@@ -36,20 +36,7 @@ class Allocator {
         const uint64 alignment,
         const uint64 header_size
     ) {
-        uint64 padding      = calculate_padding(base_address, alignment);
-        uint64 needed_space = header_size;
-
-        if (padding < needed_space) {
-            // Header does not fit
-            // Calculate next aligned address that header fits
-            needed_space -= padding;
-
-            // How many alignments I need to fit the header
-            if (needed_space % alignment > 0)
-                padding += alignment * (1 + (needed_space / alignment));
-            else padding += alignment * (needed_space / alignment);
-        }
-
-        return padding;
+        return header_size +
+               calculate_padding(base_address + header_size, alignment);
     }
 };

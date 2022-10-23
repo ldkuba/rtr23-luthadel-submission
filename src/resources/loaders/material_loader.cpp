@@ -183,7 +183,7 @@ Result<glm::vec4, uint8> load_vector(const String vector_str) { // Parse vec4
     if (str_floats.size() != 4) return Failure(1);
 
     // convert to float
-    std::vector<float32> floats(str_floats.size());
+    Vector<float32> floats(str_floats.size());
     for (uint32 i = 0; i < str_floats.size(); i++) {
         auto result = str_floats[i].parse_as_float32();
         if (result.has_error()) return Failure(2);

@@ -70,9 +70,9 @@ class Renderer {
      */
     template<typename VertexType>
     void create_geometry(
-        Geometry*                      geometry,
-        const std::vector<VertexType>& vertices,
-        const std::vector<uint32>&     indices
+        Geometry*                 geometry,
+        const Vector<VertexType>& vertices,
+        const Vector<uint32>&     indices
     );
     /**
      * @brief Destroy geometry and free its corresponding GPU resources
@@ -108,9 +108,9 @@ class Renderer {
 
 template<typename VertexType>
 void Renderer::create_geometry(
-    Geometry*                      geometry,
-    const std::vector<VertexType>& vertices,
-    const std::vector<uint32>&     indices
+    Geometry*                 geometry,
+    const Vector<VertexType>& vertices,
+    const Vector<uint32>&     indices
 ) {
     static const char* const RENDERER_LOG = "Renderer :: ";
     Logger::trace(RENDERER_LOG, "Creating geometry.");

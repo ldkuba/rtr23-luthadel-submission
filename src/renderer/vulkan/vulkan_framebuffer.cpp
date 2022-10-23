@@ -9,7 +9,7 @@ VulkanFramebuffer::VulkanFramebuffer(
     const VulkanRenderPass* const        render_pass,
     const uint32                         width,
     const uint32                         height,
-    const std::vector<vk::ImageView>     attachments
+    const Vector<vk::ImageView>&         attachments
 )
     : _device(device), _allocator(allocator), _render_pass(render_pass) {
     create(width, height, attachments);
@@ -19,9 +19,9 @@ VulkanFramebuffer::~VulkanFramebuffer() {
 }
 
 void VulkanFramebuffer::recreate(
-    const uint32                     width,
-    const uint32                     height,
-    const std::vector<vk::ImageView> attachments
+    const uint32                 width,
+    const uint32                 height,
+    const Vector<vk::ImageView>& attachments
 ) {
     _device->destroyFramebuffer(_handle, _allocator);
     create(width, height, attachments);
@@ -32,9 +32,9 @@ void VulkanFramebuffer::recreate(
 // ///////////////////////////////// //
 
 void VulkanFramebuffer::create(
-    const uint32                     width,
-    const uint32                     height,
-    const std::vector<vk::ImageView> attachments
+    const uint32                 width,
+    const uint32                 height,
+    const Vector<vk::ImageView>& attachments
 ) {
     // Create framebuffer
     vk::FramebufferCreateInfo framebuffer_info {};

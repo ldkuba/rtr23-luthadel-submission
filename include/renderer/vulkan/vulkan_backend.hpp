@@ -43,14 +43,14 @@ class VulkanBackend : public RendererBackend {
     void destroy_material(Material* const material);
 
     void create_geometry(
-        Geometry*                  geometry,
-        const std::vector<Vertex>& vertices,
-        const std::vector<uint32>& indices
+        Geometry*             geometry,
+        const Vector<Vertex>& vertices,
+        const Vector<uint32>& indices
     );
     void create_geometry(
-        Geometry*                    geometry,
-        const std::vector<Vertex2D>& vertices,
-        const std::vector<uint32>&   indices
+        Geometry*               geometry,
+        const Vector<Vertex2D>& vertices,
+        const Vector<uint32>&   indices
     );
     void destroy_geometry(Geometry* geometry);
 
@@ -103,8 +103,8 @@ class VulkanBackend : public RendererBackend {
     uint32 generate_geometry_id();
 
     // TODO: TEMP COMMAND CODE
-    VulkanCommandPool*             _command_pool;
-    std::vector<vk::CommandBuffer> _command_buffers;
+    VulkanCommandPool*        _command_pool;
+    Vector<vk::CommandBuffer> _command_buffers;
 
     // TODO: TEMP BUFFER CODE
     VulkanBuffer* _vertex_buffer;

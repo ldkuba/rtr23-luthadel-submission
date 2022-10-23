@@ -18,9 +18,9 @@ FreeListAllocator::FreeListAllocator(
 
 void* FreeListAllocator::allocate(const uint64 size, const uint64 alignment) {
     if (size < sizeof(Node))
-        Logger::fatal(
+        Logger::warning(
             ALLOCATOR_LOG,
-            "Free list allocation size must be bigger then or equal to ",
+            "Free list allocation size should be bigger then or equal to ",
             sizeof(Node),
             ", which is sizeof(Node)."
         );
@@ -42,17 +42,17 @@ void* FreeListAllocator::allocate(const uint64 size, const uint64 alignment) {
 
     const uint64 allocation_header_size = sizeof(AllocationHeader);
     const uint64 alignment_padding      = padding - allocation_header_size;
-    const uint64 required_size          = size + padding;
+    uint64       required_size          = size + padding;
 
     const uint64 rest = affected_node->data.block_size - required_size;
 
-    if (rest > 0) {
+    if (rest >= sizeof(Node)) {
         // We have to split the block into the data block and a free block of
         // size 'rest'
         Node* new_free_node = (Node*) ((uint64) affected_node + required_size);
         new_free_node->data.block_size = rest;
         _free_list.insert(affected_node, new_free_node);
-    }
+    } else if (rest > 0) required_size += rest;
     _free_list.remove(previous_node, affected_node);
 
     // Setup data block
@@ -76,10 +76,9 @@ void FreeListAllocator::free(void* ptr) {
         (AllocationHeader*) header_address
     };
 
-    Node* free_node = (Node*) (header_address);
-    free_node->data.block_size =
-        allocation_header->block_size + allocation_header->padding;
-    free_node->next = nullptr;
+    Node* free_node = (Node*) (header_address - allocation_header->padding);
+    free_node->data.block_size = allocation_header->block_size;
+    free_node->next            = nullptr;
 
     Node *it = _free_list.head, *it_prev = nullptr;
     while (it != nullptr) {

@@ -69,13 +69,13 @@ class VulkanUIShader : public VulkanShader {
             ids;
     };
     struct MaterialInstanceState {
-        bool                           allocated = false;
-        std::vector<vk::DescriptorSet> descriptor_sets;
+        bool                      allocated = false;
+        Vector<vk::DescriptorSet> descriptor_sets;
         std::array<DescriptorState, VulkanUIShader::_material_descriptor_count>
             descriptor_states;
     };
 
-    std::vector<vk::DescriptorSet>                    _global_descriptor_sets;
+    Vector<vk::DescriptorSet>                         _global_descriptor_sets;
     std::unordered_map<uint32, MaterialInstanceState> _instance_states;
     TextureUse _sampler_uses[_material_sampler_count];
 

@@ -24,7 +24,7 @@ VulkanRenderPass::VulkanRenderPass(
     _has_depth        = clear_flags & RenderPassClearFlags::Depth;
 
     // === Get all attachment descriptions ===
-    std::vector<vk::AttachmentDescription> attachments = {};
+    Vector<vk::AttachmentDescription> attachments = {};
 
     // Color attachment
     auto color_load_op = ((clear_flags & RenderPassClearFlags::Color) != 0)
@@ -167,7 +167,7 @@ VulkanRenderPass::~VulkanRenderPass() {
 void VulkanRenderPass::begin(const vk::CommandBuffer& command_buffer) {
     // Default background values of color and depth stencil for rendered area of
     // the render pass
-    std::vector<vk::ClearValue> clear_values { 1 };
+    Vector<vk::ClearValue> clear_values { 1 };
     if (_clear_flags & RenderPassClearFlags::Color)
         clear_values[0].setColor({ _clear_color });
     if (_has_depth) {

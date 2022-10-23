@@ -43,11 +43,11 @@ class GeometrySystem {
      */
     template<typename VertexType>
     Geometry* acquire(
-        const String                   name,
-        const std::vector<VertexType>& vertices,
-        const std::vector<uint32>&     indices,
-        const String                   material_name,
-        bool                           auto_release = true
+        const String              name,
+        const Vector<VertexType>& vertices,
+        const Vector<uint32>&     indices,
+        const String              material_name,
+        bool                      auto_release = true
     );
 
     /**
@@ -88,11 +88,11 @@ inline uint32 generate_id() { // TODO: TEMP
 }
 template<typename VertexType>
 Geometry* GeometrySystem::acquire(
-    const String                   name,
-    const std::vector<VertexType>& vertices,
-    const std::vector<uint32>&     indices,
-    const String                   material_name,
-    bool                           auto_release
+    const String              name,
+    const Vector<VertexType>& vertices,
+    const Vector<uint32>&     indices,
+    const String              material_name,
+    bool                      auto_release
 ) {
     // Generate unique id
     auto id = generate_id();

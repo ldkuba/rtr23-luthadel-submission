@@ -54,7 +54,7 @@ VulkanMaterialShader::VulkanMaterialShader(
     resource_system->unload(fragment_code);
 
     // === Shader stages ===
-    std::vector<vk::PipelineShaderStageCreateInfo> shader_stages(2);
+    Vector<vk::PipelineShaderStageCreateInfo> shader_stages(2);
 
     // Vertex shader stage
     shader_stages[0].setStage(vk::ShaderStageFlagBits::eVertex);
@@ -104,13 +104,13 @@ VulkanMaterialShader::VulkanMaterialShader(
 
     // === Vertex input state info ===
     // Vertex bindings
-    std::vector<vk::VertexInputBindingDescription> binding_descriptions(1);
+    Vector<vk::VertexInputBindingDescription> binding_descriptions(1);
     binding_descriptions[0].setBinding(0);
     binding_descriptions[0].setStride(sizeof(Vertex));
     binding_descriptions[0].setInputRate(vk::VertexInputRate::eVertex);
 
     // Vertex attributes
-    std::vector<vk::VertexInputAttributeDescription> attribute_descriptions(3);
+    Vector<vk::VertexInputAttributeDescription> attribute_descriptions(3);
     // Position
     attribute_descriptions[0].setBinding(0);
     attribute_descriptions[0].setLocation(0);
@@ -282,8 +282,8 @@ void VulkanMaterialShader::apply_material(
 
     // Update descriptor set if needed
     // Combined descriptor
-    std::vector<vk::WriteDescriptorSet> descriptor_writes {};
-    uint32                              descriptor_index = 1;
+    Vector<vk::WriteDescriptorSet> descriptor_writes {};
+    uint32                         descriptor_index = 1;
 
     // Uniform buffer
     if (material_state.descriptor_states[descriptor_index]
@@ -381,7 +381,7 @@ void VulkanMaterialShader::acquire_resource(Material* const material) {
     auto local_descriptor = descriptors()[1];
 
     // Allocate descriptor sets.
-    std::vector<vk::DescriptorSetLayout> layouts(
+    Vector<vk::DescriptorSetLayout> layouts(
         VulkanSettings::max_frames_in_flight, local_descriptor->set_layout
     );
     vk::DescriptorSetAllocateInfo allocation_info {};
@@ -435,7 +435,7 @@ void VulkanMaterialShader::create_global_descriptor_sets() {
     // Global descriptor is at set=0
     auto global_descriptor = descriptors()[0];
 
-    std::vector<vk::DescriptorSetLayout> layouts(
+    Vector<vk::DescriptorSetLayout> layouts(
         VulkanSettings::max_frames_in_flight, global_descriptor->set_layout
     );
     vk::DescriptorSetAllocateInfo allocation_info {};
