@@ -16,12 +16,16 @@ Allocator** MemorySystem::initialize_allocator_map() {
 
     // Define used allocators
     CAllocator*        unknown_allocator = new CAllocator();
+    StackAllocator*    temp_allocator    = new StackAllocator(1024 * 1024);
     FreeListAllocator* general_allocator = new FreeListAllocator(
         1024 * 1024, FreeListAllocator::PlacementPolicy::FindFirst
     );
+    FreeListAllocator* gpu_data_allocator = new FreeListAllocator(
+        1024 * 1024, FreeListAllocator::PlacementPolicy::FindFirst
+    );
     LinearAllocator* init_allocator = new LinearAllocator(1024 * 1024);
-    // Pools
 
+    // Pools
     uint64 max_texture_count  = 1024;
     uint64 max_material_count = 1024;
 
@@ -33,13 +37,16 @@ Allocator** MemorySystem::initialize_allocator_map() {
 
     // Initialize allocators
     unknown_allocator->init();
+    temp_allocator->init();
     general_allocator->init();
+    gpu_data_allocator->init();
     init_allocator->init();
     texture_pool->init();
     material_pool->init();
 
     // Assign allocators
     allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Unknown] = unknown_allocator;
+    allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Temp]    = temp_allocator;
 
     allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Array]    = general_allocator;
     allocator_map[(MEMORY_TAG_TYPE) MemoryTag::List]     = general_allocator;
@@ -51,6 +58,9 @@ Allocator** MemorySystem::initialize_allocator_map() {
     allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Surface]     = init_allocator;
     allocator_map[(MEMORY_TAG_TYPE) MemoryTag::System]      = init_allocator;
     allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Renderer]    = init_allocator;
+
+    allocator_map[(MEMORY_TAG_TYPE) MemoryTag::GPUTexture] = gpu_data_allocator;
+    allocator_map[(MEMORY_TAG_TYPE) MemoryTag::GPUBuffer]  = gpu_data_allocator;
 
     allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Game]    = init_allocator;
     allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Job]     = unknown_allocator;

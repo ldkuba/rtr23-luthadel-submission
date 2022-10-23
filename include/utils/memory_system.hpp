@@ -19,6 +19,7 @@ enum class MemoryTag : MEMORY_TAG_TYPE {
     // For temporary use. Should be assigned one of the below or have a new tag
     // created.
     Unknown,
+    Temp,
     // Data types
     Array,
     List,
@@ -30,6 +31,9 @@ enum class MemoryTag : MEMORY_TAG_TYPE {
     Surface,
     System,
     Renderer,
+    // Renderer
+    GPUTexture,
+    GPUBuffer,
     // Game allocations
     Game,
     Job,

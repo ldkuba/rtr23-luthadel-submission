@@ -26,10 +26,11 @@ VulkanBackend::VulkanBackend(
     _vulkan_surface = result.value();
 
     // Create device
-    _device = new VulkanDevice(_vulkan_instance, _vulkan_surface, _allocator);
+    _device = new (MemoryTag::Renderer)
+        VulkanDevice(_vulkan_instance, _vulkan_surface, _allocator);
 
     // Create swapchain
-    _swapchain = new VulkanSwapchain(
+    _swapchain = new (MemoryTag::Renderer) VulkanSwapchain(
         surface->get_width_in_pixels(),
         surface->get_height_in_pixels(),
         _vulkan_surface,
@@ -38,7 +39,7 @@ VulkanBackend::VulkanBackend(
     );
 
     // Create render pass
-    _main_render_pass = new VulkanRenderPass(
+    _main_render_pass = new (MemoryTag::Renderer) VulkanRenderPass(
         &_device->handle(),
         _allocator,
         _swapchain,
@@ -48,7 +49,7 @@ VulkanBackend::VulkanBackend(
             RenderPassClearFlags::Stencil,
         true // Multisampling
     );
-    _ui_render_pass = new VulkanRenderPass(
+    _ui_render_pass = new (MemoryTag::Renderer) VulkanRenderPass(
         &_device->handle(),
         _allocator,
         _swapchain,
@@ -59,7 +60,7 @@ VulkanBackend::VulkanBackend(
     );
 
     // Create command pool
-    _command_pool = new VulkanCommandPool(
+    _command_pool = new (MemoryTag::Renderer) VulkanCommandPool(
         &_device->handle(),
         _allocator,
         &_device->graphics_queue,
@@ -67,12 +68,11 @@ VulkanBackend::VulkanBackend(
     );
 
     // Create material shader
-    _material_shader = new VulkanMaterialShader(
+    _material_shader = new (MemoryTag::Renderer) VulkanMaterialShader(
         _device, _allocator, _main_render_pass, _resource_system
     );
-    _ui_shader = new VulkanUIShader(
-        _device, _allocator, _ui_render_pass, _resource_system
-    );
+    _ui_shader = new (MemoryTag::Renderer)
+        VulkanUIShader(_device, _allocator, _ui_render_pass, _resource_system);
 
     // TODO: TEMP VERTEX & INDEX BUFFER CODE
     create_buffers();
@@ -398,7 +398,8 @@ void VulkanBackend::create_texture(Texture* texture, const byte* const data) {
     auto texture_format = vk::Format::eR8G8B8A8Srgb;
 
     // Create staging buffer
-    auto staging_buffer = new VulkanBuffer(_device, _allocator);
+    auto staging_buffer =
+        new (MemoryTag::Temp) VulkanBuffer(_device, _allocator);
     staging_buffer->create(
         texture->total_size,
         vk::BufferUsageFlagBits::eTransferSrc,
@@ -411,7 +412,8 @@ void VulkanBackend::create_texture(Texture* texture, const byte* const data) {
 
     // Create device side image
     // NOTE: Lots of assumptions here
-    auto texture_image = new VulkanImage(_device, _allocator);
+    auto texture_image =
+        new (MemoryTag::GPUTexture) VulkanImage(_device, _allocator);
     texture_image->create(
         texture->width,
         texture->height,
@@ -476,10 +478,11 @@ void VulkanBackend::create_texture(Texture* texture, const byte* const data) {
     }
 
     // Save internal data
-    VulkanTextureData* vulkan_texture_data = new VulkanTextureData();
-    vulkan_texture_data->image             = texture_image;
-    vulkan_texture_data->sampler           = texture_sampler;
-    texture->internal_data                 = vulkan_texture_data;
+    VulkanTextureData* vulkan_texture_data =
+        new (MemoryTag::GPUTexture) VulkanTextureData();
+    vulkan_texture_data->image   = texture_image;
+    vulkan_texture_data->sampler = texture_sampler;
+    texture->internal_data       = vulkan_texture_data;
 
     Logger::trace(RENDERER_VULKAN_LOG, "Texture created.");
 }
@@ -883,7 +886,8 @@ void VulkanBackend::create_buffers() {
     // Create vertex buffer
     // TODO: NOT LIKE THIS
     vk::DeviceSize vertex_buffer_size = sizeof(Vertex) * 1024 * 1024;
-    _vertex_buffer                    = new VulkanBuffer(_device, _allocator);
+    _vertex_buffer =
+        new (MemoryTag::GPUBuffer) VulkanBuffer(_device, _allocator);
     _vertex_buffer->create(
         vertex_buffer_size,
         vk::BufferUsageFlagBits::eTransferDst |
@@ -893,7 +897,8 @@ void VulkanBackend::create_buffers() {
 
     // Create index buffer
     vk::DeviceSize index_buffer_size = sizeof(uint32) * 1024 * 1024;
-    _index_buffer                    = new VulkanBuffer(_device, _allocator);
+    _index_buffer =
+        new (MemoryTag::GPUBuffer) VulkanBuffer(_device, _allocator);
     _index_buffer->create(
         index_buffer_size,
         vk::BufferUsageFlagBits::eTransferDst |
@@ -909,7 +914,8 @@ void VulkanBackend::upload_data_to_buffer(
     VulkanBuffer*  buffer
 ) {
     // Create staging buffer
-    auto staging_buffer = new VulkanBuffer(_device, _allocator);
+    auto staging_buffer =
+        new (MemoryTag::Temp) VulkanBuffer(_device, _allocator);
     staging_buffer->create(
         size,
         vk::BufferUsageFlagBits::eTransferSrc,
