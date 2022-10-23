@@ -75,8 +75,8 @@ class VulkanUIShader : public VulkanShader {
             descriptor_states;
     };
 
-    Vector<vk::DescriptorSet>                         _global_descriptor_sets;
-    std::unordered_map<uint32, MaterialInstanceState> _instance_states;
+    Vector<vk::DescriptorSet>                   _global_descriptor_sets;
+    UnorderedMap<uint32, MaterialInstanceState> _instance_states;
     TextureUse _sampler_uses[_material_sampler_count];
 
     void   create_global_descriptor_sets();

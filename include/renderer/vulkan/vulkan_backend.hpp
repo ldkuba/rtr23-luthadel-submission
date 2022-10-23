@@ -6,7 +6,7 @@
 #include "shaders/vulkan_material_shader.hpp"
 #include "shaders/vulkan_ui_shader.hpp"
 
-#include <map>
+#include "map.hpp"
 
 class VulkanBackend : public RendererBackend {
   public:
@@ -98,7 +98,7 @@ class VulkanBackend : public RendererBackend {
     VulkanUIShader* _ui_shader;
 
     // GEOMETRY CODE
-    std::map<uint32, VulkanGeometryData> _geometries;
+    Map<uint32, VulkanGeometryData> _geometries;
 
     uint32 generate_geometry_id();
 

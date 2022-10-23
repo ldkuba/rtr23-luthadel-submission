@@ -2,7 +2,7 @@
 
 #include "resources/loaders/resource_loader.hpp"
 
-#include <unordered_map>
+#include "unordered_map.hpp"
 
 class ResourceSystem {
   public:
@@ -36,5 +36,5 @@ class ResourceSystem {
     void                            unload(Resource* resource);
 
   private:
-    std::unordered_map<String, ResourceLoader*> _registered_loaders = {};
+    UnorderedMap<String, ResourceLoader*> _registered_loaders = {};
 };

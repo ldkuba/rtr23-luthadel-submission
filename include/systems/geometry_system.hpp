@@ -77,7 +77,7 @@ class GeometrySystem {
     Geometry* _default_geometry    = nullptr;
     Geometry* _default_2d_geometry = nullptr;
 
-    std::unordered_map<uint32, GeometryRef> _registered_geometries = {};
+    UnorderedMap<uint32, GeometryRef> _registered_geometries = {};
 
     void create_default_geometries();
 };

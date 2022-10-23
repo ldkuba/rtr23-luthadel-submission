@@ -46,8 +46,8 @@ class TextureSystem {
     const uint64 _max_texture_count    = 1024;
     const String _default_texture_name = "default";
 
-    Texture*                               _default_texture     = nullptr;
-    std::unordered_map<String, TextureRef> _registered_textures = {};
+    Texture*                         _default_texture     = nullptr;
+    UnorderedMap<String, TextureRef> _registered_textures = {};
 
     void create_default_textures();
     void destroy_default_textures();

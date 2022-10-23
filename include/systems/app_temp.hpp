@@ -81,7 +81,8 @@ inline float32 TestApplication::calculate_delta_time() {
 // TODO: TEMP MODEL LOADING LIBS
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
-#include <unordered_map>
+
+#include "unordered_map.hpp"
 
 inline void load_model(
     Vector<Vertex>& out_vertices, Vector<uint32>& out_indices
@@ -99,7 +100,7 @@ inline void load_model(
     auto& materials  = reader.GetMaterials();
 
     // Loop over shapes
-    std::unordered_map<Vertex, uint32> unique_vertices = {};
+    UnorderedMap<Vertex, uint32> unique_vertices = {};
     for (const auto& shape : shapes) {
         for (const auto& index : shape.mesh.indices) {
             Vertex vertex {};
