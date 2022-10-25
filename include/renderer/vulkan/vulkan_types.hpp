@@ -7,9 +7,10 @@
 #include <set>
 #include <functional>
 
-#include "defines.hpp"
+#include "string.hpp"
 #include "math_libs.hpp"
 #include "vector.hpp"
+#include "set.hpp"
 
 struct QueueFamilyIndices {
     std::optional<uint32> graphics_family;
@@ -17,8 +18,8 @@ struct QueueFamilyIndices {
     std::optional<uint32> transfer_family;
     std::optional<uint32> present_family;
 
-    bool             is_complete() const;
-    std::set<uint32> get_unique_indices() const;
+    bool        is_complete() const;
+    Set<uint32> get_unique_indices() const;
 };
 
 struct SwapchainSupportDetails {
@@ -32,10 +33,10 @@ struct SwapchainSupportDetails {
 };
 
 struct PhysicalDeviceInfo {
-    std::string          name;
-    std::string          type;
-    std::string          driver_version;
-    std::string          api_version;
+    String               name;
+    String               type;
+    String               driver_version;
+    String               api_version;
     float32              max_sampler_anisotropy;
     vk::SampleCountFlags framebuffer_color_sample_counts;
     vk::SampleCountFlags framebuffer_depth_sample_counts;

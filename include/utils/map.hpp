@@ -13,8 +13,6 @@
  *  @tparam _Key  Type of key objects.
  *  @tparam  _Tp  Type of Mapped objects.
  *  @tparam _Compare  Comparison function object type, defaults to less<_Key>.
- *  @tparam _Alloc  Allocator type, defaults to
- *                  allocator<pair<const _Key, _Tp>.
  *
  *  Meets the requirements of a <a href="tables.html#65">container</a>, a
  *  <a href="tables.html#66">reversible container</a>, and an
@@ -37,10 +35,12 @@ class Map : public std::map<_Key, _Tp, _Compare, TAllocator<_Tp>> {
   private:
     typedef TAllocator<_Tp>                                allocator_type;
     typedef std::map<_Key, _Tp, _Compare, TAllocator<_Tp>> _base_class;
+    typedef std::map<_Key, _Tp, _Compare>                  default_version;
     typedef std::pair<const _Key, _Tp>                     value_type;
 
   public:
     using std::map<_Key, _Tp, _Compare, TAllocator<_Tp>>::map;
+    using std::map<_Key, _Tp, _Compare, TAllocator<_Tp>>::insert;
 
     /**
      *  @brief  Default constructor creates no elements.
@@ -63,8 +63,11 @@ class Map : public std::map<_Key, _Tp, _Compare, TAllocator<_Tp>> {
      *
      *  Whether the allocator is copied depends on the allocator traits.
      */
-    // Map(const std::map<_Key, _Tp, _Compare, TAllocator<_Tp>>&)
-    //     : Map(allocator_type(MemoryTag::Map)) {}
+    Map(const default_version& __x)
+        : _base_class(allocator_type(MemoryTag::Map)) {
+        for (auto var : __x)
+            insert(var);
+    }
 
     /**
      *  @brief  %Map move constructor.
@@ -72,7 +75,10 @@ class Map : public std::map<_Key, _Tp, _Compare, TAllocator<_Tp>> {
      *  The newly-created %Map contains the exact contents of the moved
      *  instance. The moved instance is a valid, but unspecified, %Map.
      */
-    // Map(Map&&) = default;
+    Map(default_version&& __x) : _base_class(allocator_type(MemoryTag::Map)) {
+        for (auto var : __x)
+            insert(var);
+    };
 
     /**
      *  @brief  Builds a %Map from an initializer_list.
@@ -89,6 +95,22 @@ class Map : public std::map<_Key, _Tp, _Compare, TAllocator<_Tp>> {
         const _Compare&                   __comp = _Compare(),
         const allocator_type&             __a = allocator_type(MemoryTag::Map))
         : _base_class(__l, __comp, __a) {}
+
+    /**
+     *  @brief  Builds a %Map from a range.
+     *  @param  __first  An input iterator.
+     *  @param  __last  An input iterator.
+     *
+     *  Create a %Map consisting of copies of the elements from
+     *  [__first,__last).  This is linear in N if the range is
+     *  already sorted, and NlogN otherwise (where N is
+     *  distance(__first,__last)).
+     */
+    template<typename _InputIterator>
+    Map(_InputIterator __first, _InputIterator __last)
+        : _base_class(allocator_type(MemoryTag::Map)) {
+        insert(__first, __last);
+    }
 
     /**
      *  @brief  Builds a %Map from a range.

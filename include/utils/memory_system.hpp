@@ -12,7 +12,7 @@
 
 #define MEMORY_SYS_LOG "MemorySystem :: "
 
-#define MEMORY_TAG_TYPE uint8
+#define MEMORY_TAG_TYPE uint16
 #define MEMORY_PADDING 8
 
 enum class MemoryTag : MEMORY_TAG_TYPE {
@@ -24,6 +24,7 @@ enum class MemoryTag : MEMORY_TAG_TYPE {
     Array,
     List,
     Map,
+    Set,
     String,
     Callback,
     // === Engine allocations ===

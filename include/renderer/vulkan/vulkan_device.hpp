@@ -8,11 +8,11 @@ class VulkanDevice {
   public:
     /// @brief Vulkan handle to a logical device.
     Property<vk::Device> handle {
-        Get { return _handle; }
+        GET { return _handle; }
     };
     /// @brief Vulkan physical device info.
     Property<PhysicalDeviceInfo> info {
-        Get { return _info; }
+        GET { return _info; }
     };
 
     VulkanDevice() {}

@@ -14,11 +14,11 @@ class VulkanRenderPass {
   public:
     /// @brief Handle to the vk::RenderPass object
     Property<vk::RenderPass> handle {
-        Get { return _handle; }
+        GET { return _handle; }
     };
     /// @brief Number of sampled used for Multisample anti-aliasing
     Property<vk::SampleCountFlagBits> sample_count {
-        Get {
+        GET {
             if (_multisampling_enabled) return _swapchain->msaa_samples();
             static auto one_sample = vk::SampleCountFlagBits::e1;
             return one_sample;

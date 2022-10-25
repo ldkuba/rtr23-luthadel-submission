@@ -1,8 +1,8 @@
 #pragma once
 
-#include "string.hpp"
-#include "property.hpp"
 #include "logger.hpp"
+#include "property.hpp"
+#include "string.hpp"
 
 #include <optional>
 
@@ -12,12 +12,12 @@ class Resource {
     std::optional<uint64> id;
     /// @brief Resource name
     Property<String>      name {
-        Get { return _name; }
+        GET { return _name; }
     };
     /// @brief Full resource file path
     Property<String> full_path {
-        Get { return _full_path; }
-        , Set {
+        GET { return _full_path; }
+        SET {
             if (_full_path == "") _full_path = value;
             else
                 Logger::error("Resource :: File path cannot be set after "
@@ -26,8 +26,8 @@ class Resource {
     };
     /// @brief Loader used for loading this resource
     Property<String> loader_type {
-        Get { return _loader_type; }
-        , Set {
+        GET { return _loader_type; }
+        SET {
             if (_loader_type == "") _loader_type = value;
             else
                 Logger::error("Resource :: Loader type cannot be set after "

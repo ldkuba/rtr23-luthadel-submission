@@ -5,8 +5,8 @@
 #include <functional>
 #include <utility>
 
-#define Get [this]() -> auto const&
-#define Set [this](auto&& value)
+#define GET [this]() -> auto const&
+#define SET , [this](auto&& value)
 
 template<class T>
 class Property {

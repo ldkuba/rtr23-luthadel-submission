@@ -6,15 +6,15 @@ class VulkanBuffer {
   public:
     /// @brief Handle to the vk:Buffer
     Property<vk::Buffer> handle {
-        Get { return _handle; }
+        GET { return _handle; }
     };
     /// @brief Pointer to on device memory of the allocated buffer
     Property<vk::DeviceMemory> memory {
-        Get { return _memory; }
+        GET { return _memory; }
     };
     /// @brief Total buffer size in bytes
     Property<vk::DeviceSize> size {
-        Get { return _size; }
+        GET { return _size; }
     };
 
     VulkanBuffer(

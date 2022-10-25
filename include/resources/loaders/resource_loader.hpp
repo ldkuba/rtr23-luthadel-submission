@@ -25,7 +25,7 @@ class ResourceLoader {
   public:
     /// @brief Resource type loaded by this resource / Resource Loader type name
     Property<String> type {
-        Get { return _type; }
+        GET { return _type; }
     };
 
     ResourceLoader() {}

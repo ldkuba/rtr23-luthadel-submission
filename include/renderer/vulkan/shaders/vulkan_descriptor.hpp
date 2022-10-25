@@ -41,11 +41,11 @@ class VulkanDescriptor {
   public:
     /// @brief vk::DescriptorPool instance
     Property<vk::DescriptorPool> pool {
-        Get { return _pool; }
+        GET { return _pool; }
     };
     /// @brief vk::DescriptorSetLayout instance
     Property<vk::DescriptorSetLayout> set_layout {
-        Get { return _set_layout; }
+        GET { return _set_layout; }
     };
 
     VulkanDescriptor(

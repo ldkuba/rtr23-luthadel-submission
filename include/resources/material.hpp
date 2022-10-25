@@ -37,20 +37,20 @@ class Material {
     std::optional<uint64> internal_id;
     /// @brief Material name
     Property<String>      name {
-        Get { return _name; }
+        GET { return _name; }
     };
     /// @brief Material type
     Property<MaterialType> type {
-        Get { return _type; }
+        GET { return _type; }
     };
     /// @brief Material's diffuse color
     Property<glm::vec4> diffuse_color {
-        Get { return _diffuse_color; }
+        GET { return _diffuse_color; }
     };
     /// @brief Material's diffuse map
     Property<TextureMap> diffuse_map {
-        Get { return _diffuse_map; }
-        , Set { _diffuse_map = value; }
+        GET { return _diffuse_map; }
+        SET { _diffuse_map = value; }
     };
 
     Material(

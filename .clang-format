@@ -138,8 +138,8 @@ StatementMacros:
   - Q_UNUSED
   - QT_REQUIRE_VERSION
 IfMacros:
-  - Get
-  - Set
+  - GET
+  - SET
 TabWidth:        4
 UseCRLF:         false
 UseTab:          Never

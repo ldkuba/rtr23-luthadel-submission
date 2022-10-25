@@ -6,11 +6,11 @@ class GeometrySystem {
   public:
     /// @brief Default fallback geometry
     Property<Geometry*> default_geometry {
-        Get { return _default_geometry; }
+        GET { return _default_geometry; }
     };
     /// @brief Default fallback 2D geometry
     Property<Geometry*> default_2d_geometry {
-        Get { return _default_2d_geometry; }
+        GET { return _default_2d_geometry; }
     };
 
     GeometrySystem(

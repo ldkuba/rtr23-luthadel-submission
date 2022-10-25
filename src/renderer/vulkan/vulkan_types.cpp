@@ -12,11 +12,11 @@ bool QueueFamilyIndices::is_complete() const {
            (!VulkanSettings::present__family_required ||
             present_family.has_value());
 }
-std::set<uint32> QueueFamilyIndices::get_unique_indices() const {
-    std::set<uint32> unique_indices = { graphics_family.value_or(-1),
-                                        compute_family.value_or(-1),
-                                        transfer_family.value_or(-1),
-                                        present_family.value_or(-1) };
+Set<uint32> QueueFamilyIndices::get_unique_indices() const {
+    Set<uint32> unique_indices = { graphics_family.value_or(-1),
+                                   compute_family.value_or(-1),
+                                   transfer_family.value_or(-1),
+                                   present_family.value_or(-1) };
     unique_indices.erase(-1);
     return unique_indices;
 }
@@ -25,8 +25,7 @@ vk::Extent2D SwapchainSupportDetails::get_extent(
     const uint32 width, const uint32 height
 ) const {
     // Return required width and height if supported
-    if (capabilities.currentExtent.width !=
-        std::numeric_limits<uint32_t>::max())
+    if (capabilities.currentExtent.width != UINT32_MAX)
         return capabilities.currentExtent;
 
     return { std::clamp(

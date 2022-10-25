@@ -12,32 +12,32 @@ class Texture {
     std::optional<uint64> id;
     /// @brief Texture name
     Property<String>      name {
-        Get { return _name; }
+        GET { return _name; }
     };
     /// @brief Texture width in pixels
     Property<int32> width {
-        Get { return _width; }
+        GET { return _width; }
     };
     /// @brief Texture height in pixels
     Property<int32> height {
-        Get { return _height; }
+        GET { return _height; }
     };
     /// @brief Number of channels used per pixel
     Property<int32> channel_count {
-        Get { return _channel_count; }
+        GET { return _channel_count; }
     };
     /// @brief Total texture data size in bytes
     Property<uint64> total_size {
-        Get { return _total_size; }
+        GET { return _total_size; }
     };
     /// @brief True if texture uses any transparency
     Property<bool> has_transparency {
-        Get { return _has_transparency; }
+        GET { return _has_transparency; }
     };
     /// @brief Pointer to internal texture data managed by the renderer
     Property<InternalTextureData*> internal_data {
-        Get { return _internal_data; }
-        , Set { _internal_data = value; }
+        GET { return _internal_data; }
+        SET { _internal_data = value; }
     };
 
     Texture(

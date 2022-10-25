@@ -8,8 +8,8 @@ class Geometry : public Resource {
     std::optional<uint64> internal_id;
     /// @brief Material used by the geometry
     Property<Material*>   material {
-        Get { return _material; }
-        , Set { _material = value; }
+        GET { return _material; }
+        SET { _material = value; }
     };
 
     Geometry(String name);

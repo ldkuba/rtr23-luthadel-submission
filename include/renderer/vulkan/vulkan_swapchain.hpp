@@ -7,11 +7,11 @@ class VulkanSwapchain {
   public:
     /// @brief Swapchain image extent
     Property<vk::Extent2D> extent {
-        Get { return _extent; }
+        GET { return _extent; }
     };
     /// @brief Number of sampled used for Multisample anti-aliasing
     Property<vk::SampleCountFlagBits> msaa_samples {
-        Get { return _msaa_samples; }
+        GET { return _msaa_samples; }
     };
 
     VulkanSwapchain(

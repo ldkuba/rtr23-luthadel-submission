@@ -6,19 +6,19 @@ class Image : public Resource {
   public:
     /// @brief Image width in pixels
     Property<uint32> width {
-        Get { return _width; }
+        GET { return _width; }
     };
     /// @brief Image height in pixels
     Property<uint32> height {
-        Get { return _height; }
+        GET { return _height; }
     };
     /// @brief Image channel count
     Property<uint8> channel_count {
-        Get { return _channel_count; }
+        GET { return _channel_count; }
     };
     /// @brief Raw image pixel data
     Property<const byte*> pixels {
-        Get { return _pixels; }
+        GET { return _pixels; }
     };
 
     Image(

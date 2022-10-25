@@ -6,6 +6,12 @@ static_assert(
     sizeof(MEMORY_TAG_TYPE) <= MEMORY_PADDING || MEMORY_PADDING >= 8,
     "Memory padding must be at least 8."
 );
+static_assert(
+    (uint64) MemoryTag::MAX_TAGS <
+        ((uint64) 1 << (sizeof(MEMORY_TAG_TYPE) * 8 - 4)),
+    "No enough space to store all tags. (NOTE: Last 4 bits of enum binary "
+    "representation are used to recognize custom allocation)"
+);
 
 Allocator** MemorySystem::_allocator_map =
     MemorySystem::initialize_allocator_map();
@@ -57,6 +63,7 @@ Allocator** MemorySystem::initialize_allocator_map() {
     allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Array]       = general_allocator;
     allocator_map[(MEMORY_TAG_TYPE) MemoryTag::List]        = general_allocator;
     allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Map]         = general_allocator;
+    allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Set]         = general_allocator;
     allocator_map[(MEMORY_TAG_TYPE) MemoryTag::String]      = general_allocator;
     allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Callback]    = general_allocator;
     // Engine
@@ -107,14 +114,14 @@ void operator delete(void* p) noexcept {
     MEMORY_TAG_TYPE* tag_ptr = (MEMORY_TAG_TYPE*) ((uint64) p - MEMORY_PADDING);
     MemoryTag        tag     = (MemoryTag) ((*tag_ptr) >> 4);
 
-    // If 4 bytes before p are 111 we are using custom allocator
+    // If 4 bytes before p are 1111 we are using custom allocator
     uint8* tag_type_ptr = (uint8*) tag_ptr;
     uint8  tag_type     = *tag_type_ptr << 4;
 
     // 240 = 11110000
     if (tag_type != 240) free(p);
     else {
-        *tag_type_ptr = 0;
+        *tag_type_ptr &= 240;
         MemorySystem::deallocate(tag_ptr, tag);
     }
 }

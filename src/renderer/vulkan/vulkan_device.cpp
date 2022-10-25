@@ -323,12 +323,10 @@ SwapchainSupportDetails VulkanDevice::query_swapchain_support_details(
 
     support_details.capabilities =
         device.getSurfaceCapabilitiesKHR(surface); // Get surface capabilities
-    auto x                  = device.getSurfaceFormatsKHR(surface);
-    support_details.formats = Vector(x);
-    // device.getSurfaceFormatsKHR(surface); // Get surface formats
-    auto y                  = device.getSurfacePresentModesKHR(surface);
-    support_details.presentation_modes = Vector(y);
-    // device.getSurfacePresentModesKHR(surface); // Get present modes
+    support_details.formats =
+        device.getSurfaceFormatsKHR(surface); // Get surface formats
+    support_details.presentation_modes =
+        device.getSurfacePresentModesKHR(surface); // Get present modes
 
     return support_details;
 }
@@ -340,7 +338,7 @@ SwapchainSupportDetails VulkanDevice::query_swapchain_support_details(
 bool check_device_extension_support(const vk::PhysicalDevice& device) {
     auto available_extensions = device.enumerateDeviceExtensionProperties();
 
-    std::set<std::string> required_extensions {
+    Set<std::string> required_extensions {
         VulkanSettings::device_required_extensions.begin(),
         VulkanSettings::device_required_extensions.end()
     };

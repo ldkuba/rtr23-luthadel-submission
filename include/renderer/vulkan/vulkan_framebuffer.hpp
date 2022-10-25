@@ -9,7 +9,7 @@ class VulkanRenderPass;
 class VulkanFramebuffer {
   public:
     Property<vk::Framebuffer> handle {
-        Get { return _handle; }
+        GET { return _handle; }
     };
 
     VulkanFramebuffer(

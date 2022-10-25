@@ -21,7 +21,7 @@ class VulkanShader {
     const vk::AllocationCallbacks* const _allocator;
 
     Property<Vector<VulkanDescriptor*>> descriptors {
-        Get { return _descriptors; }
+        GET { return _descriptors; }
     };
 
     vk::Pipeline       _pipeline;

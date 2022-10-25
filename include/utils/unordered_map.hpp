@@ -4,6 +4,27 @@
 
 #include "memory_system.hpp"
 
+/**
+ *  @brief A standard container composed of unique keys (containing
+ *  at most one of each key value) that associates values of another type
+ *  with the keys.
+ *
+ *  @ingroup unordered_associative_containers
+ *
+ *  @tparam  _Key    Type of key objects.
+ *  @tparam  _Tp     Type of mapped objects.
+ *  @tparam  _Hash   Hashing function object type, defaults to hash<_Value>.
+ *  @tparam  _Pred   Predicate function object type, defaults
+ *                   to equal_to<_Value>.
+ *
+ *  Meets the requirements of a <a href="tables.html#65">container</a>, and
+ *  <a href="tables.html#xx">unordered associative container</a>
+ *
+ * The resulting value type of the container is std::pair<const _Key, _Tp>.
+ *
+ *  Base is _Hashtable, dispatched at compile time via template
+ *  alias __umap_hashtable.
+ */
 template<
     typename _Key,
     typename _Tp,
@@ -15,7 +36,8 @@ class UnorderedMap
   private:
     typedef TAllocator<_Tp> allocator_type;
     typedef std::unordered_map<_Key, _Tp, _Hash, _Pred, allocator_type>
-        _base_class;
+                                                        _base_class;
+    typedef std::unordered_map<_Key, _Tp, _Hash, _Pred> default_version;
     typedef std::__umap_hashtable<_Key, _Tp, _Hash, _Pred, allocator_type>
                                            _Hashtable;
     typedef typename _Hashtable::hasher    hasher;
@@ -24,13 +46,10 @@ class UnorderedMap
   public:
     using std::unordered_map<_Key, _Tp, _Hash, _Pred, allocator_type>::
         unordered_map;
+    using std::unordered_map<_Key, _Tp, _Hash, _Pred, allocator_type>::insert;
 
     /// Default constructor.
-    // UnorderedMap() = default;
-    UnorderedMap()
-        : _base_class(
-              0, hasher(), key_equal(), allocator_type(MemoryTag::Map)
-          ) {}
+    UnorderedMap() : _base_class(allocator_type(MemoryTag::Map)) {}
 
     /**
      *  @brief  Default constructor creates no elements.
@@ -70,6 +89,22 @@ class UnorderedMap
         const allocator_type& __a   = allocator_type(MemoryTag::Map)
     )
         : _base_class(__first, __last, __n, __hf, __eql, __a) {}
+
+    /// Copy constructor.
+    UnorderedMap(const default_version& __x)
+        : _base_class(allocator_type(MemoryTag::Map)) {
+        for (auto var : __x) {
+            insert(var);
+        }
+    }
+
+    /// Move constructor.
+    UnorderedMap(default_version&& __x)
+        : _base_class(allocator_type(MemoryTag::Map)) {
+        for (auto var : __x) {
+            insert(var);
+        }
+    }
 
     /**
      *  @brief  Builds an %UnorderedMap from an initializer_list.

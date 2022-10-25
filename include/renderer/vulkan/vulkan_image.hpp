@@ -6,28 +6,28 @@ class VulkanImage {
   public:
     /// @brief Handle to the vk::Image
     Property<vk::Image> handle {
-        Get { return _handle; }
+        GET { return _handle; }
     };
     /// @brief Pointer to on device memory the allocated image
     Property<vk::DeviceMemory> memory {
-        Get { return _memory; }
+        GET { return _memory; }
     };
     /// @brief Image view
     Property<vk::ImageView> view {
-        Get { return _view; }
+        GET { return _view; }
     };
 
     /// @brief Image width
     Property<uint32> width {
-        Get { return _width; }
+        GET { return _width; }
     };
     /// @brief Image height
     Property<uint32> height {
-        Get { return _height; }
+        GET { return _height; }
     };
     /// @brief Number of mipmap levels used
     Property<uint32> mip_levels {
-        Get { return _mip_levels; }
+        GET { return _mip_levels; }
     };
 
     VulkanImage(

@@ -7,7 +7,7 @@ class TextureSystem {
   public:
     /// @brief Default fallback texture
     Property<Texture*> default_texture {
-        Get { return _default_texture; }
+        GET { return _default_texture; }
     };
 
     TextureSystem(

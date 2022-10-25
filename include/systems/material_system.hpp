@@ -6,7 +6,7 @@ class MaterialSystem {
   public:
     /// @brief Default fallback material
     Property<Material*> default_material {
-        Get { return _default_material; }
+        GET { return _default_material; }
     };
 
     MaterialSystem(
