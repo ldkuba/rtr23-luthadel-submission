@@ -10,7 +10,6 @@ class SinglyLinkedList {
 
     Node* head;
 
-  public:
     SinglyLinkedList();
 
     void insert(Node* previous_node, Node* new_node);

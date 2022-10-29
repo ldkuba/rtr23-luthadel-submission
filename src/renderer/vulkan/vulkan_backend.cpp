@@ -815,10 +815,8 @@ void VulkanBackend::create_geometry_internal(
         );
 
     // Upload vertex data
-    static uint32  geometry_vertex_offset = 0; // TODO: TEMP
-    static uint32  geometry_index_offset  = 0; // TODO: TEMP
-    vk::DeviceSize buffer_size            = vertex_size * vertex_count;
-    vk::DeviceSize buffer_offset          = geometry_vertex_offset;
+    vk::DeviceSize buffer_size   = vertex_size * vertex_count;
+    vk::DeviceSize buffer_offset = _vertex_buffer->allocate(buffer_size);
 
     internal_data->vertex_count  = vertex_count;
     internal_data->vertex_size   = vertex_size;
@@ -827,12 +825,11 @@ void VulkanBackend::create_geometry_internal(
     upload_data_to_buffer(
         vertex_data, buffer_size, buffer_offset, _vertex_buffer
     );
-    geometry_vertex_offset += buffer_size;
 
     // Upload index data
     if (index_count > 0) {
         buffer_size   = index_size * index_count;
-        buffer_offset = geometry_index_offset;
+        buffer_offset = _index_buffer->allocate(buffer_size);
 
         internal_data->index_count  = index_count;
         internal_data->index_size   = index_size;
@@ -841,11 +838,12 @@ void VulkanBackend::create_geometry_internal(
         upload_data_to_buffer(
             index_data, buffer_size, buffer_offset, _index_buffer
         );
-        geometry_index_offset += buffer_size;
     }
 
     if (is_reupload) {
-        // TODO: FREE VERTEX & INDEX DATA
+        _vertex_buffer->deallocate(old_data.vertex_offset);
+        if (old_data.index_count > 0)
+            _index_buffer->deallocate(old_data.index_offset);
     }
 }
 
@@ -881,13 +879,12 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback_function(
 }
 
 /// TODO: TEMP CODE BELOW
-
 void VulkanBackend::create_buffers() {
     // Create vertex buffer
     // TODO: NOT LIKE THIS
     vk::DeviceSize vertex_buffer_size = sizeof(Vertex) * 1024 * 1024;
     _vertex_buffer =
-        new (MemoryTag::GPUBuffer) VulkanBuffer(_device, _allocator);
+        new (MemoryTag::GPUBuffer) VulkanManagedBuffer(_device, _allocator);
     _vertex_buffer->create(
         vertex_buffer_size,
         vk::BufferUsageFlagBits::eTransferDst |
@@ -898,7 +895,7 @@ void VulkanBackend::create_buffers() {
     // Create index buffer
     vk::DeviceSize index_buffer_size = sizeof(uint32) * 1024 * 1024;
     _index_buffer =
-        new (MemoryTag::GPUBuffer) VulkanBuffer(_device, _allocator);
+        new (MemoryTag::GPUBuffer) VulkanManagedBuffer(_device, _allocator);
     _index_buffer->create(
         index_buffer_size,
         vk::BufferUsageFlagBits::eTransferDst |
@@ -908,10 +905,10 @@ void VulkanBackend::create_buffers() {
 }
 
 void VulkanBackend::upload_data_to_buffer(
-    const void*    data,
-    vk::DeviceSize size,
-    vk::DeviceSize offset,
-    VulkanBuffer*  buffer
+    const void*          data,
+    vk::DeviceSize       size,
+    vk::DeviceSize       offset,
+    VulkanManagedBuffer* buffer
 ) {
     // Create staging buffer
     auto staging_buffer =

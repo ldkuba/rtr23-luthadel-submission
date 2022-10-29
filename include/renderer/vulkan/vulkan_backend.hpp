@@ -3,6 +3,7 @@
 #include "renderer/renderer_backend.hpp"
 #include "vulkan_render_pass.hpp"
 #include "vulkan_command_pool.hpp"
+#include "vulkan_managed_buffer.hpp"
 #include "shaders/vulkan_material_shader.hpp"
 #include "shaders/vulkan_ui_shader.hpp"
 
@@ -107,15 +108,15 @@ class VulkanBackend : public RendererBackend {
     Vector<vk::CommandBuffer> _command_buffers;
 
     // TODO: TEMP BUFFER CODE
-    VulkanBuffer* _vertex_buffer;
-    VulkanBuffer* _index_buffer;
+    VulkanManagedBuffer* _vertex_buffer;
+    VulkanManagedBuffer* _index_buffer;
 
     void create_buffers();
     void upload_data_to_buffer(
-        const void*    data,
-        vk::DeviceSize size,
-        vk::DeviceSize offset,
-        VulkanBuffer*  buffer
+        const void*          data,
+        vk::DeviceSize       size,
+        vk::DeviceSize       offset,
+        VulkanManagedBuffer* buffer
     );
 
     // GEOMETRY

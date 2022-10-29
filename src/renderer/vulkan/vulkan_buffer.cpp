@@ -50,6 +50,14 @@ void VulkanBuffer::bind(const vk::DeviceSize offset) const {
 void VulkanBuffer::resize(
     const vk::CommandBuffer& command_buffer, const vk::DeviceSize new_size
 ) {
+    // Buffer can only increase in size
+    if (new_size <= _size)
+        Logger::fatal(
+            RENDERER_VULKAN_LOG,
+            "Vulkan buffer resize methods requires new size to be larger then "
+            "the old one."
+        );
+
     // Create new buffer with new required size
     vk::Buffer new_handle = create_buffer(new_size, _usage);
 
@@ -138,11 +146,12 @@ vk::Buffer VulkanBuffer::create_buffer(
     const vk::DeviceSize size, const vk::BufferUsageFlags usage
 ) const {
     vk::BufferCreateInfo buffer_info {};
-    buffer_info.setSize(size); // Buffer size in bytes
-    buffer_info.setUsage(usage
-    ); // Specifies for which purpose the buffer data will be used
-    buffer_info.setSharingMode(vk::SharingMode::eExclusive
-    ); // Used only in one queue
+    // Buffer size in bytes
+    buffer_info.setSize(size);
+    // Specifies for which purpose the buffer data will be used
+    buffer_info.setUsage(usage);
+    // Used only in one queue
+    buffer_info.setSharingMode(vk::SharingMode::eExclusive);
 
     vk::Buffer buffer;
     try {

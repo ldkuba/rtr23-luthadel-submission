@@ -41,7 +41,7 @@ class VulkanBuffer {
     /// @param offset Offset at which the bind should start at
     void bind(const vk::DeviceSize offset) const;
 
-    /// @brief Resize buffer
+    /// @brief Resize buffer. Only works for increased buffer the size.
     /// @param command_buffer Command buffer to witch the resize command will be
     /// submitted
     /// @param new_size New buffer size in bytes
