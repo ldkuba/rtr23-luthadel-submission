@@ -5,11 +5,11 @@
 #include "file_system.hpp"
 
 struct MSVars {
-    constexpr static const char* const version          = "version";
-    constexpr static const char* const name             = "name";
-    constexpr static const char* const type             = "type";
-    constexpr static const char* const diffuse_color    = "diffuse_color";
-    constexpr static const char* const diffuse_map_name = "diffuse_map_name";
+    STRING_CONST(version);
+    STRING_CONST(name);
+    STRING_CONST(shader);
+    STRING_CONST(diffuse_color);
+    STRING_CONST(diffuse_map_name);
 };
 
 Result<glm::vec4, uint8> load_vector(const String vector_str);
@@ -27,11 +27,11 @@ MaterialLoader::~MaterialLoader() {}
 
 Result<Resource*, RuntimeError> MaterialLoader::load(const String name) {
     // Material configuration defaults
-    String       mat_name             = name;
-    MaterialType mat_type             = MaterialType::World;
-    bool         mat_auto_release     = true;
-    glm::vec4    mat_diffuse_color    = glm::vec4(1.0f);
-    String       mat_diffuse_map_name = "";
+    String    mat_name             = name;
+    String    mat_shader           = "";
+    bool      mat_auto_release     = true;
+    glm::vec4 mat_diffuse_color    = glm::vec4(1.0f);
+    String    mat_diffuse_map_name = "";
 
     // Load material configuration from file
     String file_name = name + ".mat";
@@ -102,9 +102,9 @@ Result<Resource*, RuntimeError> MaterialLoader::load(const String name) {
                     " characters)."
                 );
         }
-        // TYPE
-        else if (setting_var.compare(MSVars::type) == 0) {
-            if (setting_val.compare_ci("ui") == 0) mat_type = MaterialType::UI;
+        // SHADER NAME
+        else if (setting_var.compare(MSVars::shader) == 0) {
+            mat_shader = setting_val;
         }
         // DIFFUSE MAP NAME
         else if (setting_var.compare(MSVars::diffuse_map_name) == 0) {
@@ -156,7 +156,7 @@ Result<Resource*, RuntimeError> MaterialLoader::load(const String name) {
     // Create material config
     auto material_config = new (MemoryTag::Resource) MaterialConfig(
         mat_name,
-        mat_type,
+        mat_shader,
         mat_diffuse_map_name,
         mat_diffuse_color,
         mat_auto_release

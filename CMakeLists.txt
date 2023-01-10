@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.23.2)
 set(CMAKE_CXX_STANDARD 17)
 
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_GLIBCXX_DEBUG")
+
 project(VulkanEngine)
 
 # add sources

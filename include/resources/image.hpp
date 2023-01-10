@@ -2,6 +2,10 @@
 
 #include "resource.hpp"
 
+/**
+ * @brief Image resource.
+ *
+ */
 class Image : public Resource {
   public:
     /// @brief Image width in pixels

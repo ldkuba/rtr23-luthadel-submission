@@ -36,6 +36,8 @@ GeometrySystem::~GeometrySystem() {
 // ////////////////////////////// //
 
 Geometry* GeometrySystem::acquire(const uint32 id) {
+    Logger::trace(GEOMETRY_SYS_LOG, "Geometry with id ", id, " requested.");
+
     auto ref = _registered_geometries.find(id);
     if (ref == _registered_geometries.end()) {
         Logger::error(
@@ -45,6 +47,8 @@ Geometry* GeometrySystem::acquire(const uint32 id) {
         return _default_geometry;
     }
     ref->second.reference_count++;
+
+    Logger::trace(GEOMETRY_SYS_LOG, "Geometry with id ", id, " acquired");
     return ref->second.handle;
 }
 
@@ -68,6 +72,7 @@ void GeometrySystem::release(Geometry* geometry) {
     if (ref.reference_count > 0) ref.reference_count--;
 
     // Is the geometry still need, if not release it
+    auto id = geometry->id.value();
     if (ref.auto_release && ref.reference_count < 1) {
         _material_system->release(ref.handle->material()->name);
         _renderer->destroy_geometry(ref.handle);
@@ -75,7 +80,7 @@ void GeometrySystem::release(Geometry* geometry) {
         _registered_geometries.erase(geometry->id.value());
     }
 
-    Logger::trace(GEOMETRY_SYS_LOG, "Geometry released.");
+    Logger::trace(GEOMETRY_SYS_LOG, "Geometry with id ", id, " released.");
 }
 
 // /////////////////////////////// //
@@ -86,19 +91,13 @@ void GeometrySystem::create_default_geometries() {
     float f = 10.0f;
 
     // === Default for 3D ===
-    Vector<Vertex> vertices = { { glm::vec3(-0.5f * f, -0.5f * f, 0.0f),
-                                  glm::vec3(0.0f),
-                                  glm::vec2(0.0f, 0.0f) },
-                                { glm::vec3(0.5f * f, 0.5f * f, 0.0f),
-                                  glm::vec3(0.0f),
-                                  glm::vec2(1.0f, 1.0f) },
-                                { glm::vec3(-0.5f * f, 0.5f * f, 0.0f),
-                                  glm::vec3(0.0f),
-                                  glm::vec2(0.0f, 1.0f) },
-                                { glm::vec3(0.5f * f, -0.5f * f, 0.0f),
-                                  glm::vec3(0.0f),
-                                  glm::vec2(1.0f, 0.0f) } };
-    Vector<uint32> indices  = { 0, 1, 2, 0, 3, 1 };
+    Vector<Vertex> vertices = {
+        { glm::vec3(-0.5f * f, -0.5f * f, 0.0f), glm::vec2(0.0f, 0.0f) },
+        { glm::vec3(0.5f * f, 0.5f * f, 0.0f), glm::vec2(1.0f, 1.0f) },
+        { glm::vec3(-0.5f * f, 0.5f * f, 0.0f), glm::vec2(0.0f, 1.0f) },
+        { glm::vec3(0.5f * f, -0.5f * f, 0.0f), glm::vec2(1.0f, 0.0f) }
+    };
+    Vector<uint32> indices = { 0, 1, 2, 0, 3, 1 };
 
     // Crete geometry
     _default_geometry =

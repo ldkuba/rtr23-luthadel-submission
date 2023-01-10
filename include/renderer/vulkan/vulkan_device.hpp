@@ -4,6 +4,11 @@
 #include "logger.hpp"
 #include "property.hpp"
 
+/**
+ * @brief Vulkan representation of device. Almost every vulkan object requires a
+ * device on which it is created to be specified. This class provides device
+ * related functionalities and info.
+ */
 class VulkanDevice {
   public:
     /// @brief Vulkan handle to a logical device.
@@ -15,7 +20,13 @@ class VulkanDevice {
         GET { return _info; }
     };
 
-    VulkanDevice() {}
+    /**
+     * @brief Construct a new Vulkan Device object
+     *
+     * @param vulkan_instance Reference to Vulkan backend instance
+     * @param vulkan_surface Reference to Vulkan surface object
+     * @param allocator Allocation callback used
+     */
     VulkanDevice(
         const vk::Instance&                  vulkan_instance,
         const vk::SurfaceKHR&                vulkan_surface,

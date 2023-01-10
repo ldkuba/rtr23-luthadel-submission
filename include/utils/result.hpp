@@ -5939,6 +5939,11 @@ inline RESULT_INLINE_VISIBILITY auto RESULT_NS_IMPL::swap(
 
 #define match_error(__result)                                                  \
     if (__result.has_error()) switch (__result.error())
+#define match_error_code(__result)                                             \
+    if (__result.has_error()) switch (__result.error().code())
 #define Err(__error)                                                           \
     break;                                                                     \
     case __error:
+#define Ok()                                                                   \
+    }                                                                          \
+    else {

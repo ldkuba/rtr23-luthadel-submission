@@ -10,10 +10,12 @@ VulkanRenderPass::VulkanRenderPass(
     const std::array<float32, 4>         clear_color,
     const RenderPassPosition             position,
     const uint8                          clear_flags,
-    const bool                           multisampling
+    const bool                           multisampling,
+    const bool                           depth_testing
 )
     : _device(device), _swapchain(swapchain), _allocator(allocator),
-      _multisampling_enabled(multisampling) {
+      _multisampling_enabled(multisampling),
+      _depth_testing_enabled(depth_testing) {
 
     Logger::trace(RENDERER_VULKAN_LOG, "Creating render pass.");
 

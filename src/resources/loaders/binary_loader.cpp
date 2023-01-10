@@ -17,8 +17,7 @@ BinaryLoader::~BinaryLoader() {}
 
 Result<Resource*, RuntimeError> BinaryLoader::load(const String name) {
     // Construct full path
-    String file_path =
-        ResourceSystem::base_path + "/" + _type_path + "/" + name;
+    String file_path = ResourceSystem::base_path + "/" + name;
 
     // Read all data
     auto data = FileSystem::read_file_bytes(file_path);

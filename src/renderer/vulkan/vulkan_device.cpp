@@ -27,8 +27,8 @@ VulkanDevice::VulkanDevice(
 
     // Log basic device info
     Logger::log(RENDERER_VULKAN_LOG, "Suitable vulkan device found.");
-    Logger::log(RENDERER_VULKAN_LOG, "Device selected\t\t: ", _info.name);
-    Logger::log(RENDERER_VULKAN_LOG, "GPU type\t\t\t: ", _info.type);
+    Logger::log(RENDERER_VULKAN_LOG, "Device selected\t: ", _info.name);
+    Logger::log(RENDERER_VULKAN_LOG, "GPU type\t\t: ", _info.type);
     Logger::log(
         RENDERER_VULKAN_LOG, "GPU driver version\t: ", _info.driver_version
     );
@@ -39,7 +39,7 @@ VulkanDevice::VulkanDevice(
         if (_info.memory_is_local[i])
             Logger::log(
                 RENDERER_VULKAN_LOG,
-                "Local GPU memory\t\t: ",
+                "Local GPU memory\t: ",
                 _info.memory_size_in_gb[i],
                 " GiB."
             );
@@ -207,6 +207,9 @@ PhysicalDeviceInfo VulkanDevice::get_physical_device_info(
         device_properties.limits.framebufferColorSampleCounts;
     device_info.framebuffer_depth_sample_counts =
         device_properties.limits.framebufferDepthSampleCounts;
+    // Min UBO alignment requirement
+    device_info.min_ubo_alignment =
+        device_properties.limits.minUniformBufferOffsetAlignment;
 
     // Info from memory properties
     device_info.memory_size_in_gb.resize(device_memory.memoryHeapCount);
@@ -214,14 +217,24 @@ PhysicalDeviceInfo VulkanDevice::get_physical_device_info(
     device_info.memory_is_local.resize(device_memory.memoryHeapCount);
 
     for (uint32 i = 0; i < device_memory.memoryHeapCount; i++) {
+        // Memory size
         device_info.memory_size_in_gb[i] =
             1.0f * device_memory.memoryHeaps[i].size / 1024.f / 1024.f / 1024.f;
+        // Local size
         device_info.memory_is_local[i] = (bool
         ) (device_memory.memoryHeaps[i].flags &
            vk::MemoryHeapFlagBits::eDeviceLocal);
     }
-    for (uint32 i = 0; i < device_memory.memoryTypeCount; i++)
+    for (uint32 i = 0; i < device_memory.memoryTypeCount; i++) {
+        // Memory types
         device_info.memory_types[i] = device_memory.memoryTypes[i];
+        // Memory is host visible and device local simultaneously?
+        if ((device_memory.memoryTypes[i].propertyFlags &
+             vk::MemoryPropertyFlagBits::eHostVisible) &&
+            (device_memory.memoryTypes[i].propertyFlags &
+             vk::MemoryPropertyFlagBits::eDeviceLocal))
+            device_info.supports_device_local_host_visible_memory = true;
+    }
 
     // Queue swapchain support details
     device_info.get_swapchain_support_details =

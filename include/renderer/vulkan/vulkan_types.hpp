@@ -12,6 +12,9 @@
 #include "vector.hpp"
 #include "set.hpp"
 
+/**
+ * @brief Indices of all vulkan queue families. Initially all unset.
+ */
 struct QueueFamilyIndices {
     std::optional<uint32> graphics_family;
     std::optional<uint32> compute_family;
@@ -22,6 +25,9 @@ struct QueueFamilyIndices {
     Set<uint32> get_unique_indices() const;
 };
 
+/**
+ * @brief Packet containing all relevant swapchain support details
+ */
 struct SwapchainSupportDetails {
     vk::SurfaceCapabilitiesKHR   capabilities;
     Vector<vk::SurfaceFormatKHR> formats;
@@ -32,6 +38,9 @@ struct SwapchainSupportDetails {
     vk::PresentModeKHR   get_presentation_mode() const;
 };
 
+/**
+ * @brief Physical device info packet.
+ */
 struct PhysicalDeviceInfo {
     String               name;
     String               type;
@@ -40,10 +49,12 @@ struct PhysicalDeviceInfo {
     float32              max_sampler_anisotropy;
     vk::SampleCountFlags framebuffer_color_sample_counts;
     vk::SampleCountFlags framebuffer_depth_sample_counts;
+    uint32               min_ubo_alignment;
 
     Vector<float32>        memory_size_in_gb;
     Vector<vk::MemoryType> memory_types;
     Vector<bool>           memory_is_local;
+    bool                   supports_device_local_host_visible_memory = false;
 
     // Swapchain
     std::function<SwapchainSupportDetails(const vk::SurfaceKHR&)>
@@ -53,16 +64,45 @@ struct PhysicalDeviceInfo {
     std::function<vk::FormatProperties(const vk::Format)> get_format_properties;
 };
 
+/**
+ * @brief Vulkan command buffer. Spawned and managed by the parent Vulkan
+ * command pool.
+ */
+struct VulkanCommandBuffer {
+    /// @brief Currently recorded frame
+    uint32                   current_frame;
+    /// @brief Handle to the currently recorded buffer
+    const vk::CommandBuffer* handle;
+
+    VulkanCommandBuffer(const Vector<vk::CommandBuffer>& buffers);
+    VulkanCommandBuffer(Vector<vk::CommandBuffer>&& buffers);
+
+    /**
+     * @brief Flushes contents and resets recording
+     * @param current_frame Index of the next frame
+     */
+    void reset(const uint32 current_frame);
+
+  private:
+    const Vector<vk::CommandBuffer> _buffers;
+};
+
 // Texture data
 #include "resources/texture.hpp"
 
 class VulkanImage;
 
+/**
+ * @brief Texture data specific to Vulkan
+ */
 struct VulkanTextureData : public InternalTextureData {
     VulkanImage* image;
     vk::Sampler  sampler;
 };
 
+/**
+ * @brief Vulkan geometry data packet
+ */
 struct VulkanGeometryData {
     uint32 vertex_count;
     uint32 vertex_size;

@@ -4,11 +4,15 @@
 #include "vulkan_render_pass.hpp"
 #include "vulkan_command_pool.hpp"
 #include "vulkan_managed_buffer.hpp"
-#include "shaders/vulkan_material_shader.hpp"
-#include "shaders/vulkan_ui_shader.hpp"
+#include "vulkan_shader.hpp"
+#include "vulkan_settings.hpp"
 
 #include "map.hpp"
 
+/**
+ * @brief Vulkan implementation of RendererBackend abstract class. Central class
+ * tasked with initializing and controlling all Vulkan renderer functionalities.
+ */
 class VulkanBackend : public RendererBackend {
   public:
     VulkanBackend(
@@ -24,24 +28,10 @@ class VulkanBackend : public RendererBackend {
     void begin_render_pass(uint8 render_pass_id);
     void end_render_pass(uint8 render_pass_id);
 
-    void update_global_world_state(
-        const glm::mat4 projection,
-        const glm::mat4 view,
-        const glm::vec3 view_position,
-        const glm::vec4 ambient_color,
-        const int32     mode
-    );
-    void update_global_ui_state(
-        const glm::mat4 projection, const glm::mat4 view, const int32 mode
-    );
-
     void draw_geometry(const GeometryRenderData data);
 
     void create_texture(Texture* texture, const byte* const data);
     void destroy_texture(Texture* texture);
-
-    void create_material(Material* const material);
-    void destroy_material(Material* const material);
 
     void create_geometry(
         Geometry*             geometry,
@@ -54,6 +44,9 @@ class VulkanBackend : public RendererBackend {
         const Vector<uint32>&   indices
     );
     void destroy_geometry(Geometry* geometry);
+
+    Shader* create_shader(const ShaderConfig config);
+    void    destroy_shader(Shader* shader);
 
   private:
     // TODO: Custom allocator
@@ -92,25 +85,20 @@ class VulkanBackend : public RendererBackend {
     VulkanRenderPass* _main_render_pass;
     VulkanRenderPass* _ui_render_pass;
 
-    // MATERIAL SHADER
-    VulkanMaterialShader* _material_shader;
-
-    // UI SHADER
-    VulkanUIShader* _ui_shader;
-
     // GEOMETRY CODE
     Map<uint32, VulkanGeometryData> _geometries;
 
     uint32 generate_geometry_id();
 
-    // TODO: TEMP COMMAND CODE
-    VulkanCommandPool*        _command_pool;
-    Vector<vk::CommandBuffer> _command_buffers;
+    // COMMAND CODE
+    VulkanCommandPool*   _command_pool;
+    VulkanCommandBuffer* _command_buffer;
 
     // TODO: TEMP BUFFER CODE
     VulkanManagedBuffer* _vertex_buffer;
     VulkanManagedBuffer* _index_buffer;
 
+    // Utility buffer methods
     void create_buffers();
     void upload_data_to_buffer(
         const void*          data,
@@ -119,7 +107,7 @@ class VulkanBackend : public RendererBackend {
         VulkanManagedBuffer* buffer
     );
 
-    // GEOMETRY
+    // Utility geometry methods
     void create_geometry_internal(
         Geometry*         geometry,
         const uint32      vertex_size,

@@ -2,6 +2,10 @@
 
 #include "renderer/vulkan/vulkan_settings.hpp"
 
+//------------------------------------------------------------------------------
+// Queue family indices
+//------------------------------------------------------------------------------
+
 bool QueueFamilyIndices::is_complete() const {
     return (!VulkanSettings::graphics_family_required ||
             graphics_family.has_value()) &&
@@ -20,6 +24,10 @@ Set<uint32> QueueFamilyIndices::get_unique_indices() const {
     unique_indices.erase(-1);
     return unique_indices;
 }
+
+//------------------------------------------------------------------------------
+// Swapchain support details
+//------------------------------------------------------------------------------
 
 vk::Extent2D SwapchainSupportDetails::get_extent(
     const uint32 width, const uint32 height
@@ -58,4 +66,25 @@ vk::PresentModeKHR SwapchainSupportDetails::get_presentation_mode() const {
             return presentation_mode;
     }
     return vk::PresentModeKHR::eFifo;
+}
+
+//------------------------------------------------------------------------------
+// Vulkan Command Buffer
+//------------------------------------------------------------------------------
+
+VulkanCommandBuffer::VulkanCommandBuffer(
+    const Vector<vk::CommandBuffer>& buffers
+)
+    : _buffers(buffers), current_frame(0) {
+    handle = &_buffers[current_frame];
+}
+VulkanCommandBuffer::VulkanCommandBuffer(Vector<vk::CommandBuffer>&& buffers)
+    : _buffers(buffers), current_frame(0) {
+    handle = &_buffers[current_frame];
+}
+
+void VulkanCommandBuffer::reset(const uint32 current_frame) {
+    this->current_frame = current_frame;
+    handle              = &_buffers[current_frame];
+    handle->reset();
 }

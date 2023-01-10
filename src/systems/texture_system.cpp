@@ -38,7 +38,7 @@ TextureSystem::~TextureSystem() {
 // ///////////////////////////// //
 
 Texture* TextureSystem::acquire(const String name, const bool auto_release) {
-    Logger::trace(TEXTURE_SYS_LOG, "Texture requested.");
+    Logger::trace(TEXTURE_SYS_LOG, "Texture \"", name, "\" requested.");
 
     // Check name validity
     if (name.length() > Texture::max_name_length) {
@@ -104,7 +104,8 @@ Texture* TextureSystem::acquire(const String name, const bool auto_release) {
 
     // Cache
     _registered_textures[s] = texture_ref;
-    Logger::trace(TEXTURE_SYS_LOG, "Texture acquired.");
+
+    Logger::trace(TEXTURE_SYS_LOG, "Texture \"", name, "\" acquired.");
     return texture_ref.handle;
 }
 
@@ -133,7 +134,7 @@ void TextureSystem::release(const String name) {
         _registered_textures.erase(s);
     }
 
-    Logger::trace(TEXTURE_SYS_LOG, "Texture released.");
+    Logger::trace(TEXTURE_SYS_LOG, "Texture \"", name, "\" released.");
 }
 
 // ////////////////////////////// //

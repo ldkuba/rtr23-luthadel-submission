@@ -4,16 +4,50 @@
 
 #define ALLOCATOR_LOG "Allocator :: "
 
+/**
+ * @brief Interface for a generic memory allocator. Provides elementary methods
+ * required of any allocator.
+ *
+ */
 class Allocator {
   public:
     Allocator(const uint64 total_size)
         : _total_size { total_size }, _used { 0 }, _peak { 0 } {}
     virtual ~Allocator();
 
+    /**
+     * @brief Initialize allocator. Must be called before any (de)allocation
+     * operations.
+     *
+     */
     virtual void  init();
+    /**
+     * @brief Allocate memory segment
+     *
+     * @param size Size requirement in bytes
+     * @param alignment Required memory alignment (by default disabled).
+     * @return void* to the beginning of the allocated segment
+     */
     virtual void* allocate(const uint64 size, const uint64 alignment = 0);
+    /**
+     * @brief Free allocated memory
+     *
+     * @param ptr Pointer to an allocated segment (Behavior for invalid input is
+     * determined by the specific allocator implementation)
+     */
     virtual void  free(void* ptr);
+    /**
+     * @brief Resets all allocations (Relevant only for some allocators)
+     *
+     */
     virtual void  reset();
+    /**
+     * @brief Checks if a memory location was allocated by this allocator
+     *
+     * @param ptr Pointer to a location in memory
+     * @returns true If relevant memory was allocated by this allocator
+     * @returns false Otherwise
+     */
     virtual bool  owns(void* ptr);
 
   protected:
@@ -25,10 +59,7 @@ class Allocator {
     static const uint64 calculate_padding(
         const uint64 base_address, const uint64 alignment
     ) {
-        if (base_address % alignment == 0) return 0;
-        const uint64 multiplier      = (base_address / alignment) + 1;
-        const uint64 aligned_address = multiplier * alignment;
-        return aligned_address - base_address;
+        return get_aligned(base_address, alignment) - base_address;
     }
 
     static const uint64 calculate_padding_with_header(

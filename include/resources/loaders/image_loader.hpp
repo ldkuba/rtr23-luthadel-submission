@@ -2,6 +2,10 @@
 
 #include "resource_loader.hpp"
 
+/**
+ * @brief Resource loader that handles image files.
+ *
+ */
 class ImageLoader : public ResourceLoader {
   public:
     ImageLoader();

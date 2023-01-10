@@ -6,6 +6,10 @@
 
 #include <optional>
 
+/**
+ * @brief Abstract resource class. For a resource to be loadable with a resource
+ * loader it needs to extend this class.
+ */
 class Resource {
   public:
     /// @brief Unique resource identifier
@@ -35,6 +39,11 @@ class Resource {
         }
     };
 
+    /**
+     * @brief Construct a new Resource object
+     *
+     * @param name Resource name. Most likely a nonempty string.
+     */
     Resource(String name);
     ~Resource();
 

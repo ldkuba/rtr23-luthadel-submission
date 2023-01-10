@@ -46,12 +46,12 @@ vk::CommandBuffer VulkanCommandPool::allocate_command_buffer(const bool primary
 }
 
 Vector<vk::CommandBuffer> VulkanCommandPool::allocate_command_buffers(
-    const uint32 size, const bool primary
+    const uint32 count, const bool primary
 ) const {
     // Allocate command buffers from the pool
     vk::CommandBufferAllocateInfo alloc_info {};
     alloc_info.setCommandPool(_command_pool); // Pool reference
-    alloc_info.setCommandBufferCount(size);   // Number of buffers to be created
+    alloc_info.setCommandBufferCount(count);  // Number of buffers to be created
     // Command buffer level. Secondary command buffers cannot be submitted
     // directly to the device queue, Instead they are used by primary command
     // buffers.
@@ -68,6 +68,13 @@ Vector<vk::CommandBuffer> VulkanCommandPool::allocate_command_buffers(
     }
 
     return command_buffers;
+}
+VulkanCommandBuffer* VulkanCommandPool::allocate_managed_command_buffer(
+    const bool primary
+) const {
+    const auto buffers =
+        allocate_command_buffers(VulkanSettings::max_frames_in_flight, primary);
+    return new VulkanCommandBuffer(buffers);
 }
 
 void VulkanCommandPool::free_command_buffer(vk::CommandBuffer& command_buffer

@@ -3,10 +3,21 @@
 #include "vulkan_buffer.hpp"
 #include "memory_allocators/gpu_free_list_allocator.hpp"
 
+/**
+ * @brief Managed specification of VulkanBuffer. Utilizes a client side Free
+ * list allocation method for on-device memory management of the buffer it
+ * allocates.
+ */
 class VulkanManagedBuffer : public VulkanBuffer {
   public:
     using VulkanBuffer::VulkanBuffer;
 
+    /**
+     * @brief Construct a new Vulkan Managed Buffer object
+     *
+     * @param device Vulkan device reference
+     * @param allocator Allocation callback used
+     */
     VulkanManagedBuffer(
         const VulkanDevice* const            device,
         const vk::AllocationCallbacks* const allocator
@@ -25,7 +36,7 @@ class VulkanManagedBuffer : public VulkanBuffer {
         const vk::BufferUsageFlags    usage,
         const vk::MemoryPropertyFlags properties,
         const bool                    bind_on_create = true
-    );
+    ) override;
 
     /// @brief Resize buffer
     /// @param command_buffer Command buffer to witch the resize command will be
@@ -33,7 +44,7 @@ class VulkanManagedBuffer : public VulkanBuffer {
     /// @param new_size New buffer size in bytes
     void resize(
         const vk::CommandBuffer& command_buffer, const vk::DeviceSize new_size
-    );
+    ) override;
 
     /// @brief Upload data to buffer. If the region denoted by the offset and
     /// size isn't fully allocated raises segmentation error.
@@ -44,12 +55,12 @@ class VulkanManagedBuffer : public VulkanBuffer {
         const void* const    data,
         const vk::DeviceSize offset,
         const vk::DeviceSize size
-    ) const;
+    ) const override;
 
     /// @brief Allocates buffer memory.
     /// @param size Requested allocation size
     /// @returns In buffer offset at which the allocated region starts.
-    vk::DeviceSize allocate(uint64 size);
+    vk::DeviceSize allocate(const uint64 size, const uint64 alignment = 8);
 
     /// @brief Deallocates part of the buffer memory.
     /// @param offset In buffer offset at which the allocated region starts.

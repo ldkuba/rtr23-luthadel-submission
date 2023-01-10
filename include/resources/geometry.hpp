@@ -2,6 +2,9 @@
 
 #include "material.hpp"
 
+/**
+ * @brief Represents a virtual geometry. Usually paired with a material.
+ */
 class Geometry : public Resource {
   public:
     /// @brief Id used by the Renderer

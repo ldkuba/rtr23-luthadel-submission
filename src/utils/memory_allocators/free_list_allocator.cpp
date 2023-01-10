@@ -24,9 +24,9 @@ void* FreeListAllocator::allocate(const uint64 size, const uint64 alignment) {
             sizeof(Node),
             ", which is sizeof(Node)."
         );
-    if (alignment < 8)
+    if (alignment < 4)
         Logger::fatal(
-            ALLOCATOR_LOG, "Free list allocation alignment must be at least 8."
+            ALLOCATOR_LOG, "Free list allocation alignment must be at least 4."
         );
 
     // Search through the free list for a free block that has enough space to

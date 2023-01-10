@@ -4,11 +4,11 @@
 
 // Constructor & Destructor
 VulkanSwapchain::VulkanSwapchain(
+    const VulkanDevice* const            device,
+    const vk::AllocationCallbacks* const allocator,
     const uint32                         width,
     const uint32                         height,
-    const vk::SurfaceKHR                 vulkan_surface,
-    const VulkanDevice* const            device,
-    const vk::AllocationCallbacks* const allocator
+    const vk::SurfaceKHR                 vulkan_surface
 )
     : _width(width), _height(height), _vulkan_surface(vulkan_surface),
       _device(device), _allocator(allocator) {
@@ -133,9 +133,10 @@ void VulkanSwapchain::present(
     present_info.setWaitSemaphores(wait_for_semaphores);
     // List of presenting swapchains
     present_info.setSwapchains(swapchains);
-    // Index of presenting image for each swapchain. Check if presentation is
-    // successful for each swapchain (not needed, as there is only 1)
+    // Index of presenting image for each swapchain.
     present_info.setPImageIndices(&_current_image_index);
+    // Check if presentation is successful for each swapchain (not needed, as
+    // there is only 1 swapchain)
     present_info.setPResults(nullptr);
 
     try {

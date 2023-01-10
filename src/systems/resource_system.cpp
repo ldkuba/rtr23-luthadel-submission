@@ -3,6 +3,7 @@
 #include "resources/loaders/image_loader.hpp"
 #include "resources/loaders/material_loader.hpp"
 #include "resources/loaders/binary_loader.hpp"
+#include "resources/loaders/shader_loader.hpp"
 
 #define RESOURCE_SYS_LOG "ResourceSystem :: "
 
@@ -15,6 +16,8 @@ ResourceSystem::ResourceSystem() {
     loader = new (MemoryTag::System) MaterialLoader();
     register_loader(loader);
     loader = new (MemoryTag::System) BinaryLoader();
+    register_loader(loader);
+    loader = new (MemoryTag::System) ShaderLoader();
     register_loader(loader);
 
     Logger::trace(RESOURCE_SYS_LOG, "Resource system initialized.");

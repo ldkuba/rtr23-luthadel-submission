@@ -5,6 +5,9 @@
 #define APP_NAME "Vulkan Engine"
 #define ENGINE_NAMESPACE engine_namespace
 
+// -----------------------------------------------------------------------------
+// TYPES
+// -----------------------------------------------------------------------------
 // byte
 typedef char          byte;
 typedef unsigned char ubyte;
@@ -58,6 +61,12 @@ static_assert(sizeof(float128) == 16, "Expected a 16 byte long float128.");
 #define INT128_MAX ((int128) (UINT128_MAX / 2))
 #define INT128_MIN ((int128) - (UINT128_MAX / 2 + 1))
 
+// String constant expresion attribute
+#define STRING_CONST(x) constexpr static const char* const x = #x
+
+// -----------------------------------------------------------------------------
+// PLATFORMS
+// -----------------------------------------------------------------------------
 // List of supported platforms
 #define LINUX 1
 #define WINDOWS32 2
@@ -79,3 +88,8 @@ static_assert(sizeof(float128) == 16, "Expected a 16 byte long float128.");
 #        error "Cant compile on this platform.";
 #    endif
 #endif
+
+// Some widly used methods
+inline uint64 get_aligned(uint64 operand, uint64 granularity) {
+    return ((operand + (granularity - 1)) & ~(granularity - 1));
+}

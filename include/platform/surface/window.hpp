@@ -6,6 +6,9 @@
 
 #    include <GLFW/glfw3.h>
 
+/**
+ * @brief Implementation of Window, as a surface type.
+ */
 class Window : public Platform::Surface {
   public:
     Window(int32 width, int32 height, std::string name);

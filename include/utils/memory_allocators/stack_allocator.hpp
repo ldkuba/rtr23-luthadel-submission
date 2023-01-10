@@ -2,6 +2,12 @@
 
 #include "allocator.hpp"
 
+/**
+ * @brief Stack allocator. Reserves a chunk of memory which then operates like a
+ * LIFO queue (stack). Allocations take memory from the top of the stack, while
+ * deallocations deallocate all memory higher on the stack.
+ *
+ */
 class StackAllocator : public Allocator {
   public:
     StackAllocator(const uint64 total_size);

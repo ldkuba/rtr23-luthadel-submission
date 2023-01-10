@@ -2,6 +2,10 @@
 
 #include "material_system.hpp"
 
+/**
+ * @brief Geometry system is responsible for the management of geometries, as
+ * well as reference counting.
+ */
 class GeometrySystem {
   public:
     /// @brief Default fallback geometry
@@ -13,6 +17,12 @@ class GeometrySystem {
         GET { return _default_2d_geometry; }
     };
 
+    /**
+     * @brief Construct a new Geometry System object
+     *
+     * @param renderer Renderer used by the system
+     * @param material_system Material system used
+     */
     GeometrySystem(
         Renderer* const renderer, MaterialSystem* const material_system
     );
@@ -82,6 +92,10 @@ class GeometrySystem {
     void create_default_geometries();
 };
 
+#ifndef GEOMETRY_SYS_LOG
+#    define GEOMETRY_SYS_LOG "GeometrySystem :: "
+#endif // !GEOMETRY_SYS_LOG
+
 inline uint32 generate_id() { // TODO: TEMP
     static uint32 id = 0;
     return id++;
@@ -94,6 +108,8 @@ Geometry* GeometrySystem::acquire(
     const String              material_name,
     bool                      auto_release
 ) {
+    Logger::trace(GEOMETRY_SYS_LOG, "Geometry \"", name, "\" requested.");
+
     // Generate unique id
     auto id = generate_id();
 
@@ -114,5 +130,8 @@ Geometry* GeometrySystem::acquire(
             ref.handle->material = _material_system->default_material();
     }
 
+    Logger::trace(GEOMETRY_SYS_LOG, "Geometry \"", name, "\" acquired.");
     return ref.handle;
 }
+
+#undef GEOMETRY_SYS_LOG

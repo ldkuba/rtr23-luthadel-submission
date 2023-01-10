@@ -2,8 +2,18 @@
 
 #include "allocator.hpp"
 
+/**
+ * @brief Standard C allocator. Uses malloc() and free() for allocation and
+ * deallocation respectively. Initialization of this allocator is unnecessary.
+ * Method own() will return false only for a nullptr. Reset does nothing.
+ *
+ */
 class CAllocator : public Allocator {
   public:
+    /**
+     * @brief Construct a new CAllocator object
+     *
+     */
     CAllocator();
     virtual ~CAllocator();
 

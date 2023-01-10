@@ -2,6 +2,9 @@
 
 #include "vulkan_device.hpp"
 
+/**
+ * @brief Vulkan implementation of an on-device image.
+ */
 class VulkanImage {
   public:
     /// @brief Handle to the vk::Image
@@ -30,6 +33,12 @@ class VulkanImage {
         GET { return _mip_levels; }
     };
 
+    /**
+     * @brief Construct a new Vulkan Image object
+     *
+     * @param device Vulkan device reference
+     * @param allocator Allocation callback used
+     */
     VulkanImage(
         const VulkanDevice* const            device,
         const vk::AllocationCallbacks* const allocator

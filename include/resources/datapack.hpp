@@ -2,6 +2,9 @@
 
 #include "resource.hpp"
 
+/**
+ * @brief Binary data resource. Container for resources loaded form binary.
+ */
 class ByteArrayData : public Resource {
   public:
     /// @brief Binary data
@@ -12,6 +15,9 @@ class ByteArrayData : public Resource {
     ~ByteArrayData() {}
 };
 
+/**
+ * @brief Plain text resource. Container for data loaded from a text file
+ */
 class TextData : public Resource {
   public:
     /// @brief Text data

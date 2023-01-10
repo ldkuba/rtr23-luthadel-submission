@@ -4,8 +4,12 @@
 
 struct InternalTextureData {};
 
+/// @brief Collection of texture uses
 enum TextureUse { Unknown, MapDiffuse };
 
+/**
+ * @brief Frontend (API agnostic) representation of a texture.
+ */
 class Texture {
   public:
     /// @brief Unique texture id
@@ -40,6 +44,17 @@ class Texture {
         SET { _internal_data = value; }
     };
 
+    /**
+     * @brief Construct a new Texture object
+     *
+     * @param name Texture name
+     * @param width Texture width in pixels
+     * @param height Texture height in pixels
+     * @param channel_count Channel count (Typically up to 4). If used,
+     * transparency channel is counted.
+     * @param has_transparency True if texture uses transparency (Has alpha
+     * chanel)
+     */
     Texture(
         const String name,
         const int32  width,

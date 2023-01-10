@@ -92,8 +92,22 @@ void VulkanBuffer::load_data(
 ) const {
     // Map buffer memory into a CPU accessible memory
     auto data_ptr = _device->handle().mapMemory(memory, offset, size);
-    memcpy(data_ptr, data, (size_t) size); // Copy data to the assigned memory
-    _device->handle().unmapMemory(memory); // Unmap the memory
+    // Copy data to the assigned memory
+    memcpy(data_ptr, data, (size_t) size);
+    // Unmap the memory
+    _device->handle().unmapMemory(memory);
+}
+
+void* VulkanBuffer::lock_memory(
+    const vk::DeviceSize offset, const vk::DeviceSize size
+) {
+    // Map buffer memory into a CPU accessible memory
+    auto data_ptr = _device->handle().mapMemory(memory, offset, size);
+    return data_ptr;
+}
+void VulkanBuffer::unlock_memory() {
+    // Unmap the memory
+    _device->handle().unmapMemory(memory);
 }
 
 void VulkanBuffer::copy_data_to_buffer(

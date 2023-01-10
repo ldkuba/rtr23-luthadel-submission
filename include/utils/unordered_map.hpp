@@ -38,7 +38,8 @@ class UnorderedMap
     typedef std::unordered_map<_Key, _Tp, _Hash, _Pred, allocator_type>
                                                         _base_class;
     typedef std::unordered_map<_Key, _Tp, _Hash, _Pred> default_version;
-    typedef std::__umap_hashtable<_Key, _Tp, _Hash, _Pred, allocator_type>
+    typedef std::__cxx1998::
+        __umap_hashtable<_Key, _Tp, _Hash, _Pred, allocator_type>
                                            _Hashtable;
     typedef typename _Hashtable::hasher    hasher;
     typedef typename _Hashtable::key_equal key_equal;
@@ -125,4 +126,22 @@ class UnorderedMap
         const allocator_type&      __a   = allocator_type(MemoryTag::Map)
     )
         : _base_class(__l, __n, __hf, __eql, __a) {}
+
+  public: // Additions
+
+    /**
+     * @brief Check whether the %UnorderedMap contains a given key.
+     *
+     * @param __key Key to search for.
+     * @returns true if %UnorderedMap contains the key; false otherwise.
+     */
+    bool contains(const _Key& __key) const {
+        const auto& i = this->find(__key);
+        return i != this->end();
+    }
+    // Move version
+    bool contains(_Key&& __key) const {
+        const auto& i = this->find(__key);
+        return i != this->end();
+    }
 };

@@ -3,6 +3,13 @@
 #include "delegate.hpp"
 #include "vector.hpp"
 
+/**
+ * @brief Event object. When invoked (when triggered) also invokes all
+ * subscribing functions with same function arguments.
+ *
+ * @tparam R Return type
+ * @tparam Args Argument types
+ */
 template<typename R, typename... Args>
 class Event {
   private:
@@ -90,6 +97,12 @@ class Event {
     inline R    operator()(Args... arguments) { return invoke(arguments...); }
 };
 
+/**
+ * @brief Event object. When invoked (when triggered) also invokes all
+ * subscribing functions with same function arguments.
+ *
+ * @tparam Args Argument types
+ */
 template<typename... Args>
 class Event<void, Args...> {
   private:

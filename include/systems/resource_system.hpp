@@ -4,11 +4,18 @@
 
 #include "unordered_map.hpp"
 
+/**
+ * @brief Resource system manages resources and their loaders in the engine.
+ */
 class ResourceSystem {
   public:
     /// @brief Base path to assets Folder
     static String base_path;
 
+    /**
+     * @brief Construct a new Resource System object
+     *
+     */
     ResourceSystem();
     ~ResourceSystem();
 

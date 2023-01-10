@@ -2,10 +2,25 @@
 
 #include <vulkan/vulkan.hpp>
 
+#include "vulkan_types.hpp"
 #include "logger.hpp"
 
+/**
+ * @brief Vulkan command pool. This class is used for spawning and managing
+ * individual Vulkan Command Buffers and issuing single-time commands.
+ */
 class VulkanCommandPool {
   public:
+
+    /**
+     * @brief Construct a new Vulkan Command Pool object
+     *
+     * @param device Vulkan device reference
+     * @param allocator Allocation callback used
+     * @param queue Reference to a Queue to which the command pool commands will
+     * be send
+     * @param queue_index Index of referenced pool
+     */
     VulkanCommandPool(
         const vk::Device* const              device,
         const vk::AllocationCallbacks* const allocator,
@@ -20,10 +35,19 @@ class VulkanCommandPool {
     vk::CommandBuffer allocate_command_buffer(const bool primary = true) const;
     /// @brief Allocate vulkan command buffers from the pool
     /// @param primary Specify whether created buffers are primary buffers
+    /// @param count Total buffer count
     /// @returns Created and allocated buffers
     Vector<vk::CommandBuffer> allocate_command_buffers(
-        const uint32 size, const bool primary = true
+        const uint32 count, const bool primary = true
     ) const;
+    /// @brief Allocate managed vulkan command buffer from the pool. Creates one
+    /// per frame
+    /// @param primary Specify whether created buffers are primary buffers
+    /// @returns Created and allocated VulkanBuffers
+    VulkanCommandBuffer* allocate_managed_command_buffer(
+        const bool primary = true
+    ) const;
+
     /// @brief Returns command buffer to the pool
     /// @param command_buffer Buffer to free
     void free_command_buffer(vk::CommandBuffer& command_buffer) const;

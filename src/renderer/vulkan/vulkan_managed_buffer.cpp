@@ -38,8 +38,10 @@ void VulkanManagedBuffer::load_data(
     VulkanBuffer::load_data(data, offset, size);
 }
 
-vk::DeviceSize VulkanManagedBuffer::allocate(uint64 size) {
-    return (vk::DeviceSize) _memory_allocator->allocate(size, 8);
+vk::DeviceSize VulkanManagedBuffer::allocate(
+    const uint64 size, const uint64 alignment
+) {
+    return (vk::DeviceSize) _memory_allocator->allocate(size, alignment);
 }
 void VulkanManagedBuffer::deallocate(vk::DeviceSize offset) {
     _memory_allocator->free((void*) offset);

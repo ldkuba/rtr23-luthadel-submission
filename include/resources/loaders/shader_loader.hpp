@@ -3,15 +3,13 @@
 #include "resource_loader.hpp"
 
 /**
- * @brief Resource loader that handles plain text resources.
+ * @brief Resource loader that handles shader config resources.
  */
-class TextLoader : public ResourceLoader {
+class ShaderLoader : public ResourceLoader {
   public:
-    TextLoader();
-    ~TextLoader();
+    ShaderLoader();
+    ~ShaderLoader();
 
     Result<Resource*, RuntimeError> load(const String name);
     void                            unload(Resource* resource);
-
-  private:
 };

@@ -1,7 +1,11 @@
 #pragma once
 
-#include "texture_system.hpp"
+#include "shader_system.hpp"
 
+/**
+ * @brief Material system is responsible for management of materials in the
+ * engine, including reference counting an auto-unloading.
+ */
 class MaterialSystem {
   public:
     /// @brief Default fallback material
@@ -9,10 +13,19 @@ class MaterialSystem {
         GET { return _default_material; }
     };
 
+    /**
+     * @brief Construct a new Material System object
+     *
+     * @param renderer Renderer used by the system
+     * @param resource_system Resource system used
+     * @param texture_system Texture system used
+     * @param shader_system Shader system used
+     */
     MaterialSystem(
         Renderer* const       renderer,
         ResourceSystem* const resource_system,
-        TextureSystem* const  texture_system
+        TextureSystem* const  texture_system,
+        ShaderSystem* const   shader_system
     );
     ~MaterialSystem();
 
@@ -51,6 +64,7 @@ class MaterialSystem {
     Renderer*       _renderer;
     ResourceSystem* _resource_system;
     TextureSystem*  _texture_system;
+    ShaderSystem*   _shader_system;
 
     const uint64 _max_material_count    = 1024;
     const String _default_material_name = "default";
@@ -60,11 +74,6 @@ class MaterialSystem {
 
     void create_default_material();
 
-    Material* crete_material(
-        const String       name,
-        const MaterialType type,
-        const String       diffuse_material_name,
-        const glm::vec4    diffuse_color
-    );
-    void destroy_material(Material* material);
+    Result<MaterialRef, bool> create_material(const MaterialConfig config);
+    void                      destroy_material(Material* material);
 };

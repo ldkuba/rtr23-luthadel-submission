@@ -40,6 +40,7 @@ enum class MemoryTag : MEMORY_TAG_TYPE {
     Texture,
     MaterialInstance,
     Geometry,
+    Shader,
     // === Game allocations ===
     Game,
     Job,

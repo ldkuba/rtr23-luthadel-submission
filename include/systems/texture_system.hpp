@@ -3,6 +3,10 @@
 #include "renderer/renderer.hpp"
 #include "resource_system.hpp"
 
+/**
+ * @brief Texture system is responsible for management of textures in the
+ * engine, including reference counting an auto-unloading.
+ */
 class TextureSystem {
   public:
     /// @brief Default fallback texture
@@ -10,6 +14,12 @@ class TextureSystem {
         GET { return _default_texture; }
     };
 
+    /**
+     * @brief Construct a new Texture System object
+     *
+     * @param renderer Renderer used by the system
+     * @param resource_system Resource system used
+     */
     TextureSystem(
         Renderer* const renderer, ResourceSystem* const resource_system
     );

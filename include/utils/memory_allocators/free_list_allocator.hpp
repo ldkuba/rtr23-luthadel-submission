@@ -3,10 +3,26 @@
 #include "allocator.hpp"
 #include "singly_linked_list.hpp"
 
+/**
+ * @brief Free list allocator. Reserves a continuous chunk of memory which it
+ * then manages using a free list. Allows for allocations of any size, but isn't
+ * all that memory efficient for a high volume of super small size allocations.
+ * If a specific allocation is too small produces a warning. Owns method will
+ * return true if given memory location is within the initial reserve.
+ *
+ */
 class FreeListAllocator : public Allocator {
   public:
     enum PlacementPolicy { FindFirst, FindBest };
 
+    /**
+     * @brief Construct a new Free List Allocator object
+     *
+     * @param total_size Maximum possible total size this allocator can
+     * allocate
+     * @param placement_policy Placement placement policy used when deciding
+     * which of the free segments will be used for allocation
+     */
     FreeListAllocator(
         const uint64 total_size, const PlacementPolicy placement_policy
     );

@@ -3,9 +3,12 @@
 #include "resources/geometry.hpp"
 
 // Vertex
+/**
+ * @brief Vertex in 3D space
+ *
+ */
 struct Vertex3D {
     glm::vec3 position;
-    glm::vec3 color;
     glm::vec2 texture_coord;
 
     bool operator==(const Vertex3D& other) const {
@@ -14,6 +17,10 @@ struct Vertex3D {
     }
 };
 
+/**
+ * @brief Vertex in 2D plane
+ *
+ */
 struct Vertex2D {
     glm::vec2 position;
     glm::vec2 texture_coord;
@@ -30,18 +37,21 @@ namespace std {
 template<>
 struct hash<Vertex> {
     size_t operator()(Vertex const& vertex) const {
-        return ((hash<glm::vec3>()(vertex.position) ^
-                 (hash<glm::vec3>()(vertex.color) << 1)) >>
-                1) ^
-               (hash<glm::vec2>()(vertex.texture_coord) << 1);
+        return hash<glm::vec3>()(vertex.position) ^
+               hash<glm::vec2>()(vertex.texture_coord);
     }
 };
 } // namespace std
 
 // Render data
+/**
+ * @brief List of builtin render passes
+ */
 enum BuiltinRenderPass : uint8 { World = 0x1, UI = 0x2 };
 
+/**
+ * @brief Geometry render packet
+ */
 struct GeometryRenderData {
-    glm::mat4 model;
     Geometry* geometry;
 };

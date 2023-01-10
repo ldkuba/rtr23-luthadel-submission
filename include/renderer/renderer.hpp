@@ -2,10 +2,24 @@
 
 #include "renderer/vulkan/vulkan_backend.hpp"
 
+/**
+ * @brief List of supported backend APIs
+ */
 enum RendererBackendType { Vulkan };
 
+/**
+ * @brief The renderer frontend. Interacts with the device using the backend, in
+ * a API agnostic way.
+ */
 class Renderer {
   public:
+    /**
+     * @brief Construct a new Renderer object
+     *
+     * @param backend_type Rendering API used for backend.
+     * @param surface A pointer to the render surface
+     * @param resource_system Resource system used for accessing stored data
+     */
     Renderer(
         const RendererBackendType backend_type,
         Platform::Surface* const  surface,
@@ -20,6 +34,8 @@ class Renderer {
     // TODO: TEMP TEST CODE
     Geometry* current_geometry    = nullptr;
     Geometry* current_ui_geometry = nullptr;
+    Shader*   material_shader     = nullptr;
+    Shader*   ui_shader           = nullptr;
     // TODO: TEMP TEST CODE END
 
     /**
@@ -51,17 +67,6 @@ class Renderer {
     void destroy_texture(Texture* texture);
 
     /**
-     * @brief Create a material and upload its relevant data to the GPU
-     * @param material Material to be uploaded
-     */
-    void create_material(Material* const material);
-    /**
-     * @brief Destroy material and free its corresponding GPU resources
-     * @param material Material to be destroyed
-     */
-    void destroy_material(Material* const material);
-
-    /**
      * @brief Create a geometry and upload its relevant data to the GPU
      * @tparam VertexType Vertex (Vertex3D) or Vertex2D
      * @param geometry Geometry to be uploaded
@@ -79,6 +84,18 @@ class Renderer {
      * @param geometry Geometry to be destroyed
      */
     void destroy_geometry(Geometry* geometry);
+
+    /**
+     * @brief Create a shader object and upload relevant data to the GPU
+     * @param config Shader configuration
+     * @return Pointer referencing the shader created object
+     */
+    Shader* create_shader(const ShaderConfig config);
+    /**
+     * @brief Destroy shader and free its corresponding GPU resources
+     * @param shader Shader to be destroyed.
+     */
+    void    destroy_shader(Shader* shader);
 
   private:
     RendererBackend* _backend         = nullptr;

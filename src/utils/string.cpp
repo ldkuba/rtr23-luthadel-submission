@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include "logger.hpp"
+#include "property.hpp"
 
 template<typename T>
 Result<T, InvalidArgument> parse_uint(
@@ -28,6 +29,14 @@ string to_string(const uint128& in) {
 string to_string(const int128& in) {
     if (in > 0) return to_string((uint128) in);
     return "-" + to_string((uint128) -in);
+}
+template<typename T>
+string to_string(const Property<T>& in) {
+    return std::to_string(in());
+}
+template<>
+string to_string<String>(const Property<String>& in) {
+    return in();
 }
 } // namespace std
 

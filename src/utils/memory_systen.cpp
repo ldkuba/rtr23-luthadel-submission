@@ -80,6 +80,7 @@ Allocator** MemorySystem::initialize_allocator_map() {
     allocator_map[(MEMORY_TAG_TYPE) MemoryTag::MaterialInstance] =
         material_pool;
     allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Geometry]   = unknown_allocator;
+    allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Shader]     = resource_allocator;
     // Game
     allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Game]       = init_allocator;
     allocator_map[(MEMORY_TAG_TYPE) MemoryTag::Job]        = unknown_allocator;

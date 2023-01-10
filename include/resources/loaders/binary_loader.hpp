@@ -2,6 +2,9 @@
 
 #include "resource_loader.hpp"
 
+/**
+ * @brief A resource loader that handles binary files.
+ */
 class BinaryLoader : public ResourceLoader {
   public:
     BinaryLoader();

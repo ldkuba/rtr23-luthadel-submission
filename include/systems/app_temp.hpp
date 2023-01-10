@@ -24,9 +24,12 @@ class TestApplication {
                              &_resource_system };
 
     TextureSystem  _texture_system { &_app_renderer, &_resource_system };
-    MaterialSystem _material_system { &_app_renderer,
-                                      &_resource_system,
-                                      &_texture_system };
+    ShaderSystem   _shader_system { &_app_renderer,
+                                  &_resource_system,
+                                  &_texture_system };
+    MaterialSystem _material_system {
+        &_app_renderer, &_resource_system, &_texture_system, &_shader_system
+    };
     GeometrySystem _geometry_system { &_app_renderer, &_material_system };
 
     float32 calculate_delta_time();
@@ -39,6 +42,11 @@ inline TestApplication::TestApplication() {}
 inline TestApplication::~TestApplication() { delete _app_surface; }
 
 inline void TestApplication::run() {
+    _app_renderer.material_shader =
+        _shader_system.acquire("builtin.material_shader").expect("ERR1");
+    _app_renderer.ui_shader =
+        _shader_system.acquire("builtin.ui_shader").expect("ERR2");
+
     Vector<Vertex> vertices = {};
     Vector<uint32> indices  = {};
     load_model(vertices, indices);
@@ -46,7 +54,7 @@ inline void TestApplication::run() {
         "viking_room", vertices, indices, "viking_room"
     );
 
-    float32          side       = 512.0f;
+    float32          side       = 128.0f;
     Vector<Vertex2D> vertices2d = {
         { glm::vec2(0.0f, 0.0f), glm::vec2(0.0f, 0.0f) },
         { glm::vec2(side, side), glm::vec2(1.0f, 1.0f) },
@@ -116,8 +124,6 @@ inline void load_model(
                 attributes.texcoords[2 * index.texcoord_index + 0],
                 1.0f - attributes.texcoords[2 * index.texcoord_index + 1]
             };
-
-            vertex.color = { 1.0f, 1.0f, 1.0f };
 
             if (unique_vertices.count(vertex) == 0) {
                 unique_vertices[vertex] =

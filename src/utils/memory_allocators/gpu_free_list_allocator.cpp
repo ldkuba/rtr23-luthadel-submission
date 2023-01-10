@@ -24,6 +24,7 @@ void GPUFreeListAllocator::init() { this->reset(); }
 void* GPUFreeListAllocator::allocate(
     const uint64 size, const uint64 alignment
 ) {
+#ifdef WARN_FREE_LIST_SIZE_FOR_GPU
     if (size < sizeof(Node))
         Logger::warning(
             ALLOCATOR_LOG,
@@ -31,9 +32,10 @@ void* GPUFreeListAllocator::allocate(
             sizeof(Node),
             ", which is sizeof(Node)."
         );
-    if (alignment < 8)
+#endif // DEBUG
+    if (alignment < 4)
         Logger::fatal(
-            ALLOCATOR_LOG, "Free list allocation alignment must be at least 8."
+            ALLOCATOR_LOG, "Free list allocation alignment must be at least 4."
         );
 
     // Search through the free list for a free block that has enough space to
@@ -47,6 +49,7 @@ void* GPUFreeListAllocator::allocate(
             ALLOCATOR_LOG, "Free list allocator out of memory error."
         );
 
+    const uint64 offset        = affected_node->offset;
     const uint64 required_size = size + padding;
     const uint64 rest          = affected_node->block_size - required_size;
 
@@ -61,7 +64,7 @@ void* GPUFreeListAllocator::allocate(
     _free_list.erase_after(previous_node);
 
     // Setup data block
-    const uint64 data_address = affected_node->offset + padding;
+    const uint64 data_address = offset + padding;
     _allocated[data_address]  = { required_size, (uint8) padding };
 
     // Debug vars

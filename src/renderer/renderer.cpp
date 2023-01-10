@@ -32,36 +32,52 @@ Result<void, RuntimeError> Renderer::draw_frame(const float32 delta_time) {
 
     // === World shader ===
     _backend->begin_render_pass(BuiltinRenderPass::World);
+    material_shader->use();
+    Material* current_material = current_geometry->material;
 
     // Update global state
-    _backend->update_global_world_state(
-        _projection, _view, glm::vec3(0.0), glm::vec4(1.0), 0
-    );
+    current_material->apply_global(_projection, _view);
 
+    // Update instances
+    current_material->apply_instance();
+
+    // Update locals
     // TODO: Temp code; update one and only object
     static float rotation = 0.0f;
     rotation += 50.0f * delta_time;
-    GeometryRenderData data = {};
-    data.model              = glm::rotate(
+    auto model = glm::rotate(
         glm::mat4(1.0f), glm::radians(rotation), glm::vec3(0.0f, 0.0f, 1.0f)
     );
-    data.geometry = current_geometry;
+    current_material->apply_local(model);
 
+    // Draw geometry
+    GeometryRenderData data = {};
+    data.geometry           = current_geometry;
     _backend->draw_geometry(data);
 
+    // End renderpass
     _backend->end_render_pass(BuiltinRenderPass::World);
 
     // === UI changes ===
     _backend->begin_render_pass(BuiltinRenderPass::UI);
+    ui_shader->use();
+    Material* ui_material = current_ui_geometry->material;
 
     // Update global state
-    _backend->update_global_ui_state(_projection_ui, _view_ui, 0);
+    ui_material->apply_global(_projection_ui, _view_ui);
 
-    data          = {};
-    data.model    = glm::mat4(1.0f);
+    // Update instance
+    ui_material->apply_instance();
+
+    // Update local
+    model = glm::mat4(1.0f);
+    ui_material->apply_local(model);
+
+    // Draw UI
     data.geometry = current_ui_geometry;
     _backend->draw_geometry(data);
 
+    // End renderpass
     _backend->end_render_pass(BuiltinRenderPass::UI);
 
     // === END FRAME ===
@@ -86,17 +102,18 @@ void Renderer::destroy_texture(Texture* texture) {
     Logger::trace(RENDERER_LOG, "Texture destroyed.");
 }
 
-void Renderer::create_material(Material* const material) {
-    Logger::trace(RENDERER_LOG, "Creating material.");
-    _backend->create_material(material);
-    Logger::trace(RENDERER_LOG, "Material created.");
-}
-void Renderer::destroy_material(Material* const material) {
-    _backend->destroy_material(material);
-    Logger::trace(RENDERER_LOG, "Material destroyed.");
-}
-
 void Renderer::destroy_geometry(Geometry* geometry) {
     _backend->destroy_geometry(geometry);
     Logger::trace(RENDERER_LOG, "Geometry destroyed.");
+}
+
+Shader* Renderer::create_shader(const ShaderConfig config) {
+    Logger::trace(RENDERER_LOG, "Creating shader.");
+    auto ret = _backend->create_shader(config);
+    Logger::trace(RENDERER_LOG, "Shader created.");
+    return ret;
+}
+void Renderer::destroy_shader(Shader* shader) {
+    _backend->destroy_shader(shader);
+    Logger::trace(RENDERER_LOG, "Shader destroyed.");
 }

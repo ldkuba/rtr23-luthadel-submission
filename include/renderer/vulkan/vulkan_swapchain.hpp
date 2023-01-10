@@ -3,6 +3,11 @@
 #include "vulkan_image.hpp"
 #include "vulkan_framebuffer.hpp"
 
+/**
+ * @brief Vulkan implementation of a swapchain. Utilizes framebuffers,
+ * attachments and a surface to present the (rendered) image to the screen.
+ *
+ */
 class VulkanSwapchain {
   public:
     /// @brief Swapchain image extent
@@ -14,12 +19,21 @@ class VulkanSwapchain {
         GET { return _msaa_samples; }
     };
 
+    /**
+     * @brief Construct a new Vulkan Swapchain object
+     *
+     * @param device Vulkan device reference
+     * @param allocator Allocation callback used
+     * @param width Swapchain width in pixels
+     * @param height Swapchain height in pixels
+     * @param vulkan_surface Surface to which we wish to render
+     */
     VulkanSwapchain(
+        const VulkanDevice* const            device,
+        const vk::AllocationCallbacks* const allocator,
         const uint32                         width,
         const uint32                         height,
-        const vk::SurfaceKHR                 vulkan_surface,
-        const VulkanDevice* const            device,
-        const vk::AllocationCallbacks* const allocator
+        const vk::SurfaceKHR                 vulkan_surface
     );
     ~VulkanSwapchain();
 

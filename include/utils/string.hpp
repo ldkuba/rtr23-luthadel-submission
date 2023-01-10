@@ -7,10 +7,15 @@
 #include "error_types.hpp"
 #include "vector.hpp"
 
+template<typename T>
+class Property;
+
 // Additional to_string conversions
 namespace std {
 string to_string(const uint128& in);
 string to_string(const int128& in);
+template<typename T>
+string to_string(const Property<T>& in);
 } // namespace std
 
 class String : public std::string {

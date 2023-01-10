@@ -4,9 +4,21 @@
 
 #include "systems/resource_system.hpp"
 #include "renderer_types.hpp"
+#include "resources/shader.hpp"
 
+/**
+ * @brief General renderer backend interface. Renderer backend is responsible
+ * for making calls to the underlying graphics API. Frontend only interacts with
+ * device with this structure.
+ */
 class RendererBackend {
   public:
+    /**
+     * @brief Construct a new Renderer Backend object
+     *
+     * @param surface A pointer to the render surface
+     * @param resource_system Resource system used for accessing stored data
+     */
     RendererBackend(
         Platform::Surface* const surface, ResourceSystem* const resource_system
     )
@@ -44,35 +56,18 @@ class RendererBackend {
         return {};
     }
 
-    virtual void begin_render_pass(uint8 render_pass_id) {}
-    virtual void end_render_pass(uint8 render_pass_id) {}
-
     /**
-     * @brief Updates the global world state of the renderer
-     * TODO:
-     * @param projection
-     * @param view
-     * @param view_position
-     * @param ambient_color
-     * @param mode
-     */
-    virtual void update_global_world_state(
-        const glm::mat4 projection,
-        const glm::mat4 view,
-        const glm::vec3 view_position,
-        const glm::vec4 ambient_color,
-        const int32     mode
-    ) {}
-    /**
-     * @brief Update global state of renderer UI
+     * @brief Start recording of render pass commands
      *
-     * @param projection
-     * @param view
-     * @param mode
+     * @param render_pass_id Render pass id
      */
-    virtual void update_global_ui_state(
-        const glm::mat4 projection, const glm::mat4 view, const int32 mode
-    ) {}
+    virtual void begin_render_pass(uint8 render_pass_id) {}
+    /**
+     * @brief End recording of render pass commands
+     *
+     * @param render_pass_id Render pass id
+     */
+    virtual void end_render_pass(uint8 render_pass_id) {}
 
     /**
      * @brief Draw command for specified geometry
@@ -93,19 +88,6 @@ class RendererBackend {
      * @param texture Texture to be destroy
      */
     virtual void destroy_texture(Texture* texture) {}
-
-    /**
-     * @brief Create a material and upload its relevant data to the GPU
-     *
-     * @param material Material to be uploaded
-     */
-    virtual void create_material(Material* const material) {}
-    /**
-     * @brief Destroy material and free its corresponding GPU resources
-     *
-     * @param material Material to be destroyed
-     */
-    virtual void destroy_material(Material* const material) {}
 
     /**
      * @brief Create a geometry and upload its relevant data to the GPU
@@ -137,6 +119,18 @@ class RendererBackend {
      * @param geometry Geometry to be destroyed
      */
     virtual void destroy_geometry(Geometry* geometry) {}
+
+    /**
+     * @brief Create a shader object and upload relevant data to the GPU
+     * @param config Shader configuration
+     * @return Pointer referencing the shader created object
+     */
+    virtual Shader* create_shader(const ShaderConfig config) { return nullptr; }
+    /**
+     * @brief Destroy shader and free its corresponding GPU resources
+     * @param shader Shader to be destroyed.
+     */
+    virtual void    destroy_shader(Shader* shader) {}
 
   protected:
     ResourceSystem* _resource_system;

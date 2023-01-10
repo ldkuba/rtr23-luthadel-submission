@@ -1,4 +1,5 @@
 #include "renderer/vulkan/vulkan_backend.hpp"
+
 #include "renderer/vulkan/vulkan_framebuffer.hpp"
 
 VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback_function(
@@ -31,11 +32,11 @@ VulkanBackend::VulkanBackend(
 
     // Create swapchain
     _swapchain = new (MemoryTag::Renderer) VulkanSwapchain(
+        _device,
+        _allocator,
         surface->get_width_in_pixels(),
         surface->get_height_in_pixels(),
-        _vulkan_surface,
-        _device,
-        _allocator
+        _vulkan_surface
     );
 
     // Create render pass
@@ -47,7 +48,8 @@ VulkanBackend::VulkanBackend(
         RenderPassPosition::Beginning,
         RenderPassClearFlags::Color | RenderPassClearFlags::Depth |
             RenderPassClearFlags::Stencil,
-        true // Multisampling
+        true, // Multisampling
+        true  // Depth testing
     );
     _ui_render_pass = new (MemoryTag::Renderer) VulkanRenderPass(
         &_device->handle(),
@@ -56,7 +58,8 @@ VulkanBackend::VulkanBackend(
         { 0.0f, 0.0f, 0.0f, 0.0f }, // Clear color
         RenderPassPosition::End,
         RenderPassClearFlags::None,
-        false // Multisampling
+        false, // Multisampling
+        false  // Depth testing
     );
 
     // Create command pool
@@ -67,20 +70,12 @@ VulkanBackend::VulkanBackend(
         _device->queue_family_indices.graphics_family.value()
     );
 
-    // Create material shader
-    _material_shader = new (MemoryTag::Renderer) VulkanMaterialShader(
-        _device, _allocator, _main_render_pass, _resource_system
-    );
-    _ui_shader = new (MemoryTag::Renderer)
-        VulkanUIShader(_device, _allocator, _ui_render_pass, _resource_system);
-
     // TODO: TEMP VERTEX & INDEX BUFFER CODE
     create_buffers();
 
     // TODO: TEMP COMMAND CODE
-    _command_buffers = _command_pool->allocate_command_buffers(
-        VulkanSettings::max_frames_in_flight
-    );
+    // TODO: One per swapchain image, instead of one per frame; maybe
+    _command_buffer = _command_pool->allocate_managed_command_buffer();
 
     // Synchronization
     create_sync_objects();
@@ -95,10 +90,6 @@ VulkanBackend::~VulkanBackend() {
     // TODO: TEMP VERTEX & INDEX BUFFER CODE
     delete _index_buffer;
     delete _vertex_buffer;
-
-    // Shader
-    delete _material_shader;
-    delete _ui_shader;
 
     // Render pass
     delete _ui_render_pass;
@@ -175,14 +166,14 @@ Result<void, RuntimeError> VulkanBackend::begin_frame(const float32 delta_time
     }
 
     // Begin recording commands
-    auto command_buffer = _command_buffers[_current_frame];
-    command_buffer.reset();
+    _command_buffer->reset(_current_frame);
+    auto command_buffer = _command_buffer->handle;
 
     // Begin recoding
     vk::CommandBufferBeginInfo begin_info {};
     begin_info.setPInheritanceInfo(nullptr);
 
-    command_buffer.begin(begin_info);
+    command_buffer->begin(begin_info);
 
     // Set dynamic states
     // Viewport
@@ -194,23 +185,22 @@ Result<void, RuntimeError> VulkanBackend::begin_frame(const float32 delta_time
     viewport.setMinDepth(0.0f);
     viewport.setMaxDepth(1.0f);
 
-    command_buffer.setViewport(0, 1, &viewport);
+    command_buffer->setViewport(0, 1, &viewport);
 
     // Scissors
     vk::Rect2D scissor {};
     scissor.setOffset({ 0, 0 });
     scissor.setExtent(_swapchain->extent);
 
-    command_buffer.setScissor(0, 1, &scissor);
+    command_buffer->setScissor(0, 1, &scissor);
 
     return {};
 }
 
 Result<void, RuntimeError> VulkanBackend::end_frame(const float32 delta_time) {
-    auto command_buffer = _command_buffers[_current_frame];
-
     // End recording
-    command_buffer.end();
+    auto command_buffer = _command_buffer->handle;
+    command_buffer->end();
 
     // Submit command buffer
     vk::PipelineStageFlags wait_stages[] = {
@@ -228,7 +218,7 @@ Result<void, RuntimeError> VulkanBackend::end_frame(const float32 delta_time) {
     submit_info.setWaitSemaphores(wait_semaphores);
     submit_info.setSignalSemaphores(signal_semaphores);
     submit_info.setCommandBufferCount(1);
-    submit_info.setPCommandBuffers(&command_buffer);
+    submit_info.setPCommandBuffers(command_buffer);
     std::array<vk::SubmitInfo, 1> submits = { submit_info };
 
     try {
@@ -250,14 +240,14 @@ Result<void, RuntimeError> VulkanBackend::end_frame(const float32 delta_time) {
 
 // Render pass
 void VulkanBackend::begin_render_pass(uint8 render_pass_id) {
-    auto command_buffer = _command_buffers[_current_frame];
-
     // Begin render pass
     switch (render_pass_id) {
     case BuiltinRenderPass::World:
-        _main_render_pass->begin(command_buffer);
+        _main_render_pass->begin(*_command_buffer->handle);
         break;
-    case BuiltinRenderPass::UI: _ui_render_pass->begin(command_buffer); break;
+    case BuiltinRenderPass::UI:
+        _ui_render_pass->begin(*_command_buffer->handle);
+        break;
     default:
         Logger::error(
             RENDERER_VULKAN_LOG,
@@ -267,23 +257,16 @@ void VulkanBackend::begin_render_pass(uint8 render_pass_id) {
         );
         return;
     }
-
-    // Use proper shader
-    switch (render_pass_id) {
-    case BuiltinRenderPass::World: _material_shader->use(command_buffer); break;
-    case BuiltinRenderPass::UI: _ui_shader->use(command_buffer); break;
-    default: return;
-    }
 }
 void VulkanBackend::end_render_pass(uint8 render_pass_id) {
-    auto command_buffer = _command_buffers[_current_frame];
-
     // End render pass
     switch (render_pass_id) {
     case BuiltinRenderPass::World:
-        _main_render_pass->end(command_buffer);
+        _main_render_pass->end(*_command_buffer->handle);
         break;
-    case BuiltinRenderPass::UI: _ui_render_pass->end(command_buffer); break;
+    case BuiltinRenderPass::UI:
+        _ui_render_pass->end(*_command_buffer->handle);
+        break;
     default:
         Logger::error(
             RENDERER_VULKAN_LOG,
@@ -295,92 +278,31 @@ void VulkanBackend::end_render_pass(uint8 render_pass_id) {
     }
 }
 
-// State
-void VulkanBackend::update_global_world_state(
-    const glm::mat4 projection,
-    const glm::mat4 view,
-    const glm::vec3 view_position,
-    const glm::vec4 ambient_color,
-    const int32     mode
-) {
-    _material_shader->update_global_state(
-        projection, view, view_position, ambient_color, mode, _current_frame
-    );
-
-    auto command_buffer = _command_buffers[_current_frame];
-
-    // Bind material shader
-    _material_shader->bind_global_description_set(
-        command_buffer, _current_frame
-    );
-}
-
-void VulkanBackend::update_global_ui_state(
-    const glm::mat4 projection, const glm::mat4 view, const int32 mode
-) {
-    _ui_shader->update_global_state(projection, view, mode, _current_frame);
-
-    auto command_buffer = _command_buffers[_current_frame];
-
-    // Bind material shader
-    _ui_shader->bind_global_description_set(command_buffer, _current_frame);
-}
-
 void VulkanBackend::draw_geometry(const GeometryRenderData data) {
     // Check if geometry data is valid
     if (!data.geometry || !data.geometry->internal_id.has_value()) return;
 
     auto buffer_data    = _geometries[data.geometry->internal_id.value()];
-    auto command_buffer = _command_buffers[_current_frame];
-
-    // TODO: CHECK CURRENT SHADER (MAYBE WE NEED TO CALL
-    // _material_shader->use())
-
-    // Upload data & bind object
-    uint64 material_id =
-        data.geometry->material()->internal_id.value(); // TODO: TEMP
-
-    switch (data.geometry->material()->type) {
-    case MaterialType::World:
-        _material_shader->set_model(data.model, material_id, _current_frame);
-        _material_shader->apply_material(
-            data.geometry->material, _current_frame
-        );
-        _material_shader->bind_material(
-            command_buffer, _current_frame, material_id
-        );
-        break;
-    case MaterialType::UI:
-        _ui_shader->set_model(data.model, material_id, _current_frame);
-        _ui_shader->apply_material(data.geometry->material, _current_frame);
-        _ui_shader->bind_material(command_buffer, _current_frame, material_id);
-        break;
-    default:
-        Logger::error(
-            RENDERER_VULKAN_LOG,
-            "Unknown material type. Couldn't destroy material."
-        );
-        return;
-    }
+    auto command_buffer = _command_buffer->handle;
 
     // Bind vertex buffer
     std::array<vk::Buffer, 1>     vertex_buffers = { _vertex_buffer->handle };
     std::array<vk::DeviceSize, 1> offsets = { buffer_data.vertex_offset };
-    command_buffer.bindVertexBuffers(0, vertex_buffers, offsets);
+    command_buffer->bindVertexBuffers(0, vertex_buffers, offsets);
 
     // Issue draw command
     if (buffer_data.index_count > 0) {
         // Bind index buffer
-        command_buffer.bindIndexBuffer(
+        command_buffer->bindIndexBuffer(
             _index_buffer->handle,
             buffer_data.index_offset,
             vk::IndexType::eUint32 // TODO: Might need to be configurable
         );
         // Draw command indexed
-        command_buffer.drawIndexed(buffer_data.index_count, 1, 0, 0, 0);
+        command_buffer->drawIndexed(buffer_data.index_count, 1, 0, 0, 0);
     } else {
         // Draw command non-indexed
-        command_buffer.draw(buffer_data.vertex_count, 1, 0, 0);
+        command_buffer->draw(buffer_data.vertex_count, 1, 0, 0);
     }
 }
 
@@ -498,66 +420,6 @@ void VulkanBackend::destroy_texture(Texture* texture) {
     Logger::trace(RENDERER_VULKAN_LOG, "Texture destroyed.");
 }
 
-// Material
-void VulkanBackend::create_material(Material* const material) {
-    if (!material) {
-        Logger::error(
-            RENDERER_VULKAN_LOG,
-            "Method create_material called with nullptr. Creation failed."
-        );
-        return;
-    }
-
-    Logger::trace(RENDERER_VULKAN_LOG, "Creating material.");
-
-    switch (material->type) {
-    case MaterialType::World:
-        _material_shader->acquire_resource(material);
-        break;
-    case MaterialType::UI: _ui_shader->acquire_resource(material); break;
-    default:
-        Logger::error(
-            RENDERER_VULKAN_LOG,
-            "Unknown material type. Couldn't create material."
-        );
-        return;
-    }
-
-    Logger::trace(RENDERER_VULKAN_LOG, "Material created.");
-}
-void VulkanBackend::destroy_material(Material* const material) {
-    if (!material) {
-        Logger::warning(
-            RENDERER_VULKAN_LOG,
-            "Method destroy_material called with nullptr. Nothing was done."
-        );
-        return;
-    }
-    if (!material->internal_id.has_value()) {
-        Logger::warning(
-            RENDERER_VULKAN_LOG,
-            "Method destroy_material called for a material which was already ",
-            "destroyed. Nothing was done."
-        );
-        return;
-    }
-
-    switch (material->type) {
-    case MaterialType::World:
-        _material_shader->release_resource(material);
-        break;
-    case MaterialType::UI: _ui_shader->release_resource(material); break;
-    default:
-        Logger::error(
-            RENDERER_VULKAN_LOG,
-            "Unknown material type. Couldn't destroy material."
-        );
-        return;
-    }
-
-    Logger::trace(RENDERER_VULKAN_LOG, "Material destroyed.");
-}
-
 // Geometry
 void VulkanBackend::create_geometry(
     Geometry*             geometry,
@@ -611,6 +473,28 @@ void VulkanBackend::destroy_geometry(Geometry* geometry) {
     // TODO: FREE VERTEX & INDEX DATA
 
     _geometries.erase(geometry->internal_id.value());
+}
+
+// Shader
+Shader* VulkanBackend::create_shader(const ShaderConfig config) {
+    Logger::trace(RENDERER_VULKAN_LOG, "Creating shader.");
+
+    // TODO: Render pass switch
+    auto render_pass = _main_render_pass;
+    if (config.render_pass_name.compare_ci("Renderpass.Builtin.UI") == 0)
+        render_pass = _ui_render_pass;
+
+    // Create shader
+    auto shader = new (MemoryTag::Shader) /**/ VulkanShader(
+        config, _device, _allocator, render_pass, _command_buffer
+    );
+
+    Logger::trace(RENDERER_VULKAN_LOG, "Shader created.");
+    return shader;
+}
+void VulkanBackend::destroy_shader(Shader* shader) {
+    delete shader;
+    Logger::trace(RENDERER_VULKAN_LOG, "Shader destroyed.");
 }
 
 // /////////////////////////////// //
@@ -881,7 +765,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback_function(
 /// TODO: TEMP CODE BELOW
 void VulkanBackend::create_buffers() {
     // Create vertex buffer
-    // TODO: NOT LIKE THIS
+    // TODO: NOT LIKE THIS, values choosen arbitrarily
     vk::DeviceSize vertex_buffer_size = sizeof(Vertex) * 1024 * 1024;
     _vertex_buffer =
         new (MemoryTag::GPUBuffer) VulkanManagedBuffer(_device, _allocator);
