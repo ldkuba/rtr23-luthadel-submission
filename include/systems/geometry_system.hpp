@@ -68,6 +68,22 @@ class GeometrySystem {
      */
     void release(Geometry* geometry);
 
+    // Generators
+    /**
+     * @brief Generates 1 by 1 by 1 cube geometry
+     *
+     * @param name Geometry name
+     * @param material_name Material name
+     * @param auto_release If enabled geometry system will automaticaly release
+     * the geometry resource from memory if no references to it are detected.
+     * @returns Created cube geometry
+     */
+    Geometry* generate_cube(
+        const String name,
+        const String material_name,
+        const bool   auto_release = true
+    );
+
   private:
     struct GeometryRef {
         Geometry* handle;

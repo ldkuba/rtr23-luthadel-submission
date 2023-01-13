@@ -36,7 +36,7 @@ Result<void, RuntimeError> Renderer::draw_frame(const float32 delta_time) {
     Material* current_material = current_geometry->material;
 
     // Update global state
-    current_material->apply_global(_projection, _view);
+    current_material->apply_global(_projection, _view, _ambient_color);
 
     // Update instances
     current_material->apply_instance();
@@ -64,7 +64,7 @@ Result<void, RuntimeError> Renderer::draw_frame(const float32 delta_time) {
     Material* ui_material = current_ui_geometry->material;
 
     // Update global state
-    ui_material->apply_global(_projection_ui, _view_ui);
+    ui_material->apply_global(_projection_ui, _view_ui, glm::vec4(0.0f));
 
     // Update instance
     ui_material->apply_instance();

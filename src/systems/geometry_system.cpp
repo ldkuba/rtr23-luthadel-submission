@@ -83,6 +83,61 @@ void GeometrySystem::release(Geometry* geometry) {
     Logger::trace(GEOMETRY_SYS_LOG, "Geometry with id ", id, " released.");
 }
 
+Geometry* GeometrySystem::generate_cube(
+    const String name, const String material_name, const bool auto_release
+) {
+    float32 l = 0.5f;
+
+    // Initialize vertices and indices for a cube
+    Vector<Vertex> vertices = {
+        // Front
+        { { -l, -l, l }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f } },
+        { { l, l, l }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 1.0f } },
+        { { -l, l, l }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } },
+        { { l, -l, l }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 0.0f } },
+        // Back
+        { { l, -l, -l }, { 0.0f, 0.0f, -1.0f }, { 0.0f, 0.0f } },
+        { { -l, l, -l }, { 0.0f, 0.0f, -1.0f }, { 1.0f, 1.0f } },
+        { { l, l, -l }, { 0.0f, 0.0f, -1.0f }, { 0.0f, 1.0f } },
+        { { -l, -l, -l }, { 0.0f, 0.0f, -1.0f }, { 1.0f, 0.0f } },
+        // Left
+        { { -l, -l, -l }, { -1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f } },
+        { { -l, l, l }, { -1.0f, 0.0f, 0.0f }, { 1.0f, 1.0f } },
+        { { -l, l, -l }, { -1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f } },
+        { { -l, -l, l }, { -1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f } },
+        // Right
+        { { l, -l, l }, { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f } },
+        { { l, l, -l }, { 1.0f, 0.0f, 0.0f }, { 1.0f, 1.0f } },
+        { { l, l, l }, { 1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f } },
+        { { l, -l, -l }, { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f } },
+        // Bottom
+        { { l, -l, l }, { 0.0f, -1.0f, 0.0f }, { 0.0f, 0.0f } },
+        { { -l, -l, -l }, { 0.0f, -1.0f, 0.0f }, { 1.0f, 1.0f } },
+        { { l, -l, -l }, { 0.0f, -1.0f, 0.0f }, { 0.0f, 1.0f } },
+        { { -l, -l, l }, { 0.0f, -1.0f, 0.0f }, { 1.0f, 0.0f } },
+        // Top
+        { { -l, l, l }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f } },
+        { { l, l, -l }, { 0.0f, 1.0f, 0.0f }, { 1.0f, 1.0f } },
+        { { -l, l, -l }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 1.0f } },
+        { { l, l, l }, { 0.0f, 1.0f, 0.0f }, { 1.0f, 0.0f } }
+    };
+    Vector<uint32> indices(36);
+    for (uint32 i = 0; i < 6; ++i) {
+        uint32 v_offset = i * 4;
+        uint32 i_offset = i * 6;
+
+        indices[i_offset + 0] = v_offset + 0;
+        indices[i_offset + 1] = v_offset + 1;
+        indices[i_offset + 2] = v_offset + 2;
+        indices[i_offset + 3] = v_offset + 0;
+        indices[i_offset + 4] = v_offset + 3;
+        indices[i_offset + 5] = v_offset + 1;
+    }
+
+    // Crete & return geometry
+    return acquire(name, vertices, indices, material_name, auto_release);
+}
+
 // /////////////////////////////// //
 // GEOMETRY SYSTEM PRIVATE METHODS //
 // /////////////////////////////// //
@@ -91,13 +146,19 @@ void GeometrySystem::create_default_geometries() {
     float f = 10.0f;
 
     // === Default for 3D ===
-    Vector<Vertex> vertices = {
-        { glm::vec3(-0.5f * f, -0.5f * f, 0.0f), glm::vec2(0.0f, 0.0f) },
-        { glm::vec3(0.5f * f, 0.5f * f, 0.0f), glm::vec2(1.0f, 1.0f) },
-        { glm::vec3(-0.5f * f, 0.5f * f, 0.0f), glm::vec2(0.0f, 1.0f) },
-        { glm::vec3(0.5f * f, -0.5f * f, 0.0f), glm::vec2(1.0f, 0.0f) }
-    };
-    Vector<uint32> indices = { 0, 1, 2, 0, 3, 1 };
+    Vector<Vertex> vertices = { { glm::vec3(-0.5f * f, -0.5f * f, 0.0f),
+                                  glm::vec3(0.0f, 0.0f, 0.0f),
+                                  glm::vec2(0.0f, 0.0f) },
+                                { glm::vec3(0.5f * f, 0.5f * f, 0.0f),
+                                  glm::vec3(0.0f, 0.0f, 0.0f),
+                                  glm::vec2(1.0f, 1.0f) },
+                                { glm::vec3(-0.5f * f, 0.5f * f, 0.0f),
+                                  glm::vec3(0.0f, 0.0f, 0.0f),
+                                  glm::vec2(0.0f, 1.0f) },
+                                { glm::vec3(0.5f * f, -0.5f * f, 0.0f),
+                                  glm::vec3(0.0f, 0.0f, 0.0f),
+                                  glm::vec2(1.0f, 0.0f) } };
+    Vector<uint32> indices  = { 0, 1, 2, 0, 3, 1 };
 
     // Crete geometry
     _default_geometry =

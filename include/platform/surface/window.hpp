@@ -21,13 +21,13 @@ class Window : public Platform::Surface {
     Result<vk::SurfaceKHR, RuntimeError> get_vulkan_surface(
         const vk::Instance&                  vulkan_instance,
         const vk::AllocationCallbacks* const allocator
-    ) const;
+    ) const override;
 
-    uint32 get_width_in_pixels();
-    uint32 get_height_in_pixels();
+    uint32 get_width_in_pixels() override;
+    uint32 get_height_in_pixels() override;
 
-    void process_events();
-    bool should_close() { return glfwWindowShouldClose(_window); }
+    void process_events(const float64 delta_time) override;
+    bool should_close() override { return glfwWindowShouldClose(_window); }
 
   private:
     GLFWwindow* _window;
@@ -36,8 +36,12 @@ class Window : public Platform::Surface {
     int32       _height;
     std::string _name;
 
+    // Callbacks
     static void framebuffer_resize_callback(
         GLFWwindow* window, int32 width, int32 height
+    );
+    static void key_callback(
+        GLFWwindow* window, int key, int scancode, int action, int mods
     );
 };
 

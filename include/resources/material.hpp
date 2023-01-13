@@ -81,7 +81,11 @@ class Material {
      * @param projection Projection matrix to set
      * @param view View matrix to set
      */
-    void apply_global(const glm::mat4 projection, const glm::mat4 view);
+    void apply_global(
+        const glm::mat4 projection,
+        const glm::mat4 view,
+        const glm::vec4 ambient_color
+    );
     /**
      * @brief Set instance uniform values of this material.
      *

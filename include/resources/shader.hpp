@@ -115,8 +115,16 @@ struct PushConstantRange {
  */
 class Shader {
   public:
+    /**
+     * @brief Construct a new Shader object
+     *
+     * @param config Shader configurations
+     */
     Shader(const ShaderConfig config);
     virtual ~Shader();
+
+    // TODO: TEMP
+    String get_name() { return _name; }
 
     /**
      * @brief Use this shader

@@ -3,6 +3,7 @@
 #include "logger.hpp"
 
 #include "systems/geometry_system.hpp"
+#include "systems/input/input_system.hpp"
 
 void load_model(Vector<Vertex>& out_vertices, Vector<uint32>& out_indices);
 
@@ -17,6 +18,7 @@ class TestApplication {
     Platform::Surface* _app_surface =
         Platform::Surface::get_instance(800, 600, std::string(APP_NAME));
 
+    InputSystem    _input_system {};
     ResourceSystem _resource_system {};
 
     Renderer _app_renderer { RendererBackendType::Vulkan,
@@ -32,7 +34,7 @@ class TestApplication {
     };
     GeometrySystem _geometry_system { &_app_renderer, &_material_system };
 
-    float32 calculate_delta_time();
+    float64 calculate_delta_time();
 };
 // TODO: TEMP
 void load_model(Vector<Vertex>& out_vertices, Vector<uint32>& out_indices);
@@ -42,17 +44,33 @@ inline TestApplication::TestApplication() {}
 inline TestApplication::~TestApplication() { delete _app_surface; }
 
 inline void TestApplication::run() {
+    // Input system
+    _input_system.register_input_source(_app_surface);
+
+    auto close_app_control =
+        _input_system.create_control("Close app", ControlType::Release)
+            .expect("ERROR :: CONTROL CREATION FAILED.");
+    close_app_control->event += [](float64, float64) { exit(true); };
+    close_app_control->map_key(KeyCode::ESCAPE);
+
+    // Renderer
     _app_renderer.material_shader =
         _shader_system.acquire("builtin.material_shader").expect("ERR1");
     _app_renderer.ui_shader =
         _shader_system.acquire("builtin.ui_shader").expect("ERR2");
 
-    Vector<Vertex> vertices = {};
-    Vector<uint32> indices  = {};
-    load_model(vertices, indices);
-    _app_renderer.current_geometry = _geometry_system.acquire(
-        "viking_room", vertices, indices, "viking_room"
-    );
+    bool use_cube = true;
+    if (use_cube) {
+        _app_renderer.current_geometry =
+            _geometry_system.generate_cube("cube", "viking_room");
+    } else {
+        Vector<Vertex> vertices = {};
+        Vector<uint32> indices  = {};
+        load_model(vertices, indices);
+        _app_renderer.current_geometry = _geometry_system.acquire(
+            "viking_room", vertices, indices, "viking_room"
+        );
+    }
 
     float32          side       = 128.0f;
     Vector<Vertex2D> vertices2d = {
@@ -67,9 +85,9 @@ inline void TestApplication::run() {
     );
 
     while (!_app_surface->should_close()) {
-        _app_surface->process_events();
-
         auto delta_time = calculate_delta_time();
+
+        _app_surface->process_events(delta_time);
 
         auto result = _app_renderer.draw_frame(delta_time);
         if (result.has_error()) {
@@ -79,7 +97,7 @@ inline void TestApplication::run() {
     }
 }
 
-inline float32 TestApplication::calculate_delta_time() {
+inline float64 TestApplication::calculate_delta_time() {
     static auto start_time   = Platform::get_absolute_time();
     auto        current_time = Platform::get_absolute_time();
     auto        delta_time   = current_time - start_time;
@@ -114,18 +132,26 @@ inline void load_model(
         for (const auto& index : shape.mesh.indices) {
             Vertex vertex {};
 
+            // Compute position
             vertex.position = {
                 attributes.vertices[3 * index.vertex_index + 0],
                 attributes.vertices[3 * index.vertex_index + 1],
                 attributes.vertices[3 * index.vertex_index + 2]
             };
 
+            // Compute normal
+            vertex.normal = { attributes.normals[3 * index.normal_index + 0],
+                              attributes.normals[3 * index.normal_index + 1],
+                              attributes.normals[3 * index.normal_index + 2] };
+
+            // Compute texture coordinate
             vertex.texture_coord = {
                 attributes.texcoords[2 * index.texcoord_index + 0],
                 1.0f - attributes.texcoords[2 * index.texcoord_index + 1]
             };
 
-            if (unique_vertices.count(vertex) == 0) {
+            // Compute index
+            if (!unique_vertices.contains(vertex)) {
                 unique_vertices[vertex] =
                     static_cast<uint32>(out_vertices.size());
                 out_vertices.push_back(vertex);

@@ -111,6 +111,8 @@ class Renderer {
         glm::vec3(0.0f, 0.0f, 0.0f),
         glm::vec3(0.0f, 0.0f, 1.0f)
     );
+    // Default should be from scene
+    glm::vec4 _ambient_color = glm::vec4(0.25f, 0.25f, 0.25f, 1.0f);
 
     // UI
     glm::mat4 _projection_ui =

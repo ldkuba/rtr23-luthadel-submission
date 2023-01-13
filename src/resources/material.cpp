@@ -66,11 +66,18 @@ Material::~Material() {}
     }
 #define set_uniform_s(uniform) set_uniform(#uniform, uniform)
 
-void Material::apply_global(const glm::mat4 projection, const glm::mat4 view) {
+void Material::apply_global(
+    const glm::mat4 projection,
+    const glm::mat4 view,
+    const glm::vec4 ambient_color
+) {
     // Apply globals
     _shader->bind_globals();
     set_uniform_s(projection);
     set_uniform_s(view);
+    // TODO: Temp solution for type checking problem
+    if (_shader->get_name().compare_ci("builtin.material_shader") == 0)
+        set_uniform_s(ambient_color);
     _shader->apply_global();
 }
 void Material::apply_instance() {

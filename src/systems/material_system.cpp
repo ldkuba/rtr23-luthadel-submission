@@ -203,6 +203,8 @@ void MaterialSystem::create_default_material() {
 
     // Upload material to GPU
     _default_material->internal_id = shader->acquire_instance_resources();
+
+    _default_material->id = 0;
 }
 
 Result<MaterialSystem::MaterialRef, bool> MaterialSystem::create_material(

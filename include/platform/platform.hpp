@@ -10,6 +10,8 @@
 #include "result.hpp"
 #include "error_types.hpp"
 
+class InputSystem;
+
 /**
  * @brief Static class representing the platform layer of the application.
  * Provides a platform agnostic way to access certain functionalities of the
@@ -109,8 +111,10 @@ class Platform {
 
         /**
          * @brief Process surface related events
+         *
+         * @param delta_time Time in seconds since the last frame
          */
-        virtual void process_events() {}
+        virtual void process_events(float64 delta_time) {}
         /**
          * @brief Check if surface should close
          *
@@ -121,5 +125,9 @@ class Platform {
 
       protected:
         Surface() {}
+
+        friend class InputSystem;
+
+        InputSystem* _input_system;
     };
 };

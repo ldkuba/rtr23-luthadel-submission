@@ -9,10 +9,11 @@
  */
 struct Vertex3D {
     glm::vec3 position;
+    glm::vec3 normal;
     glm::vec2 texture_coord;
 
     bool operator==(const Vertex3D& other) const {
-        return position == other.position &&
+        return position == other.position && normal == other.normal &&
                texture_coord == other.texture_coord;
     }
 };
