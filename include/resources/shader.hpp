@@ -3,7 +3,6 @@
 #include "texture.hpp"
 #include "unordered_map.hpp"
 
-class ResourceSystem;
 class TextureSystem;
 
 /// @brief Supported shader attribute types
@@ -79,8 +78,7 @@ struct ShaderUniform {
  */
 class ShaderConfig : public Resource {
   public:
-    ResourceSystem*                   resource_system = nullptr;
-    TextureSystem*                    texture_system  = nullptr;
+    TextureSystem*                    texture_system = nullptr;
     const String                      render_pass_name;
     const uint8                       shader_stages;
     const Vector<ShaderAttribute>     attributes;
@@ -241,8 +239,7 @@ class Shader {
     const static uint32 max_instance_count = 1024;
 
   protected:
-    TextureSystem*  _texture_system;
-    ResourceSystem* _resource_system;
+    TextureSystem* _texture_system;
 
     String _name;
     bool   _use_instances;

@@ -18,12 +18,9 @@ class Renderer {
      *
      * @param backend_type Rendering API used for backend.
      * @param surface A pointer to the render surface
-     * @param resource_system Resource system used for accessing stored data
      */
     Renderer(
-        const RendererBackendType backend_type,
-        Platform::Surface* const  surface,
-        ResourceSystem* const     resource_system
+        const RendererBackendType backend_type, Platform::Surface* const surface
     );
     ~Renderer();
 
@@ -98,8 +95,7 @@ class Renderer {
     void    destroy_shader(Shader* shader);
 
   private:
-    RendererBackend* _backend         = nullptr;
-    ResourceSystem*  _resource_system = nullptr;
+    RendererBackend* _backend = nullptr;
 
     float32   _near_plane = 0.01f;
     float32   _far_plane  = 1000.0f;

@@ -2,7 +2,6 @@
 
 #include "platform/platform.hpp"
 
-#include "systems/resource_system.hpp"
 #include "renderer_types.hpp"
 #include "resources/shader.hpp"
 
@@ -17,12 +16,8 @@ class RendererBackend {
      * @brief Construct a new Renderer Backend object
      *
      * @param surface A pointer to the render surface
-     * @param resource_system Resource system used for accessing stored data
      */
-    RendererBackend(
-        Platform::Surface* const surface, ResourceSystem* const resource_system
-    )
-        : _resource_system(resource_system) {}
+    RendererBackend(Platform::Surface* const surface) {}
     virtual ~RendererBackend() {}
 
     // Prevent accidental copying
@@ -131,9 +126,6 @@ class RendererBackend {
      * @param shader Shader to be destroyed.
      */
     virtual void    destroy_shader(Shader* shader) {}
-
-  protected:
-    ResourceSystem* _resource_system;
 
   private:
     uint64 _frame_number = 0;

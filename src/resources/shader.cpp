@@ -10,8 +10,7 @@ PushConstantRange get_aligned_range(
 
 // Constructor & Destructor
 Shader::Shader(const ShaderConfig config)
-    : _texture_system(config.texture_system),
-      _resource_system(config.resource_system), _name(config.name),
+    : _texture_system(config.texture_system), _name(config.name),
       _use_instances(config.use_instances), _use_locals(config.use_locals),
       _bound_instance_id(0) {
     // Process attributes

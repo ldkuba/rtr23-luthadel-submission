@@ -10,10 +10,8 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback_function(
 );
 
 // Constructor
-VulkanBackend::VulkanBackend(
-    Platform::Surface* const surface, ResourceSystem* const resource_system
-)
-    : RendererBackend(surface, resource_system) {
+VulkanBackend::VulkanBackend(Platform::Surface* const surface)
+    : RendererBackend(surface) {
     // Create instance
     _vulkan_instance = create_vulkan_instance();
 

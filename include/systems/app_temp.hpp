@@ -21,9 +21,7 @@ class TestApplication {
     InputSystem    _input_system {};
     ResourceSystem _resource_system {};
 
-    Renderer _app_renderer { RendererBackendType::Vulkan,
-                             _app_surface,
-                             &_resource_system };
+    Renderer _app_renderer { RendererBackendType::Vulkan, _app_surface };
 
     TextureSystem  _texture_system { &_app_renderer, &_resource_system };
     ShaderSystem   _shader_system { &_app_renderer,
@@ -44,16 +42,21 @@ inline TestApplication::TestApplication() {}
 inline TestApplication::~TestApplication() { delete _app_surface; }
 
 inline void TestApplication::run() {
-    // Input system
+    // === Input system ===
     _input_system.register_input_source(_app_surface);
 
     auto close_app_control =
         _input_system.create_control("Close app", ControlType::Release)
             .expect("ERROR :: CONTROL CREATION FAILED.");
-    close_app_control->event += [](float64, float64) { exit(true); };
+
+    bool close_required = false;
+    close_app_control->event +=
+        [&close_required](float64, float64) { close_required = true; };
     close_app_control->map_key(KeyCode::ESCAPE);
 
-    // Renderer
+    // Camera controls
+
+    // === Renderer ===
     _app_renderer.material_shader =
         _shader_system.acquire("builtin.material_shader").expect("ERR1");
     _app_renderer.ui_shader =
@@ -84,7 +87,8 @@ inline void TestApplication::run() {
         "ui", vertices2d, indices2d, "test_ui_material"
     );
 
-    while (!_app_surface->should_close()) {
+    // === Main loop ===
+    while (!_app_surface->should_close() && close_required == false) {
         auto delta_time = calculate_delta_time();
 
         _app_surface->process_events(delta_time);

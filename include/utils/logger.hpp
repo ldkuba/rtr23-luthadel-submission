@@ -9,11 +9,11 @@
 #define LOG_VERBOSE_ENABLED 0
 
 class Logger {
-  public:
-
+  private:
     Logger() {}
     ~Logger() {}
 
+  public:
     /**
      * @brief Logs given fatal error message.
      *
@@ -97,4 +97,72 @@ class Logger {
         Platform::Console::write(full_message, 0, true);
 #endif
     }
+
+    // Classes for error data auto-reporting
+    class __REPORT_FATAL__ {
+      public:
+        __REPORT_FATAL__(
+            const String caller, const String file, const uint32 line
+        )
+            : _caller(caller), _file(file), _line(line) {}
+
+        template<typename... Args>
+        void operator()(Args... message) {
+            fatal(
+                message...,
+                "\n :: File \"",
+                _file,
+                "\", line ",
+                _line,
+                ". Function ",
+                _caller,
+                "()."
+            );
+        }
+
+      private:
+        const String _caller;
+        const String _file;
+        const uint32 _line;
+    };
+    class __REPORT_ERROR__ {
+      public:
+        __REPORT_ERROR__(
+            const String caller, const String file, const uint32 line
+        )
+            : _caller(caller), _file(file), _line(line) {}
+
+        template<typename... Args>
+        void operator()(Args... message) {
+            error(
+                message...,
+                "\n :: File \"",
+                _file,
+                "\", line ",
+                _line,
+                ". Function ",
+                _caller,
+                "."
+            );
+        }
+
+      private:
+        const String _caller;
+        const String _file;
+        const uint32 _line;
+    };
+
+#undef fatal
+#define fatal __REPORT_FATAL__(__PRETTY_FUNCTION__, __FILE__, __LINE__)
+#define LOG_LOCATION                                                           \
+    "\n :: File \"", __FILE__, "\", line ", __LINE__, ". Function ",           \
+        __PRETTY_FUNCTION__, "."
+
+    // #undef error
+    // #define error __REPORT_ERROR__(__func__, __FILE__, __LINE__)
 };
+
+#undef LOG_WARNING_ENABLED
+#undef LOG_INFO_ENABLED
+#undef LOG_DEBUG_ENABLED
+#undef LOG_VERBOSE_ENABLED

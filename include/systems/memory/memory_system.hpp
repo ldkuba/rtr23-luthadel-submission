@@ -12,11 +12,12 @@
 
 #define MEMORY_SYS_LOG "MemorySystem :: "
 
-#define MEMORY_TAG_TYPE uint16
+typedef uint16 MemoryTagType;
 #define MEMORY_PADDING 8
 
-enum class MemoryTag : MEMORY_TAG_TYPE {
-    // For temporary use. Should be assigned one of the below or have a new tag
+enum class MemoryTag : MemoryTagType {
+    // For temporary use. Should be assigned one of the below or have a new
+    // tag
     // created.
     Unknown,
     Temp,
@@ -56,12 +57,12 @@ class MemorySystem {
   public:
 
     static void* allocate(uint64 size, const MemoryTag tag) {
-        auto allocator = _allocator_map[(MEMORY_TAG_TYPE) tag];
+        auto allocator = _allocator_map[(MemoryTagType) tag];
         return allocator->allocate(size, MEMORY_PADDING);
     }
 
     static void deallocate(void* ptr, const MemoryTag tag) {
-        auto allocator = _allocator_map[(MEMORY_TAG_TYPE) tag];
+        auto allocator = _allocator_map[(MemoryTagType) tag];
         if (!allocator->owns(ptr)) {
             std::cout << MEMORY_SYS_LOG << "Wrong memory tag." << std::endl;
             exit(EXIT_FAILURE);
@@ -70,7 +71,7 @@ class MemorySystem {
     }
 
     static void reset_memory(const MemoryTag tag) {
-        auto allocator = _allocator_map[(MEMORY_TAG_TYPE) tag];
+        auto allocator = _allocator_map[(MemoryTagType) tag];
         allocator->reset();
     }
 
@@ -140,3 +141,5 @@ inline shared_ptr<_Tp> make_shared(MemoryTag tag, _Args&&... __args) {
     );
 }
 } // namespace std
+
+#undef MEMORY_SYS_LOG

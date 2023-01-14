@@ -58,6 +58,7 @@ target_include_directories(${PROJECT_NAME}
     PUBLIC
     include
     include/utils
+    include/containers
     external/vulkan/glfw/include
     external/vulkan/glm
     external/vulkan/vulkan

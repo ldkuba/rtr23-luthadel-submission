@@ -1,4 +1,4 @@
-#include "memory_allocators/stack_allocator.hpp"
+#include "systems/memory/memory_allocators/stack_allocator.hpp"
 
 #include "logger.hpp"
 

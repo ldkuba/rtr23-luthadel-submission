@@ -1,7 +1,5 @@
 #include "systems/geometry_system.hpp"
 
-#define GEOMETRY_SYS_LOG "GeometrySystem :: "
-
 // Constructor & Destructor
 GeometrySystem::GeometrySystem(
     Renderer* const renderer, MaterialSystem* const material_system

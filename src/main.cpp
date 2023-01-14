@@ -3,7 +3,7 @@
 #include <vulkan/vulkan.hpp>
 #include <GLFW/glfw3.h>
 
-#include "memory_system.hpp"
+#include "systems/memory/memory_system.hpp"
 #include "systems/app_temp.hpp"
 
 // TODO: APPLICATION / ENGINE SPLIT

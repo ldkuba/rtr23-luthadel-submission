@@ -2,7 +2,7 @@
 
 #include "systems/resource_system.hpp"
 #include "resources/material.hpp"
-#include "file_system.hpp"
+#include "systems/file_system.hpp"
 
 struct MSVars {
     STRING_CONST(version);
@@ -167,7 +167,7 @@ Result<Resource*, RuntimeError> MaterialLoader::load(const String name) {
 }
 
 void MaterialLoader::unload(Resource* resource) {
-    CAN_UNLOAD(Material, resource);
+    can_unload(ResourceType::Material, resource);
 
     MaterialConfig* res = (MaterialConfig*) resource;
     delete res;

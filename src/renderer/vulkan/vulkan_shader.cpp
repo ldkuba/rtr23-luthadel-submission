@@ -1,6 +1,6 @@
 #include "renderer/vulkan/vulkan_shader.hpp"
 
-#include "renderer/vulkan/vulkan_settings.hpp"
+#include "systems/file_system.hpp"
 #include "systems/texture_system.hpp"
 #include "resources/datapack.hpp"
 
@@ -468,16 +468,15 @@ vk::ShaderModule VulkanShader::create_shader_module(
     // Process path
     const auto shader_file_ext =
         (shader_stage == vk::ShaderStageFlagBits::eVertex) ? "vert" : "frag";
-    const auto shader_file_path =
-        String::build("shaders/", _name, ".", shader_file_ext, ".spv");
+    const auto shader_file_path = String::build(
+        "../assets/shaders/", _name, ".", shader_file_ext, ".spv"
+    );
 
     // Load data
-    const auto result =
-        _resource_system->load(shader_file_path, ResourceType::Binary);
+    const auto result = FileSystem::read_file_bytes(shader_file_path);
     if (result.has_error())
         Logger::fatal(RENDERER_VULKAN_LOG, result.error().what());
-    auto       byte_data = (ByteArrayData*) result.value();
-    const auto code      = byte_data->data;
+    const auto code = result.value();
 
     // Turns raw shader code into a shader module
     vk::ShaderModuleCreateInfo create_info {};
@@ -490,9 +489,6 @@ vk::ShaderModule VulkanShader::create_shader_module(
     } catch (const vk::SystemError& e) {
         Logger::fatal(RENDERER_VULKAN_LOG, e.what());
     }
-
-    // Release binary resource
-    _resource_system->unload(byte_data);
 
     return shader_module;
 }

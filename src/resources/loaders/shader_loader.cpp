@@ -2,7 +2,7 @@
 
 #include "systems/resource_system.hpp"
 #include "resources/shader.hpp"
-#include "file_system.hpp"
+#include "systems/file_system.hpp"
 
 struct ShaderVars {
     STRING_CONST(version);
@@ -239,7 +239,7 @@ Result<Resource*, RuntimeError> ShaderLoader::load(const String name) {
 }
 
 void ShaderLoader::unload(Resource* resource) {
-    CAN_UNLOAD(Shader, resource);
+    can_unload(ResourceType::Shader, resource);
 
     ShaderConfig* res = (ShaderConfig*) resource;
     delete res;

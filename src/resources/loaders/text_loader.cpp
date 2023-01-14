@@ -2,7 +2,7 @@
 
 #include "systems/resource_system.hpp"
 #include "resources/datapack.hpp"
-#include "file_system.hpp"
+#include "systems/file_system.hpp"
 
 // Constructor & Destructor
 TextLoader::TextLoader() {
@@ -37,7 +37,7 @@ Result<Resource*, RuntimeError> TextLoader::load(const String name) {
 }
 
 void TextLoader::unload(Resource* resource) {
-    CAN_UNLOAD(Text, resource);
+    can_unload(ResourceType::Text, resource);
 
     TextData* data = (TextData*) (resource);
     delete data;

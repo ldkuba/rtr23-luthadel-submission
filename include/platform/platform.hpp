@@ -76,7 +76,7 @@ class Platform {
       public:
         virtual ~Surface() {}
         /// @brief Invoked on surface resize
-        Event<void, uint32, uint32> resize_event;
+        Event<void(uint32, uint32)> resize_event;
 
         /**
          * @brief Create an instance of Surface object

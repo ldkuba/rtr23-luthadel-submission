@@ -1,8 +1,12 @@
 #pragma once
 
+#include <functional>
+
 template<typename R, typename... Args>
 class Delegate {
   public:
+    std::size_t owner = 0;
+
     virtual R call([[maybe_unused]] Args... arguments) { return {}; }
 
     template<typename R1, typename... Args1>
@@ -14,6 +18,8 @@ class Delegate {
 template<typename... Args>
 class Delegate<void, Args...> {
   public:
+    std::size_t owner = 0;
+
     virtual void call([[maybe_unused]] Args... arguments) {}
 
     template<typename R1, typename... Args1>
@@ -30,7 +36,9 @@ class DelegateMethod : public Delegate<R, Args...> {
 
   public:
     DelegateMethod(T* caller, R (T::*callback)(Args...))
-        : _caller(caller), _callback(callback) {}
+        : _caller(caller), _callback(callback) {
+        this->owner = (size_t) caller;
+    }
     ~DelegateMethod() {}
 
     R call(Args... arguments) { return (_caller->*(_callback))(arguments...); }
@@ -44,13 +52,14 @@ class DelegateMethod : public Delegate<R, Args...> {
 template<typename R, typename... Args>
 class DelegateFunction : public Delegate<R, Args...> {
   private:
-    R (*_callback)(Args...);
+    std::function<R(Args...)> _callback;
 
   public:
-    DelegateFunction(R (*callback)(Args...)) : _callback(callback) {}
+    DelegateFunction(std::function<R(Args...)> callback)
+        : _callback(callback) {}
     ~DelegateFunction() {}
 
-    R call(Args... arguments) { return (*_callback)(arguments...); }
+    R call(Args... arguments) { return _callback(arguments...); }
 
     template<typename R1, typename... Args1>
     friend bool operator==(
@@ -64,22 +73,14 @@ bool operator==(
 ) {
     if (&delegate1 == &delegate2) return true;
 
+    if (delegate1.owner != delegate2.owner) return false;
+
+    // Method comparison
+    if (delegate1.owner) { return false; }
+
+    // Function comparison
     auto function1 = dynamic_cast<DelegateFunction<R, Args...>*>(&delegate1);
     auto function2 = dynamic_cast<DelegateFunction<R, Args...>*>(&delegate2);
-
-    if (!function1) {
-        if (function2) return false;
-
-        // TODO: COMPARE METHODS
-        // auto method1 = dynamic_cast<DelegateMethod<void*, R,
-        // Args...>*>(&delegate1); auto method2 =
-        // dynamic_cast<DelegateMethod<void*, R, Args...>*>(&delegate2);
-
-        // if (method1->_caller == method2->caller &&
-        //     method1->_callback == method2->_callback) return true;
-        return false;
-    }
-    if (!function2) return false;
 
     if (function1->_callback == function2->_callback) return true;
     return false;

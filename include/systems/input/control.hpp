@@ -35,7 +35,7 @@ class Control {
      * 'Release' accept time_since_last_press and time_since_last_release
      * 'Hold'    accept delta_time and time_since_press
      */
-    Event<void, float64, float64> event {};
+    Event<void(float64, float64)> event {};
 
     /**
      * @brief Creates a key binding for this control

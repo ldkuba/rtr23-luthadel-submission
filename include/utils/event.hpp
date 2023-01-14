@@ -3,6 +3,9 @@
 #include "delegate.hpp"
 #include "vector.hpp"
 
+template<typename Signature>
+class Event;
+
 /**
  * @brief Event object. When invoked (when triggered) also invokes all
  * subscribing functions with same function arguments.
@@ -11,7 +14,7 @@
  * @tparam Args Argument types
  */
 template<typename R, typename... Args>
-class Event {
+class Event<R(Args...)> {
   private:
     Vector<Delegate<R, Args...>*> _callbacks = {};
 
@@ -42,7 +45,7 @@ class Event {
      *
      * @param callback Called function
      */
-    void subscribe(R (*callback)(Args...)) {
+    void subscribe(std::function<R(Args...)> callback) {
         auto delegate =
             new (MemoryTag::Callback) DelegateFunction<R, Args...>(callback);
         _callbacks.emplace_back(delegate);
@@ -71,7 +74,7 @@ class Event {
      * @return true - if a function was detached
      * @return false - if no such function was found
      */
-    bool unsubscribe(R (*callback)(Args...)) {
+    bool unsubscribe(std::function<R(Args...)> callback) {
         auto delegate =
             new (MemoryTag::Callback) DelegateFunction<R, Args...>(callback);
         return remove_delegate(_callbacks, delegate);
@@ -92,9 +95,13 @@ class Event {
         return result;
     }
 
-    inline void operator+=(R (*callback)(Args...)) { subscribe(callback); }
-    inline void operator-=(R (*callback)(Args...)) { unsubscribe(callback); }
-    inline R    operator()(Args... arguments) { return invoke(arguments...); }
+    inline void operator+=(std::function<R(Args...)> callback) {
+        subscribe(callback);
+    }
+    inline void operator-=(std::function<R(Args...)> callback) {
+        unsubscribe(callback);
+    }
+    inline R operator()(Args... arguments) { return invoke(arguments...); }
 };
 
 /**
@@ -104,7 +111,7 @@ class Event {
  * @tparam Args Argument types
  */
 template<typename... Args>
-class Event<void, Args...> {
+class Event<void(Args...)> {
   private:
     Vector<Delegate<void, Args...>*> _callbacks = {};
 
@@ -136,7 +143,7 @@ class Event<void, Args...> {
      *
      * @param callback Called function
      */
-    void subscribe(void (*callback)(Args...)) {
+    void subscribe(std::function<void(Args...)> callback) {
         auto delegate =
             new (MemoryTag::Callback) DelegateFunction<void, Args...>(callback);
         _callbacks.emplace_back(delegate);
@@ -165,7 +172,7 @@ class Event<void, Args...> {
      * @return true - if a function was detached
      * @return false - if no such function was found
      */
-    bool unsubscribe(void (*callback)(Args...)) {
+    bool unsubscribe(std::function<void(Args...)> callback) {
         auto delegate =
             new (MemoryTag::Callback) DelegateFunction<void, Args...>(callback);
         return remove_delegate(_callbacks, delegate);
@@ -182,8 +189,12 @@ class Event<void, Args...> {
         }
     }
 
-    inline void operator+=(void (*callback)(Args...)) { subscribe(callback); }
-    inline void operator-=(void (*callback)(Args...)) { unsubscribe(callback); }
+    inline void operator+=(std::function<void(Args...)> callback) {
+        subscribe(callback);
+    }
+    inline void operator-=(std::function<void(Args...)> callback) {
+        unsubscribe(callback);
+    }
     inline void operator()(Args... arguments) { return invoke(arguments...); }
 };
 

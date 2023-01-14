@@ -2,7 +2,7 @@
 
 #include "systems/resource_system.hpp"
 #include "resources/datapack.hpp"
-#include "file_system.hpp"
+#include "systems/file_system.hpp"
 
 // Constructor & Destructor
 BinaryLoader::BinaryLoader() {
@@ -36,7 +36,7 @@ Result<Resource*, RuntimeError> BinaryLoader::load(const String name) {
 }
 
 void BinaryLoader::unload(Resource* resource) {
-    CAN_UNLOAD(Binary, resource);
+    can_unload(ResourceType::Binary, resource);
 
     ByteArrayData* data = (ByteArrayData*) (resource);
     delete data;

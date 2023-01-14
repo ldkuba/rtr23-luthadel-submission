@@ -1,4 +1,4 @@
-#include "memory_allocators/gpu_free_list_allocator.hpp"
+#include "systems/memory/memory_allocators/gpu_free_list_allocator.hpp"
 
 #include "logger.hpp"
 

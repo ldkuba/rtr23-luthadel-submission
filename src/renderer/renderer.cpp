@@ -3,16 +3,12 @@
 #define RENDERER_LOG "Renderer :: "
 
 Renderer::Renderer(
-    const RendererBackendType backend_type,
-    Platform::Surface* const  surface,
-    ResourceSystem* const     resource_system
-)
-    : _resource_system(resource_system) {
+    const RendererBackendType backend_type, Platform::Surface* const surface
+) {
     surface->resize_event.subscribe<Renderer>(this, &Renderer::on_resize);
     switch (backend_type) {
     case Vulkan:
-        _backend =
-            new (MemoryTag::Renderer) VulkanBackend(surface, resource_system);
+        _backend = new (MemoryTag::Renderer) VulkanBackend(surface);
         return;
 
     default: break;

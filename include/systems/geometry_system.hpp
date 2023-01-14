@@ -108,9 +108,7 @@ class GeometrySystem {
     void create_default_geometries();
 };
 
-#ifndef GEOMETRY_SYS_LOG
-#    define GEOMETRY_SYS_LOG "GeometrySystem :: "
-#endif // !GEOMETRY_SYS_LOG
+#define GEOMETRY_SYS_LOG "GeometrySystem :: "
 
 inline uint32 generate_id() { // TODO: TEMP
     static uint32 id = 0;
@@ -149,5 +147,3 @@ Geometry* GeometrySystem::acquire(
     Logger::trace(GEOMETRY_SYS_LOG, "Geometry \"", name, "\" acquired.");
     return ref.handle;
 }
-
-#undef GEOMETRY_SYS_LOG

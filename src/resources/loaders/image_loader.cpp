@@ -68,7 +68,7 @@ Result<Resource*, RuntimeError> ImageLoader::load(const String name) {
     return image;
 }
 void ImageLoader::unload(Resource* resource) {
-    CAN_UNLOAD(Image, resource);
+    can_unload(ResourceType::Image, resource);
 
     Image* res = (Image*) resource;
     delete res;

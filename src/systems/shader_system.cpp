@@ -38,8 +38,7 @@ Result<Shader*, bool> ShaderSystem::create(ShaderConfig config) {
         );
         return Failure(false);
     }
-    config.resource_system = _resource_system;
-    config.texture_system  = _texture_system;
+    config.texture_system = _texture_system;
 
     if (_registered_shaders.contains(config.name)) {
         Logger::warning(

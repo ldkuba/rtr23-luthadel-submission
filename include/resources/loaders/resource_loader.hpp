@@ -62,25 +62,6 @@ class ResourceLoader {
   protected:
     String _type_path;
     String _type;
-};
 
-// Helper define
-#define CAN_UNLOAD(TYPE, RESOURCE)                                             \
-    if (!RESOURCE) {                                                           \
-        Logger::warning(                                                       \
-            RESOURCE_LOG,                                                      \
-            "TYPE unload method called with nullptr. ",                        \
-            "Nothing was done"                                                 \
-        );                                                                     \
-        return;                                                                \
-    }                                                                          \
-                                                                               \
-    if (RESOURCE->loader_type().compare_ci(ResourceType::TYPE) != 0) {         \
-        Logger::error(                                                         \
-            RESOURCE_LOG,                                                      \
-            "TYPE loader used for \"",                                         \
-            RESOURCE->loader_type(),                                           \
-            "\" unloading."                                                    \
-        );                                                                     \
-        return;                                                                \
-    }
+    bool can_unload(const String resource_type, const Resource* const resource);
+};

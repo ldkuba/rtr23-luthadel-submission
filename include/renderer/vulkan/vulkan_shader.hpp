@@ -5,8 +5,6 @@
 #include "vulkan_settings.hpp"
 #include "resources/shader.hpp"
 
-class ResourceSystem;
-
 /**
  * @brief Configuration for descriptor set. Contains layout and binding
  * description.
