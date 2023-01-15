@@ -187,6 +187,7 @@ Result<glm::vec4, uint8> load_vector(const String vector_str) { // Parse vec4
     for (uint32 i = 0; i < str_floats.size(); i++) {
         auto result = str_floats[i].parse_as_float32();
         if (result.has_error()) return Failure(2);
+        floats[i] = result.value();
     }
 
     // Assign to diffuse color

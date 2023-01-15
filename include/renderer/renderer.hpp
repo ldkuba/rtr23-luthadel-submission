@@ -33,6 +33,9 @@ class Renderer {
     Geometry* current_ui_geometry = nullptr;
     Shader*   material_shader     = nullptr;
     Shader*   ui_shader           = nullptr;
+
+    glm::vec3 camera_position { 2.0f, 2.0f, 2.0f };
+    glm::vec3 camera_look_dir { -1.0f, -1.0f, -1.0f };
     // TODO: TEMP TEST CODE END
 
     /**
@@ -102,11 +105,7 @@ class Renderer {
     glm::mat4 _projection = glm::perspective(
         glm::radians(45.0f), 800.0f / 600.0f, _near_plane, _far_plane
     );
-    glm::mat4 _view = glm::lookAt(
-        glm::vec3(2.0f, 2.0f, 2.0f),
-        glm::vec3(0.0f, 0.0f, 0.0f),
-        glm::vec3(0.0f, 0.0f, 1.0f)
-    );
+
     // Default should be from scene
     glm::vec4 _ambient_color = glm::vec4(0.25f, 0.25f, 0.25f, 1.0f);
 

@@ -2,6 +2,7 @@
 
 #include "logger.hpp"
 
+#include "math_libs.hpp"
 #include "systems/geometry_system.hpp"
 #include "systems/input/input_system.hpp"
 
@@ -33,6 +34,9 @@ class TestApplication {
     GeometrySystem _geometry_system { &_app_renderer, &_material_system };
 
     float64 calculate_delta_time();
+
+    // TODO: TEMP
+    void setup_camera_controls();
 };
 // TODO: TEMP
 void load_model(Vector<Vertex>& out_vertices, Vector<uint32>& out_indices);
@@ -54,7 +58,7 @@ inline void TestApplication::run() {
         [&close_required](float64, float64) { close_required = true; };
     close_app_control->map_key(KeyCode::ESCAPE);
 
-    // Camera controls
+    setup_camera_controls();
 
     // === Renderer ===
     _app_renderer.material_shader =
@@ -164,4 +168,100 @@ inline void load_model(
             out_indices.push_back(unique_vertices[vertex]);
         }
     }
+}
+
+#define HoldControl(name)                                                      \
+    auto name = _input_system.create_control(#name, ControlType::Hold)         \
+                    .expect("ERROR :: CONTROL CREATION FAILED.");
+
+inline void TestApplication::setup_camera_controls() {
+    // Camera controls
+    HoldControl(camera_forward_c);
+    HoldControl(camera_backwards_c);
+    HoldControl(camera_left_c);
+    HoldControl(camera_right_c);
+    HoldControl(camera_up_c);
+    HoldControl(camera_down_c);
+    HoldControl(camera_rotate_left_c);
+    HoldControl(camera_rotate_right_c);
+    HoldControl(camera_rotate_up_c);
+    HoldControl(camera_rotate_down_c);
+    auto reset_camera =
+        _input_system.create_control("reset_camera", ControlType::Release)
+            .expect("ERROR :: CONTROL CREATION FAILED.");
+
+    // Camera info
+    auto& camera_p = _app_renderer.camera_position;
+    auto& camera_d = _app_renderer.camera_look_dir;
+    camera_d       = glm::normalize(camera_d);
+
+    const static auto camera_u = glm::vec3(0.0f, 0.0f, 1.0f);
+
+    static float32 camera_speed   = 5.0f;
+    static float32 rotation_speed = 1.4f;
+
+    // Camera movement
+    camera_forward_c->event +=
+        [&](float32 dt, float32) { camera_p += camera_d * camera_speed * dt; };
+    camera_backwards_c->event +=
+        [&](float32 dt, float32) { camera_p -= camera_d * camera_speed * dt; };
+    camera_left_c->event += [&](float32 dt, float32) {
+        auto camera_l = glm::cross(camera_u, camera_d);
+        camera_l      = glm::normalize(camera_l);
+        camera_p += camera_l * camera_speed * dt;
+    };
+    camera_right_c->event += [&](float32 dt, float32) {
+        auto camera_l = glm::cross(camera_u, camera_d);
+        camera_l      = glm::normalize(camera_l);
+        camera_p -= camera_l * camera_speed * dt;
+    };
+    camera_up_c->event +=
+        [&](float32 dt, float32) { camera_p += camera_u * camera_speed * dt; };
+    camera_down_c->event +=
+        [&](float32 dt, float32) { camera_p -= camera_u * camera_speed * dt; };
+
+    // Camera rotation
+    camera_rotate_left_c->event += [&](float32 dt, float32) {
+        auto rot_mat =
+            glm::rotate(glm::mat4(1.0f), rotation_speed * dt, camera_u);
+        camera_d = rot_mat * glm::vec4(camera_d, 1.0f);
+    };
+    camera_rotate_right_c->event += [&](float32 dt, float32) {
+        auto rot_mat =
+            glm::rotate(glm::mat4(1.0f), -rotation_speed * dt, camera_u);
+        camera_d = rot_mat * glm::vec4(camera_d, 1.0f);
+    };
+    camera_rotate_up_c->event += [&](float32 dt, float32) {
+        auto camera_l = glm::cross(camera_d, camera_u);
+        auto rot_mat =
+            glm::rotate(glm::mat4(1.0f), rotation_speed * dt, camera_l);
+        camera_d = rot_mat * glm::vec4(camera_d, 1.0f);
+    };
+    camera_rotate_down_c->event += [&](float32 dt, float32) {
+        auto camera_l = glm::cross(camera_d, camera_u);
+        auto rot_mat =
+            glm::rotate(glm::mat4(1.0f), -rotation_speed * dt, camera_l);
+        camera_d = rot_mat * glm::vec4(camera_d, 1.0f);
+    };
+    // Other
+    reset_camera->event += [&](float32, float32) {
+        camera_p = glm::vec3(2, 2, 2);
+        camera_d = glm::vec3(-1, -1, -1);
+        camera_d = glm::normalize(camera_d);
+    };
+
+    // key bindings
+    camera_forward_c->map_key(KeyCode::W);
+    camera_backwards_c->map_key(KeyCode::S);
+    camera_left_c->map_key(KeyCode::A);
+    camera_right_c->map_key(KeyCode::D);
+    camera_up_c->map_key(KeyCode::E);
+    camera_down_c->map_key(KeyCode::Q);
+
+    camera_rotate_left_c->map_key(KeyCode::J);
+    camera_rotate_right_c->map_key(KeyCode::L);
+    camera_rotate_up_c->map_key(KeyCode::I);
+    camera_rotate_down_c->map_key(KeyCode::K);
+
+    reset_camera->map_key(KeyCode::R);
 }

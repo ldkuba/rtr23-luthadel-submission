@@ -2,6 +2,7 @@
 
 #include <vulkan/vulkan.hpp>
 #include <GLFW/glfw3.h>
+#include "math_libs.hpp"
 
 #include "systems/memory/memory_system.hpp"
 #include "systems/app_temp.hpp"
