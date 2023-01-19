@@ -10,6 +10,8 @@
 struct Vertex3D {
     glm::vec3 position;
     glm::vec3 normal;
+    glm::vec4 tangent;
+    glm::vec4 color;
     glm::vec2 texture_coord;
 
     bool operator==(const Vertex3D& other) const {

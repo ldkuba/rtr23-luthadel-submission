@@ -6,4 +6,5 @@ diffuse_color=1.0 1.0 1.0 1.0
 shininess=64.0
 diffuse_map_name=cobblestone
 specular_map_name=cobblestone_SPEC
+normal_map_name=cobblestone_NRM
 shader=builtin.material_shader

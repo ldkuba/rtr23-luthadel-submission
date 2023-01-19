@@ -84,6 +84,14 @@ class GeometrySystem {
         const bool   auto_release = true
     );
 
+    // Utility methods
+    void generate_normals(
+        Vector<Vertex3D>& vertices, Vector<uint32> const& indices
+    );
+    void generate_tangents(
+        Vector<Vertex3D>& vertices, Vector<uint32> const& indices
+    );
+
   private:
     struct GeometryRef {
         Geometry* handle;

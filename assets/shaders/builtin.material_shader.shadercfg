@@ -7,6 +7,8 @@ stages=vertex,fragment
 # Attributes: type,name
 attribute=vec3,in_position
 attribute=vec3,in_normal
+attribute=vec4,in_tangent
+attribute=vec4,in_color
 attribute=vec2,in_texcoord
 
 # Uniforms: type,scope,name
@@ -18,5 +20,6 @@ uniform=vec3,0,view_position
 uniform=vec4,1,diffuse_color
 uniform=sampler,1,diffuse_texture
 uniform=sampler,1,specular_texture
+uniform=sampler,1,normal_texture
 uniform=float32,1,shininess
 uniform=mat4,2,model

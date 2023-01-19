@@ -17,6 +17,10 @@ class TextureSystem {
     Property<Texture*> default_specular_texture {
         GET { return _default_specular_texture; }
     };
+    /// @brief Default fallback normal texture
+    Property<Texture*> default_normal_texture {
+        GET { return _default_normal_texture; }
+    };
 
     /**
      * @brief Construct a new Texture System object
@@ -60,10 +64,13 @@ class TextureSystem {
     const uint64 _max_texture_count             = 1024;
     const String _default_texture_name          = "default";
     const String _default_specular_texture_name = "default_spec";
+    const String _default_normal_texture_name   = "default_norm";
 
-    Texture*                         _default_texture          = nullptr;
-    Texture*                         _default_specular_texture = nullptr;
-    UnorderedMap<String, TextureRef> _registered_textures      = {};
+    Texture* _default_texture          = nullptr;
+    Texture* _default_specular_texture = nullptr;
+    Texture* _default_normal_texture   = nullptr;
+
+    UnorderedMap<String, TextureRef> _registered_textures = {};
 
     void create_default_textures();
     void destroy_default_textures();

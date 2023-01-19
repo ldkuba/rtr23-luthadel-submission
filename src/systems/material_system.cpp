@@ -195,12 +195,20 @@ void MaterialSystem::create_default_material() {
     // Create default material
     _default_material = new (MemoryTag::MaterialInstance)
         Material(_default_material_name, shader, glm::vec4(1.0f), 32.0f);
+
+    // Set maps:
+    // Diffuse
     TextureMap diffuse_map         = { _texture_system->default_texture,
                                        TextureUse::MapDiffuse };
     _default_material->diffuse_map = diffuse_map;
+    // Specular
     TextureMap specular_map = { _texture_system->default_specular_texture,
                                 TextureUse::MapSpecular };
     _default_material->specular_map = specular_map;
+    // Normal
+    TextureMap normal_map           = { _texture_system->default_normal_texture,
+                                        TextureUse::MapNormal };
+    _default_material->normal_map   = normal_map;
 
     // TODO: Set other maps
 
@@ -254,6 +262,19 @@ Result<MaterialSystem::MaterialRef, bool> MaterialSystem::create_material(
     }
     material->specular_map = specular_map;
 
+    // Normal map
+    TextureMap normal_map = {};
+    if (config.specular_map_name.length() > 0) {
+        normal_map.use = TextureUse::MapNormal;
+        normal_map.texture =
+            _texture_system->acquire(config.normal_map_name, true);
+    } else {
+        // Note: Not needed. Set explicit for readability
+        normal_map.use     = TextureUse::Unknown;
+        normal_map.texture = nullptr;
+    }
+    material->normal_map = normal_map;
+
     // TODO: Set other maps
 
     // Acquire resource from GPU
@@ -282,8 +303,10 @@ void MaterialSystem::destroy_material(Material* material) {
 
     const Texture* diffuse_texture  = material->diffuse_map().texture;
     const Texture* specular_texture = material->specular_map().texture;
+    const Texture* normal_texture   = material->normal_map().texture;
     if (diffuse_texture) _texture_system->release(diffuse_texture->name());
     if (specular_texture) _texture_system->release(specular_texture->name());
+    if (normal_texture) _texture_system->release(normal_texture->name());
 
     material->shader()->release_instance_resources( //
         material->internal_id.value()

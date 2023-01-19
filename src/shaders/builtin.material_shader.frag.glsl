@@ -9,7 +9,8 @@ layout(set=1,binding=0)uniform local_uniform_buffer{
 // Samplers
 const int diffuse_i=0;
 const int specular_i=1;
-layout(set=1,binding=1)uniform sampler2D samplers[2];
+const int normal_i=2;
+layout(set=1,binding=1)uniform sampler2D samplers[3];
 
 // Light
 struct DirectionalLight{
@@ -23,13 +24,18 @@ DirectionalLight directional_light={
     vec4(.8,.8,.8,1.)
 };
 
+// Tangent bi-tangent normal
+mat3 TBN;
+
 // I/O
 layout(location=0)in struct data_transfer_object{
     vec4 ambient_color;
     vec3 surface_normal;
+    vec4 surface_tangent;
     vec2 texture_coordinate;
     vec3 view_position;
     vec3 frag_position;
+    vec4 color;
 }DTO;
 
 layout(location=0)out vec4 out_color;
@@ -39,8 +45,23 @@ vec4 calculate_directional_lights(DirectionalLight directional_light,vec3 normal
 
 // Main
 void main(){
+    vec3 normal=DTO.surface_normal;
+    vec3 tangent=DTO.surface_tangent.xyz;
+    
+    // Make sure tanget is really orthogonal to normal vector
+    // For this we use Gram-Schmidt process
+    // tangent -= (projection of tangent vector onto normal vector)
+    tangent-=dot(tangent,normal)*normal;
+    
+    vec3 bitangent=cross(normal,tangent)*DTO.surface_tangent.w;
+    TBN=mat3(tangent,bitangent,normal);
+    
+    // Texture normal sample (normalized to range 0 - 1)
+    vec3 local_normal=2.*texture(samplers[normal_i],DTO.texture_coordinate).rgb-1.;
+    normal=normalize(TBN*local_normal);
+    
     vec3 view_direction=normalize(DTO.view_position-DTO.frag_position);
-    out_color=calculate_directional_lights(directional_light,DTO.surface_normal,view_direction);
+    out_color=calculate_directional_lights(directional_light,normal,view_direction);
 }
 
 // Functions

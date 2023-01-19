@@ -104,6 +104,7 @@ void Material::apply_instance() {
     if (_shader->get_name().compare_ci("builtin.material_shader") == 0) {
         set_uniform("shininess", _shininess);
         set_sampler("specular_texture", _specular_map.texture);
+        set_sampler("normal_texture", _normal_map.texture);
     }
     _shader->apply_instance();
 }

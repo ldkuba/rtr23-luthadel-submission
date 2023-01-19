@@ -12,6 +12,7 @@ struct MSVars {
     STRING_CONST(shininess);
     STRING_CONST(diffuse_map_name);
     STRING_CONST(specular_map_name);
+    STRING_CONST(normal_map_name);
 };
 
 Result<glm::vec4, uint8> load_vector(const String vector_str);
@@ -36,6 +37,7 @@ Result<Resource*, RuntimeError> MaterialLoader::load(const String name) {
     float32   mat_shininess         = 32.0f;
     String    mat_diffuse_map_name  = "";
     String    mat_specular_map_name = "";
+    String    mat_normal_map_name   = "";
 
     // Load material configuration from file
     String file_name = name + ".mat";
@@ -118,6 +120,10 @@ Result<Resource*, RuntimeError> MaterialLoader::load(const String name) {
         else if (setting_var.compare(MSVars::specular_map_name) == 0) {
             mat_specular_map_name = setting_val;
         }
+        // NORMAL MAP NAME
+        else if (setting_var.compare(MSVars::normal_map_name) == 0) {
+            mat_normal_map_name = setting_val;
+        }
         // DIFFUSE COLOR
         else if (setting_var.compare(MSVars::diffuse_color) == 0) {
             auto result = load_vector(setting_val);
@@ -181,6 +187,7 @@ Result<Resource*, RuntimeError> MaterialLoader::load(const String name) {
         mat_shader,
         mat_diffuse_map_name,
         mat_specular_map_name,
+        mat_normal_map_name,
         mat_diffuse_color,
         mat_shininess,
         mat_auto_release

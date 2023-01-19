@@ -186,6 +186,19 @@ void TextureSystem::create_default_textures() {
     );
     _default_specular_texture->id = 1;
     _renderer->create_texture(_default_specular_texture, pixels);
+
+    // Normal
+    for (uint32 i = 0; i < pixel_count; i++)
+        pixels[i] = (byte) ((i / 2 % 2) ? 255 : 128);
+    _default_normal_texture = new (MemoryTag::Texture) Texture(
+        _default_normal_texture_name,
+        texture_dimension,
+        texture_dimension,
+        channels,
+        false
+    );
+    _default_normal_texture->id = 2;
+    _renderer->create_texture(_default_normal_texture, pixels);
 }
 void TextureSystem::destroy_default_textures() {
     if (_default_texture) {
@@ -195,5 +208,9 @@ void TextureSystem::destroy_default_textures() {
     if (_default_specular_texture) {
         _renderer->destroy_texture(_default_specular_texture);
         delete _default_specular_texture;
+    }
+    if (_default_normal_texture) {
+        _renderer->destroy_texture(_default_normal_texture);
+        delete _default_normal_texture;
     }
 }

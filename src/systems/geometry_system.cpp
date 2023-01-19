@@ -89,35 +89,35 @@ Geometry* GeometrySystem::generate_cube(
     // Initialize vertices and indices for a cube
     Vector<Vertex> vertices = {
         // Front
-        { { -l, -l, l }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f } },
-        { { l, l, l }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 1.0f } },
-        { { -l, l, l }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } },
-        { { l, -l, l }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 0.0f } },
+        { { -l, -l, l }, { 0.0f, 0.0f, 1.0f }, {}, {}, { 0.0f, 0.0f } },
+        { { l, l, l }, { 0.0f, 0.0f, 1.0f }, {}, {}, { 1.0f, 1.0f } },
+        { { -l, l, l }, { 0.0f, 0.0f, 1.0f }, {}, {}, { 0.0f, 1.0f } },
+        { { l, -l, l }, { 0.0f, 0.0f, 1.0f }, {}, {}, { 1.0f, 0.0f } },
         // Back
-        { { l, -l, -l }, { 0.0f, 0.0f, -1.0f }, { 0.0f, 0.0f } },
-        { { -l, l, -l }, { 0.0f, 0.0f, -1.0f }, { 1.0f, 1.0f } },
-        { { l, l, -l }, { 0.0f, 0.0f, -1.0f }, { 0.0f, 1.0f } },
-        { { -l, -l, -l }, { 0.0f, 0.0f, -1.0f }, { 1.0f, 0.0f } },
+        { { l, -l, -l }, { 0.0f, 0.0f, -1.0f }, {}, {}, { 0.0f, 0.0f } },
+        { { -l, l, -l }, { 0.0f, 0.0f, -1.0f }, {}, {}, { 1.0f, 1.0f } },
+        { { l, l, -l }, { 0.0f, 0.0f, -1.0f }, {}, {}, { 0.0f, 1.0f } },
+        { { -l, -l, -l }, { 0.0f, 0.0f, -1.0f }, {}, {}, { 1.0f, 0.0f } },
         // Left
-        { { -l, -l, -l }, { -1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f } },
-        { { -l, l, l }, { -1.0f, 0.0f, 0.0f }, { 1.0f, 1.0f } },
-        { { -l, l, -l }, { -1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f } },
-        { { -l, -l, l }, { -1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f } },
+        { { -l, -l, -l }, { -1.0f, 0.0f, 0.0f }, {}, {}, { 0.0f, 0.0f } },
+        { { -l, l, l }, { -1.0f, 0.0f, 0.0f }, {}, {}, { 1.0f, 1.0f } },
+        { { -l, l, -l }, { -1.0f, 0.0f, 0.0f }, {}, {}, { 0.0f, 1.0f } },
+        { { -l, -l, l }, { -1.0f, 0.0f, 0.0f }, {}, {}, { 1.0f, 0.0f } },
         // Right
-        { { l, -l, l }, { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f } },
-        { { l, l, -l }, { 1.0f, 0.0f, 0.0f }, { 1.0f, 1.0f } },
-        { { l, l, l }, { 1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f } },
-        { { l, -l, -l }, { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f } },
+        { { l, -l, l }, { 1.0f, 0.0f, 0.0f }, {}, {}, { 0.0f, 0.0f } },
+        { { l, l, -l }, { 1.0f, 0.0f, 0.0f }, {}, {}, { 1.0f, 1.0f } },
+        { { l, l, l }, { 1.0f, 0.0f, 0.0f }, {}, {}, { 0.0f, 1.0f } },
+        { { l, -l, -l }, { 1.0f, 0.0f, 0.0f }, {}, {}, { 1.0f, 0.0f } },
         // Bottom
-        { { l, -l, l }, { 0.0f, -1.0f, 0.0f }, { 0.0f, 0.0f } },
-        { { -l, -l, -l }, { 0.0f, -1.0f, 0.0f }, { 1.0f, 1.0f } },
-        { { l, -l, -l }, { 0.0f, -1.0f, 0.0f }, { 0.0f, 1.0f } },
-        { { -l, -l, l }, { 0.0f, -1.0f, 0.0f }, { 1.0f, 0.0f } },
+        { { l, -l, l }, { 0.0f, -1.0f, 0.0f }, {}, {}, { 0.0f, 0.0f } },
+        { { -l, -l, -l }, { 0.0f, -1.0f, 0.0f }, {}, {}, { 1.0f, 1.0f } },
+        { { l, -l, -l }, { 0.0f, -1.0f, 0.0f }, {}, {}, { 0.0f, 1.0f } },
+        { { -l, -l, l }, { 0.0f, -1.0f, 0.0f }, {}, {}, { 1.0f, 0.0f } },
         // Top
-        { { -l, l, l }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f } },
-        { { l, l, -l }, { 0.0f, 1.0f, 0.0f }, { 1.0f, 1.0f } },
-        { { -l, l, -l }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 1.0f } },
-        { { l, l, l }, { 0.0f, 1.0f, 0.0f }, { 1.0f, 0.0f } }
+        { { -l, l, l }, { 0.0f, 1.0f, 0.0f }, {}, {}, { 0.0f, 0.0f } },
+        { { l, l, -l }, { 0.0f, 1.0f, 0.0f }, {}, {}, { 1.0f, 1.0f } },
+        { { -l, l, -l }, { 0.0f, 1.0f, 0.0f }, {}, {}, { 0.0f, 1.0f } },
+        { { l, l, l }, { 0.0f, 1.0f, 0.0f }, {}, {}, { 1.0f, 0.0f } }
     };
     Vector<uint32> indices(36);
     for (uint32 i = 0; i < 6; ++i) {
@@ -132,8 +132,84 @@ Geometry* GeometrySystem::generate_cube(
         indices[i_offset + 5] = v_offset + 1;
     }
 
+    // Generate tangents
+    generate_tangents(vertices, indices);
+
     // Crete & return geometry
     return acquire(name, vertices, indices, material_name, auto_release);
+}
+
+// Utility methods
+void GeometrySystem::generate_normals(
+    Vector<Vertex3D>& vertices, const Vector<uint32>& indices
+) {
+    // Zero out normals (jic)
+    for (auto& vertex : vertices)
+        vertex.normal = glm::vec3(0.0f);
+
+    // Loops trough all triangles, compute cumulative normal vector
+    for (uint32 i = 0; i < indices.size(); i += 3) {
+        // Triangle vertices
+        Vertex& v0 = vertices[indices[i + 0]];
+        Vertex& v1 = vertices[indices[i + 1]];
+        Vertex& v2 = vertices[indices[i + 2]];
+
+        // Triangle edges
+        glm::vec3 edge1 = v1.position - v0.position;
+        glm::vec3 edge2 = v2.position - v0.position;
+
+        // Compute normal
+        glm::vec3 normal = glm::normalize(glm::cross(edge1, edge2));
+
+        // Face normal
+        v0.normal += normal;
+        v1.normal += normal;
+        v2.normal += normal;
+    }
+
+    // Normalize normal vector
+    for (auto& vertex : vertices)
+        vertex.normal = glm::normalize(vertex.normal);
+}
+void GeometrySystem::generate_tangents(
+    Vector<Vertex3D>& vertices, const Vector<uint32>& indices
+) {
+    // Loops trough all triangles
+    for (uint32 i = 0; i < indices.size(); i += 3) {
+        // Triangle vertices
+        Vertex& v0 = vertices[indices[i + 0]];
+        Vertex& v1 = vertices[indices[i + 1]];
+        Vertex& v2 = vertices[indices[i + 2]];
+
+        // Triangle edges
+        glm::vec3 edge1 = v1.position - v0.position;
+        glm::vec3 edge2 = v2.position - v0.position;
+
+        // UV delta
+        float32 delta_U1 = v1.texture_coord.x - v0.texture_coord.x;
+        float32 delta_V1 = v1.texture_coord.y - v0.texture_coord.y;
+        float32 delta_U2 = v2.texture_coord.x - v0.texture_coord.x;
+        float32 delta_V2 = v2.texture_coord.y - v0.texture_coord.y;
+
+        float32 dividend = delta_U1 * delta_V2 - delta_U2 * delta_V1;
+        float32 fc       = 1.0f / dividend;
+
+        // Used for checking whether the UV coordinates are flipped. This info
+        // is stored in tangents w component. (Useful if our model reuses its
+        // texture UVs)
+        float32 handedness = (dividend > 0.0f) ? -1.0f : 1.0f;
+
+        // Vertex tangent for this triangle
+        glm::vec4 tangent = glm::normalize(glm::vec4 {
+            fc * (delta_V2 * edge1.x - delta_V1 * edge2.x),
+            fc * (delta_V2 * edge1.y - delta_V1 * edge2.y),
+            fc * (delta_V2 * edge1.z - delta_V1 * edge2.z),
+            handedness });
+
+        v0.tangent = tangent;
+        v1.tangent = tangent;
+        v2.tangent = tangent;
+    }
 }
 
 // /////////////////////////////// //
@@ -146,15 +222,23 @@ void GeometrySystem::create_default_geometries() {
     // === Default for 3D ===
     Vector<Vertex> vertices = { { glm::vec3(-0.5f * f, -0.5f * f, 0.0f),
                                   glm::vec3(0.0f, 0.0f, 0.0f),
+                                  glm::vec4(0.0f),
+                                  glm::vec4(0.0f),
                                   glm::vec2(0.0f, 0.0f) },
                                 { glm::vec3(0.5f * f, 0.5f * f, 0.0f),
                                   glm::vec3(0.0f, 0.0f, 0.0f),
+                                  glm::vec4(0.0f),
+                                  glm::vec4(0.0f),
                                   glm::vec2(1.0f, 1.0f) },
                                 { glm::vec3(-0.5f * f, 0.5f * f, 0.0f),
                                   glm::vec3(0.0f, 0.0f, 0.0f),
+                                  glm::vec4(0.0f),
+                                  glm::vec4(0.0f),
                                   glm::vec2(0.0f, 1.0f) },
                                 { glm::vec3(0.5f * f, -0.5f * f, 0.0f),
                                   glm::vec3(0.0f, 0.0f, 0.0f),
+                                  glm::vec4(0.0f),
+                                  glm::vec4(0.0f),
                                   glm::vec2(1.0f, 0.0f) } };
     Vector<uint32> indices  = { 0, 1, 2, 0, 3, 1 };
 

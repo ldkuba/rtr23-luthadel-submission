@@ -20,6 +20,7 @@ class MaterialConfig : public Resource {
     const String    shader;
     const String    diffuse_map_name;
     const String    specular_map_name;
+    const String    normal_map_name;
     const glm::vec4 diffuse_color;
     const float32   shininess;
     const bool      auto_release;
@@ -29,12 +30,14 @@ class MaterialConfig : public Resource {
         const String    shader,
         const String    diffuse_map_name,
         const String    specular_map_name,
+        const String    normal_map_name,
         const glm::vec4 diffuse_color,
         const float32   shininess,
         const bool      auto_release
     )
         : Resource(name), shader(shader), diffuse_map_name(diffuse_map_name),
-          specular_map_name(specular_map_name), diffuse_color(diffuse_color),
+          specular_map_name(specular_map_name),
+          normal_map_name(normal_map_name), diffuse_color(diffuse_color),
           shininess(shininess), auto_release(auto_release) {}
     ~MaterialConfig() {}
 };
@@ -74,6 +77,11 @@ class Material {
     Property<TextureMap> specular_map {
         GET { return _specular_map; }
         SET { _specular_map = value; }
+    };
+    /// @brief Material's normal map
+    Property<TextureMap> normal_map {
+        GET { return _normal_map; }
+        SET { _normal_map = value; }
     };
 
     /**
@@ -123,6 +131,7 @@ class Material {
     Shader* const _shader;
     TextureMap    _diffuse_map;
     TextureMap    _specular_map;
+    TextureMap    _normal_map;
     glm::vec4     _diffuse_color;
     float32       _shininess;
 };
