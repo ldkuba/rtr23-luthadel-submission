@@ -19,18 +19,23 @@ class MaterialConfig : public Resource {
   public:
     const String    shader;
     const String    diffuse_map_name;
+    const String    specular_map_name;
     const glm::vec4 diffuse_color;
+    const float32   shininess;
     const bool      auto_release;
 
     MaterialConfig(
         const String    name,
         const String    shader,
         const String    diffuse_map_name,
+        const String    specular_map_name,
         const glm::vec4 diffuse_color,
+        const float32   shininess,
         const bool      auto_release
     )
         : Resource(name), shader(shader), diffuse_map_name(diffuse_map_name),
-          diffuse_color(diffuse_color), auto_release(auto_release) {}
+          specular_map_name(specular_map_name), diffuse_color(diffuse_color),
+          shininess(shininess), auto_release(auto_release) {}
     ~MaterialConfig() {}
 };
 
@@ -56,10 +61,19 @@ class Material {
     Property<glm::vec4> diffuse_color {
         GET { return _diffuse_color; }
     };
+    /// @brief Materials shininess. Controls concentration of specular light
+    Property<float32> shininess {
+        GET { return _shininess; }
+    };
     /// @brief Material's diffuse map
     Property<TextureMap> diffuse_map {
         GET { return _diffuse_map; }
         SET { _diffuse_map = value; }
+    };
+    /// @brief Material's specular map
+    Property<TextureMap> specular_map {
+        GET { return _specular_map; }
+        SET { _specular_map = value; }
     };
 
     /**
@@ -70,13 +84,16 @@ class Material {
      * @param diffuse_color Material diffuse color
      */
     Material(
-        const String name, Shader* const shader, const glm::vec4 diffuse_color
+        const String    name,
+        Shader* const   shader,
+        const glm::vec4 diffuse_color,
+        const float32   shininess
     );
     ~Material();
 
     /**
      * @brief Set global uniform values for all materials witch utilize this
-     * shader.
+     * shader. (TODO: temp)
      *
      * @param projection Projection matrix to set
      * @param view View matrix to set
@@ -84,7 +101,8 @@ class Material {
     void apply_global(
         const glm::mat4 projection,
         const glm::mat4 view,
-        const glm::vec4 ambient_color
+        const glm::vec4 ambient_color = glm::vec4(0.0f),
+        const glm::vec3 view_position = glm::vec3(0.0f)
     );
     /**
      * @brief Set instance uniform values of this material.
@@ -104,5 +122,7 @@ class Material {
     String        _name = "";
     Shader* const _shader;
     TextureMap    _diffuse_map;
+    TextureMap    _specular_map;
     glm::vec4     _diffuse_color;
+    float32       _shininess;
 };

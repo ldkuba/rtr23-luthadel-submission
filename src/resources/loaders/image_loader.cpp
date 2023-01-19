@@ -21,7 +21,6 @@ Result<Resource*, RuntimeError> ImageLoader::load(const String name) {
     // If name is not provided with an extension use default extension
     String file_name = name;
     if (file_name.split('.').size() < 2) file_name = file_name + ".png";
-    file_name.to_lower();
 
     // Compute full path
     String file_path =

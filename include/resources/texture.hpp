@@ -5,7 +5,7 @@
 struct InternalTextureData {};
 
 /// @brief Collection of texture uses
-enum TextureUse { Unknown, MapDiffuse };
+enum TextureUse { Unknown, MapDiffuse, MapSpecular };
 
 /**
  * @brief Frontend (API agnostic) representation of a texture.

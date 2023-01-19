@@ -37,7 +37,9 @@ Result<void, RuntimeError> Renderer::draw_frame(const float32 delta_time) {
         camera_position + camera_look_dir,
         glm::vec3(0.0f, 0.0f, 1.0f)
     );
-    current_material->apply_global(_projection, _view, _ambient_color);
+    current_material->apply_global(
+        _projection, _view, _ambient_color, camera_position
+    );
 
     // Update instances
     current_material->apply_instance();
@@ -45,7 +47,7 @@ Result<void, RuntimeError> Renderer::draw_frame(const float32 delta_time) {
     // Update locals
     // TODO: Temp code; update one and only object
     static float rotation = 0.0f;
-    rotation += 50.0f * delta_time;
+    if (cube_rotation) rotation += 50.0f * delta_time;
     auto model = glm::rotate(
         glm::mat4(1.0f), glm::radians(rotation), glm::vec3(0.0f, 0.0f, 1.0f)
     );
@@ -65,7 +67,7 @@ Result<void, RuntimeError> Renderer::draw_frame(const float32 delta_time) {
     Material* ui_material = current_ui_geometry->material;
 
     // Update global state
-    ui_material->apply_global(_projection_ui, _view_ui, glm::vec4(0.0f));
+    ui_material->apply_global(_projection_ui, _view_ui);
 
     // Update instance
     ui_material->apply_instance();

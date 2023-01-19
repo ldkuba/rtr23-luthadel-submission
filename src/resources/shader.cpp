@@ -67,6 +67,8 @@ Shader::~Shader() {
 // SHADER PUBLIC METHODS //
 // ///////////////////// //
 
+void Shader::reload() {}
+
 void Shader::use() {}
 void Shader::bind_globals() {}
 void Shader::bind_instance(const uint32 id) { _bound_instance_id = id; }

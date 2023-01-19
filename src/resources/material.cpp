@@ -4,9 +4,13 @@
 
 // Constructor & Destructor
 Material::Material(
-    const String name, Shader* const shader, const glm::vec4 diffuse_color
+    const String    name,
+    Shader* const   shader,
+    const glm::vec4 diffuse_color,
+    const float32   shininess
 )
-    : _name(name), _shader(shader), _diffuse_color(diffuse_color) {}
+    : _name(name), _shader(shader), _diffuse_color(diffuse_color),
+      _shininess(shininess) {}
 Material::~Material() {}
 
 // /////////////////////// //
@@ -69,15 +73,18 @@ Material::~Material() {}
 void Material::apply_global(
     const glm::mat4 projection,
     const glm::mat4 view,
-    const glm::vec4 ambient_color
+    const glm::vec4 ambient_color,
+    const glm::vec3 view_position
 ) {
     // Apply globals
     _shader->bind_globals();
     set_uniform_s(projection);
     set_uniform_s(view);
     // TODO: Temp solution for type checking problem
-    if (_shader->get_name().compare_ci("builtin.material_shader") == 0)
+    if (_shader->get_name().compare_ci("builtin.material_shader") == 0) {
         set_uniform_s(ambient_color);
+        set_uniform_s(view_position);
+    }
     _shader->apply_global();
 }
 void Material::apply_instance() {
@@ -94,6 +101,10 @@ void Material::apply_instance() {
     _shader->bind_instance(internal_id.value());
     set_uniform("diffuse_color", _diffuse_color);
     set_sampler("diffuse_texture", _diffuse_map.texture);
+    if (_shader->get_name().compare_ci("builtin.material_shader") == 0) {
+        set_uniform("shininess", _shininess);
+        set_sampler("specular_texture", _specular_map.texture);
+    }
     _shader->apply_instance();
 }
 void Material::apply_local(const glm::mat4 model) { set_uniform_s(model); }

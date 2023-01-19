@@ -9,7 +9,9 @@ struct MSVars {
     STRING_CONST(name);
     STRING_CONST(shader);
     STRING_CONST(diffuse_color);
+    STRING_CONST(shininess);
     STRING_CONST(diffuse_map_name);
+    STRING_CONST(specular_map_name);
 };
 
 Result<glm::vec4, uint8> load_vector(const String vector_str);
@@ -27,11 +29,13 @@ MaterialLoader::~MaterialLoader() {}
 
 Result<Resource*, RuntimeError> MaterialLoader::load(const String name) {
     // Material configuration defaults
-    String    mat_name             = name;
-    String    mat_shader           = "";
-    bool      mat_auto_release     = true;
-    glm::vec4 mat_diffuse_color    = glm::vec4(1.0f);
-    String    mat_diffuse_map_name = "";
+    String    mat_name              = name;
+    String    mat_shader            = "";
+    bool      mat_auto_release      = true;
+    glm::vec4 mat_diffuse_color     = glm::vec4(1.0f);
+    float32   mat_shininess         = 32.0f;
+    String    mat_diffuse_map_name  = "";
+    String    mat_specular_map_name = "";
 
     // Load material configuration from file
     String file_name = name + ".mat";
@@ -110,6 +114,10 @@ Result<Resource*, RuntimeError> MaterialLoader::load(const String name) {
         else if (setting_var.compare(MSVars::diffuse_map_name) == 0) {
             mat_diffuse_map_name = setting_val;
         }
+        // SPECULAR MAP NAME
+        else if (setting_var.compare(MSVars::specular_map_name) == 0) {
+            mat_specular_map_name = setting_val;
+        }
         // DIFFUSE COLOR
         else if (setting_var.compare(MSVars::diffuse_color) == 0) {
             auto result = load_vector(setting_val);
@@ -137,6 +145,20 @@ Result<Resource*, RuntimeError> MaterialLoader::load(const String name) {
             }
             else { mat_diffuse_color = result.value(); }
         }
+        // SHININESS
+        else if (setting_var.compare(MSVars::shininess) == 0) {
+            auto parse_res = setting_val.parse_as_float32();
+            if (!parse_res.has_error()) mat_shininess = parse_res.value();
+            else
+                Logger::warning(
+                    RESOURCE_LOG,
+                    "Couldn't parse shininess at line ",
+                    line_number,
+                    " of file ",
+                    file_path,
+                    ". Couldn't parse floats."
+                );
+        }
         // WRONG VAR
         else {
             Logger::warning(
@@ -158,7 +180,9 @@ Result<Resource*, RuntimeError> MaterialLoader::load(const String name) {
         mat_name,
         mat_shader,
         mat_diffuse_map_name,
+        mat_specular_map_name,
         mat_diffuse_color,
+        mat_shininess,
         mat_auto_release
     );
     material_config->full_path   = file_path;

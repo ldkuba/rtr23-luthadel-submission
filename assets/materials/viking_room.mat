@@ -1,7 +1,0 @@
-# Test material file
-
-version=0.1
-name=viking_room
-diffuse_color=1.0 1.0 1.0 1.0
-diffuse_map_name=viking_room
-shader=builtin.material_shader

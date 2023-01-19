@@ -125,6 +125,13 @@ class Shader {
     String get_name() { return _name; }
 
     /**
+     * @brief Reload shader to process changes in shader code.
+     * TODO: for now this is simplified. Doesn't consider changes in shader's
+     * attributes & uniforms configuration.
+     */
+    virtual void reload();
+
+    /**
      * @brief Use this shader
      */
     virtual void use();

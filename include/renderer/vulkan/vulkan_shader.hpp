@@ -51,6 +51,8 @@ class VulkanShader : public Shader {
     );
     ~VulkanShader();
 
+    void reload() override;
+
     void use() override;
     void bind_globals() override;
     void bind_instance(const uint32 id) override;

@@ -36,6 +36,8 @@ class Renderer {
 
     glm::vec3 camera_position { 2.0f, 2.0f, 2.0f };
     glm::vec3 camera_look_dir { -1.0f, -1.0f, -1.0f };
+
+    bool cube_rotation = false;
     // TODO: TEMP TEST CODE END
 
     /**

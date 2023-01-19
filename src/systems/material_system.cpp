@@ -194,10 +194,13 @@ void MaterialSystem::create_default_material() {
 
     // Create default material
     _default_material = new (MemoryTag::MaterialInstance)
-        Material(_default_material_name, shader, glm::vec4(1.0f));
+        Material(_default_material_name, shader, glm::vec4(1.0f), 32.0f);
     TextureMap diffuse_map         = { _texture_system->default_texture,
                                        TextureUse::MapDiffuse };
     _default_material->diffuse_map = diffuse_map;
+    TextureMap specular_map = { _texture_system->default_specular_texture,
+                                TextureUse::MapSpecular };
+    _default_material->specular_map = specular_map;
 
     // TODO: Set other maps
 
@@ -223,8 +226,9 @@ Result<MaterialSystem::MaterialRef, bool> MaterialSystem::create_material(
     }
 
     auto material = new (MemoryTag::MaterialInstance)
-        Material(config.name, shader, config.diffuse_color);
+        Material(config.name, shader, config.diffuse_color, config.shininess);
 
+    // Diffuse map
     TextureMap diffuse_map = {};
     if (config.diffuse_map_name.length() > 0) {
         diffuse_map.use = TextureUse::MapDiffuse;
@@ -236,6 +240,20 @@ Result<MaterialSystem::MaterialRef, bool> MaterialSystem::create_material(
         diffuse_map.texture = nullptr;
     }
     material->diffuse_map = diffuse_map;
+
+    // Specular map
+    TextureMap specular_map = {};
+    if (config.specular_map_name.length() > 0) {
+        specular_map.use = TextureUse::MapSpecular;
+        specular_map.texture =
+            _texture_system->acquire(config.specular_map_name, true);
+    } else {
+        // Note: Not needed. Set explicit for readability
+        specular_map.use     = TextureUse::Unknown;
+        specular_map.texture = nullptr;
+    }
+    material->specular_map = specular_map;
+
     // TODO: Set other maps
 
     // Acquire resource from GPU
@@ -261,8 +279,12 @@ void MaterialSystem::destroy_material(Material* material) {
             material->name,
             "\" not properly initialized. Internal id not set."
         );
-    String texture_name = material->diffuse_map().texture->name;
-    _texture_system->release(texture_name);
+
+    const Texture* diffuse_texture  = material->diffuse_map().texture;
+    const Texture* specular_texture = material->specular_map().texture;
+    if (diffuse_texture) _texture_system->release(diffuse_texture->name());
+    if (specular_texture) _texture_system->release(specular_texture->name());
+
     material->shader()->release_instance_resources( //
         material->internal_id.value()
     );

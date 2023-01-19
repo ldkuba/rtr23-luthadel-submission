@@ -1,0 +1,9 @@
+# Test material file
+
+version=0.1
+name=test_material
+diffuse_color=1.0 1.0 1.0 1.0
+shininess=64.0
+diffuse_map_name=cobblestone
+specular_map_name=cobblestone_SPEC
+shader=builtin.material_shader

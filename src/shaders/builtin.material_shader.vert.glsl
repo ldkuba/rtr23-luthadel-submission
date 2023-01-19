@@ -4,6 +4,7 @@ layout(set=0,binding=0)uniform global_uniform_buffer{
     mat4 projection;
     mat4 view;
     vec4 ambient_color;
+    vec3 view_position;
 }UBO;
 
 layout(push_constant)uniform push_constants{
@@ -21,11 +22,16 @@ layout(location=0)out struct data_transfer_object{
     vec4 ambient_color;
     vec3 surface_normal;
     vec2 texture_coordinate;
+    vec3 view_position;
+    vec3 frag_position;
 }DTO;
 
 void main(){
     gl_Position=UBO.projection*UBO.view*PC.model*vec4(in_position,1.);
+    
     DTO.ambient_color=UBO.ambient_color;
     DTO.surface_normal=mat3(PC.model)*in_normal;
     DTO.texture_coordinate=in_texture_coordinate;
+    DTO.view_position=UBO.view_position;
+    DTO.frag_position=vec3(PC.model*vec4(in_position,1.));
 }

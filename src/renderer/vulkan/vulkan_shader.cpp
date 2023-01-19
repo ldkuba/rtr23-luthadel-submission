@@ -199,6 +199,42 @@ VulkanShader::~VulkanShader() {
 // VULKAN SHADER PUBLIC METHODS //
 // //////////////////////////// //
 
+void VulkanShader::reload() {
+    // === Process shader config ===
+    // Translate stage info to vulkan flags
+    Vector<vk::ShaderStageFlagBits> shader_stages {};
+    shader_stages.push_back(vk::ShaderStageFlagBits::eVertex);
+    shader_stages.push_back(vk::ShaderStageFlagBits::eFragment);
+
+    // Compute shader stage infos
+    auto shader_stage_infos = compute_stage_infos(shader_stages);
+    // Compute attributes
+    auto attributes         = compute_attributes();
+
+    // === Vertex input state info ===
+    // Vertex bindings
+    Vector<vk::VertexInputBindingDescription> binding_descriptions(1);
+    binding_descriptions[0].setBinding(0);
+    binding_descriptions[0].setStride(_attribute_stride);
+    binding_descriptions[0].setInputRate(vk::VertexInputRate::eVertex);
+
+    vk::PipelineVertexInputStateCreateInfo vertex_input_info {};
+    vertex_input_info.setVertexBindingDescriptions(binding_descriptions);
+    vertex_input_info.setVertexAttributeDescriptions(attributes);
+
+    // === Destroy previous pipeline info ===
+    _device->handle().waitIdle();
+    _device->handle().destroyPipelineLayout(_pipeline_layout);
+    _device->handle().destroyPipeline(_pipeline);
+
+    // === Create pipeline ===
+    create_pipeline(shader_stage_infos, vertex_input_info);
+
+    // === Cleanup temp resources ===
+    for (auto shader_stage_info : shader_stage_infos)
+        _device->handle().destroyShaderModule(shader_stage_info.module);
+}
+
 void VulkanShader::use() {
     _command_buffer->handle->bindPipeline(
         vk::PipelineBindPoint::eGraphics, _pipeline

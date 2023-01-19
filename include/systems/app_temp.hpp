@@ -58,7 +58,25 @@ inline void TestApplication::run() {
         [&close_required](float64, float64) { close_required = true; };
     close_app_control->map_key(KeyCode::ESCAPE);
 
+    // Camera
     setup_camera_controls();
+
+    // Cube spin
+    auto spin_cube =
+        _input_system.create_control("spin_cube", ControlType::Press)
+            .expect("ERROR :: CONTROL CREATION FAILED.");
+    spin_cube->event += [&](float32, float32) {
+        _app_renderer.cube_rotation = !_app_renderer.cube_rotation;
+    };
+    spin_cube->map_key(KeyCode::SPACE);
+
+    // Material shader reload
+    auto shader_reload =
+        _input_system.create_control("shader_reload", ControlType::Press)
+            .expect("ERROR :: CONTROL CREATION FAILED.");
+    shader_reload->event +=
+        [&](float32, float32) { _app_renderer.material_shader->reload(); };
+    shader_reload->map_key(KeyCode::Z);
 
     // === Renderer ===
     _app_renderer.material_shader =
@@ -66,16 +84,18 @@ inline void TestApplication::run() {
     _app_renderer.ui_shader =
         _shader_system.acquire("builtin.ui_shader").expect("ERR2");
 
+    _app_renderer.material_shader->reload();
+
     bool use_cube = true;
     if (use_cube) {
         _app_renderer.current_geometry =
-            _geometry_system.generate_cube("cube", "viking_room");
+            _geometry_system.generate_cube("cube", "test_material");
     } else {
         Vector<Vertex> vertices = {};
         Vector<uint32> indices  = {};
         load_model(vertices, indices);
         _app_renderer.current_geometry = _geometry_system.acquire(
-            "viking_room", vertices, indices, "viking_room"
+            "test_material", vertices, indices, "test_material"
         );
     }
 
@@ -189,6 +209,9 @@ inline void TestApplication::setup_camera_controls() {
     auto reset_camera =
         _input_system.create_control("reset_camera", ControlType::Release)
             .expect("ERROR :: CONTROL CREATION FAILED.");
+    auto camera_position =
+        _input_system.create_control("camera_position", ControlType::Release)
+            .expect("ERROR :: CONTROL CREATION FAILED.");
 
     // Camera info
     auto& camera_p = _app_renderer.camera_position;
@@ -249,6 +272,8 @@ inline void TestApplication::setup_camera_controls() {
         camera_d = glm::vec3(-1, -1, -1);
         camera_d = glm::normalize(camera_d);
     };
+    camera_position->event +=
+        [&](float32, float32) { Logger::debug(camera_p); };
 
     // key bindings
     camera_forward_c->map_key(KeyCode::W);
@@ -264,4 +289,5 @@ inline void TestApplication::setup_camera_controls() {
     camera_rotate_down_c->map_key(KeyCode::K);
 
     reset_camera->map_key(KeyCode::R);
+    camera_position->map_key(KeyCode::C);
 }

@@ -78,7 +78,10 @@ Texture* TextureSystem::acquire(const String name, const bool auto_release) {
     auto result = _resource_system->load(name, ResourceType::Image);
     if (result.has_error()) {
         Logger::error(
-            TEXTURE_SYS_LOG, "Texture load failed. Returning default_texture."
+            TEXTURE_SYS_LOG,
+            "Texture \"",
+            name,
+            "\" could be loaded. Returning default_texture."
         );
         return _default_texture;
     }
@@ -145,7 +148,9 @@ void TextureSystem::create_default_textures() {
     const uint32 texture_dimension = 256;
     const uint32 channels          = 4;
     const uint32 pixel_count       = texture_dimension * texture_dimension;
-    byte         pixels[pixel_count * channels] = {};
+
+    // Diffuse
+    byte pixels[pixel_count * channels] = {};
 
     for (uint32 row = 0; row < texture_dimension; row++) {
         for (uint32 col = 0; col < texture_dimension; col++) {
@@ -168,10 +173,27 @@ void TextureSystem::create_default_textures() {
     );
     _default_texture->id = 0;
     _renderer->create_texture(_default_texture, pixels);
+
+    // Specular (full black)
+    for (auto pixel : pixels)
+        pixel = 0;
+    _default_specular_texture = new (MemoryTag::Texture) Texture(
+        _default_specular_texture_name,
+        texture_dimension,
+        texture_dimension,
+        channels,
+        false
+    );
+    _default_specular_texture->id = 1;
+    _renderer->create_texture(_default_specular_texture, pixels);
 }
 void TextureSystem::destroy_default_textures() {
     if (_default_texture) {
         _renderer->destroy_texture(_default_texture);
         delete _default_texture;
+    }
+    if (_default_specular_texture) {
+        _renderer->destroy_texture(_default_specular_texture);
+        delete _default_specular_texture;
     }
 }
