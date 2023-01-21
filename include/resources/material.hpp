@@ -110,7 +110,8 @@ class Material {
         const glm::mat4 projection,
         const glm::mat4 view,
         const glm::vec4 ambient_color = glm::vec4(0.0f),
-        const glm::vec3 view_position = glm::vec3(0.0f)
+        const glm::vec3 view_position = glm::vec3(0.0f),
+        const uint32    render_mode   = 0
     );
     /**
      * @brief Set instance uniform values of this material.

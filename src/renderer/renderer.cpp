@@ -38,7 +38,7 @@ Result<void, RuntimeError> Renderer::draw_frame(const float32 delta_time) {
         glm::vec3(0.0f, 0.0f, 1.0f)
     );
     current_material->apply_global(
-        _projection, _view, _ambient_color, camera_position
+        _projection, _view, _ambient_color, camera_position, _view_mode
     );
 
     // Update instances

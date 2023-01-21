@@ -61,6 +61,22 @@ Texture* TextureSystem::acquire(const String name, const bool auto_release) {
         );
         return _default_texture;
     }
+    if (name.compare_ci(_default_specular_texture_name) == 0) {
+        Logger::warning(
+            TEXTURE_SYS_LOG,
+            "To acquire the default texture from texture system use "
+            "default_specular_texture property instead."
+        );
+        return _default_specular_texture;
+    }
+    if (name.compare_ci(_default_normal_texture_name) == 0) {
+        Logger::warning(
+            TEXTURE_SYS_LOG,
+            "To acquire the default texture from texture system use "
+            "default_normal_texture property instead."
+        );
+        return _default_normal_texture;
+    }
 
     // Get reference
     String s = name;
@@ -113,8 +129,9 @@ Texture* TextureSystem::acquire(const String name, const bool auto_release) {
 }
 
 void TextureSystem::release(const String name) {
-    if (name.compare_ci(_default_texture_name) == 0) {
-        Logger::warning(TEXTURE_SYS_LOG, "Cannot release default texture.");
+    if (name.compare_ci(_default_texture_name) == 0 ||
+        name.compare_ci(_default_specular_texture_name) == 0 ||
+        name.compare_ci(_default_normal_texture_name) == 0) {
         return;
     }
 
@@ -188,8 +205,8 @@ void TextureSystem::create_default_textures() {
     _renderer->create_texture(_default_specular_texture, pixels);
 
     // Normal
-    for (uint32 i = 0; i < pixel_count; i++)
-        pixels[i] = (byte) ((i / 2 % 2) ? 255 : 128);
+    for (uint32 i = 0; i < pixel_count * channels; i++)
+        pixels[i] = (((i / 2) % 2) ? 0xff : 0x80);
     _default_normal_texture = new (MemoryTag::Texture) Texture(
         _default_normal_texture_name,
         texture_dimension,

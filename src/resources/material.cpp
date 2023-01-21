@@ -74,7 +74,8 @@ void Material::apply_global(
     const glm::mat4 projection,
     const glm::mat4 view,
     const glm::vec4 ambient_color,
-    const glm::vec3 view_position
+    const glm::vec3 view_position,
+    const uint32    mode
 ) {
     // Apply globals
     _shader->bind_globals();
@@ -84,6 +85,7 @@ void Material::apply_global(
     if (_shader->get_name().compare_ci("builtin.material_shader") == 0) {
         set_uniform_s(ambient_color);
         set_uniform_s(view_position);
+        set_uniform_s(mode);
     }
     _shader->apply_global();
 }

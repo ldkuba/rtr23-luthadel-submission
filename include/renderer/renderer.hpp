@@ -13,6 +13,24 @@ enum RendererBackendType { Vulkan };
  */
 class Renderer {
   public:
+    /// @brief Debug render view mode used
+    Property<DebugViewMode> view_mode {
+        GET { return _view_mode; }
+        SET { _view_mode = value; }
+    };
+
+    // TODO: TEMP TEST CODE
+    Geometry* current_geometry    = nullptr;
+    Geometry* current_ui_geometry = nullptr;
+    Shader*   material_shader     = nullptr;
+    Shader*   ui_shader           = nullptr;
+
+    glm::vec3 camera_position { 2.0f, 2.0f, 2.0f };
+    glm::vec3 camera_look_dir { -1.0f, -1.0f, -1.0f };
+
+    bool cube_rotation = false;
+    // TODO: TEMP TEST CODE END
+
     /**
      * @brief Construct a new Renderer object
      *
@@ -27,18 +45,6 @@ class Renderer {
     // Prevent accidental copying
     Renderer(Renderer const&)            = delete;
     Renderer& operator=(Renderer const&) = delete;
-
-    // TODO: TEMP TEST CODE
-    Geometry* current_geometry    = nullptr;
-    Geometry* current_ui_geometry = nullptr;
-    Shader*   material_shader     = nullptr;
-    Shader*   ui_shader           = nullptr;
-
-    glm::vec3 camera_position { 2.0f, 2.0f, 2.0f };
-    glm::vec3 camera_look_dir { -1.0f, -1.0f, -1.0f };
-
-    bool cube_rotation = false;
-    // TODO: TEMP TEST CODE END
 
     /**
      * @brief Inform renderer of a surface resize event
@@ -102,16 +108,19 @@ class Renderer {
   private:
     RendererBackend* _backend = nullptr;
 
+    DebugViewMode _view_mode = Default;
+
+    // TODO: Temp camera info
     float32   _near_plane = 0.01f;
     float32   _far_plane  = 1000.0f;
     glm::mat4 _projection = glm::perspective(
         glm::radians(45.0f), 800.0f / 600.0f, _near_plane, _far_plane
     );
 
-    // Default should be from scene
+    // TODO: Default should be from scene
     glm::vec4 _ambient_color = glm::vec4(0.25f, 0.25f, 0.25f, 1.0f);
 
-    // UI
+    // TODO: Should be in UI
     glm::mat4 _projection_ui =
         glm::ortho(0.0f, 800.f, 600.0f, 0.0f, -100.0f, 100.0f);
     glm::mat4 _view_ui = glm::mat4(

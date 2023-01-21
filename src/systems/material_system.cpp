@@ -237,44 +237,26 @@ Result<MaterialSystem::MaterialRef, bool> MaterialSystem::create_material(
         Material(config.name, shader, config.diffuse_color, config.shininess);
 
     // Diffuse map
-    TextureMap diffuse_map = {};
-    if (config.diffuse_map_name.length() > 0) {
-        diffuse_map.use = TextureUse::MapDiffuse;
-        diffuse_map.texture =
-            _texture_system->acquire(config.diffuse_map_name, true);
-    } else {
-        // Note: Not needed. Set explicit for readability
-        diffuse_map.use     = TextureUse::Unknown;
-        diffuse_map.texture = nullptr;
-    }
-    material->diffuse_map = diffuse_map;
-
+    material->diffuse_map = {
+        (config.diffuse_map_name.length() > 0)
+            ? _texture_system->acquire(config.diffuse_map_name, true)
+            : _texture_system->default_texture,
+        TextureUse::MapDiffuse
+    };
     // Specular map
-    TextureMap specular_map = {};
-    if (config.specular_map_name.length() > 0) {
-        specular_map.use = TextureUse::MapSpecular;
-        specular_map.texture =
-            _texture_system->acquire(config.specular_map_name, true);
-    } else {
-        // Note: Not needed. Set explicit for readability
-        specular_map.use     = TextureUse::Unknown;
-        specular_map.texture = nullptr;
-    }
-    material->specular_map = specular_map;
-
+    material->specular_map = {
+        (config.specular_map_name.length() > 0)
+            ? _texture_system->acquire(config.specular_map_name, true)
+            : _texture_system->default_specular_texture,
+        TextureUse::MapSpecular
+    };
     // Normal map
-    TextureMap normal_map = {};
-    if (config.specular_map_name.length() > 0) {
-        normal_map.use = TextureUse::MapNormal;
-        normal_map.texture =
-            _texture_system->acquire(config.normal_map_name, true);
-    } else {
-        // Note: Not needed. Set explicit for readability
-        normal_map.use     = TextureUse::Unknown;
-        normal_map.texture = nullptr;
-    }
-    material->normal_map = normal_map;
-
+    material->normal_map = {
+        (config.normal_map_name.length() > 0)
+            ? _texture_system->acquire(config.normal_map_name, true)
+            : _texture_system->default_normal_texture,
+        TextureUse::MapNormal
+    };
     // TODO: Set other maps
 
     // Acquire resource from GPU

@@ -17,6 +17,7 @@ uniform=mat4,0,projection
 uniform=mat4,0,view
 uniform=vec4,0,ambient_color
 uniform=vec3,0,view_position
+uniform=uint32,0,mode
 uniform=vec4,1,diffuse_color
 uniform=sampler,1,diffuse_texture
 uniform=sampler,1,specular_texture

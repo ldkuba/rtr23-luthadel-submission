@@ -53,6 +53,11 @@ struct hash<Vertex> {
 enum BuiltinRenderPass : uint8 { World = 0x1, UI = 0x2 };
 
 /**
+ * @brief Render debug view modes
+ */
+enum DebugViewMode : uint8 { Default, Lighting, Normals };
+
+/**
  * @brief Geometry render packet
  */
 struct GeometryRenderData {

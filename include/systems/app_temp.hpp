@@ -36,7 +36,11 @@ class TestApplication {
     float64 calculate_delta_time();
 
     // TODO: TEMP
+    bool _app_should_close = false;
+
+    void setup_application_controls();
     void setup_camera_controls();
+    void setup_render_mode_controls();
 };
 // TODO: TEMP
 void load_model(Vector<Vertex>& out_vertices, Vector<uint32>& out_indices);
@@ -48,18 +52,9 @@ inline TestApplication::~TestApplication() { delete _app_surface; }
 inline void TestApplication::run() {
     // === Input system ===
     _input_system.register_input_source(_app_surface);
-
-    auto close_app_control =
-        _input_system.create_control("Close app", ControlType::Release)
-            .expect("ERROR :: CONTROL CREATION FAILED.");
-
-    bool close_required = false;
-    close_app_control->event +=
-        [&close_required](float64, float64) { close_required = true; };
-    close_app_control->map_key(KeyCode::ESCAPE);
-
-    // Camera
+    setup_application_controls();
     setup_camera_controls();
+    setup_render_mode_controls();
 
     // Cube spin
     auto spin_cube =
@@ -112,7 +107,7 @@ inline void TestApplication::run() {
     );
 
     // === Main loop ===
-    while (!_app_surface->should_close() && close_required == false) {
+    while (!_app_surface->should_close() && _app_should_close == false) {
         auto delta_time = calculate_delta_time();
 
         _app_surface->process_events(delta_time);
@@ -193,6 +188,21 @@ inline void load_model(
 #define HoldControl(name)                                                      \
     auto name = _input_system.create_control(#name, ControlType::Hold)         \
                     .expect("ERROR :: CONTROL CREATION FAILED.");
+#define PressControl(name)                                                     \
+    auto name = _input_system.create_control(#name, ControlType::Press)        \
+                    .expect("ERROR :: CONTROL CREATION FAILED.");
+#define ReleaseControl(name)                                                   \
+    auto name = _input_system.create_control(#name, ControlType::Release)      \
+                    .expect("ERROR :: CONTROL CREATION FAILED.");
+
+inline void TestApplication::setup_application_controls() {
+    ReleaseControl(close_app_control);
+
+    close_app_control->event +=
+        [&](float64, float64) { _app_should_close = true; };
+
+    close_app_control->map_key(KeyCode::ESCAPE);
+}
 
 inline void TestApplication::setup_camera_controls() {
     // Camera controls
@@ -206,12 +216,8 @@ inline void TestApplication::setup_camera_controls() {
     HoldControl(camera_rotate_right_c);
     HoldControl(camera_rotate_up_c);
     HoldControl(camera_rotate_down_c);
-    auto reset_camera =
-        _input_system.create_control("reset_camera", ControlType::Release)
-            .expect("ERROR :: CONTROL CREATION FAILED.");
-    auto camera_position =
-        _input_system.create_control("camera_position", ControlType::Release)
-            .expect("ERROR :: CONTROL CREATION FAILED.");
+    ReleaseControl(reset_camera);
+    ReleaseControl(camera_position);
 
     // Camera info
     auto& camera_p = _app_renderer.camera_position;
@@ -290,4 +296,30 @@ inline void TestApplication::setup_camera_controls() {
 
     reset_camera->map_key(KeyCode::R);
     camera_position->map_key(KeyCode::C);
+}
+
+inline void TestApplication::setup_render_mode_controls() {
+    PressControl(mode_0_c);
+    PressControl(mode_1_c);
+    PressControl(mode_2_c);
+    PressControl(mode_3_c);
+    PressControl(mode_4_c);
+    PressControl(mode_5_c);
+    PressControl(mode_6_c);
+
+    auto& r = _app_renderer;
+    mode_0_c->event +=
+        [&r](float32, float32) { r.view_mode = DebugViewMode::Default; };
+    mode_1_c->event +=
+        [&r](float32, float32) { r.view_mode = DebugViewMode::Lighting; };
+    mode_2_c->event +=
+        [&r](float32, float32) { r.view_mode = DebugViewMode::Normals; };
+
+    mode_0_c->map_key(KeyCode::NUM_0);
+    mode_1_c->map_key(KeyCode::NUM_1);
+    mode_2_c->map_key(KeyCode::NUM_2);
+    mode_3_c->map_key(KeyCode::NUM_3);
+    mode_4_c->map_key(KeyCode::NUM_4);
+    mode_5_c->map_key(KeyCode::NUM_5);
+    mode_6_c->map_key(KeyCode::NUM_6);
 }
