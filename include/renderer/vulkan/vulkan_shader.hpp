@@ -15,12 +15,9 @@ struct VulkanDescriptorSetConfig {
 };
 
 /**
- * @brief An instance-level shader state.
+ * @brief Vulkan implementation of instance-level shader state.
  */
-struct VulkanInstanceState {
-    uint64 offset;
-
-    Vector<Texture*> instance_textures;
+struct VulkanInstanceState : public InstanceState {
     std::array<vk::DescriptorSet, VulkanSettings::max_frames_in_flight>
         descriptor_set;
     std::array<std::optional<uint32>, VulkanSettings::max_frames_in_flight>
@@ -81,9 +78,6 @@ class VulkanShader : public Shader {
     vk::DescriptorPool                 _descriptor_pool;
     Vector<VulkanDescriptorSetConfig*> _descriptor_set_configs;
     Vector<vk::DescriptorSet>          _global_descriptor_sets;
-
-    // Instances
-    Vector<VulkanInstanceState*> _instance_states;
 
     // Buffers
     VulkanManagedBuffer* _uniform_buffer;

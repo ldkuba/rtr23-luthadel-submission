@@ -10,10 +10,13 @@
 #include <type_traits>
 #include <memory>
 
-#define MEMORY_SYS_LOG "MemorySystem :: "
-
 typedef uint16 MemoryTagType;
 #define MEMORY_PADDING 8
+
+// Size reference points
+#define KB 1024
+#define MB KB * 1024
+#define GB MB * 1024
 
 enum class MemoryTag : MemoryTagType {
     // For temporary use. Should be assigned one of the below or have a new
@@ -55,32 +58,17 @@ enum class MemoryTag : MemoryTagType {
 
 class MemorySystem {
   public:
-
-    static void* allocate(uint64 size, const MemoryTag tag) {
-        auto allocator = _allocator_map[(MemoryTagType) tag];
-        return allocator->allocate(size, MEMORY_PADDING);
-    }
-
-    static void deallocate(void* ptr, const MemoryTag tag) {
-        auto allocator = _allocator_map[(MemoryTagType) tag];
-        if (!allocator->owns(ptr)) {
-            std::cout << MEMORY_SYS_LOG << "Wrong memory tag." << std::endl;
-            exit(EXIT_FAILURE);
-        }
-        allocator->free(ptr);
-    }
-
-    static void reset_memory(const MemoryTag tag) {
-        auto allocator = _allocator_map[(MemoryTagType) tag];
-        allocator->reset();
-    }
+    static void* allocate(uint64 size, const MemoryTag tag);
+    static void  deallocate(void* ptr, const MemoryTag tag);
+    static void  reset_memory(const MemoryTag tag);
+    static void  print_usage(const MemoryTag tag);
 
   private:
-    static Allocator** _allocator_map;
-    static Allocator** initialize_allocator_map();
-
     MemorySystem();
     ~MemorySystem();
+
+    static Allocator** _allocator_map;
+    static Allocator** initialize_allocator_map();
 };
 
 // New
@@ -90,7 +78,9 @@ void* operator new[](std::size_t size, const MemoryTag tag);
 // Delete
 void operator delete(void* p) noexcept;
 
+// -----------------------------------------------------------------------------
 // Typed allocator
+// -----------------------------------------------------------------------------
 template<class T>
 struct TAllocator {
     MemoryTag tag;
@@ -141,5 +131,3 @@ inline shared_ptr<_Tp> make_shared(MemoryTag tag, _Args&&... __args) {
     );
 }
 } // namespace std
-
-#undef MEMORY_SYS_LOG

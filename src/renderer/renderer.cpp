@@ -1,5 +1,7 @@
 #include "renderer/renderer.hpp"
 
+#include "resources/geometry.hpp"
+
 #define RENDERER_LOG "Renderer :: "
 
 Renderer::Renderer(
@@ -23,6 +25,9 @@ void Renderer::on_resize(const uint32 width, const uint32 height) {
     _backend->resized(width, height);
 }
 Result<void, RuntimeError> Renderer::draw_frame(const float32 delta_time) {
+    _backend->increment_frame_number();
+
+    // Begin frame
     auto result = _backend->begin_frame(delta_time);
     if (result.has_error()) { return {}; }
 
@@ -85,7 +90,6 @@ Result<void, RuntimeError> Renderer::draw_frame(const float32 delta_time) {
 
     // === END FRAME ===
     result = _backend->end_frame(delta_time);
-    _backend->increment_frame_number();
 
     if (result.has_error()) {
         // TODO: error handling

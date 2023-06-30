@@ -11,7 +11,6 @@
 // TODO: UNIT TESTING
 
 int main(int, char**) {
-
     TestApplication* app = new (MemoryTag::Application) TestApplication {};
 
 #ifdef NDEBUG

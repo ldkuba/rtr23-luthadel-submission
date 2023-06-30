@@ -19,10 +19,11 @@ class InputSystem;
  * implementation files.
  */
 class Platform {
-  private:
   public:
     Platform();
     ~Platform();
+
+    static const bool is_little_endian;
 
     /// @brief Get current internal clock time in seconds
     /// @return Time in seconds

@@ -38,6 +38,12 @@ template<>
 string to_string<String>(const Property<String>& in) {
     return in();
 }
+string to_string(const Vector<char>& in) {
+    return string((char*) in.data(), in.size());
+}
+string to_string(const Vector<unsigned char>& in) {
+    return string((char*) in.data(), in.size());
+}
 } // namespace std
 
 // Constructor & Destructor
@@ -213,26 +219,32 @@ Result<T, InvalidArgument> parse_int(
 
 // String builder specializations
 template<>
-void String::add_to_string<char*>(
-    String& out_string, char* component
+void String::add_to_string<char>(
+    String& out_string, const char& component
+) noexcept {
+    out_string += component;
+}
+template<>
+void String::add_to_string<char>(
+    String& out_string, char* const component
 ) noexcept {
     out_string += String(component);
 }
 template<>
-void String::add_to_string<const char*>(
-    String& out_string, const char* component
+void String::add_to_string<const char>(
+    String& out_string, const char* const component
 ) noexcept {
     out_string += String(component);
 }
 template<>
 void String::add_to_string<std::string>(
-    String& out_string, std::string component
+    String& out_string, const std::string& component
 ) noexcept {
     out_string += component;
 }
 template<>
 void String::add_to_string<String>(
-    String& out_string, String component
+    String& out_string, const String& component
 ) noexcept {
     out_string += component;
 }

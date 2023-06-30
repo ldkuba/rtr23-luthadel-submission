@@ -15,4 +15,5 @@ class ImageLoader : public ResourceLoader {
     void                            unload(Resource* resource);
 
   private:
+    static const std::vector<String> _supported_extensions;
 };

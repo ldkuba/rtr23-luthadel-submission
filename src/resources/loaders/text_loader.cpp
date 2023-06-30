@@ -21,7 +21,7 @@ Result<Resource*, RuntimeError> TextLoader::load(const String name) {
         ResourceSystem::base_path + "/" + _type_path + "/" + name;
 
     // Read all data
-    auto raw_data = FileSystem::read_file_bytes(file_path);
+    auto raw_data = FileSystem::read_bytes(file_path);
     if (raw_data.has_error()) {
         Logger::error(RESOURCE_LOG, raw_data.error().what());
         return Failure(raw_data.error().what());

@@ -6,7 +6,8 @@
 #include "systems/geometry_system.hpp"
 #include "systems/input/input_system.hpp"
 
-void load_model(Vector<Vertex>& out_vertices, Vector<uint32>& out_indices);
+// TODO: TEMP
+#include "resources/loaders/mesh_loader.hpp"
 
 class TestApplication {
   public:
@@ -43,8 +44,6 @@ class TestApplication {
     void setup_render_mode_controls();
 };
 // TODO: TEMP
-void load_model(Vector<Vertex>& out_vertices, Vector<uint32>& out_indices);
-
 inline TestApplication::TestApplication() {}
 
 inline TestApplication::~TestApplication() { delete _app_surface; }
@@ -81,18 +80,17 @@ inline void TestApplication::run() {
 
     _app_renderer.material_shader->reload();
 
-    bool use_cube = true;
-    if (use_cube) {
-        _app_renderer.current_geometry =
-            _geometry_system.generate_cube("cube", "test_material");
-    } else {
-        Vector<Vertex> vertices = {};
-        Vector<uint32> indices  = {};
-        load_model(vertices, indices);
-        _app_renderer.current_geometry = _geometry_system.acquire(
-            "test_material", vertices, indices, "test_material"
-        );
-    }
+    _app_renderer.current_geometry =
+        _geometry_system.generate_cube("cube", "test_material");
+
+    // MeshLoader loader {};
+    // auto       load_result = loader.load("viking_room");
+    // if (load_result.has_error()) Logger::fatal("Mesh loading failed");
+    // auto config_array =
+    // dynamic_cast<GeometryConfigArray*>(load_result.value()); GeometryConfig*
+    // config         = config_array->configs[0]; config->material_name =
+    // "cobblestone"; _app_renderer.current_geometry =
+    // _geometry_system.acquire(*config);
 
     float32          side       = 128.0f;
     Vector<Vertex2D> vertices2d = {
@@ -101,10 +99,15 @@ inline void TestApplication::run() {
         { glm::vec2(0.0f, side), glm::vec2(0.0f, 1.0f) },
         { glm::vec2(side, 0.0f), glm::vec2(1.0f, 0.0f) }
     };
-    Vector<uint32> indices2d          = { 2, 1, 0, 3, 0, 1 };
-    _app_renderer.current_ui_geometry = _geometry_system.acquire(
-        "ui", vertices2d, indices2d, "test_ui_material"
-    );
+    Vector<uint32>   indices2d = { 2, 1, 0, 3, 0, 1 };
+    GeometryConfig2D config2d { "ui",
+                                vertices2d,
+                                indices2d,
+                                glm::vec3(side / 2.0f),
+                                glm::vec3(side),
+                                glm::vec3(0),
+                                "test_ui_material" };
+    _app_renderer.current_ui_geometry = _geometry_system.acquire(config2d);
 
     // === Main loop ===
     while (!_app_surface->should_close() && _app_should_close == false) {
@@ -128,63 +131,7 @@ inline float64 TestApplication::calculate_delta_time() {
     return delta_time;
 }
 
-// TODO: TEMP MODEL LOADING LIBS
-#define TINYOBJLOADER_IMPLEMENTATION
-#include <tiny_obj_loader.h>
-
-#include "unordered_map.hpp"
-
-inline void load_model(
-    Vector<Vertex>& out_vertices, Vector<uint32>& out_indices
-) {
-    // Load model
-    tinyobj::ObjReader reader;
-    if (!reader.ParseFromFile("../assets/models/viking_room.obj"))
-        throw std::runtime_error("");
-
-    if (!reader.Warning().empty())
-        Logger::warning("TinyObjReader :: ", reader.Warning());
-
-    auto& attributes = reader.GetAttrib();
-    auto& shapes     = reader.GetShapes();
-    auto& materials  = reader.GetMaterials();
-
-    // Loop over shapes
-    UnorderedMap<Vertex, uint32> unique_vertices = {};
-    for (const auto& shape : shapes) {
-        for (const auto& index : shape.mesh.indices) {
-            Vertex vertex {};
-
-            // Compute position
-            vertex.position = {
-                attributes.vertices[3 * index.vertex_index + 0],
-                attributes.vertices[3 * index.vertex_index + 1],
-                attributes.vertices[3 * index.vertex_index + 2]
-            };
-
-            // Compute normal
-            vertex.normal = { attributes.normals[3 * index.normal_index + 0],
-                              attributes.normals[3 * index.normal_index + 1],
-                              attributes.normals[3 * index.normal_index + 2] };
-
-            // Compute texture coordinate
-            vertex.texture_coord = {
-                attributes.texcoords[2 * index.texcoord_index + 0],
-                1.0f - attributes.texcoords[2 * index.texcoord_index + 1]
-            };
-
-            // Compute index
-            if (!unique_vertices.contains(vertex)) {
-                unique_vertices[vertex] =
-                    static_cast<uint32>(out_vertices.size());
-                out_vertices.push_back(vertex);
-            }
-
-            out_indices.push_back(unique_vertices[vertex]);
-        }
-    }
-}
-
+// TODO: Still temp
 #define HoldControl(name)                                                      \
     auto name = _input_system.create_control(#name, ControlType::Hold)         \
                     .expect("ERROR :: CONTROL CREATION FAILED.");

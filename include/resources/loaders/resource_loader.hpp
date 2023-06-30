@@ -16,11 +16,16 @@ struct ResourceType {
     STRING_CONST(Material);
     STRING_CONST(StaticMesh);
     STRING_CONST(Shader);
+    STRING_CONST(Mesh);
     static bool is_custom(const String type) {
         return (
-            (type.compare_ci(Text) != 0) && (type.compare_ci(Binary) != 0) &&
-            (type.compare_ci(Image) != 0) && (type.compare_ci(Material) != 0) &&
-            (type.compare_ci(StaticMesh) != 0) && (type.compare_ci(Shader) != 0)
+            (type.compare_ci(Text) != 0) &&       //
+            (type.compare_ci(Binary) != 0) &&     //
+            (type.compare_ci(Image) != 0) &&      //
+            (type.compare_ci(Material) != 0) &&   //
+            (type.compare_ci(StaticMesh) != 0) && //
+            (type.compare_ci(Shader) != 0) &&     //
+            (type.compare_ci(Mesh) != 0)
         );
     }
 };

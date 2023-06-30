@@ -109,6 +109,16 @@ struct PushConstantRange {
 };
 
 /**
+ * @brief An instance-level shader state.
+ */
+struct InstanceState {
+    uint64 offset;
+    bool   should_update = true;
+
+    Vector<Texture*> instance_textures;
+};
+
+/**
  * @brief Frontend (API agnostic) representation of a shader.
  */
 class Shader {
@@ -217,7 +227,9 @@ class Shader {
                 id,
                 " because no such uniform exists."
             )));
-        set_uniform(id, (void*) value);
+        auto result = set_uniform(id, (void*) value);
+        if (result == false)
+            Logger::fatal("Shader :: Uniform_set failed for some reason.");
         return {};
     }
 
@@ -279,6 +291,9 @@ class Shader {
     uint64                    _push_constant_size   = 0;
     uint64                    _push_constant_stride = 128;
     Vector<PushConstantRange> _push_constant_ranges {};
+
+    // Instances
+    Vector<InstanceState*> _instance_states;
 
     // Textures
     Vector<Texture*> _global_textures {};

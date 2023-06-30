@@ -47,7 +47,7 @@ Result<Resource*, RuntimeError> ShaderLoader::load(const String name) {
     String file_path =
         ResourceSystem::base_path + "/" + _type_path + "/" + file_name;
 
-    auto shader_settings = FileSystem::read_file_lines(file_path);
+    auto shader_settings = FileSystem::read_lines(file_path);
     if (shader_settings.has_error()) {
         Logger::error(RESOURCE_LOG, shader_settings.error().what());
         return Failure(shader_settings.error().what());
@@ -96,7 +96,7 @@ Result<Resource*, RuntimeError> ShaderLoader::load(const String name) {
         else if (setting_var.compare(ShaderVars::name) == 0) {
             if (setting_val.length() <= Shader::max_name_length)
                 shader_name = setting_val;
-            else
+            else {
                 Logger::warning(
                     RESOURCE_LOG,
                     "Couldn't load shader name at line ",
@@ -109,6 +109,7 @@ Result<Resource*, RuntimeError> ShaderLoader::load(const String name) {
                     Shader::max_name_length,
                     " characters)."
                 );
+            }
         }
         // RENDER PASS
         else if (setting_var.compare(ShaderVars::renderpass) == 0) {

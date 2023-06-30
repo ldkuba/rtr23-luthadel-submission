@@ -1,6 +1,7 @@
 #include "renderer/vulkan/vulkan_backend.hpp"
 
 #include "renderer/vulkan/vulkan_framebuffer.hpp"
+#include "resources/geometry.hpp"
 
 VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback_function(
     VkDebugUtilsMessageSeverityFlagBitsEXT      message_severity,

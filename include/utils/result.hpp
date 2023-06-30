@@ -2584,6 +2584,33 @@ class RESULT_NODISCARD Result {
         typename std::remove_reference<T>::type;
     /// \}
 
+    // ADDITION {
+
+  private:
+    const T _default_value {};
+
+  public:
+    /// \{
+    /// \brief Returns the contained value if `*this` has a value,
+    ///        otherwise returns default value for this type.
+    ///
+    /// ### Examples
+    ///
+    /// Basic Usage:
+    ///
+    /// ```cpp
+    /// auto r = cpp::result<int,int>{42};
+    /// assert(r.value_or() == 42);
+    ///
+    /// auto r = cpp::result<int,int>{cpp::fail(42)};
+    /// assert(r.value_or() == 0);
+    /// ```
+    constexpr auto value_or() const& -> typename std::remove_reference<T>::type;
+    constexpr auto value_or() && -> typename std::remove_reference<T>::type;
+    /// \}
+
+    // }
+
     /// \{
     /// \brief Returns the contained error if `*this` has an error,
     ///        otherwise returns \p default_error.
@@ -4876,6 +4903,23 @@ inline RESULT_INLINE_VISIBILITY constexpr auto RESULT_NS_IMPL::Result<T, E>::
                                          : detail::forward<U>(default_value);
 }
 
+// ADDITIONS {
+
+template<typename T, typename E>
+inline RESULT_INLINE_VISIBILITY constexpr auto RESULT_NS_IMPL::Result<T, E>::
+    value_or() const& -> typename std::remove_reference<T>::type {
+    return m_storage.storage.m_has_value ? m_storage.storage.m_value
+                                         : _default_value;
+}
+template<typename T, typename E>
+inline RESULT_INLINE_VISIBILITY constexpr auto RESULT_NS_IMPL::Result<T, E>::
+    value_or() && -> typename std::remove_reference<T>::type {
+    return m_storage.storage.m_has_value ? static_cast<T&&>(**this)
+                                         : _default_value;
+}
+
+// }
+
 template<typename T, typename E>
 template<typename U>
 inline RESULT_INLINE_VISIBILITY constexpr auto RESULT_NS_IMPL::Result<T, E>::
@@ -5947,3 +5991,7 @@ inline RESULT_INLINE_VISIBILITY auto RESULT_NS_IMPL::swap(
 #define Ok()                                                                   \
     }                                                                          \
     else {
+
+#define check(__result)                                                        \
+    __result.value_or();                                                       \
+    if (__result.has_error()) return Failure(__result.error());

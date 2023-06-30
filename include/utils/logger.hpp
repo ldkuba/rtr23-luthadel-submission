@@ -22,7 +22,7 @@ class Logger {
      * automaticaly concatenated, ending with a new line.
      */
     template<typename... Args>
-    static void fatal(Args... message) {
+    static void fatal(const Args&... message) {
         auto full_message =
             String::build(String("FATAL ERROR"), " :: ", message...);
         Platform::Console::write(full_message, 1, true);
@@ -36,7 +36,7 @@ class Logger {
      * automaticaly concatenated, ending with a new line.
      */
     template<typename... Args>
-    static void error(Args... message) {
+    static void error(const Args&... message) {
         auto full_message = String::build(String("ERR"), " :: ", message...);
         Platform::Console::write(full_message, 2, true);
     }
@@ -48,7 +48,7 @@ class Logger {
      * automaticaly concatenated, ending with a new line.
      */
     template<typename... Args>
-    static void warning(Args... message) {
+    static void warning(const Args&... message) {
 #if LOG_WARNING_ENABLED
         auto full_message = String::build(String("WAR"), " :: ", message...);
         Platform::Console::write(full_message, 3, true);
@@ -63,7 +63,7 @@ class Logger {
      * automaticaly concatenated, ending with a new line.
      */
     template<typename... Args>
-    static void log(Args... message) {
+    static void log(const Args&... message) {
 #if LOG_INFO_ENABLED
         auto full_message = String::build(String("INF"), " :: ", message...);
         Platform::Console::write(full_message, 4, true);
@@ -77,7 +77,7 @@ class Logger {
      * automaticaly concatenated, ending with a new line.
      */
     template<typename... Args>
-    static void debug(Args... message) {
+    static void debug(const Args&... message) {
 #if LOG_DEBUG_ENABLED
         auto full_message = String::build(String("DEB"), " :: ", message...);
         Platform::Console::write(full_message, 5, true);
@@ -91,7 +91,7 @@ class Logger {
      * automaticaly concatenated, ending with a new line.
      */
     template<typename... Args>
-    static void trace(Args... message) {
+    static void trace(const Args&... message) {
 #if LOG_VERBOSE_ENABLED
         auto full_message = String::build(String("VER"), " :: ", message...);
         Platform::Console::write(full_message, 0, true);

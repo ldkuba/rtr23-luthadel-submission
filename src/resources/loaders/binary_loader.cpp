@@ -20,7 +20,7 @@ Result<Resource*, RuntimeError> BinaryLoader::load(const String name) {
     String file_path = ResourceSystem::base_path + "/" + name;
 
     // Read all data
-    auto data = FileSystem::read_file_bytes(file_path);
+    auto data = FileSystem::read_bytes(file_path);
     if (data.has_error()) {
         Logger::error(RESOURCE_LOG, data.error().what());
         return Failure(data.error().what());

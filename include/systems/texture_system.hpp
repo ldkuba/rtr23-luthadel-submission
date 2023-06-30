@@ -13,6 +13,10 @@ class TextureSystem {
     Property<Texture*> default_texture {
         GET { return _default_texture; }
     };
+    /// @brief Default fallback diffuse texture
+    Property<Texture*> default_diffuse_texture {
+        GET { return _default_diffuse_texture; }
+    };
     /// @brief Default fallback specular texture
     Property<Texture*> default_specular_texture {
         GET { return _default_specular_texture; }
@@ -63,10 +67,12 @@ class TextureSystem {
 
     const uint64 _max_texture_count             = 1024;
     const String _default_texture_name          = "default";
+    const String _default_diffuse_texture_name  = "default_diff";
     const String _default_specular_texture_name = "default_spec";
     const String _default_normal_texture_name   = "default_norm";
 
     Texture* _default_texture          = nullptr;
+    Texture* _default_diffuse_texture  = nullptr;
     Texture* _default_specular_texture = nullptr;
     Texture* _default_normal_texture   = nullptr;
 

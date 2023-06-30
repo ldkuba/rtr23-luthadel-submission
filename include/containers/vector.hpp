@@ -40,8 +40,10 @@ class Vector : public std::vector<Tp, TAllocator<Tp>> {
 
     /**
      *  @brief  Creates a %vector with no elements.
+     *  @param  __a  An allocator.
      */
-    Vector() : _base_class(t_allocator_type(MemoryTag::Array)) {
+    Vector(const TAllocator<Tp>& __a = t_allocator_type(MemoryTag::Array))
+        : _base_class(__a) {
         // Reserve at least 16 bytes
         reserve(15 / sizeof(Tp) + 1);
     }

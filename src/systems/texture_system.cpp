@@ -166,9 +166,9 @@ void TextureSystem::create_default_textures() {
     const uint32 channels          = 4;
     const uint32 pixel_count       = texture_dimension * texture_dimension;
 
-    // Diffuse
     byte pixels[pixel_count * channels] = {};
 
+    // Default texture
     for (uint32 row = 0; row < texture_dimension; row++) {
         for (uint32 col = 0; col < texture_dimension; col++) {
             uint32 index      = ((row * texture_dimension) + col) * channels;
@@ -180,7 +180,6 @@ void TextureSystem::create_default_textures() {
             }
         }
     }
-
     _default_texture = new (MemoryTag::Texture) Texture(
         _default_texture_name,
         texture_dimension,
@@ -191,9 +190,22 @@ void TextureSystem::create_default_textures() {
     _default_texture->id = 0;
     _renderer->create_texture(_default_texture, pixels);
 
+    // Diffuse (All white)
+    for (auto pixel : pixels)
+        pixel = 0xff;
+    _default_diffuse_texture = new (MemoryTag::Texture) Texture(
+        _default_diffuse_texture_name,
+        texture_dimension,
+        texture_dimension,
+        channels,
+        false
+    );
+    _default_diffuse_texture->id = 1;
+    _renderer->create_texture(_default_diffuse_texture, pixels);
+
     // Specular (full black)
     for (auto pixel : pixels)
-        pixel = 0;
+        pixel = 0x0;
     _default_specular_texture = new (MemoryTag::Texture) Texture(
         _default_specular_texture_name,
         texture_dimension,
@@ -201,10 +213,10 @@ void TextureSystem::create_default_textures() {
         channels,
         false
     );
-    _default_specular_texture->id = 1;
+    _default_specular_texture->id = 2;
     _renderer->create_texture(_default_specular_texture, pixels);
 
-    // Normal
+    // Normal (All up pointing)
     for (uint32 i = 0; i < pixel_count * channels; i++)
         pixels[i] = (((i / 2) % 2) ? 0xff : 0x80);
     _default_normal_texture = new (MemoryTag::Texture) Texture(
@@ -214,13 +226,17 @@ void TextureSystem::create_default_textures() {
         channels,
         false
     );
-    _default_normal_texture->id = 2;
+    _default_normal_texture->id = 3;
     _renderer->create_texture(_default_normal_texture, pixels);
 }
 void TextureSystem::destroy_default_textures() {
     if (_default_texture) {
         _renderer->destroy_texture(_default_texture);
         delete _default_texture;
+    }
+    if (_default_diffuse_texture) {
+        _renderer->destroy_texture(_default_diffuse_texture);
+        delete _default_diffuse_texture;
     }
     if (_default_specular_texture) {
         _renderer->destroy_texture(_default_specular_texture);

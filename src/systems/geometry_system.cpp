@@ -1,5 +1,7 @@
 #include "systems/geometry_system.hpp"
 
+#define GEOMETRY_SYS_LOG "GeometrySystem :: "
+
 // Constructor & Destructor
 GeometrySystem::GeometrySystem(
     Renderer* const renderer, MaterialSystem* const material_system
@@ -48,6 +50,51 @@ Geometry* GeometrySystem::acquire(const uint32 id) {
 
     Logger::trace(GEOMETRY_SYS_LOG, "Geometry with id ", id, " acquired");
     return ref->second.handle;
+}
+
+inline uint32 generate_id() { // TODO: TEMP
+    static uint32 id = 0;
+    return id++;
+}
+Geometry* GeometrySystem::acquire(const GeometryConfig& config) {
+    Logger::trace(
+        GEOMETRY_SYS_LOG, "Geometry \"", config.name, "\" requested."
+    );
+
+    // Generate unique id
+    auto id = generate_id();
+
+    // Register new slot
+    auto& ref           = _registered_geometries[id];
+    ref.auto_release    = config.auto_release;
+    ref.reference_count = 1;
+
+    // Crete geometry
+    ref.handle     = new (MemoryTag::Resource) Geometry(config.name);
+    ref.handle->id = id;
+
+    auto config2d = dynamic_cast<const GeometryConfig2D*>(&config);
+    auto config3d = dynamic_cast<const GeometryConfig3D*>(&config);
+
+    if (config2d)
+        _renderer->create_geometry(
+            ref.handle, config2d->vertices, config.indices
+        );
+    else if (config3d)
+        _renderer->create_geometry(
+            ref.handle, config3d->vertices, config.indices
+        );
+    else Logger::fatal(GEOMETRY_SYS_LOG, "Geometry config couldn't be parsed.");
+
+    // Acquire material
+    if (config.material_name != "") {
+        ref.handle->material = _material_system->acquire(config.material_name);
+        if (!ref.handle->material)
+            ref.handle->material = _material_system->default_material();
+    }
+
+    Logger::trace(GEOMETRY_SYS_LOG, "Geometry \"", config.name, "\" acquired.");
+    return ref.handle;
 }
 
 void GeometrySystem::release(Geometry* geometry) {
@@ -136,7 +183,12 @@ Geometry* GeometrySystem::generate_cube(
     generate_tangents(vertices, indices);
 
     // Crete & return geometry
-    return acquire(name, vertices, indices, material_name, auto_release);
+    GeometryConfig3D config = {
+        name,           vertices,           indices,
+        glm::vec3(0.0), glm::vec3(l, l, l), glm::vec3(-l, -l, -l),
+        material_name,  auto_release
+    };
+    return acquire(config);
 }
 
 // Utility methods

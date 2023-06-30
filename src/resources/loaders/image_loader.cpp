@@ -6,6 +6,11 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
+// Supported extensions
+const std::vector<String> ImageLoader::_supported_extensions = {
+    ".png", ".jpg", ".tga", ".bmp"
+};
+
 // Constructor & Destructor
 ImageLoader::ImageLoader() {
     _type      = ResourceType::Image;
@@ -18,27 +23,42 @@ ImageLoader::~ImageLoader() {}
 // /////////////////////////// //
 
 Result<Resource*, RuntimeError> ImageLoader::load(const String name) {
-    // If name is not provided with an extension use default extension
-    String file_name = name;
-    if (file_name.split('.').size() < 2) file_name = file_name + ".png";
-
     // Compute full path
     String file_path =
-        ResourceSystem::base_path + "/" + _type_path + "/" + file_name;
+        ResourceSystem::base_path + "/" + _type_path + "/" + name;
 
     // Required channel cont
     const uint32 req_channel_count = 4;
 
-    // Load image
-    int32    image_width, image_height, image_channels;
-    stbi_uc* image_pixels = stbi_load(
-        file_path.c_str(),
-        &image_width,
-        &image_height,
-        &image_channels,
-        req_channel_count
-    );
+    // Image info
+    int32 image_width, image_height, image_channels;
 
+    // Load image
+    stbi_uc* image_pixels = nullptr;
+    if (name.split('.').size() < 2) {
+        // If name is not provided with an extension, try few default default
+        // extensions
+        for (const auto& extension : _supported_extensions) {
+            image_pixels = stbi_load(
+                (file_path + extension).c_str(),
+                &image_width,
+                &image_height,
+                &image_channels,
+                req_channel_count
+            );
+            if (image_pixels) break;
+        }
+    } else {
+        image_pixels = stbi_load(
+            file_path.c_str(),
+            &image_width,
+            &image_height,
+            &image_channels,
+            req_channel_count
+        );
+    }
+
+    // Check if successful
     if (!image_pixels) {
         stbi_image_free(image_pixels);
         String error_message = "Failed to load texture image.";

@@ -16,7 +16,6 @@
     // Would like to get rid of:
     -   ALLOCATOR_LOG
     -   RESOURCE_LOG
-    -   GEOMETRY_SYS_LOG
     -   RENDERER_VULKAN_LOG
 //  Property
     -   GET
@@ -26,6 +25,7 @@
     -   match_error_code(result)
     -   Err(error)
     -   Ok()
+    -   check(result)
 //  General for use
     -   APP_NAME
     -   ENGINE_NAME

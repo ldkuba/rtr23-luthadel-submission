@@ -11,6 +11,13 @@
  */
 class Allocator {
   public:
+    /// @brief Total size allocatable by this allocator
+    uint64 total_size() { return _total_size; };
+    /// @brief Memory currently used
+    uint64 used() { return _used; };
+    /// @brief Peek memory usage of this allocator
+    uint64 peak() { return _peak; };
+
     Allocator(const uint64 total_size)
         : _total_size { total_size }, _used { 0 }, _peak { 0 } {}
     virtual ~Allocator();

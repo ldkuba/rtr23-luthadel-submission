@@ -2,6 +2,7 @@
 
 #define MATERIAL_SYS_LOG "MaterialSystem :: "
 
+// Constructor & Destructor
 MaterialSystem::MaterialSystem(
     Renderer* const       renderer,
     ResourceSystem* const resource_system,
@@ -97,7 +98,7 @@ Material* MaterialSystem::acquire(const String name) {
     Logger::trace(MATERIAL_SYS_LOG, "Material \"", name, "\" acquired.");
     return material_ref.handle;
 }
-Material* MaterialSystem::acquire(const MaterialConfig config) {
+Material* MaterialSystem::acquire(const MaterialConfig& config) {
     Logger::trace(
         MATERIAL_SYS_LOG, "Material \"", config.name, "\" requested."
     );
@@ -198,7 +199,7 @@ void MaterialSystem::create_default_material() {
 
     // Set maps:
     // Diffuse
-    TextureMap diffuse_map         = { _texture_system->default_texture,
+    TextureMap diffuse_map         = { _texture_system->default_diffuse_texture,
                                        TextureUse::MapDiffuse };
     _default_material->diffuse_map = diffuse_map;
     // Specular
@@ -240,7 +241,7 @@ Result<MaterialSystem::MaterialRef, bool> MaterialSystem::create_material(
     material->diffuse_map = {
         (config.diffuse_map_name.length() > 0)
             ? _texture_system->acquire(config.diffuse_map_name, true)
-            : _texture_system->default_texture,
+            : _texture_system->default_diffuse_texture,
         TextureUse::MapDiffuse
     };
     // Specular map

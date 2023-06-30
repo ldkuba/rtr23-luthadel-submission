@@ -1,6 +1,7 @@
 #pragma once
 
 #include "shader_system.hpp"
+#include "resources/material.hpp"
 
 /**
  * @brief Material system is responsible for management of materials in the
@@ -47,7 +48,7 @@ class MaterialSystem {
     /// material with config.name isn't already loaded.
     /// @param config Material configuration
     /// @returns Requested material resource
-    Material* acquire(const MaterialConfig config);
+    Material* acquire(const MaterialConfig& config);
     /// @brief Releases material resource. Material system will automatically
     /// release this material from memory if no other references to it are
     /// detected and auto release flag is set to true.

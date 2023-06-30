@@ -2,6 +2,8 @@
 
 #include "resources/material.hpp"
 
+#define MEMORY_SYS_LOG "MemorySystem :: "
+
 static_assert(
     sizeof(MemoryTagType) <= MEMORY_PADDING || MEMORY_PADDING >= 8,
     "Memory padding must be at least 8."
@@ -16,23 +18,95 @@ static_assert(
 Allocator** MemorySystem::_allocator_map =
     MemorySystem::initialize_allocator_map();
 
+// //////////////////////////// //
+// MEMORY SYSTEM PUBLIC METHODS //
+// //////////////////////////// //
+
+void* MemorySystem::allocate(uint64 size, const MemoryTag tag) {
+    auto allocator = _allocator_map[(MemoryTagType) tag];
+    return allocator->allocate(size, MEMORY_PADDING);
+}
+void MemorySystem::deallocate(void* ptr, const MemoryTag tag) {
+    auto allocator = _allocator_map[(MemoryTagType) tag];
+    if (!allocator->owns(ptr)) {
+        std::cout << MEMORY_SYS_LOG << "Wrong memory tag." << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    allocator->free(ptr);
+}
+
+void MemorySystem::reset_memory(const MemoryTag tag) {
+    auto allocator = _allocator_map[(MemoryTagType) tag];
+    allocator->reset();
+}
+
+#define convert_to_unit(u)                                                     \
+    if (total >= 1024) {                                                       \
+        total /= 1024;                                                         \
+        used /= 1024;                                                          \
+        peek /= 1024;                                                          \
+        unit = #u;                                                             \
+    }
+
+void MemorySystem::print_usage(const MemoryTag tag) {
+    auto allocator = _allocator_map[(MemoryTagType) tag];
+
+    // Calculate total use
+    float64 used  = allocator->used();
+    float64 total = allocator->total_size();
+    float64 peek  = allocator->peak();
+    float64 ratio = used / total;
+
+    // Compute unit
+    std::string unit = "bytes";
+    convert_to_unit(KB);
+    convert_to_unit(MB);
+    convert_to_unit(GB);
+    convert_to_unit(TB);
+
+    // Print
+    std::cout << "========================" << std::endl;
+    std::cout << used << unit << " / " << total << unit << std::endl;
+    std::cout << ratio * 100 << "% / 100%" << std::endl;
+    std::cout << "peek : " << peek << unit << std::endl;
+    std::cout << "========================" << std::endl;
+}
+
+// ///////////////////////////// //
+// MEMORY SYSTEM PRIVATE METHODS //
+// ///////////////////////////// //
+
+// Allocator initializations
+#define cal(name)                                                              \
+    auto name = new CAllocator();                                              \
+    name->init();
+#define sal(name, size)                                                        \
+    auto name = new StackAllocator(size);                                      \
+    name->init();
+#define fal(name, size)                                                        \
+    auto name = new FreeListAllocator(                                         \
+        size, FreeListAllocator::PlacementPolicy::FindFirst                    \
+    );                                                                         \
+    name->init();
+#define lal(name, size)                                                        \
+    auto name = new LinearAllocator(size);                                     \
+    name->init();
+#define pal(name, size, chunk_size)                                            \
+    auto name = new PoolAllocator(size, chunk_size);                           \
+    name->init();
+
 Allocator** MemorySystem::initialize_allocator_map() {
     Allocator** allocator_map =
         new Allocator*[(MemoryTagType) MemoryTag::MAX_TAGS]();
 
     // Define used allocators
-    CAllocator*        unknown_allocator = new CAllocator();
-    StackAllocator*    temp_allocator    = new StackAllocator(1024 * 1024);
-    FreeListAllocator* general_allocator = new FreeListAllocator(
-        1024 * 1024, FreeListAllocator::PlacementPolicy::FindFirst
-    );
-    FreeListAllocator* gpu_data_allocator = new FreeListAllocator(
-        1024 * 1024, FreeListAllocator::PlacementPolicy::FindFirst
-    );
-    FreeListAllocator* resource_allocator = new FreeListAllocator(
-        1024 * 1024, FreeListAllocator::PlacementPolicy::FindFirst
-    );
-    LinearAllocator* init_allocator = new LinearAllocator(1024 * 1024);
+    cal(unknown_allocator);
+    sal(temp_allocator, MB);
+    fal(general_allocator, MB);
+    fal(gpu_data_allocator, MB);
+    fal(resource_allocator, MB);
+    fal(geom_allocator, 128 * MB);
+    lal(init_allocator, MB);
 
     // Pools
     uint64 max_texture_count  = 1024;
@@ -41,20 +115,8 @@ Allocator** MemorySystem::initialize_allocator_map() {
     uint64 texture_size  = sizeof(Texture) + MEMORY_PADDING;
     uint64 material_size = sizeof(Material) + MEMORY_PADDING;
 
-    PoolAllocator* texture_pool =
-        new PoolAllocator(max_texture_count * texture_size, texture_size);
-    PoolAllocator* material_pool =
-        new PoolAllocator(max_material_count * material_size, material_size);
-
-    // Initialize allocators
-    unknown_allocator->init();
-    temp_allocator->init();
-    general_allocator->init();
-    gpu_data_allocator->init();
-    resource_allocator->init();
-    init_allocator->init();
-    texture_pool->init();
-    material_pool->init();
+    pal(texture_pool, max_texture_count * texture_size, texture_size);
+    pal(material_pool, max_material_count * material_size, material_size);
 
     // Assign allocators
     allocator_map[(MemoryTagType) MemoryTag::Unknown] = unknown_allocator;
@@ -78,7 +140,7 @@ Allocator** MemorySystem::initialize_allocator_map() {
     allocator_map[(MemoryTagType) MemoryTag::Resource]    = resource_allocator;
     allocator_map[(MemoryTagType) MemoryTag::Texture]     = texture_pool;
     allocator_map[(MemoryTagType) MemoryTag::MaterialInstance] = material_pool;
-    allocator_map[(MemoryTagType) MemoryTag::Geometry]   = unknown_allocator;
+    allocator_map[(MemoryTagType) MemoryTag::Geometry]         = geom_allocator;
     allocator_map[(MemoryTagType) MemoryTag::Shader]     = resource_allocator;
     // Game
     allocator_map[(MemoryTagType) MemoryTag::Game]       = init_allocator;

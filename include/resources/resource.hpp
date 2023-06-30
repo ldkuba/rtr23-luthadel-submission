@@ -45,7 +45,7 @@ class Resource {
      * @param name Resource name. Most likely a nonempty string.
      */
     Resource(String name);
-    ~Resource();
+    virtual ~Resource();
 
   private:
     String _name        = "";

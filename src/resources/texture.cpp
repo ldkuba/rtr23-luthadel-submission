@@ -1,5 +1,8 @@
 #include "resources/texture.hpp"
 
+// Statics values
+const uint32 Texture::max_name_length;
+
 Texture::Texture(
     const String name,
     const int32  width,

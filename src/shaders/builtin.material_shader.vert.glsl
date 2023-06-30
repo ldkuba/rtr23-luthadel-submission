@@ -41,7 +41,7 @@ void main(){
     mat3 model_m3=mat3(PC.model);
     
     DTO.ambient_color=UBO.ambient_color;
-    DTO.surface_normal=model_m3*in_normal;
+    DTO.surface_normal=normalize(model_m3*in_normal);
     DTO.surface_tangent=vec4(normalize(model_m3*in_tangent.xyz),in_tangent.w);
     DTO.texture_coordinate=in_texture_coordinate;
     DTO.view_position=UBO.view_position;

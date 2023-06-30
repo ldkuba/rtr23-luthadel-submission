@@ -71,17 +71,26 @@ class Material {
     /// @brief Material's diffuse map
     Property<TextureMap> diffuse_map {
         GET { return _diffuse_map; }
-        SET { _diffuse_map = value; }
+        SET {
+            _diffuse_map     = value;
+            _update_required = true;
+        }
     };
     /// @brief Material's specular map
     Property<TextureMap> specular_map {
         GET { return _specular_map; }
-        SET { _specular_map = value; }
+        SET {
+            _specular_map    = value;
+            _update_required = true;
+        }
     };
     /// @brief Material's normal map
     Property<TextureMap> normal_map {
         GET { return _normal_map; }
-        SET { _normal_map = value; }
+        SET {
+            _normal_map      = value;
+            _update_required = true;
+        }
     };
 
     /**
@@ -135,4 +144,5 @@ class Material {
     TextureMap    _normal_map;
     glm::vec4     _diffuse_color;
     float32       _shininess;
+    bool          _update_required = true;
 };

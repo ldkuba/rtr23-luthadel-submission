@@ -8,6 +8,9 @@ PushConstantRange get_aligned_range(
     uint64 offset, uint64 size, uint64 granularity
 );
 
+// Statics values
+const uint32 Shader::max_name_length;
+
 // Constructor & Destructor
 Shader::Shader(const ShaderConfig config)
     : _texture_system(config.texture_system), _name(config.name),

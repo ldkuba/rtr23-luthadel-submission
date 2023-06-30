@@ -16,6 +16,8 @@ string to_string(const uint128& in);
 string to_string(const int128& in);
 template<typename T>
 string to_string(const Property<T>& in);
+string to_string(const Vector<char>& in);
+string to_string(const Vector<unsigned char>& in);
 } // namespace std
 
 class String : public std::string {
@@ -33,7 +35,7 @@ class String : public std::string {
      * @returns Concatenated string
      */
     template<typename... Args>
-    static String build(Args... message) noexcept {
+    static String build(const Args&... message) noexcept {
         String result = "";
         (add_to_string(result, message), ...);
         return result;
@@ -179,7 +181,11 @@ class String : public std::string {
   private:
     // String builder
     template<typename T>
-    static void add_to_string(String& out_string, T component) noexcept {
+    static void add_to_string(String& out_string, const T& component) noexcept {
+        out_string += std::to_string(component);
+    }
+    template<typename T>
+    static void add_to_string(String& out_string, T* const component) noexcept {
         out_string += std::to_string(component);
     }
 };
@@ -192,16 +198,22 @@ struct hash<String> {
 } // namespace std
 
 template<>
-void String::add_to_string<char*>(String& out_string, char* component) noexcept;
+void String::add_to_string<char>(
+    String& out_string, const char& component
+) noexcept;
 template<>
-void String::add_to_string<const char*>(
-    String& out_string, const char* component
+void String::add_to_string<char>(
+    String& out_string, char* const component
+) noexcept;
+template<>
+void String::add_to_string<const char>(
+    String& out_string, const char* const component
 ) noexcept;
 template<>
 void String::add_to_string<std::string>(
-    String& out_string, std::string component
+    String& out_string, const std::string& component
 ) noexcept;
 template<>
 void String::add_to_string<String>(
-    String& out_string, String component
+    String& out_string, const String& component
 ) noexcept;

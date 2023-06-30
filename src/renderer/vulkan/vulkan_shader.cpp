@@ -175,10 +175,11 @@ VulkanShader::~VulkanShader() {
     // Instances
     for (auto instance_state : _instance_states) {
         if (instance_state) {
+            auto instance_state_v = (VulkanInstanceState*) instance_state;
             _device->handle().freeDescriptorSets(
-                _descriptor_pool, instance_state->descriptor_set
+                _descriptor_pool, instance_state_v->descriptor_set
             );
-            delete instance_state;
+            delete instance_state_v;
         }
     }
     _instance_states.clear();
@@ -320,20 +321,21 @@ void VulkanShader::apply_instance() {
         Logger::fatal(RENDERER_VULKAN_LOG, "No instance is bound.");
 
     // Obtain instance data.
-    const auto current_frame    = _command_buffer->current_frame;
-    auto       object_state     = _instance_states[_bound_instance_id];
+    const auto current_frame = _command_buffer->current_frame;
+    auto       object_state =
+        (VulkanInstanceState*) _instance_states[_bound_instance_id];
     auto& object_descriptor_set = object_state->descriptor_set[current_frame];
     auto& descriptor_set_id = object_state->descriptor_set_ids[current_frame];
 
-    // TODO: if needs update
-    static Vector<vk::WriteDescriptorSet> descriptor_writes {};
-    descriptor_writes.clear();
+    bool should_update =
+        object_state->should_update || !descriptor_set_id.has_value();
 
     // Descriptor 0 - Uniform buffer
     // Only do this if the descriptor has not yet been updated.
-    // TODO: determine if update is required.
-    // For now only checking if id has been set
-    if (!descriptor_set_id.has_value()) {
+    if (should_update) {
+        static Vector<vk::WriteDescriptorSet> descriptor_writes {};
+        descriptor_writes.clear();
+
         vk::DescriptorBufferInfo buffer_info {};
         buffer_info.setBuffer(_uniform_buffer->handle);
         buffer_info.setOffset(object_state->offset);
@@ -348,29 +350,30 @@ void VulkanShader::apply_instance() {
 
         descriptor_writes.push_back(ubo_descriptor);
         descriptor_set_id = 0; // TODO: Implement better id
+
+        // Samplers will always be in the binding. If the binding count is less
+        // than 2, there are no samplers.
+        if (_descriptor_set_configs[_desc_set_index_instance]->bindings.size() >
+            1) {
+            // Iterate samplers.
+            const auto& image_infos =
+                get_image_infos(object_state->instance_textures);
+
+            vk::WriteDescriptorSet sampler_descriptor {};
+            sampler_descriptor.setDstSet(object_descriptor_set);
+            sampler_descriptor.setDstBinding(_bind_index_sampler);
+            sampler_descriptor.setDescriptorType(
+                vk::DescriptorType::eCombinedImageSampler
+            );
+            sampler_descriptor.setImageInfo(image_infos);
+            descriptor_writes.push_back(sampler_descriptor);
+        }
+
+        // No throws
+        if (descriptor_writes.size() > 0)
+            _device->handle().updateDescriptorSets(descriptor_writes, nullptr);
+        object_state->should_update = false;
     }
-
-    // Samplers will always be in the binding. If the binding count is less than
-    // 2, there are no samplers.
-    if (_descriptor_set_configs[_desc_set_index_instance]->bindings.size() >
-        1) {
-        // Iterate samplers.
-        const auto& image_infos =
-            get_image_infos(object_state->instance_textures);
-
-        vk::WriteDescriptorSet sampler_descriptor {};
-        sampler_descriptor.setDstSet(object_descriptor_set);
-        sampler_descriptor.setDstBinding(_bind_index_sampler);
-        sampler_descriptor.setDescriptorType(
-            vk::DescriptorType::eCombinedImageSampler
-        );
-        sampler_descriptor.setImageInfo(image_infos);
-        descriptor_writes.push_back(sampler_descriptor);
-    }
-
-    // No throws
-    if (descriptor_writes.size() > 0)
-        _device->handle().updateDescriptorSets(descriptor_writes, nullptr);
 
     // Bind the descriptor set to be updated, or in case the shader changed.
     // Bind the global descriptor set to be updated.
@@ -434,7 +437,7 @@ void VulkanShader::release_instance_resources(uint32 instance_id) {
         return;
     }
 
-    auto instance_state = _instance_states[instance_id];
+    auto instance_state = (VulkanInstanceState*) _instance_states[instance_id];
 
     // Wait for any pending operations using the descriptor set to finish.
     _device->handle().waitIdle();
@@ -465,6 +468,10 @@ bool VulkanShader::set_uniform(const uint16 id, void* value) {
             _bound_ubo_offset = _instance_states[_bound_instance_id]->offset;
         _bound_scope = uniform.scope;
     }
+
+    // Inform the need for uniform reapplication
+    if (_bound_scope == ShaderScope::Instance)
+        _instance_states[_bound_instance_id]->should_update = true;
 
     // If sampler
     if (uniform.type == ShaderUniformType::sampler) {
@@ -509,7 +516,7 @@ vk::ShaderModule VulkanShader::create_shader_module(
     );
 
     // Load data
-    const auto result = FileSystem::read_file_bytes(shader_file_path);
+    const auto result = FileSystem::read_bytes(shader_file_path);
     if (result.has_error())
         Logger::fatal(RENDERER_VULKAN_LOG, result.error().what());
     const auto code = result.value();

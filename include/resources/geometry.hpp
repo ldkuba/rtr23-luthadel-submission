@@ -1,9 +1,10 @@
 #pragma once
 
-#include "material.hpp"
+#include "geometry_config.hpp"
 
 /**
- * @brief Represents a virtual geometry. Usually paired with a material.
+ * @brief Geometry resource. Represents a virtual geometry. Usually paired with
+ * a material.
  */
 class Geometry : public Resource {
   public:

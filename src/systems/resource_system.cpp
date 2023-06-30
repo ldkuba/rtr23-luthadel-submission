@@ -4,21 +4,23 @@
 #include "resources/loaders/material_loader.hpp"
 #include "resources/loaders/binary_loader.hpp"
 #include "resources/loaders/shader_loader.hpp"
+#include "resources/loaders/mesh_loader.hpp"
 
 #define RESOURCE_SYS_LOG "ResourceSystem :: "
+
+#define known_loader(LoaderType)                                               \
+    loader = new (MemoryTag::System) LoaderType();                             \
+    register_loader(loader);
 
 // Constructor & Destructor
 ResourceSystem::ResourceSystem() {
     // Auto-register known loaders
     ResourceLoader* loader;
-    loader = new (MemoryTag::System) ImageLoader();
-    register_loader(loader);
-    loader = new (MemoryTag::System) MaterialLoader();
-    register_loader(loader);
-    loader = new (MemoryTag::System) BinaryLoader();
-    register_loader(loader);
-    loader = new (MemoryTag::System) ShaderLoader();
-    register_loader(loader);
+    known_loader(ImageLoader);
+    known_loader(MaterialLoader);
+    known_loader(BinaryLoader);
+    known_loader(ShaderLoader);
+    known_loader(MeshLoader);
 
     Logger::trace(RESOURCE_SYS_LOG, "Resource system initialized.");
 }

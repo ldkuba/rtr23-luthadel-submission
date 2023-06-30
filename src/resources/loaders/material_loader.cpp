@@ -45,7 +45,7 @@ Result<Resource*, RuntimeError> MaterialLoader::load(const String name) {
     String file_path =
         ResourceSystem::base_path + "/" + _type_path + "/" + file_name;
 
-    auto material_settings = FileSystem::read_file_lines(file_path);
+    auto material_settings = FileSystem::read_lines(file_path);
     if (material_settings.has_error()) {
         Logger::error(RESOURCE_LOG, material_settings.error().what());
         return Failure(material_settings.error().what());

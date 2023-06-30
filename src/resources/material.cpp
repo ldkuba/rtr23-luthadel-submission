@@ -2,6 +2,9 @@
 
 #define MATERIAL_LOG "Material :: "
 
+// Statics values
+const uint32 Material::max_name_length;
+
 // Constructor & Destructor
 Material::Material(
     const String    name,
@@ -99,14 +102,17 @@ void Material::apply_instance() {
             "\" not properly initialized. Internal id not set."
         );
 
-    // Apply locals
+    // Apply instance level uniforms
     _shader->bind_instance(internal_id.value());
-    set_uniform("diffuse_color", _diffuse_color);
-    set_sampler("diffuse_texture", _diffuse_map.texture);
-    if (_shader->get_name().compare_ci("builtin.material_shader") == 0) {
-        set_uniform("shininess", _shininess);
-        set_sampler("specular_texture", _specular_map.texture);
-        set_sampler("normal_texture", _normal_map.texture);
+    if (_update_required) {
+        set_uniform("diffuse_color", _diffuse_color);
+        set_sampler("diffuse_texture", _diffuse_map.texture);
+        if (_shader->get_name().compare_ci("builtin.material_shader") == 0) {
+            set_uniform("shininess", _shininess);
+            set_sampler("specular_texture", _specular_map.texture);
+            set_sampler("normal_texture", _normal_map.texture);
+        }
+        _update_required = false;
     }
     _shader->apply_instance();
 }

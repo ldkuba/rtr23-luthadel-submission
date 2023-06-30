@@ -1,6 +1,7 @@
 #pragma once
 
 #include "material_system.hpp"
+#include "resources/geometry.hpp"
 
 /**
  * @brief Geometry system is responsible for the management of geometries, as
@@ -42,23 +43,10 @@ class GeometrySystem {
     /**
      * @brief Creates new geometry resource and load its material
      *
-     * @tparam VertexType Vertex (Vertex3D) or Vertex2D
-     * @param vertices Vertex data
-     * @param indices Index data
-     * @param name Geometry's name
-     * @param material_name Material to be loaded
-     * @param auto_release If enabled geometry system will automaticaly release
-     * the geometry resource from memory if no references to it are detected.
+     * @param config Geometry configuration
      * @returns Created geometry resource
      */
-    template<typename VertexType>
-    Geometry* acquire(
-        const String              name,
-        const Vector<VertexType>& vertices,
-        const Vector<uint32>&     indices,
-        const String              material_name,
-        bool                      auto_release = true
-    );
+    Geometry* acquire(const GeometryConfig& config);
 
     /**
      * @brief Releases geometry resource. Geometry system will automatically
@@ -85,10 +73,10 @@ class GeometrySystem {
     );
 
     // Utility methods
-    void generate_normals(
+    static void generate_normals(
         Vector<Vertex3D>& vertices, Vector<uint32> const& indices
     );
-    void generate_tangents(
+    static void generate_tangents(
         Vector<Vertex3D>& vertices, Vector<uint32> const& indices
     );
 
@@ -115,43 +103,3 @@ class GeometrySystem {
 
     void create_default_geometries();
 };
-
-#define GEOMETRY_SYS_LOG "GeometrySystem :: "
-
-inline uint32 generate_id() { // TODO: TEMP
-    static uint32 id = 0;
-    return id++;
-}
-template<typename VertexType>
-Geometry* GeometrySystem::acquire(
-    const String              name,
-    const Vector<VertexType>& vertices,
-    const Vector<uint32>&     indices,
-    const String              material_name,
-    bool                      auto_release
-) {
-    Logger::trace(GEOMETRY_SYS_LOG, "Geometry \"", name, "\" requested.");
-
-    // Generate unique id
-    auto id = generate_id();
-
-    // Register new slot
-    auto& ref           = _registered_geometries[id];
-    ref.auto_release    = auto_release;
-    ref.reference_count = 1;
-
-    // Crete geometry
-    ref.handle     = new (MemoryTag::Resource) Geometry(name);
-    ref.handle->id = id;
-    _renderer->create_geometry(ref.handle, vertices, indices);
-
-    // Acquire material
-    if (material_name != "") {
-        ref.handle->material = _material_system->acquire(material_name);
-        if (!ref.handle->material)
-            ref.handle->material = _material_system->default_material();
-    }
-
-    Logger::trace(GEOMETRY_SYS_LOG, "Geometry \"", name, "\" acquired.");
-    return ref.handle;
-}
