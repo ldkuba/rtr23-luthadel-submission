@@ -103,8 +103,14 @@ Result<void, bool> save_mesh(
         auto config_2d = dynamic_cast<GeometryConfig2D*>(config);
         auto config_3d = dynamic_cast<GeometryConfig3D*>(config);
 
-        if (config_2d) buffer = config_2d->serialize(&serializer);
-        if (config_3d) buffer = config_3d->serialize(&serializer);
+        if (config_2d) {
+            serializer.serialize((uint8) 2);
+            buffer = config_2d->serialize(&serializer);
+        }
+        if (config_3d) {
+            serializer.serialize((uint8) 3);
+            buffer = config_3d->serialize(&serializer);
+        }
 
         // Write config
         file->write(buffer);
@@ -114,21 +120,13 @@ Result<void, bool> save_mesh(
     return {};
 }
 
-#define deserialize_buffer(args...)                                            \
-    read = serializer.deserialize(buffer, args);                               \
-    if (read.has_error()) {                                                    \
-        delete config_array;                                                   \
-        return Failure(read.error());                                          \
-    }                                                                          \
-    buffer = buffer.substr(read.value());
-
 Result<GeometryConfigArray*, RuntimeError> load_mesh(
     const String& name, const String& path
 ) {
     // Load mesh file
-    const auto bytes_r = FileSystem::read_bytes(path);
-    const auto bytes   = check(bytes_r);
-    String     buffer { bytes.data(), bytes.size() };
+    const auto   bytes_r = FileSystem::read_bytes(path);
+    const auto   bytes   = check(bytes_r);
+    const String buffer { bytes.data(), bytes.size() };
 
     // File is binary, so we will utilize the help of Binary serializer
     BinarySerializer serializer {};
@@ -139,9 +137,8 @@ Result<GeometryConfigArray*, RuntimeError> load_mesh(
     uint32 geom_count;
 
     Result<uint32, RuntimeError> read =
-        serializer.deserialize(buffer, version, mesh_name, geom_count);
+        serializer.deserialize(buffer, 0, version, mesh_name, geom_count);
     if (read.has_error()) return Failure(read.error());
-    buffer = buffer.substr(read.value());
 
     // Output geometry configuration array
     auto config_array =
@@ -152,18 +149,22 @@ Result<GeometryConfigArray*, RuntimeError> load_mesh(
     for (uint32 i = 0; i < geom_count; i++) {
         // Read geometry dimension cout
         uint8 dim_count;
-        deserialize_buffer(dim_count);
+        read = serializer.deserialize(buffer, read.value(), dim_count);
+        if (read.has_error()) {
+            delete config_array;
+            return Failure(read.error());
+        };
 
         // Read geometry
         switch (dim_count) {
         case 2: {
             auto config = new (MemoryTag::Geometry) GeometryConfig2D();
-            read        = config->deserialize(buffer, &serializer);
+            read = config->deserialize(&serializer, buffer, read.value());
             config_array->configs.push_back(config);
         } break;
         case 3: {
             auto config = new (MemoryTag::Geometry) GeometryConfig3D();
-            read        = config->deserialize(buffer, &serializer);
+            read = config->deserialize(&serializer, buffer, read.value());
             config_array->configs.push_back(config);
         } break;
         default:
@@ -180,7 +181,6 @@ Result<GeometryConfigArray*, RuntimeError> load_mesh(
             delete config_array;
             return Failure(read.error());
         }
-        buffer = buffer.substr(read.value());
     }
 
     // return results

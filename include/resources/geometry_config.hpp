@@ -28,10 +28,15 @@ class GeometryConfig : public Serializable {
     );
     virtual ~GeometryConfig();
 
-    virtual String serialize(const Serializer* const serializer) const override;
-    virtual Result<uint32, RuntimeError> deserialize(
-        const String& data, const Serializer* const serializer
-    ) override;
+    serializable_attributes(
+        indices,
+        center,
+        max_extents,
+        min_extents,
+        name,
+        material_name,
+        auto_release
+    );
 };
 
 /**
@@ -54,10 +59,16 @@ class GeometryConfig2D : public GeometryConfig {
     );
     ~GeometryConfig2D();
 
-    String serialize(const Serializer* const serializer) const override;
-    Result<uint32, RuntimeError> deserialize(
-        const String& data, const Serializer* const serializer
-    ) override;
+    serializable_attributes(
+        vertices,
+        indices,
+        center,
+        max_extents,
+        min_extents,
+        name,
+        material_name,
+        auto_release
+    )
 };
 
 /**
@@ -80,11 +91,16 @@ class GeometryConfig3D : public GeometryConfig {
     );
     ~GeometryConfig3D() override;
 
-    String serialize(const Serializer* const serializer) const override;
-
-    Result<uint32, RuntimeError> deserialize(
-        const String& data, const Serializer* const serializer
-    ) override;
+    serializable_attributes(
+        vertices,
+        indices,
+        center,
+        max_extents,
+        min_extents,
+        name,
+        material_name,
+        auto_release
+    )
 };
 
 /**

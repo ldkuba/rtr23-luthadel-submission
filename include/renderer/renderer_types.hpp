@@ -10,7 +10,7 @@
  * @brief Vertex in 3D space
  *
  */
-struct Vertex3D : public Serializable {
+struct Vertex3D {
     glm::vec3 position;
     glm::vec3 normal;
     glm::vec4 tangent;
@@ -29,25 +29,6 @@ struct Vertex3D : public Serializable {
           texture_coord(texture_coord) {}
     ~Vertex3D() {}
 
-    serializable_attributes(
-        position.x,
-        position.y,
-        position.z,
-        normal.x,
-        normal.y,
-        normal.z,
-        tangent.x,
-        tangent.y,
-        tangent.z,
-        tangent.w,
-        color.x,
-        color.y,
-        color.z,
-        color.w,
-        texture_coord.x,
-        texture_coord.y
-    );
-
     bool operator==(const Vertex3D& other) const {
         return other.position == position && //
                other.normal == normal &&     //
@@ -57,17 +38,39 @@ struct Vertex3D : public Serializable {
     }
 };
 
+template<>
+inline String serialize_object<Vertex3D>(
+    const Vertex3D& obj, const Serializer* const serializer
+) {
+    return serializer->serialize(
+        obj.position, obj.normal, obj.tangent, obj.color, obj.texture_coord
+    );
+}
+template<>
+inline Result<uint32, RuntimeError> deserialize_object<Vertex3D>(
+    Vertex3D&               obj,
+    const Serializer* const serializer,
+    const String&           data,
+    const uint32            from_pos
+) {
+    return serializer->deserialize(
+        data,
+        from_pos,
+        obj.position,
+        obj.normal,
+        obj.tangent,
+        obj.color,
+        obj.texture_coord
+    );
+}
+
 /**
  * @brief Vertex in 2D plane
  *
  */
-struct Vertex2D : public Serializable {
+struct Vertex2D {
     glm::vec2 position;
     glm::vec2 texture_coord;
-
-    serializable_attributes(
-        position.x, position.y, texture_coord.x, texture_coord.y
-    );
 
     Vertex2D() {}
     Vertex2D(const glm::vec2 position, const glm::vec2 texture_coord)
@@ -79,6 +82,24 @@ struct Vertex2D : public Serializable {
                other.texture_coord == texture_coord;
     }
 };
+
+template<>
+inline String serialize_object<Vertex2D>(
+    const Vertex2D& obj, const Serializer* const serializer
+) {
+    return serializer->serialize(obj.position, obj.texture_coord);
+}
+template<>
+inline Result<uint32, RuntimeError> deserialize_object<Vertex2D>(
+    Vertex2D&               obj,
+    const Serializer* const serializer,
+    const String&           data,
+    const uint32            from_pos
+) {
+    return serializer->deserialize(
+        data, from_pos, obj.position, obj.texture_coord
+    );
+}
 
 typedef Vertex3D Vertex;
 

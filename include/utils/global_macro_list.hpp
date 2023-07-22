@@ -37,6 +37,8 @@
     -   INT128_MIN
     -   UINT128_MAX
     -   UINT128_MIN
+// Serialization extensions
+    - serializable_attributes
 //  General, NOT FOR USE
     -   ...
 
