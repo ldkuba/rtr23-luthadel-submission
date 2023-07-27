@@ -8,6 +8,7 @@
  */
 class GeometryConfig : public Serializable {
   public:
+    uint8          dim_count = 0;
     String         name;
     Vector<uint32> indices { { MemoryTag::Geometry } };
     glm::vec3      center;
@@ -29,6 +30,7 @@ class GeometryConfig : public Serializable {
     virtual ~GeometryConfig();
 
     serializable_attributes(
+        dim_count,
         indices,
         center,
         max_extents,
@@ -44,6 +46,7 @@ class GeometryConfig : public Serializable {
  */
 class GeometryConfig2D : public GeometryConfig {
   public:
+    uint8            dim_count = 2;
     Vector<Vertex2D> vertices { { MemoryTag::Geometry } };
 
     GeometryConfig2D();
@@ -60,6 +63,7 @@ class GeometryConfig2D : public GeometryConfig {
     ~GeometryConfig2D();
 
     serializable_attributes(
+        dim_count,
         vertices,
         indices,
         center,
@@ -76,6 +80,7 @@ class GeometryConfig2D : public GeometryConfig {
  */
 class GeometryConfig3D : public GeometryConfig {
   public:
+    uint8            dim_count = 3;
     Vector<Vertex3D> vertices { { MemoryTag::Geometry } };
 
     GeometryConfig3D();
@@ -92,6 +97,7 @@ class GeometryConfig3D : public GeometryConfig {
     ~GeometryConfig3D() override;
 
     serializable_attributes(
+        dim_count,
         vertices,
         indices,
         center,

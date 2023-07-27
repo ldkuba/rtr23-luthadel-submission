@@ -80,18 +80,22 @@ inline void TestApplication::run() {
 
     _app_renderer.material_shader->reload();
 
-    _app_renderer.current_geometry =
-        _geometry_system.generate_cube("cube", "test_material");
+    // _app_renderer.current_geometry =
+    //     _geometry_system.generate_cube("cube", "test_material");
 
-    // MeshLoader loader {};
-    // auto       load_result = loader.load("viking_room");
-    // if (load_result.has_error()) Logger::fatal("Mesh loading failed");
-    // auto config_array =
-    // dynamic_cast<GeometryConfigArray*>(load_result.value()); GeometryConfig*
-    // config         = config_array->configs[0]; config->material_name =
-    // "cobblestone"; _app_renderer.current_geometry =
-    // _geometry_system.acquire(*config);
+    /// Load MESH TEST
+    MeshLoader loader {};
+    auto       load_result = loader.load("sponza");
+    if (load_result.has_error()) {
+        Logger::error(load_result.error().what());
+        Logger::fatal("Mesh loading failed");
+    }
+    auto config_array = dynamic_cast<GeometryConfigArray*>(load_result.value());
+    GeometryConfig* config         = config_array->configs[0];
+    config->material_name          = "sponza";
+    _app_renderer.current_geometry = _geometry_system.acquire(*config);
 
+    /// Load GUI TEST
     float32          side       = 128.0f;
     Vector<Vertex2D> vertices2d = {
         { glm::vec2(0.0f, 0.0f), glm::vec2(0.0f, 0.0f) },

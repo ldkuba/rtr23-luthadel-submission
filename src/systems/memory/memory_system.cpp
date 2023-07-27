@@ -102,7 +102,7 @@ Allocator** MemorySystem::initialize_allocator_map() {
     // Define used allocators
     cal(unknown_allocator);
     sal(temp_allocator, MB);
-    fal(general_allocator, MB);
+    fal(general_allocator, 128 * MB);
     fal(gpu_data_allocator, MB);
     fal(resource_allocator, MB);
     fal(geom_allocator, 128 * MB);

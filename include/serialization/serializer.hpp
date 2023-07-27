@@ -48,15 +48,18 @@ class Serializer {
     Result<uint32, RuntimeError> deserialize(
         const String& data, const uint32 from_pos, T&... out_data
     ) const {
-        uint32 position   = from_pos;
-        bool   successful = true;
+        uint32 position = from_pos;
+
         // Remove modifiers
         if (!object_remove_beg(data, position)) return _deserialization_failure;
         if (!object_remove_end(data, position)) return _deserialization_failure;
 
+        // Deserialize attributes
+        bool successful = true;
         (deserialize_attribute<T>(data, out_data, position, successful), ...);
         if (!successful) return _deserialization_failure;
-        return {};
+
+        return position - from_pos;
     }
 
   protected:
@@ -194,17 +197,23 @@ class Serializer {
     bool deserialize_type(
         const String& in_str, Vector<T>& data, uint32& position
     ) const {
-        uint64     count = -1;
+        uint64     count = 0;
         const auto size  = sizeof(T);
+
+        // Deserialize beginning
         if (!vector_remove_beg(in_str, count, size, position)) return false;
+        if (data.size() != count) data.resize(count);
+
+        // Deserialize elements
         for (uint64 i = 0; i < count; i++) {
-            if (i != 0) {
-                if (!vector_remove_sep(in_str, count, size, i, position))
-                    return false;
-            }
+            if (i != 0 && !vector_remove_sep(in_str, count, size, i, position))
+                return false;
             if (!deserialize_one(in_str, data[i], position)) return false;
         }
+
+        // Deserialize end
         if (!vector_remove_end(in_str, count, size, position)) return false;
+        if (data.size() != count) data.resize(count);
         return true;
     }
 
@@ -227,7 +236,7 @@ class Serializer {
                           const String&,
                           T&,
                           uint32&>::value)
-            deserialize_type(data, out_data, position);
+            return deserialize_type(data, out_data, position);
         else if constexpr (std::is_base_of_v<Serializable, T>) {
             auto serializable_data = dynamic_cast<Serializable*>((T*) &data);
             const auto res =
