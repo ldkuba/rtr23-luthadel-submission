@@ -61,9 +61,6 @@ _deps
 build/
 [Bb][Uu][Ii][Ll][Dd]/
 
-external/*
-[Ee][Xx][Tt][Ee][Rr][Nn][Aa][Ll]/*
-
 assets/materials/*
 assets/models/*
 assets/textures/*
