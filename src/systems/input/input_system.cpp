@@ -18,7 +18,7 @@ void InputSystem::register_input_source(Platform::Surface* const surface) {
     Logger::trace(INPUT_SYS_LOG, "Input source registered.");
 }
 
-Result<Control*, bool> InputSystem::create_control(
+Result<Control*, RuntimeError> InputSystem::create_control(
     const String name, const ControlType type
 ) {
     Logger::trace(INPUT_SYS_LOG, "Creating control \"", name, "\".");
@@ -26,13 +26,13 @@ Result<Control*, bool> InputSystem::create_control(
     // If name already exists raise error
     for (const auto* control : _controls) {
         if (control->_name.compare(name) == 0) {
-            Logger::error(
-                INPUT_SYS_LOG,
+            const auto err_message = String::build(
                 "Couldn't create a control with a name \"",
                 name,
                 "\". This name is already taken. Action failed."
             );
-            return Failure(false);
+            Logger::error(INPUT_SYS_LOG, err_message);
+            return Failure(err_message);
         }
     }
 

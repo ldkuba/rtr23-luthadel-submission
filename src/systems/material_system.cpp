@@ -219,19 +219,18 @@ void MaterialSystem::create_default_material() {
     _default_material->id = 0;
 }
 
-Result<MaterialSystem::MaterialRef, bool> MaterialSystem::create_material(
-    const MaterialConfig config
-) {
+Result<MaterialSystem::MaterialRef, RuntimeError> //
+MaterialSystem::create_material(const MaterialConfig config) {
     // Get shader
     auto shader = _shader_system->acquire(config.shader).value_or(nullptr);
     if (shader == nullptr) {
-        Logger::error(
-            MATERIAL_SYS_LOG,
+        const auto error_message = String::build(
             "Material couldn't be created. Couldn't find \"",
             config.shader,
             "\" shader. Default material returned instead."
         );
-        return Failure(false);
+        Logger::error(MATERIAL_SYS_LOG, error_message);
+        return Failure(error_message);
     }
 
     auto material = new (MemoryTag::MaterialInstance)

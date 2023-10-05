@@ -31,10 +31,12 @@ class InputSystem {
      * @param type Type of control. Determines control's callback activation
      * point.
      * @return Pointer to a newly created control if successful.
-     * @throws false If control with this name already exists
+     * @throws RuntimeError If control with this name already exists
      */
-    Result<Control*, bool> create_control(const String name, ControlType type);
-    void                   destroy_control(const String name);
+    Result<Control*, RuntimeError> create_control(
+        const String name, ControlType type
+    );
+    void destroy_control(const String name);
 
     /**
      * @brief Signal a key state change to pressed. All press type controls will

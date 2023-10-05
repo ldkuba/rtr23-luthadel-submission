@@ -34,9 +34,9 @@ class ShaderSystem {
      *
      * @param config Shader configuration
      * @returns Plain pointer to the created shader
-     * @throws False if creation fails for some reason
+     * @throws RuntimeError if creation fails for some reason
      */
-    Result<Shader*, bool> create(ShaderConfig config);
+    Result<Shader*, RuntimeError> create(ShaderConfig config);
     /**
      * @brief Acquire a shader by name. If shader of the given name isn't
      * previously cashed it will be loaded from the shader config asset with the
@@ -44,9 +44,9 @@ class ShaderSystem {
      *
      * @param name Name of the required shader.
      * @returns Plain pointer to the acquired shader
-     * @throws False if acquisition fails for some reason
+     * @throws RuntimeError if acquisition fails for some reason
      */
-    Result<Shader*, bool> acquire(const String name);
+    Result<Shader*, RuntimeError> acquire(const String name);
 
   private:
     Renderer*       _renderer;

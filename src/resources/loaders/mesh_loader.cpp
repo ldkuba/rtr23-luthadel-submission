@@ -6,7 +6,7 @@
 #include "renderer/renderer_types.hpp"
 
 // Helper functions
-Result<void, bool> save_mesh(
+Result<void, RuntimeError> save_mesh(
     const String& name, const String& path, GeometryConfigArray* const configs
 );
 Result<GeometryConfigArray*, RuntimeError> load_mesh(
@@ -75,7 +75,7 @@ void MeshLoader::unload(Resource* resource) {
 
 #include "serialization/binary_serializer.hpp"
 
-Result<void, bool> save_mesh(
+Result<void, RuntimeError> save_mesh(
     const String&              name,
     const String&              path,
     GeometryConfigArray* const config_array
@@ -96,7 +96,7 @@ Result<void, bool> save_mesh(
 
     // Create new mesh file
     auto result = FileSystem::create_or_open(path, FileSystem::binary);
-    if (result.has_error()) return Failure(false);
+    if (result.has_error()) return Failure(result.error().what());
     auto& file = result.value();
 
     // Write buffer

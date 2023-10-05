@@ -24,19 +24,19 @@ ShaderSystem::~ShaderSystem() {
 // SHADER SYSTEM PUBLIC METHODS //
 // //////////////////////////// //
 
-Result<Shader*, bool> ShaderSystem::create(ShaderConfig config) {
+Result<Shader*, RuntimeError> ShaderSystem::create(ShaderConfig config) {
     Logger::trace(SHADER_SYS_LOG, "Creating shader \"", config.name, "\".");
 
     if (config.name().length() > Shader::max_name_length) {
-        Logger::error(
-            SHADER_SYS_LOG,
+        const auto error_message = String::build(
             "Shader creation failed. Maximum name length of a shader is ",
             Shader::max_name_length,
             " characters but ",
             config.name().length(),
             " character long name was passed. Creation unsuccessful."
         );
-        return Failure(false);
+        Logger::error(SHADER_SYS_LOG, error_message);
+        return Failure(error_message);
     }
     config.texture_system = _texture_system;
 
@@ -56,19 +56,19 @@ Result<Shader*, bool> ShaderSystem::create(ShaderConfig config) {
     return shader;
 }
 
-Result<Shader*, bool> ShaderSystem::acquire(const String name) {
+Result<Shader*, RuntimeError> ShaderSystem::acquire(const String name) {
     Logger::trace(SHADER_SYS_LOG, "Shader \"", name, "\" requested.");
 
     if (name.length() > Shader::max_name_length) {
-        Logger::error(
-            SHADER_SYS_LOG,
+        const auto error_message = String::build(
             "Shader acquisition failed. Maximum name length of a shader is ",
             Shader::max_name_length,
             " characters but ",
             name.length(),
             " character long name was passed. Acquisition unsuccessful."
         );
-        return Failure(false);
+        Logger::error(SHADER_SYS_LOG, error_message);
+        return Failure(error_message);
     }
 
     auto it = _registered_shaders.find(name);
@@ -78,7 +78,7 @@ Result<Shader*, bool> ShaderSystem::acquire(const String name) {
         auto result = _resource_system->load(name, "Shader");
         if (result.has_error()) {
             Logger::error(SHADER_SYS_LOG, result.error().what());
-            return Failure(false);
+            return Failure(result.error().what());
         }
         auto config = (ShaderConfig*) result.value();
         auto shader = create(*config).expect(

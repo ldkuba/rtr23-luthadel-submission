@@ -57,7 +57,7 @@ add_subdirectory(external/tinyobjloader)
 target_include_directories(${PROJECT_NAME}
     PUBLIC
     include
-    include/utils
+    include/common
     include/containers
     external/vulkan/glfw/include
     external/vulkan/glm
