@@ -192,7 +192,8 @@ Result<T, InvalidArgument> parse_uint(
         uint32 digit = s[i] - '0';
         if (digit / 10 != 0) return -1;
 
-        if (max - result < power * digit) Failure("String couldn't be parsed.");
+        if (max - result < power * digit)
+            return Failure("String couldn't be parsed.");
 
         result += power * digit;
         power *= 10;

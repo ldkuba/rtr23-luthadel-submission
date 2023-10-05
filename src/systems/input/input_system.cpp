@@ -55,17 +55,17 @@ void InputSystem::destroy_control(const String name) {
     // Remove all references to it
     switch (control->_type) {
     case ControlType::Press:
-        for (const auto& input : control->_maped_inputs)
+        for (const auto& input : control->_mapped_inputs)
             if (input.type == Control::InputType::Key)
                 _on_key_pressed_events[input.code] = nullptr;
         break;
     case ControlType::Release:
-        for (const auto& input : control->_maped_inputs)
+        for (const auto& input : control->_mapped_inputs)
             if (input.type == Control::InputType::Key)
                 _on_key_released_events[input.code] = nullptr;
         break;
     case ControlType::Hold:
-        for (const auto& input : control->_maped_inputs)
+        for (const auto& input : control->_mapped_inputs)
             if (input.type == Control::InputType::Key)
                 _on_key_hold_events[input.code] = nullptr;
         break;

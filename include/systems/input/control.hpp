@@ -72,7 +72,7 @@ class Control {
     InputSystem* const _input_system;
 
     // Control state
-    Vector<Input> _maped_inputs {};
+    Vector<Input> _mapped_inputs {};
     uint32        _hold_active = 0;
     float64       _last_press_t;
     float64       _last_release_t;

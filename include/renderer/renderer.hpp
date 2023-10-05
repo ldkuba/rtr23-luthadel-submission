@@ -19,7 +19,7 @@ class Renderer {
         SET { _view_mode = value; }
     };
 
-    // TODO: TEMP TEST CODE
+    // TODO: TEMP TEST CODE BEGIN
     Geometry* current_geometry    = nullptr;
     Geometry* current_ui_geometry = nullptr;
     Shader*   material_shader     = nullptr;

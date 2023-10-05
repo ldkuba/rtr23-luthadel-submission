@@ -16,7 +16,7 @@ Control::~Control() {}
 
 void Control::map_key(const KeyCode key) {
     // Add new input mapping
-    _maped_inputs.push_back({ InputType::Key, (InputCode) key });
+    _mapped_inputs.push_back({ InputType::Key, (InputCode) key });
 
     // Update appropriate event map
     switch (_type) {
@@ -49,11 +49,11 @@ void Control::unmap_key(const KeyCode key) {
 
     // Unmap key from mapped inputs list
     auto it = std::find_if(
-        _maped_inputs.begin(),
-        _maped_inputs.end(),
+        _mapped_inputs.begin(),
+        _mapped_inputs.end(),
         [key](const Input& x) {
             return x.type == InputType::Key && x.code == (InputCode) key;
         }
     );
-    _maped_inputs.erase(it);
+    _mapped_inputs.erase(it);
 }
