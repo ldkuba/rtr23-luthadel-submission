@@ -4,6 +4,8 @@
 #include "resources/material.hpp"
 #include "systems/file_system.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 struct MSVars {
     STRING_CONST(version);
     STRING_CONST(name);
@@ -224,3 +226,5 @@ Result<glm::vec4, uint8> load_vector(const String vector_str) { // Parse vec4
     // Assign to diffuse color
     return glm::vec4(floats[0], floats[1], floats[2], floats[3]);
 }
+
+} // namespace ENGINE_NAMESPACE

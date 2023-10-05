@@ -10,6 +10,8 @@
 #include "result.hpp"
 #include "error_types.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 class InputSystem;
 
 /**
@@ -132,3 +134,5 @@ class Platform {
         InputSystem* _input_system;
     };
 };
+
+} // namespace ENGINE_NAMESPACE

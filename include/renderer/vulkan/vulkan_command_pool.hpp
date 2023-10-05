@@ -5,6 +5,8 @@
 #include "vulkan_types.hpp"
 #include "logger.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 /**
  * @brief Vulkan command pool. This class is used for spawning and managing
  * individual Vulkan Command Buffers and issuing single-time commands.
@@ -69,3 +71,5 @@ class VulkanCommandPool {
 
     vk::CommandPool _command_pool;
 };
+
+} // namespace ENGINE_NAMESPACE

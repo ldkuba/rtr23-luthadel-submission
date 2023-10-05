@@ -4,6 +4,8 @@
 #include "resources/datapack.hpp"
 #include "systems/file_system.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 // Constructor & Destructor
 BinaryLoader::BinaryLoader() {
     _type      = ResourceType::Binary;
@@ -41,3 +43,5 @@ void BinaryLoader::unload(Resource* resource) {
     ByteArrayData* data = (ByteArrayData*) (resource);
     delete data;
 }
+
+} // namespace ENGINE_NAMESPACE

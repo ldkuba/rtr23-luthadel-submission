@@ -4,6 +4,8 @@
 #include "logger.hpp"
 #include <vulkan/vulkan.hpp>
 
+namespace ENGINE_NAMESPACE {
+
 class VulkanRenderPass;
 
 /**
@@ -62,3 +64,5 @@ class VulkanFramebuffer {
         const Vector<vk::ImageView>& attachments
     );
 };
+
+} // namespace ENGINE_NAMESPACE

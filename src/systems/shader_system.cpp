@@ -1,5 +1,7 @@
 #include "systems/shader_system.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 #define SHADER_SYS_LOG "ShaderSystem :: "
 
 // Constructor & Destructor
@@ -93,3 +95,5 @@ Result<Shader*, RuntimeError> ShaderSystem::acquire(const String name) {
     Logger::trace(SHADER_SYS_LOG, "Shader \"", name, "\" acquired.");
     return it->second;
 }
+
+} // namespace ENGINE_NAMESPACE

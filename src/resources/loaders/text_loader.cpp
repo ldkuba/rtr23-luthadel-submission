@@ -4,6 +4,8 @@
 #include "resources/datapack.hpp"
 #include "systems/file_system.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 // Constructor & Destructor
 TextLoader::TextLoader() {
     _type      = ResourceType::Text;
@@ -42,3 +44,5 @@ void TextLoader::unload(Resource* resource) {
     TextData* data = (TextData*) (resource);
     delete data;
 }
+
+} // namespace ENGINE_NAMESPACE

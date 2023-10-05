@@ -5,6 +5,8 @@
 #include "defines.hpp"
 #include "vector.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 class VulkanSettings {
   public:
     // General settings
@@ -119,5 +121,6 @@ class VulkanSettings {
     constexpr static uint32 max_material_count = 1024;
     constexpr static uint32 max_geometry_count = 1024;
 };
-
 // TODO: TEMP CODE
+
+} // namespace ENGINE_NAMESPACE

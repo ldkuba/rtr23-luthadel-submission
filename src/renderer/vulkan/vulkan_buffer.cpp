@@ -1,5 +1,7 @@
 #include "renderer/vulkan/vulkan_buffer.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 // #define TRACE_FILE_VULKAN_BUFFER
 
 VulkanBuffer::~VulkanBuffer() {
@@ -203,3 +205,5 @@ vk::DeviceMemory VulkanBuffer::allocate_buffer_memory(
     }
     return memory;
 }
+
+} // namespace ENGINE_NAMESPACE

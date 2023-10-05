@@ -3,6 +3,8 @@
 #include "platform/platform.hpp"
 #include "control.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 /**
  * @brief Input system is responsible for control creation, destruction and
  * invocation, as well as input management.
@@ -72,3 +74,5 @@ class InputSystem {
     Control* _on_key_released_events[(InputCode) KeyCode::MAX_KEY_CODE] = {};
     Control* _on_key_hold_events[(InputCode) KeyCode::MAX_KEY_CODE]     = {};
 };
+
+} // namespace ENGINE_NAMESPACE

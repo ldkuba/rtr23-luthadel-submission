@@ -1,5 +1,7 @@
 #include "renderer/vulkan/vulkan_managed_buffer.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 VulkanManagedBuffer::~VulkanManagedBuffer() { delete _memory_allocator; }
 
 // //////////////////////////////////// //
@@ -46,3 +48,5 @@ vk::DeviceSize VulkanManagedBuffer::allocate(
 void VulkanManagedBuffer::deallocate(vk::DeviceSize offset) {
     _memory_allocator->free((void*) offset);
 }
+
+} // namespace ENGINE_NAMESPACE

@@ -4,6 +4,8 @@
 
 #include <algorithm> // max
 
+namespace ENGINE_NAMESPACE {
+
 // Constructor & Destructor
 LinearAllocator::LinearAllocator(const uint64 total_size)
     : Allocator(total_size) {}
@@ -47,3 +49,5 @@ void LinearAllocator::reset() {
     _used   = 0;
     _peak   = 0;
 }
+
+} // namespace ENGINE_NAMESPACE

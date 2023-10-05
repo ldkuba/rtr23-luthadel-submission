@@ -1,5 +1,7 @@
 #include "renderer/vulkan/vulkan_image.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 // #define TRACE_FILE_VULKAN_IMAGE
 
 VulkanImage::~VulkanImage() {
@@ -372,3 +374,5 @@ void VulkanImage::create_view(
         Logger::fatal(RENDERER_VULKAN_LOG, e.what());
     }
 }
+
+} // namespace ENGINE_NAMESPACE

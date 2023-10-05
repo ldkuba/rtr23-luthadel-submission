@@ -1,5 +1,7 @@
 #include "systems/geometry_system.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 #define GEOMETRY_SYS_LOG "GeometrySystem :: "
 
 // Constructor & Destructor
@@ -316,3 +318,5 @@ void GeometrySystem::create_default_geometries() {
     _renderer->create_geometry(_default_2d_geometry, vertices2d, indices2d);
     _default_2d_geometry->material = _material_system->default_material();
 }
+
+} // namespace ENGINE_NAMESPACE

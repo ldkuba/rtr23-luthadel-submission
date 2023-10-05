@@ -1,5 +1,7 @@
 #include "systems/material_system.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 #define MATERIAL_SYS_LOG "MaterialSystem :: "
 
 // Constructor & Destructor
@@ -295,3 +297,5 @@ void MaterialSystem::destroy_material(Material* material) {
     );
     delete material;
 }
+
+} // namespace ENGINE_NAMESPACE

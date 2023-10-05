@@ -2,6 +2,8 @@
 
 #include "renderer/vulkan/vulkan_backend.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 /**
  * @brief List of supported backend APIs
  */
@@ -142,3 +144,5 @@ void Renderer::create_geometry(
     _backend->create_geometry(geometry, vertices, indices);
     Logger::trace(RENDERER_LOG, "Geometry created.");
 }
+
+} // namespace ENGINE_NAMESPACE

@@ -6,6 +6,8 @@
 #include "resources/loaders/shader_loader.hpp"
 #include "resources/loaders/mesh_loader.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 #define RESOURCE_SYS_LOG "ResourceSystem :: "
 
 #define known_loader(LoaderType)                                               \
@@ -102,3 +104,5 @@ void ResourceSystem::unload(Resource* resource) {
     // Unload
     loader->second->unload(resource);
 }
+
+} // namespace ENGINE_NAMESPACE

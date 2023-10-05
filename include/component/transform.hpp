@@ -3,6 +3,8 @@
 #include "math_libs.hpp"
 #include "property.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 /**
  * @brief Transform of objects in world. Holds data like position rotation and
  * scale. Can hold pointer to a parent whose transform this transform is
@@ -99,3 +101,5 @@ class Transform {
 
     Transform* _parent {};
 };
+
+} // namespace ENGINE_NAMESPACE

@@ -2,6 +2,8 @@
 
 #include "allocator.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 /**
  * @brief Standard C allocator. Uses malloc() and free() for allocation and
  * deallocation respectively. Initialization of this allocator is unnecessary.
@@ -23,3 +25,5 @@ class CAllocator : public Allocator {
     virtual void free(void* ptr) override;
     virtual bool owns(void* ptr) override;
 };
+
+} // namespace ENGINE_NAMESPACE

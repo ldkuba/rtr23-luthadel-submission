@@ -2,6 +2,8 @@
 
 #include "geometry.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 class Model : Resource {
   public:
     /// @brief List of geometry configurations
@@ -15,3 +17,5 @@ class Model : Resource {
   private:
     Vector<GeometryConfig*> _geometry_configs;
 };
+
+} // namespace ENGINE_NAMESPACE

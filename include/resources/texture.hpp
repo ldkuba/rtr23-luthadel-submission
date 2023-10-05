@@ -2,6 +2,8 @@
 
 #include "resource.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 struct InternalTextureData {};
 
 /// @brief Collection of texture uses
@@ -75,3 +77,5 @@ class Texture {
     uint64               _total_size;
     InternalTextureData* _internal_data;
 };
+
+} // namespace ENGINE_NAMESPACE

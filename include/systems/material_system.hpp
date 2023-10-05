@@ -3,6 +3,8 @@
 #include "shader_system.hpp"
 #include "resources/material.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 /**
  * @brief Material system is responsible for management of materials in the
  * engine, including reference counting an auto-unloading.
@@ -80,3 +82,5 @@ class MaterialSystem {
     );
     void destroy_material(Material* material);
 };
+
+} // namespace ENGINE_NAMESPACE

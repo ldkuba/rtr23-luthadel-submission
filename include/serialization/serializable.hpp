@@ -2,8 +2,9 @@
 
 #include "string.hpp"
 
-class Serializer;
+namespace ENGINE_NAMESPACE {
 class String;
+class Serializer;
 class RuntimeError;
 
 /**
@@ -106,3 +107,5 @@ Result<uint32, RuntimeError> deserialize_object(
     ) override {                                                               \
         return serializer->deserialize(data, from_pos, attributes);            \
     }
+
+} // namespace ENGINE_NAMESPACE

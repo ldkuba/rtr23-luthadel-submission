@@ -7,8 +7,10 @@
 #include "systems/memory/memory_system.hpp"
 #include "app_temp.hpp"
 
+using namespace ENGINE_NAMESPACE;
+
 // TODO: APPLICATION / ENGINE SPLIT
-// TODO: UNIT TESTING
+// TODO: UNIT TESTINGString message) {}
 
 int main(int, char**) {
     TestApplication* app = new (MemoryTag::Application) TestApplication {};

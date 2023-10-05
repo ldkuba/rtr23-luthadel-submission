@@ -4,6 +4,8 @@
 
 #include <algorithm> // std::max
 
+namespace ENGINE_NAMESPACE {
+
 // Constructor & Destructor
 FreeListAllocator::FreeListAllocator(
     const uint64 totalSize, const PlacementPolicy pPolicy
@@ -193,3 +195,5 @@ void FreeListAllocator::coalescence(Node* previous_node, Node* free_node) {
         _free_list.remove(previous_node, free_node);
     }
 }
+
+} // namespace ENGINE_NAMESPACE

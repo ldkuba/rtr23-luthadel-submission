@@ -4,6 +4,8 @@
 #include "event.hpp"
 #include "input_codes.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 class InputSystem;
 
 /**
@@ -77,3 +79,5 @@ class Control {
     float64       _last_press_t;
     float64       _last_release_t;
 };
+
+} // namespace ENGINE_NAMESPACE

@@ -2,6 +2,8 @@
 
 #include "geometry_config.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 /**
  * @brief Geometry resource. Represents a virtual geometry. Usually paired with
  * a material.
@@ -24,3 +26,5 @@ class Geometry : public Resource {
   private:
     Material* _material = nullptr;
 };
+
+} // namespace ENGINE_NAMESPACE

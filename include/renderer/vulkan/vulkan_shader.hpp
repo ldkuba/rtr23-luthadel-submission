@@ -5,6 +5,8 @@
 #include "vulkan_settings.hpp"
 #include "resources/shader.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 /**
  * @brief Configuration for descriptor set. Contains layout and binding
  * description.
@@ -111,3 +113,5 @@ class VulkanShader : public Shader {
         const Vector<Texture*>& textures
     ) const;
 };
+
+} // namespace ENGINE_NAMESPACE

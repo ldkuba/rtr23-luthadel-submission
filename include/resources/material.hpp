@@ -3,6 +3,8 @@
 #include "math_libs.hpp"
 #include "shader.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 /**
  * @brief Texture with its relevant properties
  */
@@ -146,3 +148,5 @@ class Material {
     float32       _shininess;
     bool          _update_required = true;
 };
+
+} // namespace ENGINE_NAMESPACE

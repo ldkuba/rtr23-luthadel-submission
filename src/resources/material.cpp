@@ -1,5 +1,7 @@
 #include "resources/material.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 #define MATERIAL_LOG "Material :: "
 
 // Statics values
@@ -117,3 +119,5 @@ void Material::apply_instance() {
     _shader->apply_instance();
 }
 void Material::apply_local(const glm::mat4 model) { set_uniform_s(model); }
+
+} // namespace ENGINE_NAMESPACE

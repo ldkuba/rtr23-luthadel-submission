@@ -2,6 +2,8 @@
 
 #include "defines.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 #define ALLOCATOR_LOG "Allocator :: "
 
 /**
@@ -78,3 +80,5 @@ class Allocator {
                calculate_padding(base_address + header_size, alignment);
     }
 };
+
+} // namespace ENGINE_NAMESPACE

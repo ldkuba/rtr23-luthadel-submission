@@ -4,6 +4,8 @@
 
 #include <algorithm> /* max */
 
+namespace ENGINE_NAMESPACE {
+
 // Constructor & Destructor
 StackAllocator::StackAllocator(const uint64 total_size)
     : Allocator(total_size) {}
@@ -57,3 +59,5 @@ void StackAllocator::reset() {
     _used   = 0;
     _peak   = 0;
 }
+
+} // namespace ENGINE_NAMESPACE

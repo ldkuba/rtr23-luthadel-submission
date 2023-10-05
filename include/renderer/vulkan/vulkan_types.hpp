@@ -1,7 +1,5 @@
 #pragma once
 
-#define RENDERER_VULKAN_LOG "Renderer :: VULKAN :: "
-
 #include <vulkan/vulkan.hpp>
 #include <optional>
 #include <set>
@@ -11,6 +9,11 @@
 #include "math_libs.hpp"
 #include "vector.hpp"
 #include "set.hpp"
+#include "resources/texture.hpp"
+
+namespace ENGINE_NAMESPACE {
+
+#define RENDERER_VULKAN_LOG "Renderer :: VULKAN :: "
 
 /**
  * @brief Indices of all vulkan queue families. Initially all unset.
@@ -88,8 +91,6 @@ struct VulkanCommandBuffer {
 };
 
 // Texture data
-#include "resources/texture.hpp"
-
 class VulkanImage;
 
 /**
@@ -111,3 +112,5 @@ struct VulkanGeometryData {
     uint32 index_size;
     uint32 index_offset;
 };
+
+} // namespace ENGINE_NAMESPACE

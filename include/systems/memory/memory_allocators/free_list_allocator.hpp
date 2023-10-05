@@ -3,6 +3,8 @@
 #include "allocator.hpp"
 #include "singly_linked_list.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 /**
  * @brief Free list allocator. Reserves a continuous chunk of memory which it
  * then manages using a free list. Allows for allocations of any size, but isn't
@@ -72,3 +74,5 @@ class FreeListAllocator : public Allocator {
 
     void coalescence(Node* prev_block, Node* free_block);
 };
+
+} // namespace ENGINE_NAMESPACE

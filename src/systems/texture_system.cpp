@@ -2,6 +2,8 @@
 
 #include "resources/image.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 #define TEXTURE_SYS_LOG "TextureSystem :: "
 
 void create_default_textures();
@@ -247,3 +249,5 @@ void TextureSystem::destroy_default_textures() {
         delete _default_normal_texture;
     }
 }
+
+} // namespace ENGINE_NAMESPACE

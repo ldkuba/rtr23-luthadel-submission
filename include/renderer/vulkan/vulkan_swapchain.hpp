@@ -3,6 +3,8 @@
 #include "vulkan_image.hpp"
 #include "vulkan_framebuffer.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 /**
  * @brief Vulkan implementation of a swapchain. Utilizes framebuffers,
  * attachments and a surface to present the (rendered) image to the screen.
@@ -108,3 +110,5 @@ class VulkanSwapchain {
     void create_depth_resources();
     void find_depth_format();
 };
+
+} // namespace ENGINE_NAMESPACE

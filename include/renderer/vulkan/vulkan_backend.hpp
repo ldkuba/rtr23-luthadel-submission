@@ -9,6 +9,8 @@
 
 #include "map.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 /**
  * @brief Vulkan implementation of RendererBackend abstract class. Central class
  * tasked with initializing and controlling all Vulkan renderer functionalities.
@@ -116,3 +118,5 @@ class VulkanBackend : public RendererBackend {
         const void* const index_data
     );
 };
+
+} // namespace ENGINE_NAMESPACE

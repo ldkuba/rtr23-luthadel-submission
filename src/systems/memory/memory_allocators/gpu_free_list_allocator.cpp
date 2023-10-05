@@ -4,6 +4,8 @@
 
 #include <algorithm> // std::max
 
+namespace ENGINE_NAMESPACE {
+
 // Constructor & Destructor
 GPUFreeListAllocator::GPUFreeListAllocator(
     const uint64          totalSize,
@@ -201,3 +203,5 @@ void GPUFreeListAllocator::coalescence(Node previous_node, Node free_node) {
         _free_list.erase_after(previous_node);
     }
 }
+
+} // namespace ENGINE_NAMESPACE

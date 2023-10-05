@@ -4,6 +4,8 @@
 #include "vector.hpp"
 #include "outcome.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 template<typename Signature>
 class Event;
 
@@ -215,3 +217,5 @@ Outcome remove_delegate(
 
     return Outcome::Successful;
 }
+
+} // namespace ENGINE_NAMESPACE

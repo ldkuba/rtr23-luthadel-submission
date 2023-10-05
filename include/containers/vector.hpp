@@ -4,6 +4,8 @@
 
 #include "systems/memory/memory_system.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 /**
  *  @brief A standard container which offers fixed time access to
  *  individual elements in any order.
@@ -153,3 +155,5 @@ class Vector : public std::vector<Tp, TAllocator<Tp>> {
     )
         : _base_class(__first, __last, __a) {}
 };
+
+} // namespace ENGINE_NAMESPACE

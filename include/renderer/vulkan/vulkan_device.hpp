@@ -4,6 +4,8 @@
 #include "logger.hpp"
 #include "property.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 /**
  * @brief Vulkan representation of device. Almost every vulkan object requires a
  * device on which it is created to be specified. This class provides device
@@ -76,3 +78,5 @@ class VulkanDevice {
         const vk::PhysicalDevice& device, const vk::SurfaceKHR& surface
     ) const;
 };
+
+} // namespace ENGINE_NAMESPACE

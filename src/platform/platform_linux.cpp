@@ -9,6 +9,8 @@
 #        include <unistd.h>
 #    endif
 
+namespace ENGINE_NAMESPACE {
+
 Platform::Platform() {}
 
 Platform::~Platform() {}
@@ -44,5 +46,7 @@ void Platform::Console::write(std::string message, uint32 kind, bool new_line) {
     std::cout << "\033[" << color_string[kind] << "m" << message << "\033[0m";
     if (new_line) std::cout << std::endl;
 }
+
+} // namespace ENGINE_NAMESPACE
 
 #endif

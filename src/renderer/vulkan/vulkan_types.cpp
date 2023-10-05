@@ -2,6 +2,8 @@
 
 #include "renderer/vulkan/vulkan_settings.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 //------------------------------------------------------------------------------
 // Queue family indices
 //------------------------------------------------------------------------------
@@ -88,3 +90,5 @@ void VulkanCommandBuffer::reset(const uint32 current_frame) {
     handle              = &_buffers[current_frame];
     handle->reset();
 }
+
+} // namespace ENGINE_NAMESPACE

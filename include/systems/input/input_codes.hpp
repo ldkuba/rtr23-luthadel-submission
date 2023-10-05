@@ -2,6 +2,8 @@
 
 #include "defines.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 typedef uint8 InputCode;
 
 /**
@@ -141,3 +143,5 @@ enum class KeyCode : InputCode {
     // MAX
     MAX_KEY_CODE
 };
+
+} // namespace ENGINE_NAMESPACE

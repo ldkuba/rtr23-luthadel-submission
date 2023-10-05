@@ -5,6 +5,8 @@
 
 #include "outcome.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 class TextureSystem;
 
 /// @brief Supported shader attribute types
@@ -309,3 +311,5 @@ class Shader {
         const std::optional<uint32> location = std::optional<uint32>()
     );
 };
+
+} // namespace ENGINE_NAMESPACE

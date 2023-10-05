@@ -3,6 +3,8 @@
 #include "renderer/renderer.hpp"
 #include "resource_system.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 /**
  * @brief Texture system is responsible for management of textures in the
  * engine, including reference counting an auto-unloading.
@@ -81,3 +83,5 @@ class TextureSystem {
     void create_default_textures();
     void destroy_default_textures();
 };
+
+} // namespace ENGINE_NAMESPACE

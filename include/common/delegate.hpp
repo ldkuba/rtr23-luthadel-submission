@@ -1,6 +1,10 @@
 #pragma once
 
+#include "defines.hpp"
+
 #include <functional>
+
+namespace ENGINE_NAMESPACE {
 
 template<typename R, typename... Args>
 class Delegate {
@@ -85,3 +89,5 @@ bool operator==(
     if (function1->_callback == function2->_callback) return true;
     return false;
 }
+
+} // namespace ENGINE_NAMESPACE

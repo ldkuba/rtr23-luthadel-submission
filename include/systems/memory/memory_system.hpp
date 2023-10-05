@@ -10,7 +10,7 @@
 #include <type_traits>
 #include <memory>
 
-typedef uint16 MemoryTagType;
+typedef ENGINE_NAMESPACE::uint16 MemoryTagType;
 #define MEMORY_PADDING 8
 
 // Size reference points
@@ -56,6 +56,8 @@ enum class MemoryTag : MemoryTagType {
     MAX_TAGS
 };
 
+namespace ENGINE_NAMESPACE {
+
 class MemorySystem {
   public:
     static void* allocate(uint64 size, const MemoryTag tag);
@@ -71,12 +73,16 @@ class MemorySystem {
     static Allocator** initialize_allocator_map();
 };
 
+} // namespace ENGINE_NAMESPACE
+
 // New
 void* operator new(std::size_t size, const MemoryTag tag);
 void* operator new[](std::size_t size, const MemoryTag tag);
 
 // Delete
 void operator delete(void* p) noexcept;
+
+namespace ENGINE_NAMESPACE {
 
 // -----------------------------------------------------------------------------
 // Typed allocator
@@ -115,6 +121,8 @@ void TAllocator<T>::deallocate(T* const p, std::size_t) const noexcept {
     operator delete(p);
 }
 
+} // namespace ENGINE_NAMESPACE
+
 // Make
 namespace std {
 template<typename _Tp, typename... _Args>
@@ -127,7 +135,8 @@ template<typename _Tp, typename... _Args>
 inline shared_ptr<_Tp> make_shared(MemoryTag tag, _Args&&... __args) {
     typedef typename std::remove_cv<_Tp>::type _Tp_nc;
     return std::allocate_shared<_Tp>(
-        TAllocator<_Tp_nc>(tag), std::forward<_Args>(__args)...
+        ENGINE_NAMESPACE::TAllocator<_Tp_nc>(tag),
+        std::forward<_Args>(__args)...
     );
 }
 } // namespace std

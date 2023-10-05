@@ -7,6 +7,8 @@
 #include "error_types.hpp"
 #include "platform/platform.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 /**
  * @brief IO File
  */
@@ -158,3 +160,5 @@ class FileSystem {
     FileSystem();
     ~FileSystem();
 };
+
+} // namespace ENGINE_NAMESPACE

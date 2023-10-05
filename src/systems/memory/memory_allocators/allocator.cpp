@@ -2,6 +2,8 @@
 
 #include <stdlib.h> /* malloc, free */
 
+namespace ENGINE_NAMESPACE {
+
 Allocator::~Allocator() {
     free(_start_ptr);
     _start_ptr = nullptr;
@@ -21,3 +23,5 @@ bool Allocator::owns(void* ptr) {
     return ptr >= _start_ptr &&
            (uint64) ptr < (uint64) _start_ptr + _total_size;
 }
+
+} // namespace ENGINE_NAMESPACE

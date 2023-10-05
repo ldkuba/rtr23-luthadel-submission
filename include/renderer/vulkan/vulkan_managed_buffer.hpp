@@ -3,6 +3,8 @@
 #include "vulkan_buffer.hpp"
 #include "systems/memory/memory_allocators/gpu_free_list_allocator.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 /**
  * @brief Managed specification of VulkanBuffer. Utilizes a client side Free
  * list allocation method for on-device memory management of the buffer it
@@ -69,3 +71,5 @@ class VulkanManagedBuffer : public VulkanBuffer {
   private:
     GPUFreeListAllocator* _memory_allocator;
 };
+
+} // namespace ENGINE_NAMESPACE

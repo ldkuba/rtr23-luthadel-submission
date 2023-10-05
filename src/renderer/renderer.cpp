@@ -2,6 +2,8 @@
 
 #include "resources/geometry.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 #define RENDERER_LOG "Renderer :: "
 
 Renderer::Renderer(
@@ -124,3 +126,5 @@ void Renderer::destroy_shader(Shader* shader) {
     _backend->destroy_shader(shader);
     Logger::trace(RENDERER_LOG, "Shader destroyed.");
 }
+
+} // namespace ENGINE_NAMESPACE

@@ -4,6 +4,8 @@
 
 #include <forward_list>
 
+namespace ENGINE_NAMESPACE {
+
 /**
  *  @brief A standard container with linear time access to elements,
  *  and fixed time insertion/deletion at any point in the sequence.
@@ -137,3 +139,5 @@ class ForwardList : public std::forward_list<_Tp, TAllocator<_Tp>> {
     )
         : _base_class(__il, __al) {}
 };
+
+} // namespace ENGINE_NAMESPACE

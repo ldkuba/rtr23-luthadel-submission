@@ -5,6 +5,8 @@
 #include "math_libs.hpp"
 #include "outcome.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 /**
  * @brief The  Serializer  class is an abstract class that provides a blueprint
  * for serialization and deserialization of different data types into a string
@@ -320,3 +322,5 @@ class Serializer {
         successful = true;
     }
 };
+
+} // namespace ENGINE_NAMESPACE

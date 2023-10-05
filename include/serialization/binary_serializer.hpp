@@ -3,6 +3,8 @@
 #include "platform/platform.hpp"
 #include "serializer.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 /**
  * @brief A class that inherits from the Serializer class and provides
  * functionality for binary serialization and deserialization of various data
@@ -118,3 +120,5 @@ class BinarySerializer : public Serializer {
         return Outcome::Successful;
     }
 };
+
+} // namespace ENGINE_NAMESPACE

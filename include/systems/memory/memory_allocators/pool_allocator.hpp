@@ -3,6 +3,8 @@
 #include "allocator.hpp"
 #include "stack_linked_list.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 /**
  * @brief Pool allocator. Reserves a pice of memory which it then can only
  * populate with the same fixed sized chunks. Each (de)allocation will
@@ -33,3 +35,5 @@ class PoolAllocator : public Allocator {
 
     PoolAllocator(PoolAllocator& pool_allocator);
 };
+
+} // namespace ENGINE_NAMESPACE

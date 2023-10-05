@@ -4,6 +4,8 @@
 #include "result.hpp"
 #include "error_types.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 #define RESOURCE_LOG "ResourceLoader :: "
 
 /**
@@ -70,3 +72,5 @@ class ResourceLoader {
 
     bool can_unload(const String resource_type, const Resource* const resource);
 };
+
+} // namespace ENGINE_NAMESPACE

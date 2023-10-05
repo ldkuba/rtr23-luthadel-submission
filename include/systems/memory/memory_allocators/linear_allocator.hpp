@@ -2,6 +2,8 @@
 
 #include "allocator.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 /**
  * @brief Linear allocator. Reserves a chunk of memory which can then be freely
  * allocated with allocations of any size. Allocations are made one after
@@ -29,3 +31,5 @@ class LinearAllocator : public Allocator {
   private:
     LinearAllocator(LinearAllocator& linear_allocator);
 };
+
+} // namespace ENGINE_NAMESPACE

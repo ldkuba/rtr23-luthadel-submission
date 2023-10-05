@@ -1,5 +1,7 @@
 #include "serialization/binary_serializer.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 // /////////////////////////////////// //
 // BINARY SERIALIZER PROTECTED METHODS //
 // /////////////////////////////////// //
@@ -266,3 +268,5 @@ Outcome BinarySerializer::vector_remove_beg(
 ) const {
     return deserialize_type(in_str, count, position);
 }
+
+} // namespace ENGINE_NAMESPACE

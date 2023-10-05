@@ -4,6 +4,8 @@
 
 #include "systems/memory/memory_system.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 /**
  *  @brief A standard container made up of unique keys, which can be
  *  retrieved in logarithmic time.
@@ -124,3 +126,5 @@ class Set : public std::set<_Key, _Compare, TAllocator<_Key>> {
         const allocator_type&             __a = allocator_type(MemoryTag::Set))
         : _base_class(__l, __comp, __a) {}
 };
+
+} // namespace ENGINE_NAMESPACE

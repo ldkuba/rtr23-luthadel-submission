@@ -2,6 +2,8 @@
 
 #include "renderer/vulkan/vulkan_settings.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 // Helper function forward declaration
 bool check_device_extension_support(const vk::PhysicalDevice& device);
 bool device_supports_required_features(
@@ -462,3 +464,5 @@ bool device_supports_required_features(
             features.variableMultisampleRate) &&
            (!required_features.inheritedQueries || features.inheritedQueries);
 }
+
+} // namespace ENGINE_NAMESPACE

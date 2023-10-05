@@ -3,6 +3,8 @@
 #include <system_error>
 #include "defines.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 /**
  * @brief One of two subclasses of exception.
  * Specialization of std::runtime_error, specifically made for Result exception
@@ -82,3 +84,5 @@ class InvalidArgument : public std::invalid_argument {
     using std::invalid_argument::logic_error;
     using std::invalid_argument::operator=;
 };
+
+} // namespace ENGINE_NAMESPACE

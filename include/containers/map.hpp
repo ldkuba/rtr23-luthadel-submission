@@ -4,6 +4,8 @@
 
 #include "systems/memory/memory_system.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 /**
  *  @brief A standard container made up of (key,value) pairs, which can be
  *  retrieved based on a key, in logarithmic time.
@@ -131,3 +133,5 @@ class Map : public std::map<_Key, _Tp, _Compare, TAllocator<_Tp>> {
         const allocator_type& __a = allocator_type(MemoryTag::Map))
         : _base_class(__first, __last, __comp, __a) {}
 };
+
+} // namespace ENGINE_NAMESPACE

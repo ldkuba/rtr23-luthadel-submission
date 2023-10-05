@@ -2,6 +2,8 @@
 
 #include "resource_loader.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 /**
  * @brief Resource loader that handles image files.
  *
@@ -17,3 +19,5 @@ class ImageLoader : public ResourceLoader {
   private:
     static const std::vector<String> _supported_extensions;
 };
+
+} // namespace ENGINE_NAMESPACE

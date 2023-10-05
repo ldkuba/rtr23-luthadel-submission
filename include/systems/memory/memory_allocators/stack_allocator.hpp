@@ -2,6 +2,8 @@
 
 #include "allocator.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 /**
  * @brief Stack allocator. Reserves a chunk of memory which then operates like a
  * LIFO queue (stack). Allocations take memory from the top of the stack, while
@@ -27,3 +29,5 @@ class StackAllocator : public Allocator {
         uint8 padding;
     };
 };
+
+} // namespace ENGINE_NAMESPACE

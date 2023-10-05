@@ -3,6 +3,8 @@
 #include "material.hpp"
 #include "renderer/renderer_types.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 /**
  * @brief Configuration of single geometry.
  */
@@ -119,3 +121,5 @@ class GeometryConfigArray : public Resource {
     GeometryConfigArray(const String& name);
     ~GeometryConfigArray();
 };
+
+} // namespace ENGINE_NAMESPACE

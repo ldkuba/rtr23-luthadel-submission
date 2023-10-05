@@ -3,6 +3,8 @@
 #include "renderer/vulkan/vulkan_framebuffer.hpp"
 #include "resources/geometry.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback_function(
     VkDebugUtilsMessageSeverityFlagBitsEXT      message_severity,
     VkDebugUtilsMessageTypeFlagsEXT             message_type,
@@ -816,3 +818,5 @@ void VulkanBackend::upload_data_to_buffer(
     delete staging_buffer;
 }
 // TODO: TEMP CODE END
+
+} // namespace ENGINE_NAMESPACE

@@ -1,5 +1,7 @@
 #include "resources/texture.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 // Statics values
 const uint32 Texture::max_name_length;
 
@@ -14,3 +16,5 @@ Texture::Texture(
       _channel_count(channel_count), _has_transparency(has_transparency) {
     _total_size = width * height * channel_count;
 }
+
+} // namespace ENGINE_NAMESPACE

@@ -5,6 +5,8 @@
 #include <functional>
 #include <utility>
 
+namespace ENGINE_NAMESPACE {
+
 #define GET [this]() -> auto const&
 #define SET , [this](auto&& value)
 
@@ -44,3 +46,5 @@ class Property {
     const std::function<T const&()> _getter;
     const std::function<void(T)>    _setter;
 };
+
+} // namespace ENGINE_NAMESPACE

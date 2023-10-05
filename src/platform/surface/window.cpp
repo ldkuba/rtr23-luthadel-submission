@@ -4,6 +4,8 @@
 #    include "platform/surface/window.hpp"
 #    include "systems/input/input_system.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 // Platform overloads
 Platform::Surface* Platform::Surface::get_instance(
     uint32 width, uint32 height, std::string name
@@ -240,5 +242,7 @@ KeyCode* setup_key_code_translator() {
 
     return translator;
 }
+
+} // namespace ENGINE_NAMESPACE
 
 #endif

@@ -5,6 +5,8 @@
 #define APP_NAME "Vulkan Engine"
 #define ENGINE_NAMESPACE engine_namespace
 
+namespace ENGINE_NAMESPACE {
+
 // -----------------------------------------------------------------------------
 // TYPES
 // -----------------------------------------------------------------------------
@@ -93,3 +95,5 @@ static_assert(sizeof(float128) == 16, "Expected a 16 byte long float128.");
 inline uint64 get_aligned(uint64 operand, uint64 granularity) {
     return ((operand + (granularity - 1)) & ~(granularity - 1));
 }
+
+} // namespace ENGINE_NAMESPACE

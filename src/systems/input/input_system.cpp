@@ -2,6 +2,8 @@
 
 #include "logger.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 #define INPUT_SYS_LOG "InputSystem :: "
 
 // Constructor & Destructor
@@ -155,3 +157,5 @@ void InputSystem::invoke_held_keys(const float64 delta_time) {
         }
     }
 }
+
+} // namespace ENGINE_NAMESPACE

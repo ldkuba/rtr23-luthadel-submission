@@ -2,6 +2,8 @@
 
 #include "renderer/vulkan/vulkan_settings.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 // Constructor & Destructor
 VulkanRenderPass::VulkanRenderPass(
     const vk::Device* const              device,
@@ -207,3 +209,5 @@ void VulkanRenderPass::begin(const vk::CommandBuffer& command_buffer) {
 void VulkanRenderPass::end(const vk::CommandBuffer& command_buffer) {
     command_buffer.endRenderPass();
 }
+
+} // namespace ENGINE_NAMESPACE

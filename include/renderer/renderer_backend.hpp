@@ -5,6 +5,8 @@
 #include "renderer_types.hpp"
 #include "resources/shader.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 /**
  * @brief General renderer backend interface. Renderer backend is responsible
  * for making calls to the underlying graphics API. Frontend only interacts with
@@ -130,3 +132,5 @@ class RendererBackend {
   private:
     uint64 _frame_number = 0;
 };
+
+} // namespace ENGINE_NAMESPACE

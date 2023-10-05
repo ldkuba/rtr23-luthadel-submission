@@ -3,6 +3,8 @@
 #include "systems/input/input_system.hpp"
 #include "logger.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 // Constructor & Destructor
 Control::Control(
     const String name, const ControlType type, InputSystem* const input_system
@@ -57,3 +59,5 @@ void Control::unmap_key(const KeyCode key) {
     );
     _mapped_inputs.erase(it);
 }
+
+} // namespace ENGINE_NAMESPACE

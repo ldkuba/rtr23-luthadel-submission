@@ -3,6 +3,8 @@
 #include "forward_list.hpp"
 #include "map.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 /**
  * @brief Free list allocator specialized for management of GPU memory. Used
  * mostly for management of GPU buffers from the host. Segment headers are saved
@@ -90,3 +92,5 @@ class GPUFreeListAllocator : public Allocator {
 
     void coalescence(Node prev_block, Node free_block);
 };
+
+} // namespace ENGINE_NAMESPACE

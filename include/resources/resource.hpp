@@ -6,6 +6,8 @@
 
 #include <optional>
 
+namespace ENGINE_NAMESPACE {
+
 /**
  * @brief Abstract resource class. For a resource to be loadable with a resource
  * loader it needs to extend this class.
@@ -52,3 +54,5 @@ class Resource {
     String _full_path   = "";
     String _loader_type = "";
 };
+
+} // namespace ENGINE_NAMESPACE

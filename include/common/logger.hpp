@@ -3,6 +3,8 @@
 #include "string.hpp"
 #include "platform/platform.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 #define LOG_WARNING_ENABLED 1
 #define LOG_INFO_ENABLED 1
 #define LOG_DEBUG_ENABLED 1
@@ -161,6 +163,8 @@ class Logger {
     // #undef error
     // #define error __REPORT_ERROR__(__func__, __FILE__, __LINE__)
 };
+
+} // namespace ENGINE_NAMESPACE
 
 #undef LOG_WARNING_ENABLED
 #undef LOG_INFO_ENABLED

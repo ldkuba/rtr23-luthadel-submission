@@ -3,6 +3,8 @@
 #include "resource_loader.hpp"
 #include "resources/geometry.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 // TODO: TEMP
 class GeometryConfig;
 
@@ -28,3 +30,5 @@ class MeshLoader : public ResourceLoader {
 
     static const std::vector<MeshFileType> _supported_mesh_file_types;
 };
+
+} // namespace ENGINE_NAMESPACE

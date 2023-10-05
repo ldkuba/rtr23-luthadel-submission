@@ -6,6 +6,8 @@
 
 #    include <GLFW/glfw3.h>
 
+namespace ENGINE_NAMESPACE {
+
 /**
  * @brief Implementation of Window, as a surface type.
  */
@@ -44,5 +46,7 @@ class Window : public Platform::Surface {
         GLFWwindow* window, int key, int scancode, int action, int mods
     );
 };
+
+} // namespace ENGINE_NAMESPACE
 
 #endif

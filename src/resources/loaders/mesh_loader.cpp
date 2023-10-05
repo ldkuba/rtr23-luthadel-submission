@@ -4,6 +4,9 @@
 #include "systems/file_system.hpp"
 #include "systems/geometry_system.hpp"
 #include "renderer/renderer_types.hpp"
+#include "serialization/binary_serializer.hpp"
+
+namespace ENGINE_NAMESPACE {
 
 // Helper functions
 Result<void, RuntimeError> save_mesh(
@@ -72,8 +75,6 @@ void MeshLoader::unload(Resource* resource) {
 // -----------------------------------------------------------------------------
 // Proprietary
 // -----------------------------------------------------------------------------
-
-#include "serialization/binary_serializer.hpp"
 
 Result<void, RuntimeError> save_mesh(
     const String&              name,
@@ -176,6 +177,8 @@ Result<GeometryConfigArray*, RuntimeError> load_mesh(
     return config_array;
 }
 
+} // namespace ENGINE_NAMESPACE
+
 // -----------------------------------------------------------------------------
 // OBJ
 // -----------------------------------------------------------------------------
@@ -184,6 +187,8 @@ Result<GeometryConfigArray*, RuntimeError> load_mesh(
 #include <tiny_obj_loader.h>
 
 #include "unordered_map.hpp"
+
+namespace ENGINE_NAMESPACE {
 
 // Local helper
 String create_mat_file(const MaterialConfig& config);
@@ -371,3 +376,5 @@ String create_mat_file(const MaterialConfig& config) {
 
     return config.name;
 }
+
+} // namespace ENGINE_NAMESPACE

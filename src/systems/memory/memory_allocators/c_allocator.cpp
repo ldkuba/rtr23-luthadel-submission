@@ -2,6 +2,8 @@
 
 #include <stdlib.h>
 
+namespace ENGINE_NAMESPACE {
+
 CAllocator::CAllocator() : Allocator(0) {}
 CAllocator::~CAllocator() {}
 
@@ -11,3 +13,5 @@ void* CAllocator::allocate(const uint64 size, const uint64 alignment) {
 }
 void CAllocator::free(void* ptr) { std::free(ptr); }
 bool CAllocator::owns(void* ptr) { return ptr != nullptr; }
+
+} // namespace ENGINE_NAMESPACE

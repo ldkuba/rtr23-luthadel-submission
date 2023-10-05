@@ -4,6 +4,8 @@
 
 #include "unordered_map.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 /**
  * @brief Resource system manages resources and their loaders in the engine.
  */
@@ -45,3 +47,5 @@ class ResourceSystem {
   private:
     UnorderedMap<String, ResourceLoader*> _registered_loaders = {};
 };
+
+} // namespace ENGINE_NAMESPACE

@@ -2,6 +2,8 @@
 
 #include "resource_loader.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 /**
  * @brief A resource loader that handles binary files.
  */
@@ -15,3 +17,5 @@ class BinaryLoader : public ResourceLoader {
 
   private:
 };
+
+} // namespace ENGINE_NAMESPACE

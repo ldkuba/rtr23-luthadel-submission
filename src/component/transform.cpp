@@ -1,5 +1,7 @@
 #include "component/transform.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 void Transform::translate_by(const glm::vec3 translation) {
     _position += _position;
     _is_dirty = true;
@@ -33,3 +35,5 @@ glm::mat4 Transform::world() {
     if (parent()) return local * parent()->world();
     return local;
 }
+
+} // namespace ENGINE_NAMESPACE

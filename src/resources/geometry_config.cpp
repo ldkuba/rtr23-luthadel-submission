@@ -1,5 +1,7 @@
 #include "resources/geometry_config.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 // -----------------------------------------------------------------------------
 // Geometry config
 // -----------------------------------------------------------------------------
@@ -82,3 +84,5 @@ GeometryConfigArray::~GeometryConfigArray() {
         delete config;
     configs.clear();
 }
+
+} // namespace ENGINE_NAMESPACE

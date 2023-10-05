@@ -7,19 +7,23 @@
 #include "error_types.hpp"
 #include "vector.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 template<typename T>
 class Property;
+}
 
 // Additional to_string conversions
 namespace std {
-string to_string(const uint128& in);
-string to_string(const int128& in);
+string to_string(const ENGINE_NAMESPACE::uint128& in);
+string to_string(const ENGINE_NAMESPACE::int128& in);
 template<typename T>
-string to_string(const Property<T>& in);
-string to_string(const Vector<char>& in);
-string to_string(const Vector<unsigned char>& in);
+string to_string(const ENGINE_NAMESPACE::Property<T>& in);
+string to_string(const ENGINE_NAMESPACE::Vector<char>& in);
+string to_string(const ENGINE_NAMESPACE::Vector<unsigned char>& in);
 } // namespace std
 
+namespace ENGINE_NAMESPACE {
 class String : public std::string {
   public:
     using std::string::string;
@@ -190,13 +194,6 @@ class String : public std::string {
     }
 };
 
-namespace std {
-template<>
-struct hash<String> {
-    size_t operator()(String const& str) const { return hash<string>()(str); }
-};
-} // namespace std
-
 template<>
 void String::add_to_string<char>(
     String& out_string, const char& component
@@ -217,3 +214,14 @@ template<>
 void String::add_to_string<String>(
     String& out_string, const String& component
 ) noexcept;
+
+} // namespace ENGINE_NAMESPACE
+
+namespace std {
+template<>
+struct hash<ENGINE_NAMESPACE::String> {
+    size_t operator()(ENGINE_NAMESPACE::String const& str) const {
+        return hash<string>()(str);
+    }
+};
+} // namespace std

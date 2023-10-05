@@ -2,6 +2,8 @@
 
 #include <filesystem>
 
+namespace ENGINE_NAMESPACE {
+
 // Constructor & Destructor
 FileSystem::FileSystem() {}
 FileSystem::~FileSystem() {}
@@ -115,3 +117,5 @@ Result<Vector<String>, RuntimeError> FileSystem::read_lines(
 
     return lines;
 }
+
+} // namespace ENGINE_NAMESPACE

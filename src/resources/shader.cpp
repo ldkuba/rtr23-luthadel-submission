@@ -2,6 +2,8 @@
 
 #include "systems/texture_system.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 #define SHADER_LOG "Shader :: "
 
 PushConstantRange get_aligned_range(
@@ -192,3 +194,5 @@ PushConstantRange get_aligned_range(
     return { get_aligned(offset, granularity),
              (uint16) get_aligned(size, granularity) };
 }
+
+} // namespace ENGINE_NAMESPACE

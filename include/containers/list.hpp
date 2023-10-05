@@ -4,6 +4,8 @@
 
 #include <list>
 
+namespace ENGINE_NAMESPACE {
+
 /**
  *  @brief A standard container with linear time access to elements,
  *  and fixed time insertion/deletion at any point in the sequence.
@@ -156,3 +158,5 @@ class List : public std::list<_Tp, TAllocator<_Tp>> {
     )
         : _base_class(__first, __last, __a) {}
 };
+
+} // namespace ENGINE_NAMESPACE

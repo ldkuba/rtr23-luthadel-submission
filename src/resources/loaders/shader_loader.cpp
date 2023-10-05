@@ -4,6 +4,8 @@
 #include "resources/shader.hpp"
 #include "systems/file_system.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 struct ShaderVars {
     STRING_CONST(version);
     STRING_CONST(name);
@@ -368,3 +370,5 @@ Result<ShaderUniformConfig, RuntimeErrorCode> parse_uniform_config(
 
     return uniform_config;
 }
+
+} // namespace ENGINE_NAMESPACE

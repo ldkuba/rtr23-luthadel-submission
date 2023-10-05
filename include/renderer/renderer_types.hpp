@@ -3,6 +3,8 @@
 #include "math_libs.hpp"
 #include "serialization/serializer.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 // -----------------------------------------------------------------------------
 // Vertex
 // -----------------------------------------------------------------------------
@@ -103,15 +105,19 @@ inline Result<uint32, RuntimeError> deserialize_object<Vertex2D>(
 
 typedef Vertex3D Vertex;
 
+} // namespace ENGINE_NAMESPACE
+
 namespace std {
 template<>
-struct hash<Vertex> {
-    size_t operator()(Vertex const& vertex) const {
+struct hash<ENGINE_NAMESPACE::Vertex> {
+    size_t operator()(ENGINE_NAMESPACE::Vertex const& vertex) const {
         return hash<glm::vec3>()(vertex.position) ^
                hash<glm::vec2>()(vertex.texture_coord);
     }
 };
 } // namespace std
+
+namespace ENGINE_NAMESPACE {
 
 // -----------------------------------------------------------------------------
 // Render data
@@ -134,3 +140,5 @@ class Geometry;
 struct GeometryRenderData {
     Geometry* geometry;
 };
+
+} // namespace ENGINE_NAMESPACE

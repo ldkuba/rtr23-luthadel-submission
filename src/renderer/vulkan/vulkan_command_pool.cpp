@@ -3,6 +3,8 @@
 #include "renderer/vulkan/vulkan_settings.hpp"
 #include "renderer/vulkan/vulkan_types.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 VulkanCommandPool::VulkanCommandPool(
     const vk::Device* const              device,
     const vk::AllocationCallbacks* const allocator,
@@ -118,3 +120,5 @@ void VulkanCommandPool::end_single_time_commands(
     // Free temp command buffer
     free_command_buffer(command_buffer);
 }
+
+} // namespace ENGINE_NAMESPACE

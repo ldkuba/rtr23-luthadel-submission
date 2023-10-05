@@ -2,6 +2,8 @@
 
 #include "resource.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 /**
  * @brief Image resource.
  *
@@ -58,3 +60,5 @@ class Image : public Resource {
     uint8       _channel_count;
     const byte* _pixels;
 };
+
+} // namespace ENGINE_NAMESPACE

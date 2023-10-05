@@ -3,6 +3,8 @@
 #include "material_system.hpp"
 #include "resources/geometry.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 /**
  * @brief Geometry system is responsible for the management of geometries, as
  * well as reference counting.
@@ -103,3 +105,5 @@ class GeometrySystem {
 
     void create_default_geometries();
 };
+
+} // namespace ENGINE_NAMESPACE

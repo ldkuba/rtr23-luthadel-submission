@@ -2,6 +2,8 @@
 
 #include "vulkan_device.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 /**
  * @brief Vulkan implementation of an on-device image.
  */
@@ -157,3 +159,5 @@ class VulkanImage {
         const vk::ImageAspectFlags aspect_flags
     );
 };
+
+} // namespace ENGINE_NAMESPACE

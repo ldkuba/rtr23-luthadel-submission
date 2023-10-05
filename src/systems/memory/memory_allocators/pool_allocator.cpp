@@ -4,6 +4,8 @@
 
 #include <algorithm> //max
 
+namespace ENGINE_NAMESPACE {
+
 // Constructor & Destructor
 PoolAllocator::PoolAllocator(const uint64 total_size, const uint64 chunk_size)
     : Allocator(total_size) {
@@ -62,3 +64,5 @@ void PoolAllocator::reset() {
         _free_list.push((Node*) address);
     }
 }
+
+} // namespace ENGINE_NAMESPACE

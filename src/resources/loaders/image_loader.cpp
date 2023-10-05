@@ -6,6 +6,8 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
+namespace ENGINE_NAMESPACE {
+
 // Supported extensions
 const std::vector<String> ImageLoader::_supported_extensions = {
     ".png", ".jpg", ".tga", ".bmp"
@@ -92,3 +94,5 @@ void ImageLoader::unload(Resource* resource) {
     Image* res = (Image*) resource;
     delete res;
 }
+
+} // namespace ENGINE_NAMESPACE

@@ -2,6 +2,8 @@
 
 #include "resource.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 /**
  * @brief Binary data resource. Container for resources loaded form binary.
  */
@@ -27,3 +29,5 @@ class TextData : public Resource {
         : Resource(name), data(data) {}
     ~TextData() {}
 };
+
+} // namespace ENGINE_NAMESPACE

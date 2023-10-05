@@ -1,5 +1,9 @@
 #pragma once
 
+#include "defines.hpp"
+
+namespace ENGINE_NAMESPACE {
+
 class Outcome {
   protected:
     Outcome(const bool outcome_value) : _outcome_state(outcome_value) {}
@@ -17,3 +21,5 @@ class Outcome {
 
 inline const Outcome Outcome::Successful { true };
 inline const Outcome Outcome::Failed { false };
+
+} // namespace ENGINE_NAMESPACE

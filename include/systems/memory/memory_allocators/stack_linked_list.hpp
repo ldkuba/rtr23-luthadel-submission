@@ -1,5 +1,7 @@
 #pragma once
 
+namespace ENGINE_NAMESPACE {
+
 template<class T>
 class StackLinkedList {
   public:
@@ -29,3 +31,5 @@ typename StackLinkedList<T>::Node* StackLinkedList<T>::pop() {
     head      = head->next;
     return top;
 }
+
+} // namespace ENGINE_NAMESPACE

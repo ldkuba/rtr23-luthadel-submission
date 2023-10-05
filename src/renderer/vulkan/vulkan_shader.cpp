@@ -4,6 +4,8 @@
 #include "systems/texture_system.hpp"
 #include "resources/datapack.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 // Constructor & Destructor
 VulkanShader::VulkanShader(
     const ShaderConfig                   config,
@@ -936,3 +938,5 @@ Vector<vk::DescriptorImageInfo>& VulkanShader::get_image_infos(
 
     return image_infos;
 }
+
+} // namespace ENGINE_NAMESPACE

@@ -3,6 +3,8 @@
 #include "resources/shader.hpp"
 #include "texture_system.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 /**
  * @brief Shader system is responsible for management of shader acquisitions and
  * creations. It keeps the reference count, and can be used for auto-updating.
@@ -55,3 +57,5 @@ class ShaderSystem {
 
     UnorderedMap<String, Shader*> _registered_shaders {};
 };
+
+} // namespace ENGINE_NAMESPACE

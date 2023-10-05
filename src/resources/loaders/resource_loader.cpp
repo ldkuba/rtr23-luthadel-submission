@@ -1,5 +1,7 @@
 #include "resources/loaders/resource_loader.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 bool ResourceLoader::can_unload(
     const String resource_type, const Resource* const resource
 ) {
@@ -24,3 +26,5 @@ bool ResourceLoader::can_unload(
 
     return true;
 }
+
+} // namespace ENGINE_NAMESPACE

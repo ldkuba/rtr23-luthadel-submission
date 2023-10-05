@@ -1,5 +1,7 @@
 #pragma once
 
+namespace ENGINE_NAMESPACE {
+
 template<class T>
 class SinglyLinkedList {
   public:
@@ -41,3 +43,5 @@ void SinglyLinkedList<T>::remove(Node* previous_node, Node* delete_node) {
     }
     previous_node->next = delete_node->next;
 }
+
+} // namespace ENGINE_NAMESPACE

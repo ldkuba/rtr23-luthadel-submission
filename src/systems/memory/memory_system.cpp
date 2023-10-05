@@ -2,6 +2,8 @@
 
 #include "resources/material.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 #define MEMORY_SYS_LOG "MemorySystem :: "
 
 static_assert(
@@ -153,9 +155,14 @@ Allocator** MemorySystem::initialize_allocator_map() {
     return allocator_map;
 }
 
+} // namespace ENGINE_NAMESPACE
+
+using namespace ENGINE_NAMESPACE;
+
 // New
 void* operator new(std::size_t size, MemoryTag tag) {
-    void* full_ptr = MemorySystem::allocate(size + MEMORY_PADDING, tag);
+    void* full_ptr =
+        ENGINE_NAMESPACE::MemorySystem::allocate(size + MEMORY_PADDING, tag);
     void* data_ptr = (void*) ((uint64) full_ptr + MEMORY_PADDING);
 
     MemoryTagType tag_data = ((MemoryTagType) tag) << 4;
@@ -166,6 +173,7 @@ void* operator new(std::size_t size, MemoryTag tag) {
 
     return data_ptr;
 }
+
 void* operator new[](std::size_t size, const MemoryTag tag) {
     return operator new(size, tag);
 }

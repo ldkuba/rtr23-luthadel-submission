@@ -2,6 +2,8 @@
 
 #include "renderer/vulkan/vulkan_render_pass.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 // Constructor & Destructor
 VulkanFramebuffer::VulkanFramebuffer(
     const vk::Device* const              device,
@@ -53,3 +55,5 @@ void VulkanFramebuffer::create(
         Logger::fatal(RENDERER_VULKAN_LOG, e.what());
     }
 }
+
+} // namespace ENGINE_NAMESPACE

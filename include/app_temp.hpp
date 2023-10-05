@@ -9,6 +9,8 @@
 // TODO: TEMP
 #include "resources/loaders/mesh_loader.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 class TestApplication {
   public:
     TestApplication();
@@ -242,3 +244,5 @@ inline void TestApplication::setup_input() {
     shader_reload->event +=
         [&](float32, float32) { _app_renderer.material_shader->reload(); };
 }
+
+} // namespace ENGINE_NAMESPACE

@@ -2,6 +2,8 @@
 
 #include "vulkan_image.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 /**
  * @brief Vulkan specific data buffer
  */
@@ -126,3 +128,5 @@ class VulkanBuffer {
         const vk::Buffer buffer, const vk::MemoryPropertyFlags properties
     ) const;
 };
+
+} // namespace ENGINE_NAMESPACE

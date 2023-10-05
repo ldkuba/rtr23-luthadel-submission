@@ -4,6 +4,8 @@
 
 #include "systems/memory/memory_system.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 /**
  *  @brief A standard container composed of unique keys (containing
  *  at most one of each key value) that associates values of another type
@@ -145,3 +147,5 @@ class UnorderedMap
         return i != this->end();
     }
 };
+
+} // namespace ENGINE_NAMESPACE

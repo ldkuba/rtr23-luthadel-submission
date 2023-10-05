@@ -2,6 +2,8 @@
 
 #include "renderer/vulkan/vulkan_settings.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 // Constructor & Destructor
 VulkanSwapchain::VulkanSwapchain(
     const VulkanDevice* const            device,
@@ -351,3 +353,5 @@ void VulkanSwapchain::find_depth_format() {
     }
     Logger::fatal(RENDERER_VULKAN_LOG, "Failed to find supported format.");
 }
+
+} // namespace ENGINE_NAMESPACE

@@ -4,6 +4,8 @@
 #include "logger.hpp"
 #include "property.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 template<typename T>
 Result<T, InvalidArgument> parse_uint(
     const char* s, const uint32 n, const T max
@@ -12,39 +14,6 @@ template<typename T>
 Result<T, InvalidArgument> parse_int(
     const char* s, const uint32 n, const T max
 );
-
-// Additional to_string conversions
-namespace std {
-string to_string(const uint128& in) {
-    uint8   digit = in % 10;
-    uint128 num   = in / 10;
-    string  res   = to_string(digit);
-    while (num != 0) {
-        digit = num % 10;
-        num   = num / 10;
-        res   = to_string(digit) + res;
-    }
-    return res;
-}
-string to_string(const int128& in) {
-    if (in > 0) return to_string((uint128) in);
-    return "-" + to_string((uint128) -in);
-}
-template<typename T>
-string to_string(const Property<T>& in) {
-    return std::to_string(in());
-}
-template<>
-string to_string<String>(const Property<String>& in) {
-    return in();
-}
-string to_string(const Vector<char>& in) {
-    return string((char*) in.data(), in.size());
-}
-string to_string(const Vector<unsigned char>& in) {
-    return string((char*) in.data(), in.size());
-}
-} // namespace std
 
 // Constructor & Destructor
 String::String() noexcept {}
@@ -249,3 +218,40 @@ void String::add_to_string<String>(
 ) noexcept {
     out_string += component;
 }
+
+} // namespace ENGINE_NAMESPACE
+
+using namespace ENGINE_NAMESPACE;
+
+// Additional to_string conversions
+namespace std {
+string to_string(const uint128& in) {
+    uint8   digit = in % 10;
+    uint128 num   = in / 10;
+    string  res   = to_string(digit);
+    while (num != 0) {
+        digit = num % 10;
+        num   = num / 10;
+        res   = to_string(digit) + res;
+    }
+    return res;
+}
+string to_string(const int128& in) {
+    if (in > 0) return to_string((uint128) in);
+    return "-" + to_string((uint128) -in);
+}
+template<typename T>
+string to_string(const Property<T>& in) {
+    return std::to_string(in());
+}
+template<>
+string to_string<String>(const Property<String>& in) {
+    return in();
+}
+string to_string(const Vector<char>& in) {
+    return string((char*) in.data(), in.size());
+}
+string to_string(const Vector<unsigned char>& in) {
+    return string((char*) in.data(), in.size());
+}
+} // namespace std

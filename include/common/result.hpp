@@ -77,7 +77,7 @@
 #    define RESULT_NODISCARD
 #endif
 
-#define RESULT_NS_IMPL bitwizeshift
+#define RESULT_NS_IMPL ENGINE_NAMESPACE // Was : bitwizeshift
 
 // clang's `-Wdocumentation-unknown-command` flag is bugged and does not
 // understand `\copydoc` tags, despite this being a valid doxygen tag.
@@ -86,7 +86,7 @@
 // #    pragma clang diagnostic ignored "-Wdocumentation-unknown-command"
 #endif
 
-inline namespace bitwizeshift {
+namespace ENGINE_NAMESPACE {
 
 //===========================================================================
 // utilities : constexpr forward
@@ -3710,7 +3710,7 @@ auto swap(Result<void, E>& lhs, Result<void, E>& rhs)
         -> void;
 /// \}
 
-} // namespace bitwizeshift
+} // namespace ENGINE_NAMESPACE
 
 namespace std {
 
@@ -5972,7 +5972,7 @@ inline RESULT_INLINE_VISIBILITY auto RESULT_NS_IMPL::swap(
 // #    pragma clang diagnostic pop
 #endif
 
-#undef RESULT_NS_IMPL
+// #undef RESULT_NS_IMPL
 #undef constexpr
 #undef RESULT_CPP17_INLINE
 #undef RESULT_INLINE_VISIBILITY

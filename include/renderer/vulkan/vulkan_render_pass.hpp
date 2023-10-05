@@ -2,6 +2,8 @@
 
 #include "vulkan_swapchain.hpp"
 
+namespace ENGINE_NAMESPACE {
+
 /**
  * @brief Types of clearing available to the render pass. Combinations will
  * enable multiple clearing types.
@@ -90,3 +92,5 @@ class VulkanRenderPass {
     bool                   _depth_testing_enabled;
     Vector<vk::ClearValue> _clear_values { 1 };
 };
+
+} // namespace ENGINE_NAMESPACE
