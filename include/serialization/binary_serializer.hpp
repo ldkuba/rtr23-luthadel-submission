@@ -15,7 +15,7 @@ class BinarySerializer : public Serializer {
         String& out_str, void* const data, const uint8& size
     ) const;
 
-    virtual bool deserialize_primitive(
+    virtual Outcome deserialize_primitive(
         const String& data,
         uint32&       total_read,
         byte* const   out_data,
@@ -55,39 +55,39 @@ class BinarySerializer : public Serializer {
 
     // === Deserialize for types ===
     // Bool
-    virtual bool deserialize_type(const String& in_str, bool& data, uint32& position)      const override;
+    virtual Outcome deserialize_type(const String& in_str, bool& data, uint32& position)      const override;
     // Char
-    virtual bool deserialize_type(const String& in_str, char& data, uint32& position)      const override;
+    virtual Outcome deserialize_type(const String& in_str, char& data, uint32& position)      const override;
     // Int
-    virtual bool deserialize_type(const String& in_str, int8& data, uint32& position)      const override;
-    virtual bool deserialize_type(const String& in_str, int16& data, uint32& position)     const override;
-    virtual bool deserialize_type(const String& in_str, int32& data, uint32& position)     const override;
-    virtual bool deserialize_type(const String& in_str, int64& data, uint32& position)     const override;
-    virtual bool deserialize_type(const String& in_str, int128& data, uint32& position)    const override;
-    virtual bool deserialize_type(const String& in_str, uint8& data, uint32& position)     const override;
-    virtual bool deserialize_type(const String& in_str, uint16& data, uint32& position)    const override;
-    virtual bool deserialize_type(const String& in_str, uint32& data, uint32& position)    const override;
-    virtual bool deserialize_type(const String& in_str, uint64& data, uint32& position)    const override;
-    virtual bool deserialize_type(const String& in_str, uint128& data, uint32& position)   const override;
+    virtual Outcome deserialize_type(const String& in_str, int8& data, uint32& position)      const override;
+    virtual Outcome deserialize_type(const String& in_str, int16& data, uint32& position)     const override;
+    virtual Outcome deserialize_type(const String& in_str, int32& data, uint32& position)     const override;
+    virtual Outcome deserialize_type(const String& in_str, int64& data, uint32& position)     const override;
+    virtual Outcome deserialize_type(const String& in_str, int128& data, uint32& position)    const override;
+    virtual Outcome deserialize_type(const String& in_str, uint8& data, uint32& position)     const override;
+    virtual Outcome deserialize_type(const String& in_str, uint16& data, uint32& position)    const override;
+    virtual Outcome deserialize_type(const String& in_str, uint32& data, uint32& position)    const override;
+    virtual Outcome deserialize_type(const String& in_str, uint64& data, uint32& position)    const override;
+    virtual Outcome deserialize_type(const String& in_str, uint128& data, uint32& position)   const override;
     // Float
-    virtual bool deserialize_type(const String& in_str, float32& data, uint32& position)   const override;
-    virtual bool deserialize_type(const String& in_str, float64& data, uint32& position)   const override;
+    virtual Outcome deserialize_type(const String& in_str, float32& data, uint32& position)   const override;
+    virtual Outcome deserialize_type(const String& in_str, float64& data, uint32& position)   const override;
     // String
-    virtual bool deserialize_type(const String& in_str, String& data, uint32& position)    const override;
+    virtual Outcome deserialize_type(const String& in_str, String& data, uint32& position)    const override;
     // Math
-    virtual bool deserialize_type(const String& in_str, glm::vec1& data, uint32& position) const override;
-    virtual bool deserialize_type(const String& in_str, glm::vec2& data, uint32& position) const override;
-    virtual bool deserialize_type(const String& in_str, glm::vec3& data, uint32& position) const override;
-    virtual bool deserialize_type(const String& in_str, glm::vec4& data, uint32& position) const override;
-    virtual bool deserialize_type(const String& in_str, glm::mat2& data, uint32& position) const override;
-    virtual bool deserialize_type(const String& in_str, glm::mat3& data, uint32& position) const override;
-    virtual bool deserialize_type(const String& in_str, glm::mat4& data, uint32& position) const override;
+    virtual Outcome deserialize_type(const String& in_str, glm::vec1& data, uint32& position) const override;
+    virtual Outcome deserialize_type(const String& in_str, glm::vec2& data, uint32& position) const override;
+    virtual Outcome deserialize_type(const String& in_str, glm::vec3& data, uint32& position) const override;
+    virtual Outcome deserialize_type(const String& in_str, glm::vec4& data, uint32& position) const override;
+    virtual Outcome deserialize_type(const String& in_str, glm::mat2& data, uint32& position) const override;
+    virtual Outcome deserialize_type(const String& in_str, glm::mat3& data, uint32& position) const override;
+    virtual Outcome deserialize_type(const String& in_str, glm::mat4& data, uint32& position) const override;
     // clang-format on
 
     virtual void vector_add_beg(
         String& out_str, const uint64 count, const uint64 type_size
     ) const override;
-    virtual bool vector_remove_beg(
+    virtual Outcome vector_remove_beg(
         const String& in_str,
         uint64&       count,
         const uint64  type_size,
@@ -102,17 +102,19 @@ class BinarySerializer : public Serializer {
             serialize_one(out_str, data_point);
     }
     template<typename T>
-    bool deserialize_type(
+    Outcome deserialize_type(
         const String& in_str, Vector<T>& data, uint32& position
     ) const {
         // Data size
         uint32 data_count;
-        if (!deserialize_type(in_str, data_count, position)) return false;
+        if (deserialize_type(in_str, data_count, position).failed())
+            return Outcome::Failed;
 
         // Data
         data.resize(data_count);
         for (auto& data_point : data)
-            if (!deserialize_one(in_str, data_point, position)) return false;
-        return true;
+            if (!deserialize_one(in_str, data_point, position))
+                return Outcome::Failed;
+        return Outcome::Successful;
     }
 };

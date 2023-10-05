@@ -3,6 +3,8 @@
 #include "texture.hpp"
 #include "unordered_map.hpp"
 
+#include "outcome.hpp"
+
 class TextureSystem;
 
 /// @brief Supported shader attribute types
@@ -227,8 +229,7 @@ class Shader {
                 id,
                 " because no such uniform exists."
             )));
-        auto result = set_uniform(id, (void*) value);
-        if (result == false)
+        if (set_uniform(id, (void*) value).failed())
             Logger::fatal("Shader :: Uniform_set failed for some reason.");
         return {};
     }
@@ -299,7 +300,7 @@ class Shader {
     Vector<Texture*> _global_textures {};
     uint8            _instance_texture_count;
 
-    virtual bool set_uniform(const uint16 id, void* value);
+    virtual Outcome set_uniform(const uint16 id, void* value);
 
   private:
     void add_sampler(const ShaderUniformConfig& config);

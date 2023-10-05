@@ -106,7 +106,9 @@ Result<void, InvalidArgument> Shader::set_sampler(
 // SHADER PROTECTED METHODS //
 // //////////////////////// //
 
-bool Shader::set_uniform(const uint16 id, void* value) { return true; }
+Outcome Shader::set_uniform(const uint16 id, void* value) {
+    return Outcome::Successful;
+}
 
 // ////////////////////// //
 // SHADER PRIVATE METHODS //

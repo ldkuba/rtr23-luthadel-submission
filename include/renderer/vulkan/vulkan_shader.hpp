@@ -62,7 +62,7 @@ class VulkanShader : public Shader {
     const static uint32 max_descriptor_sets = 1024; // TODO: Maybe make dynamic
 
   protected:
-    bool set_uniform(const uint16 id, void* value) override;
+    Outcome set_uniform(const uint16 id, void* value) override;
 
   private:
     const VulkanDevice*                  _device;

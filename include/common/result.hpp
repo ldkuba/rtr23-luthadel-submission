@@ -5979,8 +5979,11 @@ inline RESULT_INLINE_VISIBILITY auto RESULT_NS_IMPL::swap(
 #undef RESULT_NODISCARD
 #undef RESULT_WARN_UNUSED
 
+// -----------------------------------------------------------------------------
 // ADDITIONS
+// -----------------------------------------------------------------------------
 
+// Utility macros
 #define match_error(__result)                                                  \
     if (__result.has_error()) switch (__result.error())
 #define match_error_code(__result)                                             \

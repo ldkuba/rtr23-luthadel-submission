@@ -2,6 +2,7 @@
 
 #include "delegate.hpp"
 #include "vector.hpp"
+#include "outcome.hpp"
 
 template<typename Signature>
 class Event;
@@ -60,7 +61,7 @@ class Event<R(Args...)> {
      * @return false - if no such method was found
      */
     template<typename T>
-    bool unsubscribe(T* caller, R (T::*callback)(Args...)) {
+    Outcome unsubscribe(T* caller, R (T::*callback)(Args...)) {
         auto delegate = new (MemoryTag::Callback)
             DelegateMethod<T, R, Args...>(caller, callback);
         return remove_delegate(_callbacks, delegate);
@@ -74,7 +75,7 @@ class Event<R(Args...)> {
      * @return true - if a function was detached
      * @return false - if no such function was found
      */
-    bool unsubscribe(std::function<R(Args...)> callback) {
+    Outcome unsubscribe(std::function<R(Args...)> callback) {
         auto delegate =
             new (MemoryTag::Callback) DelegateFunction<R, Args...>(callback);
         return remove_delegate(_callbacks, delegate);
@@ -158,7 +159,7 @@ class Event<void(Args...)> {
      * @return false - if no such method was found
      */
     template<typename T>
-    bool unsubscribe(T* caller, void (T::*callback)(Args...)) {
+    Outcome unsubscribe(T* caller, void (T::*callback)(Args...)) {
         auto delegate = new (MemoryTag::Callback)
             DelegateMethod<T, void, Args...>(caller, callback);
         return remove_delegate(_callbacks, delegate);
@@ -172,7 +173,7 @@ class Event<void(Args...)> {
      * @return true - if a function was detached
      * @return false - if no such function was found
      */
-    bool unsubscribe(std::function<void(Args...)> callback) {
+    Outcome unsubscribe(std::function<void(Args...)> callback) {
         auto delegate =
             new (MemoryTag::Callback) DelegateFunction<void, Args...>(callback);
         return remove_delegate(_callbacks, delegate);
@@ -199,7 +200,7 @@ class Event<void(Args...)> {
 };
 
 template<typename R, typename... Args>
-bool remove_delegate(
+Outcome remove_delegate(
     Vector<Delegate<R, Args...>*> callbacks, Delegate<R, Args...>* delegate
 ) {
     auto iter = callbacks.begin();
@@ -207,10 +208,10 @@ bool remove_delegate(
         if (**iter == *delegate) break;
         iter++;
     }
-    if (iter == callbacks.end()) return false;
+    if (iter == callbacks.end()) return Outcome::Failed;
 
     callbacks.erase(iter);
     delete *iter;
 
-    return true;
+    return Outcome::Successful;
 }

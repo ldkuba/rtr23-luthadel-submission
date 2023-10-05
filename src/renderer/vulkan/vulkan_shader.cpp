@@ -457,7 +457,7 @@ void VulkanShader::release_instance_resources(uint32 instance_id) {
 // VULKAN SHADER PROTECTED METHODS //
 // /////////////////////////////// //
 
-bool VulkanShader::set_uniform(const uint16 id, void* value) {
+Outcome VulkanShader::set_uniform(const uint16 id, void* value) {
     auto uniform = _uniforms[id];
 
     // Bind scope
@@ -480,7 +480,7 @@ bool VulkanShader::set_uniform(const uint16 id, void* value) {
         else
             _instance_states[_bound_instance_id]
                 ->instance_textures[uniform.location] = (Texture*) value;
-        return true;
+        return Outcome::Successful;
     }
 
     // If other uniform
@@ -498,7 +498,7 @@ bool VulkanShader::set_uniform(const uint16 id, void* value) {
             _uniform_buffer_offset + _bound_ubo_offset + uniform.offset;
         memcpy((void*) address, value, uniform.size);
     }
-    return true;
+    return Outcome::Successful;
 }
 
 // ///////////////////////////// //

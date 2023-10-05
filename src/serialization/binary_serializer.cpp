@@ -11,7 +11,7 @@
         const uint8 size   = sizeof(T);                                        \
         serialize_primitive(out_str, data_p, size);                            \
     }                                                                          \
-    bool BinarySerializer::deserialize_type(                                   \
+    Outcome BinarySerializer::deserialize_type(                                \
         const String& in_str, T& data, uint32& position                        \
     ) const {                                                                  \
         byte* const data_p = (byte* const) &data;                              \
@@ -48,7 +48,7 @@ void BinarySerializer::serialize_primitive(
     }
     out_str += std::string(bytes, size);
 }
-bool BinarySerializer::deserialize_primitive(
+Outcome BinarySerializer::deserialize_primitive(
     const String& data,
     uint32&       position,
     byte* const   out_data,
@@ -62,7 +62,7 @@ bool BinarySerializer::deserialize_primitive(
         for (uint32 i = 0; i < size; i++)
             out_data[i] = bytes[i];
     position += size;
-    return true;
+    return Outcome::Successful;
 }
 
 void BinarySerializer::serialize_type(String& out_str, const String& data)
@@ -70,14 +70,14 @@ void BinarySerializer::serialize_type(String& out_str, const String& data)
     out_str += data;
     out_str += '\0';
 }
-bool BinarySerializer::deserialize_type(
+Outcome BinarySerializer::deserialize_type(
     const String& in_str, String& data, uint32& position
 ) const {
     auto end_i = in_str.find('\0', position);
-    if (end_i == std::string::npos) return false;
+    if (end_i == std::string::npos) return Outcome::Failed;
     data = in_str.substr(position, end_i - position);
     position += data.size() + 1;
-    return true;
+    return Outcome::Successful;
 }
 
 void BinarySerializer::serialize_type(String& out_str, const glm::vec1& data)
@@ -141,78 +141,116 @@ void BinarySerializer::serialize_type(String& out_str, const glm::mat4& data)
     serialize_type(out_str, data[3][3]);
 }
 
-bool BinarySerializer::deserialize_type(
+Outcome BinarySerializer::deserialize_type(
     const String& in_str, glm::vec1& data, uint32& position
 ) const {
     return deserialize_type(in_str, data.x, position);
 }
-bool BinarySerializer::deserialize_type(
+Outcome BinarySerializer::deserialize_type(
     const String& in_str, glm::vec2& data, uint32& position
 ) const {
-    if (!deserialize_type(in_str, data.x, position)) return false;
-    if (!deserialize_type(in_str, data.y, position)) return false;
-    return true;
+    if (deserialize_type(in_str, data.x, position).failed())
+        return Outcome::Failed;
+    if (deserialize_type(in_str, data.y, position).failed())
+        return Outcome::Failed;
+    return Outcome::Successful;
 }
-bool BinarySerializer::deserialize_type(
+Outcome BinarySerializer::deserialize_type(
     const String& in_str, glm::vec3& data, uint32& position
 ) const {
-    if (!deserialize_type(in_str, data.x, position)) return false;
-    if (!deserialize_type(in_str, data.y, position)) return false;
-    if (!deserialize_type(in_str, data.z, position)) return false;
-    return true;
+    if (deserialize_type(in_str, data.x, position).failed())
+        return Outcome::Failed;
+    if (deserialize_type(in_str, data.y, position).failed())
+        return Outcome::Failed;
+    if (deserialize_type(in_str, data.z, position).failed())
+        return Outcome::Failed;
+    return Outcome::Successful;
 }
-bool BinarySerializer::deserialize_type(
+Outcome BinarySerializer::deserialize_type(
     const String& in_str, glm::vec4& data, uint32& position
 ) const {
-    if (!deserialize_type(in_str, data.x, position)) return false;
-    if (!deserialize_type(in_str, data.y, position)) return false;
-    if (!deserialize_type(in_str, data.z, position)) return false;
-    if (!deserialize_type(in_str, data.w, position)) return false;
-    return true;
+    if (deserialize_type(in_str, data.x, position).failed())
+        return Outcome::Failed;
+    if (deserialize_type(in_str, data.y, position).failed())
+        return Outcome::Failed;
+    if (deserialize_type(in_str, data.z, position).failed())
+        return Outcome::Failed;
+    if (deserialize_type(in_str, data.w, position).failed())
+        return Outcome::Failed;
+    return Outcome::Successful;
 }
-bool BinarySerializer::deserialize_type(
+Outcome BinarySerializer::deserialize_type(
     const String& in_str, glm::mat2& data, uint32& position
 ) const {
-    if (!deserialize_type(in_str, data[0][0], position)) return false;
-    if (!deserialize_type(in_str, data[0][1], position)) return false;
-    if (!deserialize_type(in_str, data[1][0], position)) return false;
-    if (!deserialize_type(in_str, data[1][1], position)) return false;
-    return true;
+    if (deserialize_type(in_str, data[0][0], position).failed())
+        return Outcome::Failed;
+    if (deserialize_type(in_str, data[0][1], position).failed())
+        return Outcome::Failed;
+    if (deserialize_type(in_str, data[1][0], position).failed())
+        return Outcome::Failed;
+    if (deserialize_type(in_str, data[1][1], position).failed())
+        return Outcome::Failed;
+    return Outcome::Successful;
 }
-bool BinarySerializer::deserialize_type(
+Outcome BinarySerializer::deserialize_type(
     const String& in_str, glm::mat3& data, uint32& position
 ) const {
-    if (!deserialize_type(in_str, data[0][0], position)) return false;
-    if (!deserialize_type(in_str, data[0][1], position)) return false;
-    if (!deserialize_type(in_str, data[0][2], position)) return false;
-    if (!deserialize_type(in_str, data[1][0], position)) return false;
-    if (!deserialize_type(in_str, data[1][1], position)) return false;
-    if (!deserialize_type(in_str, data[1][2], position)) return false;
-    if (!deserialize_type(in_str, data[2][0], position)) return false;
-    if (!deserialize_type(in_str, data[2][1], position)) return false;
-    if (!deserialize_type(in_str, data[2][2], position)) return false;
-    return true;
+    if (deserialize_type(in_str, data[0][0], position).failed())
+        return Outcome::Failed;
+    if (deserialize_type(in_str, data[0][1], position).failed())
+        return Outcome::Failed;
+    if (deserialize_type(in_str, data[0][2], position).failed())
+        return Outcome::Failed;
+    if (deserialize_type(in_str, data[1][0], position).failed())
+        return Outcome::Failed;
+    if (deserialize_type(in_str, data[1][1], position).failed())
+        return Outcome::Failed;
+    if (deserialize_type(in_str, data[1][2], position).failed())
+        return Outcome::Failed;
+    if (deserialize_type(in_str, data[2][0], position).failed())
+        return Outcome::Failed;
+    if (deserialize_type(in_str, data[2][1], position).failed())
+        return Outcome::Failed;
+    if (deserialize_type(in_str, data[2][2], position).failed())
+        return Outcome::Failed;
+    return Outcome::Successful;
 }
-bool BinarySerializer::deserialize_type(
+Outcome BinarySerializer::deserialize_type(
     const String& in_str, glm::mat4& data, uint32& position
 ) const {
-    if (!deserialize_type(in_str, data[0][0], position)) return false;
-    if (!deserialize_type(in_str, data[0][1], position)) return false;
-    if (!deserialize_type(in_str, data[0][2], position)) return false;
-    if (!deserialize_type(in_str, data[0][3], position)) return false;
-    if (!deserialize_type(in_str, data[1][0], position)) return false;
-    if (!deserialize_type(in_str, data[1][1], position)) return false;
-    if (!deserialize_type(in_str, data[1][2], position)) return false;
-    if (!deserialize_type(in_str, data[1][3], position)) return false;
-    if (!deserialize_type(in_str, data[2][0], position)) return false;
-    if (!deserialize_type(in_str, data[2][1], position)) return false;
-    if (!deserialize_type(in_str, data[2][2], position)) return false;
-    if (!deserialize_type(in_str, data[2][3], position)) return false;
-    if (!deserialize_type(in_str, data[3][0], position)) return false;
-    if (!deserialize_type(in_str, data[3][1], position)) return false;
-    if (!deserialize_type(in_str, data[3][2], position)) return false;
-    if (!deserialize_type(in_str, data[3][3], position)) return false;
-    return true;
+    if (deserialize_type(in_str, data[0][0], position).failed())
+        return Outcome::Failed;
+    if (deserialize_type(in_str, data[0][1], position).failed())
+        return Outcome::Failed;
+    if (deserialize_type(in_str, data[0][2], position).failed())
+        return Outcome::Failed;
+    if (deserialize_type(in_str, data[0][3], position).failed())
+        return Outcome::Failed;
+    if (deserialize_type(in_str, data[1][0], position).failed())
+        return Outcome::Failed;
+    if (deserialize_type(in_str, data[1][1], position).failed())
+        return Outcome::Failed;
+    if (deserialize_type(in_str, data[1][2], position).failed())
+        return Outcome::Failed;
+    if (deserialize_type(in_str, data[1][3], position).failed())
+        return Outcome::Failed;
+    if (deserialize_type(in_str, data[2][0], position).failed())
+        return Outcome::Failed;
+    if (deserialize_type(in_str, data[2][1], position).failed())
+        return Outcome::Failed;
+    if (deserialize_type(in_str, data[2][2], position).failed())
+        return Outcome::Failed;
+    if (deserialize_type(in_str, data[2][3], position).failed())
+        return Outcome::Failed;
+    if (deserialize_type(in_str, data[3][0], position).failed())
+        return Outcome::Failed;
+    if (deserialize_type(in_str, data[3][1], position).failed())
+        return Outcome::Failed;
+    if (deserialize_type(in_str, data[3][2], position).failed())
+        return Outcome::Failed;
+    if (deserialize_type(in_str, data[3][3], position).failed())
+        return Outcome::Failed;
+    return Outcome::Successful;
 }
 
 void BinarySerializer::vector_add_beg(
@@ -220,7 +258,7 @@ void BinarySerializer::vector_add_beg(
 ) const {
     serialize_type(out_str, count);
 }
-bool BinarySerializer::vector_remove_beg(
+Outcome BinarySerializer::vector_remove_beg(
     const String& in_str,
     uint64&       count,
     const uint64  type_size,

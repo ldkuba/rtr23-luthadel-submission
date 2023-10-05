@@ -3,6 +3,7 @@
 #include "serializable.hpp"
 #include "logger.hpp"
 #include "math_libs.hpp"
+#include "outcome.hpp"
 
 /**
  * @brief The  Serializer  class is an abstract class that provides a blueprint
@@ -51,8 +52,10 @@ class Serializer {
         uint32 position = from_pos;
 
         // Remove modifiers
-        if (!object_remove_beg(data, position)) return _deserialization_failure;
-        if (!object_remove_end(data, position)) return _deserialization_failure;
+        if (object_remove_beg(data, position).failed())
+            return _deserialization_failure;
+        if (object_remove_end(data, position).failed())
+            return _deserialization_failure;
 
         // Deserialize attributes
         bool successful = true;
@@ -96,48 +99,48 @@ class Serializer {
 
     // === Deserialize for types ===
     // Bool
-    virtual bool deserialize_type(const String& in_str, bool& data, uint32& position)      const = 0;
+    virtual Outcome deserialize_type(const String& in_str, bool& data, uint32& position)      const = 0;
     // Char
-    virtual bool deserialize_type(const String& in_str, char& data, uint32& position)      const = 0;
+    virtual Outcome deserialize_type(const String& in_str, char& data, uint32& position)      const = 0;
     // Int
-    virtual bool deserialize_type(const String& in_str, int8& data, uint32& position)      const = 0;
-    virtual bool deserialize_type(const String& in_str, int16& data, uint32& position)     const = 0;
-    virtual bool deserialize_type(const String& in_str, int32& data, uint32& position)     const = 0;
-    virtual bool deserialize_type(const String& in_str, int64& data, uint32& position)     const = 0;
-    virtual bool deserialize_type(const String& in_str, int128& data, uint32& position)    const = 0;
-    virtual bool deserialize_type(const String& in_str, uint8& data, uint32& position)     const = 0;
-    virtual bool deserialize_type(const String& in_str, uint16& data, uint32& position)    const = 0;
-    virtual bool deserialize_type(const String& in_str, uint32& data, uint32& position)    const = 0;
-    virtual bool deserialize_type(const String& in_str, uint64& data, uint32& position)    const = 0;
-    virtual bool deserialize_type(const String& in_str, uint128& data, uint32& position)   const = 0;
+    virtual Outcome deserialize_type(const String& in_str, int8& data, uint32& position)      const = 0;
+    virtual Outcome deserialize_type(const String& in_str, int16& data, uint32& position)     const = 0;
+    virtual Outcome deserialize_type(const String& in_str, int32& data, uint32& position)     const = 0;
+    virtual Outcome deserialize_type(const String& in_str, int64& data, uint32& position)     const = 0;
+    virtual Outcome deserialize_type(const String& in_str, int128& data, uint32& position)    const = 0;
+    virtual Outcome deserialize_type(const String& in_str, uint8& data, uint32& position)     const = 0;
+    virtual Outcome deserialize_type(const String& in_str, uint16& data, uint32& position)    const = 0;
+    virtual Outcome deserialize_type(const String& in_str, uint32& data, uint32& position)    const = 0;
+    virtual Outcome deserialize_type(const String& in_str, uint64& data, uint32& position)    const = 0;
+    virtual Outcome deserialize_type(const String& in_str, uint128& data, uint32& position)   const = 0;
     // Float
-    virtual bool deserialize_type(const String& in_str, float32& data, uint32& position)   const = 0;
-    virtual bool deserialize_type(const String& in_str, float64& data, uint32& position)   const = 0;
+    virtual Outcome deserialize_type(const String& in_str, float32& data, uint32& position)   const = 0;
+    virtual Outcome deserialize_type(const String& in_str, float64& data, uint32& position)   const = 0;
     // String
-    virtual bool deserialize_type(const String& in_str, String& data, uint32& position)    const = 0;
+    virtual Outcome deserialize_type(const String& in_str, String& data, uint32& position)    const = 0;
     // Math
-    virtual bool deserialize_type(const String& in_str, glm::vec1& data, uint32& position) const = 0;
-    virtual bool deserialize_type(const String& in_str, glm::vec2& data, uint32& position) const = 0;
-    virtual bool deserialize_type(const String& in_str, glm::vec3& data, uint32& position) const = 0;
-    virtual bool deserialize_type(const String& in_str, glm::vec4& data, uint32& position) const = 0;
-    virtual bool deserialize_type(const String& in_str, glm::mat2& data, uint32& position) const = 0;
-    virtual bool deserialize_type(const String& in_str, glm::mat3& data, uint32& position) const = 0;
-    virtual bool deserialize_type(const String& in_str, glm::mat4& data, uint32& position) const = 0;
+    virtual Outcome deserialize_type(const String& in_str, glm::vec1& data, uint32& position) const = 0;
+    virtual Outcome deserialize_type(const String& in_str, glm::vec2& data, uint32& position) const = 0;
+    virtual Outcome deserialize_type(const String& in_str, glm::vec3& data, uint32& position) const = 0;
+    virtual Outcome deserialize_type(const String& in_str, glm::vec4& data, uint32& position) const = 0;
+    virtual Outcome deserialize_type(const String& in_str, glm::mat2& data, uint32& position) const = 0;
+    virtual Outcome deserialize_type(const String& in_str, glm::mat3& data, uint32& position) const = 0;
+    virtual Outcome deserialize_type(const String& in_str, glm::mat4& data, uint32& position) const = 0;
 
     // === Padding ===
     // Attribute
     virtual void attribute_add_beg(String& out_string) const {};
     virtual void attribute_add_sep(String& out_string) const {};
     virtual void attribute_add_end(String& out_string) const {};
-    virtual bool attribute_remove_beg(const String& in_string, uint32& position) const { return true; };
-    virtual bool attribute_remove_sep(const String& in_string, uint32& position) const { return true; };
-    virtual bool attribute_remove_end(const String& in_string, uint32& position) const { return true; };
+    virtual Outcome attribute_remove_beg(const String& in_string, uint32& position) const { return Outcome::Successful; };
+    virtual Outcome attribute_remove_sep(const String& in_string, uint32& position) const { return Outcome::Successful; };
+    virtual Outcome attribute_remove_end(const String& in_string, uint32& position) const { return Outcome::Successful; };
     
     // Whole object
     virtual void object_add_beg(String& out_string) const {};
     virtual void object_add_end(String& out_string) const {};
-    virtual bool object_remove_beg(const String& in_string, uint32& position) const { return true; };
-    virtual bool object_remove_end(const String& in_string, uint32& position) const { return true; };
+    virtual Outcome object_remove_beg(const String& in_string, uint32& position) const { return Outcome::Successful; };
+    virtual Outcome object_remove_end(const String& in_string, uint32& position) const { return Outcome::Successful; };
     // clang-format on
 
     // Containers
@@ -154,30 +157,30 @@ class Serializer {
         String& out_str, const uint64 count, const uint64 type_size
     ) const {}
 
-    virtual bool vector_remove_beg(
+    virtual Outcome vector_remove_beg(
         const String& in_str,
         uint64&       count,
         const uint64  type_size,
         uint32&       position
     ) const {
-        return true;
+        return Outcome::Successful;
     }
-    virtual bool vector_remove_sep(
+    virtual Outcome vector_remove_sep(
         const String& in_str,
         uint64&       count,
         const uint64  type_size,
         const uint64  current,
         uint32&       position
     ) const {
-        return true;
+        return Outcome::Successful;
     }
-    virtual bool vector_remove_end(
+    virtual Outcome vector_remove_end(
         const String& in_str,
         uint64&       count,
         const uint64  type_size,
         uint32&       position
     ) const {
-        return true;
+        return Outcome::Successful;
     }
 
   private:
@@ -194,27 +197,31 @@ class Serializer {
     }
 
     template<typename T>
-    bool deserialize_type(
+    Outcome deserialize_type(
         const String& in_str, Vector<T>& data, uint32& position
     ) const {
         uint64     count = 0;
         const auto size  = sizeof(T);
 
         // Deserialize beginning
-        if (!vector_remove_beg(in_str, count, size, position)) return false;
+        if (vector_remove_beg(in_str, count, size, position).failed())
+            return Outcome::Failed;
         if (data.size() != count) data.resize(count);
 
         // Deserialize elements
         for (uint64 i = 0; i < count; i++) {
-            if (i != 0 && !vector_remove_sep(in_str, count, size, i, position))
-                return false;
-            if (!deserialize_one(in_str, data[i], position)) return false;
+            if (i != 0 &&
+                vector_remove_sep(in_str, count, size, i, position).failed())
+                return Outcome::Failed;
+            if (deserialize_one(in_str, data[i], position).failed())
+                return Outcome::Failed;
         }
 
         // Deserialize end
-        if (!vector_remove_end(in_str, count, size, position)) return false;
+        if (vector_remove_end(in_str, count, size, position).failed())
+            return Outcome::Failed;
         if (data.size() != count) data.resize(count);
-        return true;
+        return Outcome::Successful;
     }
 
     // Serialize one
@@ -229,7 +236,7 @@ class Serializer {
     }
 
     template<typename T>
-    bool deserialize_one(const String& data, T& out_data, uint32& position)
+    Outcome deserialize_one(const String& data, T& out_data, uint32& position)
         const {
         if constexpr (has_deserialize_method<
                           Serializer,
@@ -242,13 +249,13 @@ class Serializer {
             const auto res =
                 serializable_data->deserialize(this, data, position);
             position += res.value_or(0);
-            return !res.has_error();
+            return (res.has_error()) ? Outcome::Failed : Outcome::Successful;
         } else {
             const auto res = deserialize_object(out_data, this, data, position);
             position += res.value_or(0);
-            return !res.has_error();
+            return (res.has_error()) ? Outcome::Failed : Outcome::Successful;
         }
-        return false;
+        return Outcome::Failed;
     }
 
     // Helper trait to check if a serializer function exists in a class
@@ -306,10 +313,10 @@ class Serializer {
     ) const {
         if (!successful) return;
         successful = false;
-        if (!attribute_remove_beg(data, position)) return;
-        if (!deserialize_one(data, out_data, position)) return;
-        if (!attribute_remove_end(data, position)) return;
-        if (!attribute_remove_sep(data, position)) return;
+        if (attribute_remove_beg(data, position).failed()) return;
+        if (deserialize_one(data, out_data, position).failed()) return;
+        if (attribute_remove_end(data, position).failed()) return;
+        if (attribute_remove_sep(data, position).failed()) return;
         successful = true;
     }
 };
