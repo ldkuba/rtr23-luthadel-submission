@@ -41,16 +41,11 @@ Platform::Console::~Console() {}
 
 void Platform::Console::write(std::string message, uint32 kind, bool new_line) {
     // Define color attributes for the Windows Console
-    const WORD colors[] = { 0,
-                            FOREGROUND_RED | BACKGROUND_RED,
-                            FOREGROUND_RED | FOREGROUND_GREEN |
-                                FOREGROUND_INTENSITY,
-                            FOREGROUND_RED | FOREGROUND_GREEN |
-                                FOREGROUND_BLUE | FOREGROUND_INTENSITY,
-                            FOREGROUND_GREEN | FOREGROUND_INTENSITY,
-                            FOREGROUND_BLUE | FOREGROUND_INTENSITY,
-                            FOREGROUND_RED | FOREGROUND_GREEN |
-                                FOREGROUND_BLUE | FOREGROUND_INTENSITY };
+    const WORD colors[] = {
+        FOREGROUND_INTENSITY, BACKGROUND_RED | FOREGROUND_INTENSITY,
+        FOREGROUND_RED,       FOREGROUND_RED | FOREGROUND_GREEN,
+        FOREGROUND_GREEN,     FOREGROUND_BLUE
+    };
 
     // Get the handle to the console output
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
