@@ -241,10 +241,11 @@ Result<GeometryConfigArray*, RuntimeError> load_obj(
     // Loop over shapes
     UnorderedMap<Vertex, uint32> unique_vertices = {};
     for (const auto& shape : shapes) {
+        const auto max_float = std::numeric_limits<float>::infinity();
         Vector<Vertex3D> vertices { { MemoryTag::Geometry } };
         Vector<uint32>   indices { { MemoryTag::Geometry } };
-        glm::vec3        extent_min { MAXFLOAT, MAXFLOAT, MAXFLOAT };
-        glm::vec3        extent_max { -MAXFLOAT, -MAXFLOAT, -MAXFLOAT };
+        glm::vec3        extent_min { max_float, max_float, max_float };
+        glm::vec3        extent_max { -max_float, -max_float, -max_float };
 
         // Load vertices, indices and extent
         for (const auto& index : shape.mesh.indices) {

@@ -44,7 +44,7 @@ elseif(NOT EXISTS "${PROJECT_SOURCE_DIR}/external/vulkan/CMakeLists.txt")
 endif()
 
 # Find packages
-find_package(Vulkan REQUIRED FATAL_ERROR)
+find_package(Vulkan REQUIRED)
 
 # include subdirectories
 add_subdirectory(external/vulkan)
@@ -82,6 +82,7 @@ target_link_libraries(${PROJECT_NAME}
     vulkan
     # stb
     tinyobjloader
+    Vulkan::Vulkan
 )
 
 # file(GLOB_RECURSE sources ${PROJECT_SOURCE_DIR}/**/*.c)

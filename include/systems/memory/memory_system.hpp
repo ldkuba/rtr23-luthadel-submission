@@ -126,7 +126,7 @@ void TAllocator<T>::deallocate(T* const p, std::size_t) const noexcept {
 // Make
 namespace std {
 template<typename _Tp, typename... _Args>
-inline typename _MakeUniq<_Tp>::__single_object make_unique(
+inline typename __detail::_MakeUniq<_Tp>::__single_object make_unique(
     MemoryTag tag, _Args&&... __args
 ) {
     return unique_ptr<_Tp>(new (tag) _Tp(std::forward<_Args>(__args)...));

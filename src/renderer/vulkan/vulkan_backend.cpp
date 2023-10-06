@@ -689,7 +689,7 @@ void VulkanBackend::create_geometry_internal(
         old_data.index_size    = internal_data->index_size;
         old_data.index_offset  = internal_data->index_offset;
     } else {
-        uint id               = generate_geometry_id();
+        uint32 id               = generate_geometry_id();
         geometry->internal_id = id;
         internal_data         = &_geometries[id];
     }
