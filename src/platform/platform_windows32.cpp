@@ -15,17 +15,24 @@ float64 Platform::get_absolute_time() {
     LARGE_INTEGER counter;
 
     if (!QueryPerformanceFrequency(&frequency)) {
-        // QueryPerformanceFrequency failed, handle error here
-        return -1.0; // or some other error value
+        // QueryPerformanceCounter is not supported
+        // Handle the error or return a default value
+        std::cout << "ERROR :: In function get_absolute_time. "
+                     "`QueryPerformanceFrequency` failed."
+                  << std::endl;
+        exit(EXIT_FAILURE);
     }
 
     if (!QueryPerformanceCounter(&counter)) {
-        // QueryPerformanceCounter failed, handle error here
-        return -1.0; // or some other error value
+        // QueryPerformanceCounter failed
+        // Handle the error or return a default value
+        std::cout << "ERROR :: In function get_absolute_time's "
+                     "`QueryPerformanceCounter` failed."
+                  << std::endl;
+        exit(EXIT_FAILURE);
     }
 
-    return static_cast<float64>(counter.QuadPart) /
-           static_cast<float64>(frequency.QuadPart);
+    return (float64) counter.QuadPart / (float64) frequency.QuadPart;
 }
 
 void Platform::sleep(uint64 ms) {

@@ -79,7 +79,6 @@ target_link_directories(${PROJECT_NAME}
 target_link_libraries(${PROJECT_NAME}
     glfw
     glm
-    vulkan
     # stb
     tinyobjloader
     Vulkan::Vulkan

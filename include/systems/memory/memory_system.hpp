@@ -76,6 +76,8 @@ class MemorySystem {
 } // namespace ENGINE_NAMESPACE
 
 // New
+void* operator new(std::size_t size);
+void* operator new[](std::size_t size);
 void* operator new(std::size_t size, const MemoryTag tag);
 void* operator new[](std::size_t size, const MemoryTag tag);
 

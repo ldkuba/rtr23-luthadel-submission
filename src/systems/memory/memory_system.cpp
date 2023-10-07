@@ -160,20 +160,27 @@ Allocator** MemorySystem::initialize_allocator_map() {
 using namespace ENGINE_NAMESPACE;
 
 // New
+void* operator new(std::size_t size) {
+    void* full_ptr = malloc(size + MEMORY_PADDING);
+    void* data_ptr = (void*) ((uint64) full_ptr + MEMORY_PADDING);
+
+    MemoryTag* header_ptr = (MemoryTag*) full_ptr;
+    *header_ptr           = (MemoryTag) 0;
+
+    return data_ptr;
+}
 void* operator new(std::size_t size, MemoryTag tag) {
     void* full_ptr =
         ENGINE_NAMESPACE::MemorySystem::allocate(size + MEMORY_PADDING, tag);
     void* data_ptr = (void*) ((uint64) full_ptr + MEMORY_PADDING);
 
-    MemoryTagType tag_data = ((MemoryTagType) tag) << 4;
-    tag_data |= 15; // 1111
-
     MemoryTag* header_ptr = (MemoryTag*) full_ptr;
-    *header_ptr           = (MemoryTag) tag_data;
+    *header_ptr           = (MemoryTag) tag;
 
     return data_ptr;
 }
 
+void* operator new[](std::size_t size) { return operator new(size); }
 void* operator new[](std::size_t size, const MemoryTag tag) {
     return operator new(size, tag);
 }
@@ -181,17 +188,11 @@ void* operator new[](std::size_t size, const MemoryTag tag) {
 // Delete
 void operator delete(void* p) noexcept {
     if (p == nullptr) return;
-    MemoryTagType* tag_ptr = (MemoryTagType*) ((uint64) p - MEMORY_PADDING);
-    MemoryTag      tag     = (MemoryTag) ((*tag_ptr) >> 4);
-
-    // If 4 bytes before p are 1111 we are using custom allocator
-    uint8* tag_type_ptr = (uint8*) tag_ptr;
-    uint8  tag_type     = *tag_type_ptr << 4;
+    void*          full_ptr = (void*) ((uint64) p - MEMORY_PADDING);
+    MemoryTagType* tag_ptr  = (MemoryTagType*) full_ptr;
+    MemoryTag      tag      = (MemoryTag) *tag_ptr;
 
     // 240 = 11110000
-    if (tag_type != 240) free(p);
-    else {
-        *tag_type_ptr &= 240;
-        MemorySystem::deallocate(tag_ptr, tag);
-    }
+    if (tag == MemoryTag::Unknown) free(full_ptr);
+    else MemorySystem::deallocate(tag_ptr, tag);
 }
