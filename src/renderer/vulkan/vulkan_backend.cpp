@@ -86,18 +86,18 @@ VulkanBackend::~VulkanBackend() {
     _device->handle().waitIdle();
 
     // Swapchain
-    delete _swapchain;
+    del(_swapchain);
 
     // TODO: TEMP VERTEX & INDEX BUFFER CODE
-    delete _index_buffer;
-    delete _vertex_buffer;
+    del(_index_buffer);
+    del(_vertex_buffer);
 
     // Render pass
-    delete _ui_render_pass;
-    delete _main_render_pass;
+    del(_ui_render_pass);
+    del(_main_render_pass);
 
     // Command pool
-    delete _command_pool;
+    del(_command_pool);
 
     // Synchronization code
     for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++) {
@@ -112,7 +112,7 @@ VulkanBackend::~VulkanBackend() {
     Logger::trace(RENDERER_VULKAN_LOG, "Synchronization objects destroyed.");
 
     // Device
-    delete _device;
+    del(_device);
     // Surface
     _vulkan_instance.destroySurfaceKHR(_vulkan_surface);
     // Validation layer
@@ -371,7 +371,7 @@ void VulkanBackend::create_texture(Texture* texture, const byte* const data) {
     _command_pool->end_single_time_commands(command_buffer);
 
     // Cleanup
-    delete staging_buffer;
+    del(staging_buffer);
 
     // TODO: CREATE SAMPLER
     vk::SamplerCreateInfo sampler_info {};
@@ -415,7 +415,7 @@ void VulkanBackend::destroy_texture(Texture* texture) {
     auto data = reinterpret_cast<VulkanTextureData*>(texture->internal_data());
 
     _device->handle().waitIdle();
-    if (data->image) delete data->image;
+    if (data->image) del(data->image);
     if (data->sampler) _device->handle().destroySampler(data->sampler);
 
     Logger::trace(RENDERER_VULKAN_LOG, "Texture destroyed.");
@@ -494,7 +494,7 @@ Shader* VulkanBackend::create_shader(const ShaderConfig config) {
     return shader;
 }
 void VulkanBackend::destroy_shader(Shader* shader) {
-    delete shader;
+    del(shader);
     Logger::trace(RENDERER_VULKAN_LOG, "Shader destroyed.");
 }
 
@@ -689,7 +689,7 @@ void VulkanBackend::create_geometry_internal(
         old_data.index_size    = internal_data->index_size;
         old_data.index_offset  = internal_data->index_offset;
     } else {
-        uint32 id               = generate_geometry_id();
+        uint32 id             = generate_geometry_id();
         geometry->internal_id = id;
         internal_data         = &_geometries[id];
     }
@@ -815,7 +815,7 @@ void VulkanBackend::upload_data_to_buffer(
     _command_pool->end_single_time_commands(command_buffer);
 
     // Cleanup
-    delete staging_buffer;
+    del(staging_buffer);
 }
 // TODO: TEMP CODE END
 

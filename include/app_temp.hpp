@@ -46,7 +46,7 @@ class TestApplication {
 // TODO: TEMP
 inline TestApplication::TestApplication() {}
 
-inline TestApplication::~TestApplication() { delete _app_surface; }
+inline TestApplication::~TestApplication() { del(_app_surface); }
 
 inline void TestApplication::run() {
     // === Input system ===

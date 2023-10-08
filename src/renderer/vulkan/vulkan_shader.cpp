@@ -167,7 +167,7 @@ VulkanShader::~VulkanShader() {
     // Ubo
     _uniform_buffer_offset = 0;
     _uniform_buffer->unlock_memory();
-    delete _uniform_buffer;
+    del(_uniform_buffer);
 
     // Pipeline
     if (_pipeline) _device->handle().destroyPipeline(_pipeline, _allocator);
@@ -181,7 +181,7 @@ VulkanShader::~VulkanShader() {
             _device->handle().freeDescriptorSets(
                 _descriptor_pool, instance_state_v->descriptor_set
             );
-            delete instance_state_v;
+            del(instance_state_v);
         }
     }
     _instance_states.clear();
@@ -193,7 +193,7 @@ VulkanShader::~VulkanShader() {
         _device->handle().destroyDescriptorSetLayout(
             config->layout, _allocator
         );
-        delete config;
+        del(config);
     }
     _descriptor_set_configs.clear();
 }
@@ -451,7 +451,7 @@ void VulkanShader::release_instance_resources(uint32 instance_id) {
 
     _uniform_buffer->deallocate(instance_state->offset);
 
-    delete instance_state;
+    del(instance_state);
     _instance_states[instance_id] = nullptr;
 }
 

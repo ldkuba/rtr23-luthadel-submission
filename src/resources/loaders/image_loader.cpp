@@ -92,7 +92,7 @@ void ImageLoader::unload(Resource* resource) {
     can_unload(ResourceType::Image, resource);
 
     Image* res = (Image*) resource;
-    delete res;
+    del(res);
 }
 
 } // namespace ENGINE_NAMESPACE

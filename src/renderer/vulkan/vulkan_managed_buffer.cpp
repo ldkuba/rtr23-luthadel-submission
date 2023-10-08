@@ -2,7 +2,7 @@
 
 namespace ENGINE_NAMESPACE {
 
-VulkanManagedBuffer::~VulkanManagedBuffer() { delete _memory_allocator; }
+VulkanManagedBuffer::~VulkanManagedBuffer() { del(_memory_allocator); }
 
 // //////////////////////////////////// //
 // VULKAN MANAGED BUFFER PUBLIC METHODS //

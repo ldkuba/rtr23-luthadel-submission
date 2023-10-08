@@ -160,30 +160,7 @@ Allocator** MemorySystem::initialize_allocator_map() {
 using namespace ENGINE_NAMESPACE;
 
 // New
-#if OLD_IMPLEMENTATION == 0
-void* operator new(std::size_t size) {
-    void* full_ptr = malloc(size + MEMORY_PADDING);
-    void* data_ptr = (void*) ((uint64) full_ptr + MEMORY_PADDING);
-
-    MemoryTag* header_ptr = (MemoryTag*) full_ptr;
-    *header_ptr           = (MemoryTag) 0;
-
-    return data_ptr;
-}
-#endif
 void* operator new(std::size_t size, MemoryTag tag) {
-#if OLD_IMPLEMENTATION
-    void* full_ptr =
-        ENGINE_NAMESPACE::MemorySystem::allocate(size + MEMORY_PADDING, tag);
-    void* data_ptr = (void*) ((uint64) full_ptr + MEMORY_PADDING);
-
-    MemoryTagType tag_data = ((MemoryTagType) tag << 4) | 0b1111;
-
-    MemoryTag* header_ptr = (MemoryTag*) full_ptr;
-    *header_ptr           = (MemoryTag) tag_data;
-
-    return data_ptr;
-#else
     void* full_ptr =
         ENGINE_NAMESPACE::MemorySystem::allocate(size + MEMORY_PADDING, tag);
     void* data_ptr = (void*) ((uint64) full_ptr + MEMORY_PADDING);
@@ -192,54 +169,24 @@ void* operator new(std::size_t size, MemoryTag tag) {
     *header_ptr           = (MemoryTag) tag;
 
     return data_ptr;
-#endif
 }
-
-#if OLD_IMPLEMENTATION == 0
-void* operator new[](std::size_t size) { return operator new(size); }
-#endif
 void* operator new[](std::size_t size, const MemoryTag tag) {
     return operator new(size, tag);
 }
 
-void log_bytes(const void* const p, const size_t size) {
-    for (size_t i = 0; i < size; i++) {
-        const auto byte = (ubyte*) ((size_t) p + (size - 1 - i));
-        for (size_t j = 0; j < 8; j++) {
-            const auto bit = (*byte >> (7 - j)) & 0b1;
-            if (bit == 1) //
-                std::cout << "1";
-            else std::cout << "0";
-        }
-        std::cout << " ";
-    }
-    std::cout << std::endl;
-}
-
 // Delete
-void operator delete(void* p) noexcept {
-#if OLD_IMPLEMENTATION
-    if (p == nullptr) return;
-    void*         full_ptr   = (void*) ((uint64) p - MEMORY_PADDING);
-    MemoryTag*    header_ptr = (MemoryTag*) full_ptr;
-    MemoryTagType tag_data   = (MemoryTagType) *header_ptr;
-
-    log_bytes(full_ptr, MEMORY_PADDING);
-
-    MemoryTag     tag      = (MemoryTag) (tag_data >> 4);
-    MemoryTagType tag_type = tag_data & 0b1111;
-
-    // 240 = 11110000
-    if (tag_type != 0b1111) free(p);
-    else MemorySystem::deallocate(full_ptr, tag);
-#else
+void operator delete(void* p, bool) noexcept {
     if (p == nullptr) return;
     void*          full_ptr = (void*) ((uint64) p - MEMORY_PADDING);
     MemoryTagType* tag_ptr  = (MemoryTagType*) full_ptr;
     MemoryTag      tag      = (MemoryTag) *tag_ptr;
 
-    // 240 = 11110000
-    if (tag == MemoryTag::Unknown) free(full_ptr);
-    else MemorySystem::deallocate(p, tag);
-#endif
+    if (tag >= MemoryTag::MAX_TAGS) {
+        std::cerr << "Non existant tag passed (" << (MemoryTagType) tag << ")"
+                  << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    MemorySystem::deallocate(full_ptr, tag);
 }
+void operator delete[](void* p, bool) noexcept { del(p); }

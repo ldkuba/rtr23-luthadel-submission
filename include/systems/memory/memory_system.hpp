@@ -76,23 +76,22 @@ class MemorySystem {
 } // namespace ENGINE_NAMESPACE
 
 // New
-#define OLD_IMPLEMENTATION 0
-
-#if OLD_IMPLEMENTATION == 0
-void* operator new(std::size_t size);
-void* operator new[](std::size_t size);
-#endif
 void* operator new(std::size_t size, const MemoryTag tag);
 void* operator new[](std::size_t size, const MemoryTag tag);
 
 // Delete
-void operator delete(void* p) noexcept;
+void operator delete(void* p, bool) noexcept;
+void operator delete[](void* p, bool) noexcept;
 
-namespace ENGINE_NAMESPACE {
+// New delete operator
+#define del(x) ::operator delete(x, true)
 
 // -----------------------------------------------------------------------------
 // Typed allocator
 // -----------------------------------------------------------------------------
+
+namespace ENGINE_NAMESPACE {
+
 template<class T>
 struct TAllocator {
     MemoryTag tag;
@@ -123,8 +122,8 @@ T* TAllocator<T>::allocate(const std::size_t n) const {
     return (T*) operator new(n * sizeof(T), this->tag);
 }
 template<class T>
-void TAllocator<T>::deallocate(T* const p, std::size_t) const noexcept {
-    operator delete(p);
+void TAllocator<T>::deallocate(T* const p, std::size_t n) const noexcept {
+    del(p);
 }
 
 } // namespace ENGINE_NAMESPACE

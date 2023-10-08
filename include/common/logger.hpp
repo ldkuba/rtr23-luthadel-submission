@@ -8,7 +8,7 @@ namespace ENGINE_NAMESPACE {
 #define LOG_WARNING_ENABLED 1
 #define LOG_INFO_ENABLED 1
 #define LOG_DEBUG_ENABLED 1
-#define LOG_VERBOSE_ENABLED 1
+#define LOG_VERBOSE_ENABLED 0
 
 class Logger {
   private:

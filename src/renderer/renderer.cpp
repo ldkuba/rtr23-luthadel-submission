@@ -18,7 +18,7 @@ Renderer::Renderer(
     default: break;
     }
 }
-Renderer::~Renderer() { delete _backend; }
+Renderer::~Renderer() { del(_backend); }
 
 void Renderer::on_resize(const uint32 width, const uint32 height) {
     _projection = glm::perspective(

@@ -31,7 +31,7 @@ MaterialSystem::~MaterialSystem() {
     _default_material->shader()->release_instance_resources(
         _default_material->internal_id.value()
     );
-    delete _default_material;
+    del(_default_material);
 
     Logger::trace(MATERIAL_SYS_LOG, "Material system destroyed.");
 }
@@ -295,7 +295,7 @@ void MaterialSystem::destroy_material(Material* material) {
     material->shader()->release_instance_resources( //
         material->internal_id.value()
     );
-    delete material;
+    del(material);
 }
 
 } // namespace ENGINE_NAMESPACE

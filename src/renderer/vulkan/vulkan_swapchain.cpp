@@ -51,7 +51,7 @@ VulkanSwapchain::~VulkanSwapchain() {
     destroy();
     for (auto& framebuffer_set : _framebuffer_sets) {
         for (auto& framebuffer : framebuffer_set.framebuffers)
-            delete framebuffer;
+            del(framebuffer);
         framebuffer_set.framebuffers.clear();
     }
     _framebuffer_sets.clear();
@@ -261,8 +261,8 @@ void VulkanSwapchain::create() {
 
 void VulkanSwapchain::destroy() {
     // Destroy image resources
-    delete _color_image;
-    delete _depth_image;
+    del(_color_image);
+    del(_depth_image);
 
     // Destroy image views
     for (auto image_view : _image_views)

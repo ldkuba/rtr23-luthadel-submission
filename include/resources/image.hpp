@@ -28,15 +28,15 @@ class Image : public Resource {
     };
 
     Image(
-        const String      name,
-        const uint32      width,
-        const uint32      height,
-        const uint8       channel_count,
-        const byte* const pixels
+        const String name,
+        const uint32 width,
+        const uint32 height,
+        const uint8  channel_count,
+        byte* const  pixels
     )
         : Resource(name), _width(width), _height(height),
           _channel_count(channel_count), _pixels(pixels) {}
-    ~Image() { delete _pixels; }
+    ~Image() { del(_pixels); }
 
     /**
      * @brief Check for image transparency
@@ -55,10 +55,10 @@ class Image : public Resource {
     }
 
   private:
-    uint32      _width;
-    uint32      _height;
-    uint8       _channel_count;
-    const byte* _pixels;
+    uint32 _width;
+    uint32 _height;
+    uint8  _channel_count;
+    byte*  _pixels;
 };
 
 } // namespace ENGINE_NAMESPACE

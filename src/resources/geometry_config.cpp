@@ -81,7 +81,7 @@ GeometryConfig3D::~GeometryConfig3D() {}
 GeometryConfigArray::GeometryConfigArray(const String& name) : Resource(name) {}
 GeometryConfigArray::~GeometryConfigArray() {
     for (auto& config : configs)
-        delete config;
+        del(config);
     configs.clear();
 }
 

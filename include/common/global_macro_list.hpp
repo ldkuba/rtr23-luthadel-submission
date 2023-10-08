@@ -32,6 +32,7 @@
     -   ENGINE_NAMESPACE
     -   MEMORY_PADDING  Note: Memory padding used by allocators
     -   STRING_CONST(str)   Note: Used for custom "String" enum classes
+    -   del
     // Additional type limits
     -   INT128_MAX
     -   INT128_MIN
