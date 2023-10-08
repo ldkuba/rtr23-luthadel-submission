@@ -76,8 +76,12 @@ class MemorySystem {
 } // namespace ENGINE_NAMESPACE
 
 // New
+#define OLD_IMPLEMENTATION 0
+
+#if OLD_IMPLEMENTATION == 0
 void* operator new(std::size_t size);
 void* operator new[](std::size_t size);
+#endif
 void* operator new(std::size_t size, const MemoryTag tag);
 void* operator new[](std::size_t size, const MemoryTag tag);
 
@@ -127,12 +131,26 @@ void TAllocator<T>::deallocate(T* const p, std::size_t) const noexcept {
 
 // Make
 namespace std {
+/// std::make_unique for single objects
 template<typename _Tp, typename... _Args>
-inline typename __detail::_MakeUniq<_Tp>::__single_object make_unique(
-    MemoryTag tag, _Args&&... __args
-) {
+inline unique_ptr<_Tp> make_unique(MemoryTag tag, _Args&&... __args) {
     return unique_ptr<_Tp>(new (tag) _Tp(std::forward<_Args>(__args)...));
 }
+
+/// std::make_unique for arrays of unknown bound
+template<typename _Tp>
+inline unique_ptr<_Tp[]> make_unique(MemoryTag tag, size_t __num) {
+    return unique_ptr<_Tp>(new (tag) remove_extent_t<_Tp>[__num]());
+}
+
+/**
+ *  @brief  Create an object that is owned by a shared_ptr.
+ *  @param  tag  Memory tag
+ *  @param  __args  Arguments for the @a _Tp object's constructor.
+ *  @return A shared_ptr that owns the newly created object.
+ *  @throw  std::bad_alloc, or an exception thrown from the
+ *          constructor of @a _Tp.
+ */
 template<typename _Tp, typename... _Args>
 inline shared_ptr<_Tp> make_shared(MemoryTag tag, _Args&&... __args) {
     typedef typename std::remove_cv<_Tp>::type _Tp_nc;
