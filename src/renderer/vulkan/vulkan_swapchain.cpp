@@ -148,6 +148,10 @@ void VulkanSwapchain::present(
             recreate();
             _should_resize = false;
         }
+    // TODO: Windows nvidia drivers throw this (probably). Can be handled without catching using pResults in present_info
+    } catch (vk::OutOfDateKHRError e) {
+        recreate();
+        _should_resize = false;
     } catch (vk::SystemError e) {
         Logger::fatal(RENDERER_VULKAN_LOG, e.what());
     }
