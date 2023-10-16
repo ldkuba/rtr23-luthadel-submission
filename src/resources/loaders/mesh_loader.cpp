@@ -37,8 +37,7 @@ MeshLoader::~MeshLoader() {}
 
 Result<Resource*, RuntimeError> MeshLoader::load(const String name) {
     // Construct file path
-    String file_name = name;
-    file_name.to_lower();
+    const String file_name = name.lower_c();
     const String file_path =
         ResourceSystem::base_path + "/" + _type_path + "/" + file_name;
 
@@ -212,9 +211,6 @@ Result<GeometryConfigArray*, RuntimeError> load_obj(
     // Load materials and save them as .mat files
     Vector<String> material_configs;
     for (const auto& material : materials) {
-        // Shininess below 8.0f causes problems, so we cap it
-        auto shininess = material.shininess;
-        if (shininess < 8.0f) shininess = 8.0f;
         const auto material_name = create_mat_file(
             { material.name,
               "builtin.material_shader", // Note: OBJ doesn't hold this info
@@ -227,7 +223,7 @@ Result<GeometryConfigArray*, RuntimeError> load_obj(
                   material.diffuse[2],
                   1
               ),
-              shininess,
+              std::max(material.shininess, 8.0f),
               true }
         );
         // Geometries will reference these materials by name
@@ -239,7 +235,7 @@ Result<GeometryConfigArray*, RuntimeError> load_obj(
     config_array->configs.reserve(shapes.size());
 
     // Loop over shapes
-    UnorderedMap<Vertex, uint32> unique_vertices = {};
+    UnorderedMap<uint32, uint32> unique_vertices = {};
     for (const auto& shape : shapes) {
         const auto       max_float = std::numeric_limits<float>::infinity();
         Vector<Vertex3D> vertices { { MemoryTag::Geometry } };
@@ -248,47 +244,53 @@ Result<GeometryConfigArray*, RuntimeError> load_obj(
         glm::vec3        extent_max { -max_float, -max_float, -max_float };
 
         // Load vertices, indices and extent
+        unique_vertices.clear();
         for (const auto& index : shape.mesh.indices) {
-            Vertex vertex {};
+            // Was vertex with this index already present?
+            if (!unique_vertices.contains(index.vertex_index)) {
+                // This is a new vertex, fill it with data
+                Vertex vertex {};
 
-            // Load position
-            const auto x    = attributes.vertices[3 * index.vertex_index + 0];
-            const auto y    = attributes.vertices[3 * index.vertex_index + 1];
-            const auto z    = attributes.vertices[3 * index.vertex_index + 2];
-            vertex.position = { x, y, z };
+                // Load position
+                const auto x = attributes.vertices[3 * index.vertex_index + 0];
+                const auto y = attributes.vertices[3 * index.vertex_index + 1];
+                const auto z = attributes.vertices[3 * index.vertex_index + 2];
+                vertex.position = { x, y, z };
 
-            // Compute extent
-            if (x < extent_min.x) extent_min.x = x;
-            if (y < extent_min.y) extent_min.y = y;
-            if (z < extent_min.z) extent_min.z = z;
-            if (x > extent_max.x) extent_max.x = x;
-            if (y > extent_max.y) extent_max.y = y;
-            if (z > extent_max.z) extent_max.z = z;
+                // Compute extent
+                if (x < extent_min.x) extent_min.x = x;
+                if (y < extent_min.y) extent_min.y = y;
+                if (z < extent_min.z) extent_min.z = z;
+                if (x > extent_max.x) extent_max.x = x;
+                if (y > extent_max.y) extent_max.y = y;
+                if (z > extent_max.z) extent_max.z = z;
 
-            // Load normal
-            vertex.normal = { attributes.normals[3 * index.normal_index + 0],
-                              attributes.normals[3 * index.normal_index + 1],
-                              attributes.normals[3 * index.normal_index + 2] };
+                // Load normal
+                vertex.normal = {
+                    attributes.normals[3 * index.normal_index + 0],
+                    attributes.normals[3 * index.normal_index + 1],
+                    attributes.normals[3 * index.normal_index + 2]
+                };
 
-            // Load texture coordinate
-            vertex.texture_coord = {
-                attributes.texcoords[2 * index.texcoord_index + 0],
-                1.0f - attributes.texcoords[2 * index.texcoord_index + 1]
-            };
+                // Load texture coordinate
+                vertex.texture_coord = {
+                    attributes.texcoords[2 * index.texcoord_index + 0],
+                    1.0f - attributes.texcoords[2 * index.texcoord_index + 1]
+                };
 
-            // Load colors
-            vertex.color = { attributes.colors[3 * index.vertex_index + 0],
-                             attributes.colors[3 * index.vertex_index + 1],
-                             attributes.colors[3 * index.vertex_index + 2],
-                             1 };
+                // Load colors
+                vertex.color = { attributes.colors[3 * index.vertex_index + 0],
+                                 attributes.colors[3 * index.vertex_index + 1],
+                                 attributes.colors[3 * index.vertex_index + 2],
+                                 1 };
 
-            // Compute index
-            if (!unique_vertices.contains(vertex)) {
-                unique_vertices[vertex] = static_cast<uint32>(vertices.size());
+                // Push to vertex list
+                unique_vertices[index.vertex_index] = vertices.size();
                 vertices.push_back(vertex);
             }
 
-            indices.push_back(unique_vertices[vertex]);
+            // Push this index to the list anyways
+            indices.push_back(unique_vertices[index.vertex_index]);
         }
 
         // Compute center

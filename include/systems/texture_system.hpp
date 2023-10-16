@@ -44,18 +44,25 @@ class TextureSystem {
     TextureSystem& operator=(TextureSystem const&) = delete;
 
     /// @brief Acquire texture resource from texture system. Texture system will
-    /// load the texture from the appropriate location if it's unavailable.
+    /// load the texture from the appropriate location if it's unavailable. If
+    /// texture loading fails default is returned instead.
     /// @param name Name of the requested texture
     /// @param auto_release If enabled texture system will automaticaly release
     /// the texture resource from memory if no references to the texture are
     /// detected. Can only be set if the texture resource isn't loaded yet.
+    /// @param default_fallback Used in case of acquisition failure. By default
+    /// uses texture_system.default_texture.
     /// @returns Requested texture resource
-    Texture* acquire(const String name, const bool auto_release);
+    Texture* acquire(
+        const String   name,
+        const bool     auto_release,
+        Texture* const default_fallback = nullptr
+    );
     /// @brief Releases texture resource. Texture system will automatically
     /// release this texture from memory if no other references to it are
     /// detected and auto release flag is set to true.
     /// @param name Name of the released texture
-    void     release(const String name);
+    void release(const String name);
 
   private:
     struct TextureRef {

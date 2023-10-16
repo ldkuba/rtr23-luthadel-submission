@@ -65,7 +65,9 @@ inline void TestApplication::run() {
 
     /// Load MESH TEST
     MeshLoader loader {};
-    auto       load_result = loader.load("falcon");
+    // auto       load_result = loader.load("falcon");
+    // auto       load_result = loader.load("sponza");
+    auto       load_result = loader.load("viking_room");
     if (load_result.has_error()) {
         Logger::error(load_result.error().what());
         Logger::fatal("Mesh loading failed");
@@ -73,6 +75,19 @@ inline void TestApplication::run() {
     auto config_array = dynamic_cast<GeometryConfigArray*>(load_result.value());
     GeometryConfig* config         = config_array->configs[0];
     _app_renderer.current_geometry = _geometry_system.acquire(*config);
+
+    Logger::debug(
+        "Diffuse map\t: ",
+        _app_renderer.current_geometry->material()->diffuse_map().texture->name
+    );
+    Logger::debug(
+        "Specular map\t: ",
+        _app_renderer.current_geometry->material()->specular_map().texture->name
+    );
+    Logger::debug(
+        "Normal map\t: ",
+        _app_renderer.current_geometry->material()->normal_map().texture->name
+    );
 
     /// Load GUI TEST
     float32          side       = 128.0f;

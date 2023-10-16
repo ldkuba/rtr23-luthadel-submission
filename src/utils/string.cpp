@@ -23,6 +23,11 @@ String::~String() noexcept {}
 // STRING PUBLIC FUNCTIONS //
 // /////////////////////// //
 
+#define copy_method(inplace_method)                                            \
+    String copy { *this };                                                     \
+    copy.inplace_method();                                                     \
+    return copy
+
 // Character transforms
 void String::to_lower() noexcept {
     std::transform(
@@ -41,6 +46,9 @@ void String::to_upper() noexcept {
     );
 }
 
+String String::lower_c() const noexcept { copy_method(to_lower); }
+String String::upper_c() const noexcept { copy_method(to_upper); }
+
 // Trim methods
 void String::trim_left() noexcept {
     auto is_space = [](uchar ch) { return !std::isspace(ch); };
@@ -54,6 +62,10 @@ void String::trim() noexcept {
     trim_left();
     trim_right();
 }
+
+String String::trimmed_left_c() const noexcept { copy_method(trim_left); }
+String String::trimmed_right_c() const noexcept { copy_method(trim_right); }
+String String::trimmed_c() const noexcept { copy_method(trim); }
 
 // Compare methods
 int32 String::compare_ci(const String& other) const {

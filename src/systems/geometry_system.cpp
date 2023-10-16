@@ -63,40 +63,42 @@ Geometry* GeometrySystem::acquire(const GeometryConfig& config) {
         GEOMETRY_SYS_LOG, "Geometry \"", config.name, "\" requested."
     );
 
-    // Generate unique id
-    auto id = generate_id();
+    // Crete new geometry
+    const auto geometry = new (MemoryTag::Resource) Geometry(config.name);
 
-    // Register new slot
-    auto& ref           = _registered_geometries[id];
-    ref.auto_release    = config.auto_release;
-    ref.reference_count = 1;
-
-    // Crete geometry
-    ref.handle     = new (MemoryTag::Resource) Geometry(config.name);
-    ref.handle->id = id;
-
+    // Create on GPU
     auto config2d = dynamic_cast<const GeometryConfig2D*>(&config);
     auto config3d = dynamic_cast<const GeometryConfig3D*>(&config);
 
     if (config2d)
         _renderer->create_geometry(
-            ref.handle, config2d->vertices, config.indices
+            geometry, config2d->vertices, config.indices
         );
     else if (config3d)
         _renderer->create_geometry(
-            ref.handle, config3d->vertices, config.indices
+            geometry, config3d->vertices, config.indices
         );
     else Logger::fatal(GEOMETRY_SYS_LOG, "Geometry config couldn't be parsed.");
 
     // Acquire material
-    if (config.material_name != "") {
-        ref.handle->material = _material_system->acquire(config.material_name);
-        if (!ref.handle->material)
-            ref.handle->material = _material_system->default_material();
-    }
+    if (config.material_name.length() != 0) {
+        geometry->material = _material_system->acquire(config.material_name);
+        if (!geometry->material)
+            geometry->material = _material_system->default_material();
+    } else geometry->material = _material_system->default_material();
+
+    // Generate unique id
+    auto id      = generate_id();
+    geometry->id = id;
+
+    // Register new slot
+    auto& ref           = _registered_geometries[id];
+    ref.handle          = geometry;
+    ref.auto_release    = config.auto_release;
+    ref.reference_count = 1;
 
     Logger::trace(GEOMETRY_SYS_LOG, "Geometry \"", config.name, "\" acquired.");
-    return ref.handle;
+    return geometry;
 }
 
 void GeometrySystem::release(Geometry* geometry) {

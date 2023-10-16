@@ -51,6 +51,11 @@ class String : public std::string {
     /// @brief Transform all string characters to uppercase (inplace)
     void to_upper() noexcept;
 
+    /// @brief Get transformed copy of the string, with all characters lowercase
+    String lower_c() const noexcept;
+    /// @brief Get transformed copy of the string, with all characters uppercase
+    String upper_c() const noexcept;
+
     // Trim
     /// @brief Removes all white-space characters from left side (Inplace)
     void trim_left() noexcept;
@@ -58,6 +63,16 @@ class String : public std::string {
     void trim_right() noexcept;
     /// @brief Removes all white-space characters from both sides (Inplace)
     void trim() noexcept;
+
+    /// @brief Get transformed copy of the string, with all white-space
+    /// characters removed from left side
+    String trimmed_left_c() const noexcept;
+    /// @brief Get transformed copy of the string, with all white-space
+    /// characters removed from right side
+    String trimmed_right_c() const noexcept;
+    /// @brief Get transformed copy of the string, with all white-space
+    /// characters removed from both sides
+    String trimmed_c() const noexcept;
 
     // Comparison
     /**

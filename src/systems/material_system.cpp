@@ -63,10 +63,8 @@ Material* MaterialSystem::acquire(const String name) {
         Logger::trace(MATERIAL_SYS_LOG, "Default material acquired.");
     }
 
-    String s = name;
-    s.to_lower();
-    auto ref = _registered_materials.find(s);
-
+    const auto key = name.lower_c();
+    auto       ref = _registered_materials.find(key);
     if (ref != _registered_materials.end()) {
         ref->second.reference_count++;
         Logger::trace(MATERIAL_SYS_LOG, "Material acquired.");
@@ -92,7 +90,7 @@ Material* MaterialSystem::acquire(const String name) {
     auto material_ref = material_result.value();
 
     // Register created material
-    _registered_materials[name] = material_ref;
+    _registered_materials[key] = material_ref;
 
     // Free config
     _resource_system->unload(material_config);
@@ -106,8 +104,7 @@ Material* MaterialSystem::acquire(const MaterialConfig& config) {
     );
 
     // Check name validity
-    String name = config.name;
-    name.to_lower();
+    const auto name = config.name().lower_c();
     if (name.length() > Material::max_name_length) {
         Logger::error(
             MATERIAL_SYS_LOG,
@@ -157,9 +154,8 @@ void MaterialSystem::release(const String name) {
         return;
     }
 
-    String s = name;
-    s.to_lower();
-    auto ref = _registered_materials.find(s);
+    const auto key = name.lower_c();
+    auto       ref = _registered_materials.find(key);
 
     if (ref == _registered_materials.end() ||
         ref->second.reference_count == 0) {
@@ -173,7 +169,7 @@ void MaterialSystem::release(const String name) {
     // Release resource if it isn't needed
     if (ref->second.reference_count == 0 && ref->second.auto_release == true) {
         destroy_material(ref->second.handle);
-        _registered_materials.erase(s);
+        _registered_materials.erase(key);
     }
 
     Logger::trace(MATERIAL_SYS_LOG, "Material \"", name, "\" released.");
@@ -221,6 +217,10 @@ void MaterialSystem::create_default_material() {
     _default_material->id = 0;
 }
 
+#define acquire_texture(name, or_default)                                      \
+    (name.length() > 0) ? _texture_system->acquire(name, true, or_default)     \
+                        : or_default
+
 Result<MaterialSystem::MaterialRef, RuntimeError> //
 MaterialSystem::create_material(const MaterialConfig config) {
     // Get shader
@@ -239,26 +239,23 @@ MaterialSystem::create_material(const MaterialConfig config) {
         Material(config.name, shader, config.diffuse_color, config.shininess);
 
     // Diffuse map
-    material->diffuse_map = {
-        (config.diffuse_map_name.length() > 0)
-            ? _texture_system->acquire(config.diffuse_map_name, true)
-            : _texture_system->default_diffuse_texture,
-        TextureUse::MapDiffuse
-    };
+    material->diffuse_map  = { acquire_texture(
+                                  config.diffuse_map_name,
+                                  _texture_system->default_diffuse_texture
+                              ),
+                               TextureUse::MapDiffuse };
     // Specular map
-    material->specular_map = {
-        (config.specular_map_name.length() > 0)
-            ? _texture_system->acquire(config.specular_map_name, true)
-            : _texture_system->default_specular_texture,
-        TextureUse::MapSpecular
-    };
+    material->specular_map = { acquire_texture(
+                                   config.specular_map_name,
+                                   _texture_system->default_specular_texture
+                               ),
+                               TextureUse::MapSpecular };
     // Normal map
-    material->normal_map = {
-        (config.normal_map_name.length() > 0)
-            ? _texture_system->acquire(config.normal_map_name, true)
-            : _texture_system->default_normal_texture,
-        TextureUse::MapNormal
-    };
+    material->normal_map   = { acquire_texture(
+                                 config.normal_map_name,
+                                 _texture_system->default_normal_texture
+                             ),
+                               TextureUse::MapNormal };
     // TODO: Set other maps
 
     // Acquire resource from GPU
