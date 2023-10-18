@@ -28,7 +28,7 @@ class VulkanBackend : public RendererBackend {
     void begin_render_pass(uint8 render_pass_id) override;
     void end_render_pass(uint8 render_pass_id) override;
 
-    void draw_geometry(const GeometryRenderData data) override;
+    void draw_geometry(Geometry* const geometry) override;
 
     void create_texture(Texture* texture, const byte* const data) override;
     void destroy_texture(Texture* texture) override;

@@ -73,27 +73,7 @@ Material::~Material() {}
             return;                                                            \
         }                                                                      \
     }
-#define set_uniform_s(uniform) set_uniform(#uniform, uniform)
 
-void Material::apply_global(
-    const glm::mat4 projection,
-    const glm::mat4 view,
-    const glm::vec4 ambient_color,
-    const glm::vec3 view_position,
-    const uint32    mode
-) {
-    // Apply globals
-    _shader->bind_globals();
-    set_uniform_s(projection);
-    set_uniform_s(view);
-    // TODO: Temp solution for type checking problem
-    if (_shader->get_name().compare_ci("builtin.material_shader") == 0) {
-        set_uniform_s(ambient_color);
-        set_uniform_s(view_position);
-        set_uniform_s(mode);
-    }
-    _shader->apply_global();
-}
 void Material::apply_instance() {
     // Bind instance based on id
     if (!internal_id.has_value())
@@ -118,6 +98,5 @@ void Material::apply_instance() {
     }
     _shader->apply_instance();
 }
-void Material::apply_local(const glm::mat4 model) { set_uniform_s(model); }
 
 } // namespace ENGINE_NAMESPACE

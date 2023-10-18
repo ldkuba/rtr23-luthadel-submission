@@ -26,7 +26,17 @@ class RendererBackend {
     RendererBackend(RendererBackend const&)            = delete;
     RendererBackend& operator=(RendererBackend const&) = delete;
 
-    void         increment_frame_number() { _frame_number++; }
+    /**
+     * @brief Increments frame counter
+     */
+    void increment_frame_number() { _frame_number++; }
+
+    /**
+     * @brief Get current value of the frame counter
+     * @return uint64 Current frame counter value
+     */
+    uint64 get_current_frame() { return _frame_number; }
+
     /**
      * @brief Inform renderer backend of a surface resize event
      * @param width New width in pixels
@@ -68,9 +78,9 @@ class RendererBackend {
 
     /**
      * @brief Draw command for specified geometry
-     * @param data Draw info
+     * @param geometry Geometry to draw
      */
-    virtual void draw_geometry(const GeometryRenderData data) {}
+    virtual void draw_geometry(Geometry* const geometry) {}
 
     /**
      * @brief Create a texture and upload its relevant data to the GPU

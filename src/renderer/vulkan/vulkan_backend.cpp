@@ -279,11 +279,11 @@ void VulkanBackend::end_render_pass(uint8 render_pass_id) {
     }
 }
 
-void VulkanBackend::draw_geometry(const GeometryRenderData data) {
+void VulkanBackend::draw_geometry(Geometry* const geometry) {
     // Check if geometry data is valid
-    if (!data.geometry || !data.geometry->internal_id.has_value()) return;
+    if (!geometry || !geometry->internal_id.has_value()) return;
 
-    auto buffer_data    = _geometries[data.geometry->internal_id.value()];
+    auto buffer_data    = _geometries[geometry->internal_id.value()];
     auto command_buffer = _command_buffer->handle;
 
     // Bind vertex buffer

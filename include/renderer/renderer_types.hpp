@@ -139,6 +139,12 @@ class Geometry;
  */
 struct GeometryRenderData {
     Geometry* geometry;
+    glm::mat4 model;
+};
+
+struct RenderPacket {
+    Vector<GeometryRenderData> geometry_data;
+    GeometryRenderData         ui_geometry_data;
 };
 
 } // namespace ENGINE_NAMESPACE

@@ -40,6 +40,7 @@ class TestApplication {
 
     // TODO: TEMP
     bool _app_should_close = false;
+    bool _cube_rotation    = false;
 
     void setup_input();
 };
@@ -60,34 +61,36 @@ inline void TestApplication::run() {
 
     _app_renderer.material_shader->reload();
 
-    // _app_renderer.current_geometry =
-    //     _geometry_system.generate_cube("cube", "test_material");
+    // Construct render packet
+    RenderPacket packet {};
 
+#define CURRENT_SCENE 2
+#if CURRENT_SCENE == 0
+    Geometry* const geometry =
+        _geometry_system.generate_cube("cube", "test_material");
+    packet.geometry_data.push_back({ geometry, glm::mat4(1.0f) });
+#else
     /// Load MESH TEST
     MeshLoader loader {};
-    // auto       load_result = loader.load("falcon");
-    // auto       load_result = loader.load("sponza");
-    auto       load_result = loader.load("viking_room");
+#    if CURRENT_SCENE == 1
+    auto       load_result = loader.load("falcon");
+#    elif CURRENT_SCENE == 2
+    auto load_result = loader.load("sponza");
+#    elif CURRENT_SCENE == 3
+    auto load_result = loader.load("viking_room");
+#    endif
     if (load_result.has_error()) {
         Logger::error(load_result.error().what());
         Logger::fatal("Mesh loading failed");
     }
     auto config_array = dynamic_cast<GeometryConfigArray*>(load_result.value());
-    GeometryConfig* config         = config_array->configs[0];
-    _app_renderer.current_geometry = _geometry_system.acquire(*config);
 
-    Logger::debug(
-        "Diffuse map\t: ",
-        _app_renderer.current_geometry->material()->diffuse_map().texture->name
-    );
-    Logger::debug(
-        "Specular map\t: ",
-        _app_renderer.current_geometry->material()->specular_map().texture->name
-    );
-    Logger::debug(
-        "Normal map\t: ",
-        _app_renderer.current_geometry->material()->normal_map().texture->name
-    );
+    // Add all geometries
+    for (const auto config : config_array->configs) {
+        Geometry* const geometry = _geometry_system.acquire(*config);
+        packet.geometry_data.push_back({ geometry, glm::mat4(1.0f) });
+    }
+#endif
 
     /// Load GUI TEST
     float32          side       = 128.0f;
@@ -105,7 +108,8 @@ inline void TestApplication::run() {
                                 glm::vec3(side),
                                 glm::vec3(0),
                                 "test_ui_material" };
-    _app_renderer.current_ui_geometry = _geometry_system.acquire(config2d);
+    packet.ui_geometry_data.geometry = _geometry_system.acquire(config2d);
+    packet.ui_geometry_data.model    = glm::mat4(1.f);
 
     // === Main loop ===
     while (!_app_surface->should_close() && _app_should_close == false) {
@@ -113,7 +117,15 @@ inline void TestApplication::run() {
 
         _app_surface->process_events(delta_time);
 
-        auto result = _app_renderer.draw_frame(delta_time);
+        // TODO: Temp code; update one and only object
+        static float rotation = 0.0f;
+        if (_cube_rotation) rotation += 50.0f * delta_time;
+        auto model = glm::rotate(
+            glm::mat4(1.0f), glm::radians(rotation), glm::vec3(0.0f, 0.0f, 1.0f)
+        );
+        packet.geometry_data[0].model = model;
+
+        auto result = _app_renderer.draw_frame(&packet, delta_time);
         if (result.has_error()) {
             // TODO: PROCESS ERROR
             Logger::error(result.error().what());
@@ -253,9 +265,8 @@ inline void TestApplication::setup_input() {
         [&r](float32, float32) { r.view_mode = DebugViewMode::Normals; };
 
     // Other
-    spin_cube->event += [&](float32, float32) {
-        _app_renderer.cube_rotation = !_app_renderer.cube_rotation;
-    };
+    spin_cube->event +=
+        [&](float32, float32) { _cube_rotation = !_cube_rotation; };
     shader_reload->event +=
         [&](float32, float32) { _app_renderer.material_shader->reload(); };
 }

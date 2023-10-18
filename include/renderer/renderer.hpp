@@ -22,15 +22,12 @@ class Renderer {
     };
 
     // TODO: TEMP TEST CODE BEGIN
-    Geometry* current_geometry    = nullptr;
-    Geometry* current_ui_geometry = nullptr;
-    Shader*   material_shader     = nullptr;
-    Shader*   ui_shader           = nullptr;
+    Shader* material_shader = nullptr;
+    Shader* ui_shader       = nullptr;
 
     glm::vec3 camera_position { 2.0f, 2.0f, 2.0f };
+    // glm::vec3 camera_position { -428.2226105, 685.6713255, 231.030861 };
     glm::vec3 camera_look_dir { -1.0f, -1.0f, -1.0f };
-
-    bool cube_rotation = false;
     // TODO: TEMP TEST CODE END
 
     /**
@@ -58,11 +55,14 @@ class Renderer {
     /**
      * @brief Draw to the surface
      *
+     * @param render_data Data about everything that needs to be rendered
      * @param delta_time Time in seconds since the last frame
      * @return true If draw operation fully completes
      * @return false Otherwise
      */
-    Result<void, RuntimeError> draw_frame(const float32 delta_time);
+    Result<void, RuntimeError> draw_frame(
+        const RenderPacket* const render_data, const float32 delta_time
+    );
 
     /**
      * @brief Create a texture and upload its relevant data to the GPU
@@ -131,6 +131,12 @@ class Renderer {
         glm::vec4(0.0f, 0.0f, 1.0f, 0.0f),
         glm::vec4(0.0f, 0.0f, 0.0f, 1.0f)
     );
+
+    // TODO: Possibly temporary, but not 100% sure
+    void update_material_shader_globals() const;
+    void update_material_shader_locals(const glm::mat4 model) const;
+    void update_ui_shader_globals() const;
+    void update_ui_shader_locals(const glm::mat4 model) const;
 };
 
 template<typename VertexType>

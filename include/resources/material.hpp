@@ -94,6 +94,11 @@ class Material {
             _update_required = true;
         }
     };
+    /// @brief Index of the frame on which this material has been last updated
+    Property<uint64> last_update_frame {
+        GET { return _last_update_frame; }
+        SET { _last_update_frame = value; }
+    };
 
     /**
      * @brief Construct a new Material object
@@ -111,30 +116,10 @@ class Material {
     ~Material();
 
     /**
-     * @brief Set global uniform values for all materials witch utilize this
-     * shader. (TODO: temp)
-     *
-     * @param projection Projection matrix to set
-     * @param view View matrix to set
-     */
-    void apply_global(
-        const glm::mat4 projection,
-        const glm::mat4 view,
-        const glm::vec4 ambient_color = glm::vec4(0.0f),
-        const glm::vec3 view_position = glm::vec3(0.0f),
-        const uint32    render_mode   = 0
-    );
-    /**
      * @brief Set instance uniform values of this material.
      *
      */
     void apply_instance();
-    /**
-     * @brief Set local uniform values of this material
-     *
-     * @param model Model matrix to set
-     */
-    void apply_local(const glm::mat4 model);
 
     const static uint32 max_name_length = 256;
 
@@ -147,6 +132,8 @@ class Material {
     glm::vec4     _diffuse_color;
     float32       _shininess;
     bool          _update_required = true;
+
+    uint64 _last_update_frame = (uint64) -1;
 };
 
 } // namespace ENGINE_NAMESPACE

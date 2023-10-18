@@ -26,7 +26,9 @@ void Renderer::on_resize(const uint32 width, const uint32 height) {
     );
     _backend->resized(width, height);
 }
-Result<void, RuntimeError> Renderer::draw_frame(const float32 delta_time) {
+Result<void, RuntimeError> Renderer::draw_frame(
+    const RenderPacket* const render_data, const float32 delta_time
+) {
     _backend->increment_frame_number();
 
     // Begin frame
@@ -34,36 +36,29 @@ Result<void, RuntimeError> Renderer::draw_frame(const float32 delta_time) {
     if (result.has_error()) { return {}; }
 
     // === World shader ===
+    // Bind render pass
     _backend->begin_render_pass(BuiltinRenderPass::World);
+    // Use shader
     material_shader->use();
-    Material* current_material = current_geometry->material;
+    // Setup shader globals
+    update_material_shader_globals();
 
-    // Update global state
-    glm::mat4 _view = glm::lookAt(
-        camera_position,
-        camera_position + camera_look_dir,
-        glm::vec3(0.0f, 0.0f, 1.0f)
-    );
-    current_material->apply_global(
-        _projection, _view, _ambient_color, camera_position, _view_mode
-    );
+    // Draw geometries
+    for (const auto& geo_data : render_data->geometry_data) {
+        // Update material instance
+        Material* const geo_material = geo_data.geometry->material;
+        if (_backend->get_current_frame() != geo_material->last_update_frame) {
+            // This material hasn't been updated yet
+            geo_material->apply_instance();
+            geo_material->last_update_frame = _backend->get_current_frame();
+        }
 
-    // Update instances
-    current_material->apply_instance();
+        // Apply local
+        update_material_shader_locals(geo_data.model);
 
-    // Update locals
-    // TODO: Temp code; update one and only object
-    static float rotation = 0.0f;
-    if (cube_rotation) rotation += 50.0f * delta_time;
-    auto model = glm::rotate(
-        glm::mat4(1.0f), glm::radians(rotation), glm::vec3(0.0f, 0.0f, 1.0f)
-    );
-    current_material->apply_local(model);
-
-    // Draw geometry
-    GeometryRenderData data = {};
-    data.geometry           = current_geometry;
-    _backend->draw_geometry(data);
+        // Draw geometry
+        _backend->draw_geometry(geo_data.geometry);
+    }
 
     // End renderpass
     _backend->end_render_pass(BuiltinRenderPass::World);
@@ -71,21 +66,20 @@ Result<void, RuntimeError> Renderer::draw_frame(const float32 delta_time) {
     // === UI changes ===
     _backend->begin_render_pass(BuiltinRenderPass::UI);
     ui_shader->use();
-    Material* ui_material = current_ui_geometry->material;
+    update_ui_shader_globals();
 
-    // Update global state
-    ui_material->apply_global(_projection_ui, _view_ui);
+    // Get UI geometry
+    const auto ui_geo = render_data->ui_geometry_data;
 
     // Update instance
+    Material* ui_material = ui_geo.geometry->material;
     ui_material->apply_instance();
 
     // Update local
-    model = glm::mat4(1.0f);
-    ui_material->apply_local(model);
+    update_ui_shader_locals(ui_geo.model);
 
     // Draw UI
-    data.geometry = current_ui_geometry;
-    _backend->draw_geometry(data);
+    _backend->draw_geometry(ui_geo.geometry);
 
     // End renderpass
     _backend->end_render_pass(BuiltinRenderPass::UI);
@@ -125,6 +119,70 @@ Shader* Renderer::create_shader(const ShaderConfig config) {
 void Renderer::destroy_shader(Shader* shader) {
     _backend->destroy_shader(shader);
     Logger::trace(RENDERER_LOG, "Shader destroyed.");
+}
+
+// //////////////////////// //
+// RENDERER PRIVATE METHODS //
+// //////////////////////// //
+
+#define set_uniform(uniform_name, uniform_value)                               \
+    {                                                                          \
+        auto uniform_id_res = shader->get_uniform_index(uniform_name);         \
+        if (uniform_id_res.has_error()) {                                      \
+            Logger::error(                                                     \
+                RENDERER_LOG,                                                  \
+                "Shader set_uniform method failed. No uniform is named \"",    \
+                uniform_name,                                                  \
+                "\". Nothing was done."                                        \
+            );                                                                 \
+            return;                                                            \
+        }                                                                      \
+        auto uniform_id = uniform_id_res.value();                              \
+        auto set_result = shader->set_uniform(uniform_id, &uniform_value);     \
+        if (set_result.has_error()) {                                          \
+            Logger::error(                                                     \
+                RENDERER_LOG,                                                  \
+                "Shader set_uniform method failed for \"",                     \
+                uniform_name,                                                  \
+                "\". Nothing was done"                                         \
+            );                                                                 \
+            return;                                                            \
+        }                                                                      \
+    }
+
+void Renderer::update_material_shader_globals() const {
+    const auto shader = material_shader;
+
+    // Compute view matrix
+    glm::mat4 view = glm::lookAt(
+        camera_position,
+        camera_position + camera_look_dir,
+        glm::vec3(0.0f, 0.0f, 1.0f)
+    );
+
+    // Apply globals
+    set_uniform("projection", _projection);
+    set_uniform("view", view);
+    set_uniform("ambient_color", _ambient_color);
+    set_uniform("view_position", camera_position);
+    set_uniform("mode", _view_mode);
+    shader->apply_global();
+}
+void Renderer::update_ui_shader_globals() const {
+    const auto shader = ui_shader;
+
+    // Apply globals
+    set_uniform("projection", _projection_ui);
+    set_uniform("view", _view_ui);
+    shader->apply_global();
+}
+void Renderer::update_material_shader_locals(const glm::mat4 model) const {
+    const auto shader = material_shader;
+    set_uniform("model", model);
+}
+void Renderer::update_ui_shader_locals(const glm::mat4 model) const {
+    const auto shader = ui_shader;
+    set_uniform("model", model);
 }
 
 } // namespace ENGINE_NAMESPACE
