@@ -10,14 +10,10 @@ GeometryConfig::GeometryConfig() {}
 GeometryConfig::GeometryConfig(
     const String          name,
     const Vector<uint32>& indices,
-    const glm::vec3       center,
-    const glm::vec3       max_extents,
-    const glm::vec3       min_extents,
     const String          material_name,
     const bool            auto_release
 )
-    : name(name), indices(indices), center(center), max_extents(max_extents),
-      min_extents(min_extents), material_name(material_name),
+    : name(name), indices(indices), material_name(material_name),
       auto_release(auto_release) {}
 GeometryConfig::~GeometryConfig() {}
 
@@ -30,21 +26,14 @@ GeometryConfig2D::GeometryConfig2D(
     const String            name,
     const Vector<Vertex2D>& vertices,
     const Vector<uint32>&   indices,
-    const glm::vec3         center,
-    const glm::vec3         max_extents,
-    const glm::vec3         min_extents,
+    const glm::vec2         center,
+    const glm::vec2         max_extents,
+    const glm::vec2         min_extents,
     const String            material_name,
     const bool              auto_release
 )
-    : GeometryConfig(
-          name,
-          indices,
-          center,
-          max_extents,
-          min_extents,
-          material_name,
-          auto_release
-      ),
+    : GeometryConfig(name, indices, material_name, auto_release),
+      center(center), max_extents(max_extents), min_extents(min_extents),
       vertices(vertices) {}
 GeometryConfig2D::~GeometryConfig2D() {}
 
@@ -63,15 +52,8 @@ GeometryConfig3D::GeometryConfig3D(
     const String            material_name,
     const bool              auto_release
 )
-    : GeometryConfig(
-          name,
-          indices,
-          center,
-          max_extents,
-          min_extents,
-          material_name,
-          auto_release
-      ),
+    : GeometryConfig(name, indices, material_name, auto_release),
+      center(center), max_extents(max_extents), min_extents(min_extents),
       vertices(vertices) {}
 GeometryConfig3D::~GeometryConfig3D() {}
 

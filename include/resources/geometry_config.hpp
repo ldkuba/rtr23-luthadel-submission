@@ -13,9 +13,6 @@ class GeometryConfig : public Serializable {
     uint8          dim_count = 0;
     String         name;
     Vector<uint32> indices { { MemoryTag::Geometry } };
-    glm::vec3      center;
-    glm::vec3      max_extents;
-    glm::vec3      min_extents;
     String         material_name;
     bool           auto_release;
 
@@ -23,23 +20,13 @@ class GeometryConfig : public Serializable {
     GeometryConfig(
         const String          name,
         const Vector<uint32>& indices,
-        const glm::vec3       center,
-        const glm::vec3       max_extents,
-        const glm::vec3       min_extents,
         const String          material_name = "",
         const bool            auto_release  = true
     );
     virtual ~GeometryConfig();
 
     serializable_attributes(
-        dim_count,
-        indices,
-        center,
-        max_extents,
-        min_extents,
-        name,
-        material_name,
-        auto_release
+        dim_count, indices, name, material_name, auto_release
     );
 };
 
@@ -50,15 +37,18 @@ class GeometryConfig2D : public GeometryConfig {
   public:
     uint8            dim_count = 2;
     Vector<Vertex2D> vertices { { MemoryTag::Geometry } };
+    glm::vec2        max_extents;
+    glm::vec2        center;
+    glm::vec2        min_extents;
 
     GeometryConfig2D();
     GeometryConfig2D(
         const String            name,
         const Vector<Vertex2D>& vertices,
         const Vector<uint32>&   indices,
-        const glm::vec3         center,
-        const glm::vec3         max_extents,
-        const glm::vec3         min_extents,
+        const glm::vec2         center,
+        const glm::vec2         max_extents,
+        const glm::vec2         min_extents,
         const String            material_name = "",
         const bool              auto_release  = true
     );
@@ -84,6 +74,9 @@ class GeometryConfig3D : public GeometryConfig {
   public:
     uint8            dim_count = 3;
     Vector<Vertex3D> vertices { { MemoryTag::Geometry } };
+    glm::vec3        center;
+    glm::vec3        max_extents;
+    glm::vec3        min_extents;
 
     GeometryConfig3D();
     GeometryConfig3D(
