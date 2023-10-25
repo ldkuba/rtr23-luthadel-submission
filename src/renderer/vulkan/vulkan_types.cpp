@@ -35,7 +35,7 @@ vk::Extent2D SwapchainSupportDetails::get_extent(
     const uint32 width, const uint32 height
 ) const {
     // Return required width and height if supported
-    if (capabilities.currentExtent.width != UINT32_MAX)
+    if (capabilities.currentExtent.width != uint32_max)
         return capabilities.currentExtent;
 
     return { std::clamp(

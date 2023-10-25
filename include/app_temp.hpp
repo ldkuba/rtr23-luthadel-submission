@@ -5,6 +5,7 @@
 #include "math_libs.hpp"
 #include "systems/geometry_system.hpp"
 #include "systems/input/input_system.hpp"
+#include "resources/mesh.hpp"
 
 // TODO: TEMP
 #include "resources/loaders/mesh_loader.hpp"
@@ -61,14 +62,40 @@ inline void TestApplication::run() {
 
     _app_renderer.material_shader->reload();
 
-    // Construct render packet
-    RenderPacket packet {};
+    // === Assign meshes ===
+    Vector<Mesh*> meshes {};
 
 #define CURRENT_SCENE 2
 #if CURRENT_SCENE == 0
-    Geometry* const geometry =
+    // Create geometries
+    Geometry* const geometry_1 =
         _geometry_system.generate_cube("cube", "test_material");
-    packet.geometry_data.push_back({ geometry, glm::mat4(1.0f) });
+    Geometry* const geometry_2 =
+        _geometry_system.generate_cube("cube", "test_material");
+    Geometry* const geometry_3 =
+        _geometry_system.generate_cube("cube", "test_material");
+
+    // Create meshes
+    Mesh* mesh_1 = new Mesh(geometry_1);
+    Mesh* mesh_2 = new Mesh(geometry_2);
+    Mesh* mesh_3 = new Mesh(geometry_3);
+
+    // Mesh 2 transform
+    mesh_2->transform.scale_by(0.4f);
+    mesh_2->transform.rotate_by_deg(glm::vec3(0, 1, 0), 30.f);
+    mesh_2->transform.translate_by(glm::vec3(0.f, 1.f, 0.f));
+    mesh_2->transform.parent = &mesh_1->transform;
+
+    // Mesh 3 transform
+    mesh_3->transform.scale_by(0.2f);
+    mesh_3->transform.rotate_by_deg(glm::vec3(1, 0, 0), -30.f);
+    mesh_3->transform.translate_by(glm::vec3(0.f, 1.f, 0.f));
+    mesh_3->transform.parent = &mesh_2->transform;
+
+    // Add meshes
+    meshes.push_back(mesh_1);
+    meshes.push_back(mesh_2);
+    meshes.push_back(mesh_3);
 #else
     /// Load MESH TEST
     MeshLoader loader {};
@@ -86,10 +113,20 @@ inline void TestApplication::run() {
     auto config_array = dynamic_cast<GeometryConfigArray*>(load_result.value());
 
     // Add all geometries
-    for (const auto config : config_array->configs) {
-        Geometry* const geometry = _geometry_system.acquire(*config);
-        packet.geometry_data.push_back({ geometry, glm::mat4(1.0f) });
-    }
+    Vector<Geometry*> geometries {};
+    geometries.reserve(config_array->configs.size());
+    for (auto config : config_array->configs)
+        geometries.push_back(_geometry_system.acquire(*config));
+
+    // Add mesh
+    Mesh* mesh = new Mesh(geometries);
+#    if CURRENT_SCENE == 2 || CURRENT_SCENE == 1
+#        if CURRENT_SCENE == 2
+    mesh->transform.scale_by(0.01f);
+#        endif
+    mesh->transform.rotate_by_deg(glm::vec3(1, 0, 0), 90.f);
+#    endif
+    meshes.push_back(mesh);
 #endif
 
     /// Load GUI TEST
@@ -108,7 +145,17 @@ inline void TestApplication::run() {
                                 glm::vec3(side),
                                 glm::vec3(0),
                                 "test_ui_material" };
-    packet.ui_geometry_data.geometry = _geometry_system.acquire(config2d);
+    const auto       geom_2d = _geometry_system.acquire(config2d);
+
+    // === Construct render packet ===
+    RenderPacket packet {};
+
+    // Add 3D meshes
+    for (const auto mesh : meshes)
+        mesh->add_geometry_to_render_packet(packet);
+
+    // Add UI
+    packet.ui_geometry_data.geometry = geom_2d;
     packet.ui_geometry_data.model    = glm::mat4(1.f);
 
     // === Main loop ===
@@ -118,12 +165,24 @@ inline void TestApplication::run() {
         _app_surface->process_events(delta_time);
 
         // TODO: Temp code; update one and only object
-        static float rotation = 0.0f;
-        if (_cube_rotation) rotation += 50.0f * delta_time;
-        auto model = glm::rotate(
-            glm::mat4(1.0f), glm::radians(rotation), glm::vec3(0.0f, 0.0f, 1.0f)
-        );
-        packet.geometry_data[0].model = model;
+        if (_cube_rotation) {
+            float rotation_speed = 1.0f * delta_time;
+            for (auto& mesh : meshes) {
+                mesh->transform.rotate_by(
+#if CURRENT_SCENE == 2 || CURRENT_SCENE == 1
+                    glm::vec3(0.0f, 1.0f, 0.0f),
+#else
+                    glm::vec3(0.0f, 0.0f, 1.0f),
+#endif
+                    rotation_speed
+                );
+            }
+
+            // Readd everything
+            packet.geometry_data.clear();
+            for (const auto mesh : meshes)
+                mesh->add_geometry_to_render_packet(packet);
+        }
 
         auto result = _app_renderer.draw_frame(&packet, delta_time);
         if (result.has_error()) {

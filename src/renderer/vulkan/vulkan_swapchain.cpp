@@ -110,7 +110,7 @@ void VulkanSwapchain::compute_next_image_index(
     // Obtain a swapchain image (next in queue for drawing)
     try {
         auto obtained = _device->handle().acquireNextImageKHR(
-            _handle, UINT64_MAX, signal_semaphore
+            _handle, uint64_max, signal_semaphore
         );
         if (obtained.result != vk::Result::eSuccess &&
             obtained.result != vk::Result::eSuboptimalKHR)
@@ -148,7 +148,8 @@ void VulkanSwapchain::present(
             recreate();
             _should_resize = false;
         }
-    // TODO: Windows nvidia drivers throw this (probably). Can be handled without catching using pResults in present_info
+        // TODO: Windows nvidia drivers throw this (probably). Can be handled
+        // without catching using pResults in present_info
     } catch (vk::OutOfDateKHRError e) {
         recreate();
         _should_resize = false;

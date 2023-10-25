@@ -160,7 +160,7 @@ void FreeListAllocator::find_best(
     Node*&       found_node
 ) {
     // Iterate WHOLE list keeping a pointer to the best fit
-    uint64 smallest_diff = UINT64_MAX;
+    uint64 smallest_diff = uint64_max;
     Node*  best_block    = nullptr;
 
     Node *it = _free_list.head, *it_prev = nullptr;

@@ -15,7 +15,7 @@ namespace ENGINE_NAMESPACE {
 struct Vertex3D {
     glm::vec3 position;
     glm::vec3 normal;
-    glm::vec4 tangent;
+    glm::vec3 tangent;
     glm::vec4 color;
     glm::vec2 texture_coord;
 
@@ -23,7 +23,7 @@ struct Vertex3D {
     Vertex3D(
         const glm::vec3 position,
         const glm::vec3 normal,
-        const glm::vec4 tangent,
+        const glm::vec3 tangent,
         const glm::vec4 color,
         const glm::vec2 texture_coord
     )
@@ -32,11 +32,19 @@ struct Vertex3D {
     ~Vertex3D() {}
 
     bool operator==(const Vertex3D& other) const {
-        return other.position == position && //
-               other.normal == normal &&     //
-               other.tangent == tangent &&   //
-               other.color == color &&       //
-               other.texture_coord == texture_coord;
+        const auto same_position =
+            glm::all(glm::epsilonEqual(other.position, position, Epsilon32));
+        const auto same_normal =
+            glm::all(glm::epsilonEqual(other.normal, normal, Epsilon32));
+        const auto same_tangent =
+            glm::all(glm::epsilonEqual(other.tangent, tangent, Epsilon32));
+        const auto same_color =
+            glm::all(glm::epsilonEqual(other.color, color, Epsilon32));
+        const auto same_texture_coord = glm::all(
+            glm::epsilonEqual(other.texture_coord, texture_coord, Epsilon32)
+        );
+        return same_position && same_normal && same_tangent && same_color &&
+               same_texture_coord;
     }
 };
 
@@ -80,8 +88,12 @@ struct Vertex2D {
     ~Vertex2D() {}
 
     bool operator==(const Vertex2D& other) const {
-        return other.position == position &&
-               other.texture_coord == texture_coord;
+        const auto same_position =
+            glm::all(glm::epsilonEqual(other.position, position, Epsilon32));
+        const auto same_texture_coord = glm::all(
+            glm::epsilonEqual(other.texture_coord, texture_coord, Epsilon32)
+        );
+        return same_position && same_texture_coord;
     }
 };
 

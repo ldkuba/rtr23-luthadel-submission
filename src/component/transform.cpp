@@ -2,8 +2,23 @@
 
 namespace ENGINE_NAMESPACE {
 
+Transform::Transform(
+    const glm::vec3 position, const glm::quat rotation, const glm::vec3 scale
+)
+    : _position(position), _rotation(rotation), _scale(scale) {}
+Transform::Transform(const Transform& transform)
+    : Transform(transform.position, transform.rotation, transform.scale) {}
+
+Transform::~Transform() {}
+
+void Transform::copy(const Transform& transform) {
+    _position = transform.position;
+    _rotation = transform.rotation;
+    _scale    = transform.scale;
+}
+
 void Transform::translate_by(const glm::vec3 translation) {
-    _position += _position;
+    _position += translation;
     _is_dirty = true;
 }
 void Transform::rotate_by(const glm::quat rotation) {
@@ -14,7 +29,15 @@ void Transform::rotate_by(const glm::vec3 axis, const float32 angle) {
     _rotation = glm::rotate(_rotation, angle, axis);
     _is_dirty = true;
 }
+void Transform::rotate_by_deg(const glm::vec3 axis, const float32 angle) {
+    _rotation = glm::rotate(_rotation, glm::radians(angle), axis);
+    _is_dirty = true;
+}
 void Transform::scale_by(const glm::vec3 scale) {
+    _scale *= scale;
+    _is_dirty = true;
+}
+void Transform::scale_by(const float32 scale) {
     _scale *= scale;
     _is_dirty = true;
 }
@@ -32,7 +55,7 @@ glm::mat4 Transform::local() {
 }
 glm::mat4 Transform::world() {
     auto local = this->local();
-    if (parent()) return local * parent()->world();
+    if (parent()) return parent()->world() * local;
     return local;
 }
 

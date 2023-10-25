@@ -1,5 +1,7 @@
 #pragma once
 
+#include <limits>
+
 // Global settings
 #define ENGINE_NAME "Vulkan Engine"
 #define APP_NAME "Vulkan Engine"
@@ -58,13 +60,46 @@ static_assert(sizeof(float32) == 4, "Expected a 4 byte long float32.");
 static_assert(sizeof(float64) == 8, "Expected a 8 byte long float64.");
 static_assert(sizeof(float128) == 16, "Expected a 16 byte long float128.");
 
-// Additional max values
-#define UINT128_MAX ((uint128) -1)
-#define INT128_MAX ((int128) (UINT128_MAX / 2))
-#define INT128_MIN ((int128) - (UINT128_MAX / 2 + 1))
-
 // String constant expresion attribute
 #define STRING_CONST(x) constexpr static const char* const x = #x
+
+// -----------------------------------------------------------------------------
+// Numeric limits
+// -----------------------------------------------------------------------------
+
+// Max unsigned integers
+inline const constexpr uint8   uint8_max   = 255;
+inline const constexpr uint16  uint16_max  = 65535;
+inline const constexpr uint32  uint32_max  = 4294967295U;
+inline const constexpr uint64  uint64_max  = (uint64) -1;
+inline const constexpr uint128 uint128_max = (uint128) -1;
+
+// Max / Min integers
+inline const constexpr int8   int8_max   = 127;
+inline const constexpr int16  int16_max  = 32767;
+inline const constexpr int32  int32_max  = 2147483647;
+inline const constexpr int64  int64_max  = uint64_max / 2;
+inline const constexpr int128 int128_max = uint128_max / 2;
+
+inline const constexpr int8   int8_min   = -int8_max - 1;
+inline const constexpr int16  int16_min  = -int16_max - 1;
+inline const constexpr int32  int32_min  = -int32_max - 1;
+inline const constexpr int64  int64_min  = -int64_max - 1;
+inline const constexpr int128 int128_min = -uint128_max - 1;
+
+// Smallest positive floats
+inline const constexpr float32 Epsilon32 =
+    std::numeric_limits<float32>::epsilon();
+inline const constexpr float64 Epsilon64 =
+    std::numeric_limits<float64>::epsilon();
+inline const constexpr float64 Epsilon128 =
+    std::numeric_limits<float128>::epsilon();
+inline const constexpr float32 Infinity32 =
+    std::numeric_limits<float32>::infinity();
+inline const constexpr float64 Infinity64 =
+    std::numeric_limits<float64>::infinity();
+inline const constexpr float128 Infinity128 =
+    std::numeric_limits<float128>::infinity();
 
 // -----------------------------------------------------------------------------
 // PLATFORMS

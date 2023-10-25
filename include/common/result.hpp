@@ -126,9 +126,10 @@ namespace detail {
             std::is_base_of<Base, typename std::decay<Derived>::type>::value>::
             type>
     inline RESULT_INLINE_VISIBILITY constexpr auto
-    invoke(T Base::*pmf, Derived&& ref, Args&&... args) noexcept(noexcept((
-        ::RESULT_NS_IMPL::detail::forward<Derived>(ref).*pmf
-    )(::RESULT_NS_IMPL::detail::forward<Args>(args)...)))
+    invoke(T Base::*pmf, Derived&& ref, Args&&... args) noexcept(noexcept(
+        (::RESULT_NS_IMPL::detail::forward<Derived>(ref).*
+         pmf)(::RESULT_NS_IMPL::detail::forward<Args>(args)...)
+    ))
         -> decltype((::RESULT_NS_IMPL::detail::forward<Derived>(ref).*pmf)(
             ::RESULT_NS_IMPL::detail::forward<Args>(args)...
         )) {
@@ -231,10 +232,12 @@ namespace detail {
     inline RESULT_INLINE_VISIBILITY constexpr auto invoke(
         F&& f, Args&&... args
     ) noexcept(noexcept(std::forward<F>(f)(std::forward<Args>(args)...)))
-        -> decltype(RESULT_NS_IMPL::detail::forward<F>(f
-        )(RESULT_NS_IMPL::detail::forward<Args>(args)...)) {
-        return RESULT_NS_IMPL::detail::forward<F>(f
-        )(RESULT_NS_IMPL::detail::forward<Args>(args)...);
+        -> decltype(RESULT_NS_IMPL::detail::forward<F>(f)(
+            RESULT_NS_IMPL::detail::forward<Args>(args)...
+        )) {
+        return RESULT_NS_IMPL::detail::forward<F>(f)(
+            RESULT_NS_IMPL::detail::forward<Args>(args)...
+        );
     }
 
     template<typename Fn, typename... Args>
@@ -3863,7 +3866,7 @@ inline RESULT_INLINE_VISIBILITY constexpr RESULT_NS_IMPL::Failure<E>::Failure(
 template<typename E>
 template<typename E2, typename>
 inline RESULT_INLINE_VISIBILITY constexpr auto RESULT_NS_IMPL::Failure<E>::
-                                               operator=(E2&& error) noexcept(
+operator=(E2&& error) noexcept(
     std::is_nothrow_assignable<E, E2>::value ||
     std::is_lvalue_reference<E>::value
 ) -> Failure& {
@@ -4334,7 +4337,7 @@ inline RESULT_INLINE_VISIBILITY RESULT_NS_IMPL::detail::
 //=============================================================================
 
 template<typename T, typename E>
-inline RESULT_INLINE_VISIBILITY auto            RESULT_NS_IMPL::detail::
+inline RESULT_INLINE_VISIBILITY auto RESULT_NS_IMPL::detail::
     result_trivial_copy_assign_base_impl<T, E>::operator=(
         const result_trivial_copy_assign_base_impl& other
     ) noexcept(std::is_nothrow_copy_constructible<T>::value&&
@@ -4353,7 +4356,7 @@ inline RESULT_INLINE_VISIBILITY auto            RESULT_NS_IMPL::detail::
 //=========================================================================
 
 template<typename T, typename E>
-inline RESULT_INLINE_VISIBILITY auto            RESULT_NS_IMPL::detail::
+inline RESULT_INLINE_VISIBILITY auto RESULT_NS_IMPL::detail::
     result_trivial_move_assign_base_impl<T, E>::operator=(
         result_trivial_move_assign_base_impl&& other
     ) noexcept(std::is_nothrow_move_constructible<T>::value&&
@@ -4647,7 +4650,7 @@ operator->() noexcept -> typename std::remove_reference<T>::type* {
 
 template<typename T, typename E>
 inline RESULT_INLINE_VISIBILITY constexpr auto RESULT_NS_IMPL::Result<T, E>::
-                                               operator->() const noexcept ->
+operator->() const noexcept ->
     typename std::remove_reference<typename std::add_const<T>::type>::type* {
 #if __cplusplus >= 201703L
     return std::addressof(**this);
@@ -4672,14 +4675,14 @@ operator*() && noexcept -> typename std::add_rvalue_reference<T>::type {
 
 template<typename T, typename E>
 inline RESULT_INLINE_VISIBILITY constexpr auto RESULT_NS_IMPL::Result<T, E>::
-                                               operator*() const& noexcept ->
+operator*() const& noexcept ->
     typename std::add_lvalue_reference<typename std::add_const<T>::type>::type {
     return m_storage.storage.m_value;
 }
 
 template<typename T, typename E>
 inline RESULT_INLINE_VISIBILITY constexpr auto RESULT_NS_IMPL::Result<T, E>::
-                                               operator*() const&& noexcept ->
+operator*() const&& noexcept ->
     typename std::add_rvalue_reference<typename std::add_const<T>::type>::type {
     using reference = typename std::add_rvalue_reference<
         typename std::add_const<T>::type>::type;

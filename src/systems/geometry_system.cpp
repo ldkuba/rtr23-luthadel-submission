@@ -250,17 +250,17 @@ void GeometrySystem::generate_tangents(
         float32 dividend = delta_U1 * delta_V2 - delta_U2 * delta_V1;
         float32 fc       = 1.0f / dividend;
 
+        // Vertex tangent for this triangle
+        glm::vec3 tangent = glm::normalize(glm::vec3 {
+            fc * (delta_V2 * edge1.x - delta_V1 * edge2.x),
+            fc * (delta_V2 * edge1.y - delta_V1 * edge2.y),
+            fc * (delta_V2 * edge1.z - delta_V1 * edge2.z) });
+
         // Used for checking whether the UV coordinates are flipped. This info
         // is stored in tangents w component. (Useful if our model reuses its
         // texture UVs)
         float32 handedness = (dividend > 0.0f) ? -1.0f : 1.0f;
-
-        // Vertex tangent for this triangle
-        glm::vec4 tangent = glm::normalize(glm::vec4 {
-            fc * (delta_V2 * edge1.x - delta_V1 * edge2.x),
-            fc * (delta_V2 * edge1.y - delta_V1 * edge2.y),
-            fc * (delta_V2 * edge1.z - delta_V1 * edge2.z),
-            handedness });
+        tangent *= handedness;
 
         v0.tangent = tangent;
         v1.tangent = tangent;

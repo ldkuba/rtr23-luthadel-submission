@@ -47,11 +47,7 @@ Result<void, RuntimeError> Renderer::draw_frame(
     for (const auto& geo_data : render_data->geometry_data) {
         // Update material instance
         Material* const geo_material = geo_data.geometry->material;
-        if (_backend->get_current_frame() != geo_material->last_update_frame) {
-            // This material hasn't been updated yet
-            geo_material->apply_instance();
-            geo_material->last_update_frame = _backend->get_current_frame();
-        }
+        geo_material->apply_instance();
 
         // Apply local
         update_material_shader_locals(geo_data.model);

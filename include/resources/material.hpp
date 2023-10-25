@@ -94,11 +94,6 @@ class Material {
             _update_required = true;
         }
     };
-    /// @brief Index of the frame on which this material has been last updated
-    Property<uint64> last_update_frame {
-        GET { return _last_update_frame; }
-        SET { _last_update_frame = value; }
-    };
 
     /**
      * @brief Construct a new Material object
@@ -132,8 +127,6 @@ class Material {
     glm::vec4     _diffuse_color;
     float32       _shininess;
     bool          _update_required = true;
-
-    uint64 _last_update_frame = (uint64) -1;
 };
 
 } // namespace ENGINE_NAMESPACE

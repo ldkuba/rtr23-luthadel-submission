@@ -132,6 +132,24 @@ class Map : public std::map<_Key, _Tp, _Compare, TAllocator<_Tp>> {
         const _Compare&       __comp,
         const allocator_type& __a = allocator_type(MemoryTag::Map))
         : _base_class(__first, __last, __comp, __a) {}
+
+  public: // Additions
+
+    /**
+     * @brief Check whether the %Map contains a given key.
+     *
+     * @param __key Key to search for.
+     * @returns true if %Map contains the key; false otherwise.
+     */
+    bool contains(const _Key& __key) const {
+        const auto& i = this->find(__key);
+        return i != this->end();
+    }
+    // Move version
+    bool contains(_Key&& __key) const {
+        const auto& i = this->find(__key);
+        return i != this->end();
+    }
 };
 
 } // namespace ENGINE_NAMESPACE

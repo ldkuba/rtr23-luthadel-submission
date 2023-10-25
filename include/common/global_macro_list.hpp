@@ -33,11 +33,6 @@
     -   MEMORY_PADDING  Note: Memory padding used by allocators
     -   STRING_CONST(str)   Note: Used for custom "String" enum classes
     -   del
-    // Additional type limits
-    -   INT128_MAX
-    -   INT128_MIN
-    -   UINT128_MAX
-    -   UINT128_MIN
 // Serialization extensions
     - serializable_attributes
 //  General, NOT FOR USE

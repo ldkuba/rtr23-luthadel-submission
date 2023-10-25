@@ -108,37 +108,37 @@ Vector<String> String::split(const char delimiter) const {
 
 // Parse methods
 Result<uint8, InvalidArgument> String::parse_as_uint8() {
-    return parse_uint<uint8>(data(), length(), UINT8_MAX);
+    return parse_uint<uint8>(data(), length(), uint8_max);
 }
 Result<uint16, InvalidArgument> String::parse_as_uint16() {
-    return parse_uint<uint16>(data(), length(), UINT16_MAX);
+    return parse_uint<uint16>(data(), length(), uint16_max);
 }
 Result<uint32, InvalidArgument> String::parse_as_uint32() {
-    return parse_uint<uint32>(data(), length(), UINT32_MAX);
+    return parse_uint<uint32>(data(), length(), uint32_max);
 }
 Result<uint64, InvalidArgument> String::parse_as_uint64() {
-    return parse_uint<uint64>(data(), length(), UINT64_MAX);
+    return parse_uint<uint64>(data(), length(), uint64_max);
 }
 Result<uint128, InvalidArgument> String::parse_as_uint128() {
     if (length() > 39) return Failure("String couldn't be parsed.");
     Logger::warning("Correct conversion to uint128 is not guaranteed, overflow "
                     "may still occur.");
-    return parse_uint<uint128>(data(), length(), UINT128_MAX);
+    return parse_uint<uint128>(data(), length(), uint128_max);
 }
 Result<int8, InvalidArgument> String::parse_as_int8() {
-    return parse_int<int8>(data(), length(), INT8_MAX);
+    return parse_int<int8>(data(), length(), int8_max);
 }
 Result<int16, InvalidArgument> String::parse_as_int16() {
-    return parse_int<int16>(data(), length(), INT16_MAX);
+    return parse_int<int16>(data(), length(), int16_max);
 }
 Result<int32, InvalidArgument> String::parse_as_int32() {
-    return parse_int<int32>(data(), length(), INT32_MAX);
+    return parse_int<int32>(data(), length(), int32_max);
 }
 Result<int64, InvalidArgument> String::parse_as_int64() {
-    return parse_int<int64>(data(), length(), INT64_MAX);
+    return parse_int<int64>(data(), length(), int64_max);
 }
 Result<int128, InvalidArgument> String::parse_as_int128() {
-    return parse_int<int128>(data(), length(), INT128_MAX);
+    return parse_int<int128>(data(), length(), int128_max);
 }
 Result<float32, InvalidArgument> String::parse_as_float32() {
     size_t  ending;
@@ -237,10 +237,10 @@ using namespace ENGINE_NAMESPACE;
 
 // Additional to_string conversions
 namespace std {
-string to_string(const uint128& in) {
-    uint8   digit = in % 10;
-    uint128 num   = in / 10;
-    string  res   = to_string(digit);
+string to_string(const ENGINE_NAMESPACE::uint128& in) {
+    ENGINE_NAMESPACE::uint8   digit = in % 10;
+    ENGINE_NAMESPACE::uint128 num   = in / 10;
+    string                    res   = to_string(digit);
     while (num != 0) {
         digit = num % 10;
         num   = num / 10;
@@ -248,22 +248,22 @@ string to_string(const uint128& in) {
     }
     return res;
 }
-string to_string(const int128& in) {
-    if (in > 0) return to_string((uint128) in);
-    return "-" + to_string((uint128) -in);
+string to_string(const ENGINE_NAMESPACE::int128& in) {
+    if (in > 0) return to_string((ENGINE_NAMESPACE::uint128) in);
+    return "-" + to_string((ENGINE_NAMESPACE::uint128) -in);
 }
 template<typename T>
-string to_string(const Property<T>& in) {
+string to_string(const ENGINE_NAMESPACE::Property<T>& in) {
     return std::to_string(in());
 }
 template<>
-string to_string<String>(const Property<String>& in) {
+string to_string<String>(const ENGINE_NAMESPACE::Property<String>& in) {
     return in();
 }
-string to_string(const Vector<char>& in) {
+string to_string(const ENGINE_NAMESPACE::Vector<char>& in) {
     return string((char*) in.data(), in.size());
 }
-string to_string(const Vector<unsigned char>& in) {
+string to_string(const ENGINE_NAMESPACE::Vector<unsigned char>& in) {
     return string((char*) in.data(), in.size());
 }
 } // namespace std

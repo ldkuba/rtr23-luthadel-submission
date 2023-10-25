@@ -48,16 +48,28 @@ class Transform {
     /**
      * @brief Construct a new Transform object
      *
-     * @param _position Transform position (Defaults to zero)
-     * @param _rotation Transform rotation (Defaults to identity)
-     * @param _scale Transform scale (Defaults to one)
+     * @param position Transform position (Defaults to zero)
+     * @param rotation Transform rotation (Defaults to identity)
+     * @param scale Transform scale (Defaults to one)
      */
     Transform(
-        const glm::vec3 _position = glm::zero<glm::vec3>(),
-        const glm::quat _rotation = glm::identity<glm::quat>(),
-        const glm::vec3 _scale    = glm::one<glm::vec3>()
+        const glm::vec3 position = glm::zero<glm::vec3>(),
+        const glm::quat rotation = glm::identity<glm::quat>(),
+        const glm::vec3 scale    = glm::one<glm::vec3>()
     );
+    /**
+     * @brief Construct a new Transform object
+     *
+     * @param transform Transform who's state we will copy
+     */
+    Transform(const Transform& transform);
     ~Transform();
+
+    /**
+     * @brief Copy state from another transform
+     * @param transform Transform who's state we will copy
+     */
+    void copy(const Transform& transform);
 
     /**
      * @brief Translate current transform position
@@ -75,15 +87,28 @@ class Transform {
      * @brief Rotate current transform
      *
      * @param axis Rotation axis
-     * @param angle Rotation angle
+     * @param angle Rotation angle expressed in radians
      */
     void rotate_by(const glm::vec3 axis, const float32 angle);
+
+    /**
+     * @brief Rotate current transform
+     *
+     * @param axis Rotation axis
+     * @param angle Rotation angle expressed in degrees
+     */
+    void rotate_by_deg(const glm::vec3 axis, const float32 angle);
 
     /**
      * @brief Apply scale to the current transform
      * @param scale Scale amount
      */
     void scale_by(const glm::vec3 scale);
+    /**
+     * @brief Apply scale to the current transform uniformly
+     * @param scale Scale amount
+     */
+    void scale_by(const float32 scale);
 
     /// @brief Get local transformation matrix of this transform
     glm::mat4 local();

@@ -185,12 +185,15 @@ Result<GeometryConfigArray*, RuntimeError> load_mesh(
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
 
-#include "unordered_map.hpp"
+#include "map.hpp"
 
 namespace ENGINE_NAMESPACE {
 
 // Local helper
-String create_mat_file(const MaterialConfig& config);
+String               create_mat_file(const MaterialConfig& config);
+Result<uint32, bool> fuzzy_get_index(
+    Map<float32, std::pair<Vertex, uint32>> vertex_map, Vertex vertex
+);
 
 Result<GeometryConfigArray*, RuntimeError> load_obj(
     const String& name, const String& path
@@ -235,62 +238,61 @@ Result<GeometryConfigArray*, RuntimeError> load_obj(
     config_array->configs.reserve(shapes.size());
 
     // Loop over shapes
-    UnorderedMap<uint32, uint32> unique_vertices = {};
+    Map<float32, std::pair<Vertex, uint32>> unique_vertices = {};
     for (const auto& shape : shapes) {
-        const auto       max_float = std::numeric_limits<float>::infinity();
         Vector<Vertex3D> vertices { { MemoryTag::Geometry } };
         Vector<uint32>   indices { { MemoryTag::Geometry } };
-        glm::vec3        extent_min { max_float, max_float, max_float };
-        glm::vec3        extent_max { -max_float, -max_float, -max_float };
+        glm::vec3        extent_min { Infinity32, Infinity32, Infinity32 };
+        glm::vec3        extent_max { -Infinity32, -Infinity32, -Infinity32 };
 
         // Load vertices, indices and extent
         unique_vertices.clear();
         for (const auto& index : shape.mesh.indices) {
+            Vertex vertex {};
+
+            // Load position
+            const auto x    = attributes.vertices[3 * index.vertex_index + 0];
+            const auto y    = attributes.vertices[3 * index.vertex_index + 1];
+            const auto z    = attributes.vertices[3 * index.vertex_index + 2];
+            vertex.position = { x, y, z };
+
+            // Compute extent
+            if (x < extent_min.x) extent_min.x = x;
+            if (y < extent_min.y) extent_min.y = y;
+            if (z < extent_min.z) extent_min.z = z;
+            if (x > extent_max.x) extent_max.x = x;
+            if (y > extent_max.y) extent_max.y = y;
+            if (z > extent_max.z) extent_max.z = z;
+
+            // Load normal
+            vertex.normal = { attributes.normals[3 * index.normal_index + 0],
+                              attributes.normals[3 * index.normal_index + 1],
+                              attributes.normals[3 * index.normal_index + 2] };
+
+            // Load texture coordinate
+            vertex.texture_coord = {
+                attributes.texcoords[2 * index.texcoord_index + 0],
+                1.0f - attributes.texcoords[2 * index.texcoord_index + 1]
+            };
+
+            // Load colors
+            vertex.color = { attributes.colors[3 * index.vertex_index + 0],
+                             attributes.colors[3 * index.vertex_index + 1],
+                             attributes.colors[3 * index.vertex_index + 2],
+                             1 };
+
             // Was vertex with this index already present?
-            if (!unique_vertices.contains(index.vertex_index)) {
-                // This is a new vertex, fill it with data
-                Vertex vertex {};
-
-                // Load position
-                const auto x = attributes.vertices[3 * index.vertex_index + 0];
-                const auto y = attributes.vertices[3 * index.vertex_index + 1];
-                const auto z = attributes.vertices[3 * index.vertex_index + 2];
-                vertex.position = { x, y, z };
-
-                // Compute extent
-                if (x < extent_min.x) extent_min.x = x;
-                if (y < extent_min.y) extent_min.y = y;
-                if (z < extent_min.z) extent_min.z = z;
-                if (x > extent_max.x) extent_max.x = x;
-                if (y > extent_max.y) extent_max.y = y;
-                if (z > extent_max.z) extent_max.z = z;
-
-                // Load normal
-                vertex.normal = {
-                    attributes.normals[3 * index.normal_index + 0],
-                    attributes.normals[3 * index.normal_index + 1],
-                    attributes.normals[3 * index.normal_index + 2]
-                };
-
-                // Load texture coordinate
-                vertex.texture_coord = {
-                    attributes.texcoords[2 * index.texcoord_index + 0],
-                    1.0f - attributes.texcoords[2 * index.texcoord_index + 1]
-                };
-
-                // Load colors
-                vertex.color = { attributes.colors[3 * index.vertex_index + 0],
-                                 attributes.colors[3 * index.vertex_index + 1],
-                                 attributes.colors[3 * index.vertex_index + 2],
-                                 1 };
-
+            const auto new_index_res = fuzzy_get_index(unique_vertices, vertex);
+            const auto new_index     = new_index_res.value_or(vertices.size());
+            if (new_index_res.has_value() == false) {
                 // Push to vertex list
-                unique_vertices[index.vertex_index] = vertices.size();
+                unique_vertices[vertex.position.x] =
+                    std::pair(vertex, new_index);
                 vertices.push_back(vertex);
             }
 
             // Push this index to the list anyways
-            indices.push_back(unique_vertices[index.vertex_index]);
+            indices.push_back(new_index);
         }
 
         // Compute center
@@ -300,7 +302,14 @@ Result<GeometryConfigArray*, RuntimeError> load_obj(
         GeometrySystem::generate_tangents(vertices, indices);
 
         // Compute materials
-        // TODO: Support multiple materials
+        // TODO: Support multiple materials per geometry
+        // Does that even ever happen?
+        const auto val_of_in = shape.mesh.material_ids.size();
+        if (val_of_in > 1)
+            Logger::trace(
+                "[!!!] :: Shape with multiple materials : ", val_of_in
+            );
+
         const auto mat_id = shape.mesh.material_ids[0];
         const auto material_name =
             (mat_id >= 0) ? material_configs[mat_id] : "";
@@ -330,6 +339,21 @@ Result<GeometryConfigArray*, RuntimeError> load_obj(
     return config_array;
 }
 
+Result<uint32, bool> fuzzy_get_index(
+    Map<float32, std::pair<Vertex, uint32>> vertex_map, Vertex vertex
+) {
+    const auto key  = vertex.position.x;
+    const auto from = vertex_map.lower_bound(key - Epsilon32);
+    const auto to   = vertex_map.upper_bound(key + Epsilon32);
+
+    auto current = from;
+    for (; current != to; current++)
+        if (current->second.first == vertex) return current->second.second;
+
+    return Failure(0);
+}
+
+// TODO: REMOVE WHEN POSSIBLE
 #define MAT_PATH "materials"
 
 #define write_setting(setting) file->write_ln(#setting, "=", config.setting);

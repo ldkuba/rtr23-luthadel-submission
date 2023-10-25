@@ -145,7 +145,7 @@ Result<void, RuntimeError> VulkanBackend::begin_frame(const float32 delta_time
     // Wait for previous frame to finish drawing
     std::array<vk::Fence, 1> fences = { _fences_in_flight[_current_frame] };
     try {
-        auto result = _device->handle().waitForFences(fences, true, UINT64_MAX);
+        auto result = _device->handle().waitForFences(fences, true, uint64_max);
         if (result != vk::Result::eSuccess) {
             Logger::error(RENDERER_VULKAN_LOG, "End of frame fence timed-out.");
             return Failure("Failed initialization failed.");

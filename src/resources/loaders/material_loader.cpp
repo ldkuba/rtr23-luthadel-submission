@@ -43,7 +43,7 @@ Result<Resource*, RuntimeError> MaterialLoader::load(const String name) {
 
     // Load material configuration from file
     String file_name = name + ".mat";
-    file_name.to_lower();
+    // file_name.to_lower();
     String file_path =
         ResourceSystem::base_path + "/" + _type_path + "/" + file_name;
 
