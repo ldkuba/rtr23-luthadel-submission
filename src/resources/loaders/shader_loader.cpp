@@ -25,7 +25,7 @@ Result<ShaderUniformConfig, RuntimeErrorCode> parse_uniform_config(
 // Constructor & Destructor
 ShaderLoader::ShaderLoader() {
     _type      = ResourceType::Shader;
-    _type_path = "shaders";
+    _type_path = "shaders/config";
 }
 ShaderLoader::~ShaderLoader() {}
 
