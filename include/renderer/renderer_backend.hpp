@@ -47,8 +47,8 @@ class RendererBackend {
     /**
      * @brief Preform operations in preparation for frame rendering
      * @param delta_time Time in seconds since the last frame
-     * @return false If a problem is encountered during the method execution
-     * @return true Otherwise
+     * @throws RuntimeError If a problem is encountered during the method
+     * execution
      */
     virtual Result<void, RuntimeError> begin_frame(const float32 delta_time) {
         return {};
@@ -56,8 +56,8 @@ class RendererBackend {
     /**
      * @brief Complete all rendering operations for this frame
      * @param delta_time Time in seconds since the last frame
-     * @return false If a problem is encountered during the method execution
-     * @return true Otherwise
+     * @throws RuntimeError If a problem is encountered during the method
+     * execution
      */
     virtual Result<void, RuntimeError> end_frame(const float32 delta_time) {
         return {};

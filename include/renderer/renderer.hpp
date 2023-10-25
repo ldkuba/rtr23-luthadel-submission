@@ -57,8 +57,7 @@ class Renderer {
      *
      * @param render_data Data about everything that needs to be rendered
      * @param delta_time Time in seconds since the last frame
-     * @return true If draw operation fully completes
-     * @return false Otherwise
+     * @throws RuntimeError If draw operation encounters issues
      */
     Result<void, RuntimeError> draw_frame(
         const RenderPacket* const render_data, const float32 delta_time
