@@ -49,7 +49,7 @@ Material::~Material() {}
             return;                                                            \
         }                                                                      \
     }
-#define set_sampler(sampler_name, texture)                                     \
+#define set_sampler(sampler_name, texture_map)                                 \
     {                                                                          \
         auto sampler_id_res = _shader->get_uniform_index(sampler_name);        \
         if (sampler_id_res.has_error()) {                                      \
@@ -62,7 +62,7 @@ Material::~Material() {}
             return;                                                            \
         }                                                                      \
         auto sampler_id = sampler_id_res.value();                              \
-        auto set_result = _shader->set_sampler(sampler_id, texture);           \
+        auto set_result = _shader->set_sampler(sampler_id, texture_map);       \
         if (set_result.has_error()) {                                          \
             Logger::error(                                                     \
                 MATERIAL_LOG,                                                  \
@@ -88,15 +88,37 @@ void Material::apply_instance() {
     _shader->bind_instance(internal_id.value());
     if (_update_required) {
         set_uniform("diffuse_color", _diffuse_color);
-        set_sampler("diffuse_texture", _diffuse_map.texture);
+        set_sampler("diffuse_texture", &_diffuse_map);
         if (_shader->get_name().compare_ci("builtin.material_shader") == 0) {
             set_uniform("shininess", _shininess);
-            set_sampler("specular_texture", _specular_map.texture);
-            set_sampler("normal_texture", _normal_map.texture);
+            set_sampler("specular_texture", &_specular_map);
+            set_sampler("normal_texture", &_normal_map);
         }
         _update_required = false;
     }
     _shader->apply_instance();
+}
+
+void Material::acquire_map_resources() {
+    // Gather texture map pointer list
+    Vector<TextureMap*> texture_maps;
+    texture_maps.push_back(&_diffuse_map);
+    texture_maps.push_back(&_specular_map);
+    texture_maps.push_back(&_normal_map);
+
+    // Acquire texture maps
+    for (const auto texture_map : texture_maps)
+        _shader->acquire_texture_map_resources(texture_map);
+
+    // Acquire shader instance
+    internal_id = _shader->acquire_instance_resources(texture_maps);
+}
+
+void Material::release_map_resources() {
+    _shader->release_texture_map_resources(&_diffuse_map);
+    _shader->release_texture_map_resources(&_specular_map);
+    _shader->release_texture_map_resources(&_normal_map);
+    _shader->release_instance_resources(internal_id.value());
 }
 
 } // namespace ENGINE_NAMESPACE

@@ -5,9 +5,7 @@
 namespace ENGINE_NAMESPACE {
 
 struct InternalTextureData {};
-
-/// @brief Collection of texture uses
-enum TextureUse { Unknown, MapDiffuse, MapSpecular, MapNormal };
+struct InternalTextureMapData {};
 
 /**
  * @brief Frontend (API agnostic) representation of a texture.
@@ -32,6 +30,10 @@ class Texture {
     Property<int32> channel_count {
         GET { return _channel_count; }
     };
+    /// @brief Number of MipMap levels used
+    Property<uint32> mip_level_count {
+        GET { return _mip_levels; }
+    };
     /// @brief Total texture data size in bytes
     Property<uint64> total_size {
         GET { return _total_size; }
@@ -39,6 +41,10 @@ class Texture {
     /// @brief True if texture uses any transparency
     Property<bool> has_transparency {
         GET { return _has_transparency; }
+    };
+    /// @brief True if this texture can be written to
+    Property<bool> is_writable {
+        GET { return _is_writable; }
     };
     /// @brief Pointer to internal texture data managed by the renderer
     Property<InternalTextureData*> internal_data {
@@ -62,20 +68,48 @@ class Texture {
         const int32  width,
         const int32  height,
         const int32  channel_count,
-        const bool   has_transparency
+        const bool   has_transparency,
+        const bool   is_writable
     );
     ~Texture() {}
 
     const static uint32 max_name_length = 256;
 
   private:
-    String               _name = "";
-    int32                _width;
-    int32                _height;
-    int32                _channel_count;
-    bool                 _has_transparency;
-    uint64               _total_size;
+    String _name = "";
+    int32  _width;
+    int32  _height;
+    int32  _channel_count;
+    int32  _mip_levels;
+    uint64 _total_size;
+    bool   _has_transparency;
+    bool   _is_writable;
+
     InternalTextureData* _internal_data;
+};
+
+/// @brief Collection of texture uses
+enum class TextureUse { Unknown, MapDiffuse, MapSpecular, MapNormal };
+/// @brief Collection of supported texture filtering modes
+enum class TextureFilter { NearestNeighbour, BiLinear };
+/// @brief Collection of possible patterns for sampling textures outside their
+/// standard range
+enum class TextureRepeat { Repeat, MirroredRepeat, ClampToEdge, ClampToBorder };
+
+/**
+ * @brief Texture with its relevant properties. Front end representation,
+ * renderer agnostic.
+ */
+struct TextureMap {
+    const Texture* texture = nullptr;
+    TextureUse     use;
+    TextureFilter  filter_minify;
+    TextureFilter  filter_magnify;
+    TextureRepeat  repeat_u;
+    TextureRepeat  repeat_v;
+    TextureRepeat  repeat_w;
+
+    InternalTextureMapData* internal_data;
 };
 
 } // namespace ENGINE_NAMESPACE

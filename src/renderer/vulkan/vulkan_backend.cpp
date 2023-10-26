@@ -311,11 +311,6 @@ void VulkanBackend::draw_geometry(Geometry* const geometry) {
 void VulkanBackend::create_texture(Texture* texture, const byte* const data) {
     Logger::trace(RENDERER_VULKAN_LOG, "Creating texture.");
 
-    // Calculate mip levels
-    auto mip_levels =
-        std::floor(std::log2(std::max(texture->width(), texture->height()))) +
-        1;
-
     // Image format
     // NOTE: assumes 8 bits per channel
     auto texture_format = vk::Format::eR8G8B8A8Srgb;
@@ -340,7 +335,7 @@ void VulkanBackend::create_texture(Texture* texture, const byte* const data) {
     texture_image->create(
         texture->width,
         texture->height,
-        mip_levels,
+        texture->mip_level_count,
         vk::SampleCountFlagBits::e1,
         texture_format,
         vk::ImageTiling::eOptimal,
@@ -373,39 +368,11 @@ void VulkanBackend::create_texture(Texture* texture, const byte* const data) {
     // Cleanup
     del(staging_buffer);
 
-    // TODO: CREATE SAMPLER
-    vk::SamplerCreateInfo sampler_info {};
-    sampler_info.setAddressModeU(vk::SamplerAddressMode::eRepeat);
-    sampler_info.setAddressModeV(vk::SamplerAddressMode::eRepeat);
-    sampler_info.setAddressModeW(vk::SamplerAddressMode::eRepeat);
-    sampler_info.setAnisotropyEnable(true);
-    sampler_info.setMaxAnisotropy(_device->info().max_sampler_anisotropy);
-    sampler_info.setBorderColor(vk::BorderColor::eIntOpaqueBlack);
-    sampler_info.setUnnormalizedCoordinates(false);
-    sampler_info.setCompareEnable(false);
-    sampler_info.setCompareOp(vk::CompareOp::eAlways);
-    // Mipmap settings
-    sampler_info.setMagFilter(vk::Filter::eLinear);
-    sampler_info.setMinFilter(vk::Filter::eLinear);
-    sampler_info.setMipmapMode(vk::SamplerMipmapMode::eLinear);
-    sampler_info.setMipLodBias(0.0f);
-    sampler_info.setMinLod(0.0f);
-    sampler_info.setMaxLod(static_cast<float32>(mip_levels));
-
-    vk::Sampler texture_sampler;
-    try {
-        texture_sampler =
-            _device->handle().createSampler(sampler_info, _allocator);
-    } catch (vk::SystemError e) {
-        Logger::fatal(RENDERER_VULKAN_LOG, e.what());
-    }
-
     // Save internal data
     VulkanTextureData* vulkan_texture_data =
         new (MemoryTag::GPUTexture) VulkanTextureData();
-    vulkan_texture_data->image   = texture_image;
-    vulkan_texture_data->sampler = texture_sampler;
-    texture->internal_data       = vulkan_texture_data;
+    vulkan_texture_data->image = texture_image;
+    texture->internal_data     = vulkan_texture_data;
 
     Logger::trace(RENDERER_VULKAN_LOG, "Texture created.");
 }
@@ -416,7 +383,6 @@ void VulkanBackend::destroy_texture(Texture* texture) {
 
     _device->handle().waitIdle();
     if (data->image) del(data->image);
-    if (data->sampler) _device->handle().destroySampler(data->sampler);
 
     Logger::trace(RENDERER_VULKAN_LOG, "Texture destroyed.");
 }

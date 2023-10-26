@@ -6,14 +6,6 @@
 namespace ENGINE_NAMESPACE {
 
 /**
- * @brief Texture with its relevant properties
- */
-struct TextureMap {
-    const Texture* texture = nullptr;
-    TextureUse     use;
-};
-
-/**
  * @brief Material configuration resource.
  *
  */
@@ -115,6 +107,17 @@ class Material {
      *
      */
     void apply_instance();
+
+    /**
+     * @brief Acquires map resources from the GPU. Usually called after
+     * initialization.
+     */
+    void acquire_map_resources();
+
+    /**
+     * @brief Release map resources from GPU. Usually called before destruction.
+     */
+    void release_map_resources();
 
     const static uint32 max_name_length = 256;
 

@@ -114,7 +114,8 @@ Texture* TextureSystem::acquire(
         image->width,
         image->height,
         image->channel_count,
-        image->has_transparency()
+        image->has_transparency(),
+        false
     );
     texture->id = (uint64) texture;
     // Upload it to GPU
@@ -187,6 +188,7 @@ void TextureSystem::create_default_textures() {
         texture_dimension,
         texture_dimension,
         channels,
+        false,
         false
     );
     _default_texture->id = 0;
@@ -198,6 +200,7 @@ void TextureSystem::create_default_textures() {
         texture_dimension,
         texture_dimension,
         channels,
+        false,
         false
     );
     _default_diffuse_texture->id = 1;
@@ -211,6 +214,7 @@ void TextureSystem::create_default_textures() {
         texture_dimension,
         texture_dimension,
         channels,
+        false,
         false
     );
     _default_specular_texture->id = 2;
@@ -224,6 +228,7 @@ void TextureSystem::create_default_textures() {
         texture_dimension,
         texture_dimension,
         channels,
+        false,
         false
     );
     _default_normal_texture->id = 3;

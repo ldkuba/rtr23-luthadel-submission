@@ -58,8 +58,11 @@ class VulkanShader : public Shader {
     void apply_global() override;
     void apply_instance() override;
 
-    uint32 acquire_instance_resources() override;
+    uint32 acquire_instance_resources(const Vector<TextureMap*>& maps) override;
     void   release_instance_resources(uint32 instance_id) override;
+
+    void acquire_texture_map_resources(TextureMap* texture_map) override;
+    void release_texture_map_resources(TextureMap* texture_map) override;
 
     const static uint32 max_descriptor_sets = 1024; // TODO: Maybe make dynamic
 
@@ -110,7 +113,7 @@ class VulkanShader : public Shader {
     );
 
     Vector<vk::DescriptorImageInfo>& get_image_infos(
-        const Vector<Texture*>& textures
+        const Vector<TextureMap*>& texture_maps
     ) const;
 };
 

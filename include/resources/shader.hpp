@@ -119,7 +119,7 @@ struct InstanceState {
     uint64 offset;
     bool   should_update = true;
 
-    Vector<Texture*> instance_textures;
+    Vector<TextureMap*> instance_texture_maps;
 };
 
 /**
@@ -176,12 +176,15 @@ class Shader {
      * instance
      * @return uint32 instance id
      */
-    virtual uint32 acquire_instance_resources();
+    virtual uint32 acquire_instance_resources(const Vector<TextureMap*>& maps);
     /**
      * @brief Release previously acquired instance resources
      * @param instance_id Id of instance to be released
      */
     virtual void   release_instance_resources(uint32 instance_id);
+
+    virtual void acquire_texture_map_resources(TextureMap* texture_map);
+    virtual void release_texture_map_resources(TextureMap* texture_map);
 
     /**
      * @brief Get the the index of a requested uniform
@@ -244,7 +247,7 @@ class Shader {
      * @throws InvalidArgument exception if no sampler is found
      */
     Result<void, InvalidArgument> set_sampler(
-        const String name, const Texture* const texture
+        const String name, const TextureMap* const texture_map
     );
     /**
      * @brief Set the sampler texture by sampler id
@@ -254,7 +257,7 @@ class Shader {
      * @throws InvalidArgument exception if no sampler is found
      */
     Result<void, InvalidArgument> set_sampler(
-        const uint16 id, const Texture* const texture
+        const uint16 id, const TextureMap* const texture_map
     );
 
     const static uint32 max_name_length    = 256;
@@ -299,8 +302,8 @@ class Shader {
     Vector<InstanceState*> _instance_states;
 
     // Textures
-    Vector<Texture*> _global_textures {};
-    uint8            _instance_texture_count;
+    Vector<TextureMap*> _global_texture_maps {};
+    uint8               _instance_texture_count;
 
     virtual Outcome set_uniform(const uint16 id, void* value);
 

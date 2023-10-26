@@ -98,7 +98,13 @@ class VulkanImage;
  */
 struct VulkanTextureData : public InternalTextureData {
     VulkanImage* image;
-    vk::Sampler  sampler;
+};
+
+/**
+ * @brief Texture map data specific to Vulkan
+ */
+struct VulkanTextureMapData : public InternalTextureMapData {
+    vk::Sampler sampler;
 };
 
 /**

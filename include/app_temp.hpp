@@ -122,7 +122,8 @@ inline void TestApplication::run() {
     Mesh* mesh = new Mesh(geometries);
 #    if CURRENT_SCENE == 2 || CURRENT_SCENE == 1
 #        if CURRENT_SCENE == 2
-    mesh->transform.scale_by(0.01f);
+    mesh->transform.scale_by(0.02f);
+    mesh->transform.translate_by(glm::vec3(0, -1, 0));
 #        endif
     mesh->transform.rotate_by_deg(glm::vec3(1, 0, 0), 90.f);
 #    endif

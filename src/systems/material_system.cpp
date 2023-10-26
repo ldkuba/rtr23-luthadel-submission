@@ -28,9 +28,7 @@ MaterialSystem::~MaterialSystem() {
     for (auto& material : _registered_materials)
         destroy_material(material.second.handle);
     _registered_materials.clear();
-    _default_material->shader()->release_instance_resources(
-        _default_material->internal_id.value()
-    );
+    _default_material->release_map_resources();
     del(_default_material);
 
     Logger::trace(MATERIAL_SYS_LOG, "Material system destroyed.");
@@ -198,21 +196,39 @@ void MaterialSystem::create_default_material() {
     // Set maps:
     // Diffuse
     TextureMap diffuse_map         = { _texture_system->default_diffuse_texture,
-                                       TextureUse::MapDiffuse };
+                                       TextureUse::MapDiffuse,
+                                       TextureFilter::BiLinear,
+                                       TextureFilter::BiLinear,
+                                       TextureRepeat::Repeat,
+                                       TextureRepeat::Repeat,
+                                       TextureRepeat::Repeat,
+                                       nullptr };
     _default_material->diffuse_map = diffuse_map;
     // Specular
     TextureMap specular_map = { _texture_system->default_specular_texture,
-                                TextureUse::MapSpecular };
+                                TextureUse::MapSpecular,
+                                TextureFilter::BiLinear,
+                                TextureFilter::BiLinear,
+                                TextureRepeat::Repeat,
+                                TextureRepeat::Repeat,
+                                TextureRepeat::Repeat,
+                                nullptr };
     _default_material->specular_map = specular_map;
     // Normal
     TextureMap normal_map           = { _texture_system->default_normal_texture,
-                                        TextureUse::MapNormal };
+                                        TextureUse::MapNormal,
+                                        TextureFilter::BiLinear,
+                                        TextureFilter::BiLinear,
+                                        TextureRepeat::Repeat,
+                                        TextureRepeat::Repeat,
+                                        TextureRepeat::Repeat,
+                                        nullptr };
     _default_material->normal_map   = normal_map;
 
     // TODO: Set other maps
 
     // Upload material to GPU
-    _default_material->internal_id = shader->acquire_instance_resources();
+    _default_material->acquire_map_resources();
 
     _default_material->id = 0;
 }
@@ -238,28 +254,47 @@ MaterialSystem::create_material(const MaterialConfig config) {
     auto material = new (MemoryTag::MaterialInstance)
         Material(config.name, shader, config.diffuse_color, config.shininess);
 
+    // TODO: Make filter and repeat configurable
     // Diffuse map
     material->diffuse_map  = { acquire_texture(
                                   config.diffuse_map_name,
                                   _texture_system->default_diffuse_texture
                               ),
-                               TextureUse::MapDiffuse };
+                               TextureUse::MapDiffuse,
+                               TextureFilter::BiLinear,
+                               TextureFilter::BiLinear,
+                               TextureRepeat::Repeat,
+                               TextureRepeat::Repeat,
+                               TextureRepeat::Repeat,
+                               nullptr };
     // Specular map
     material->specular_map = { acquire_texture(
                                    config.specular_map_name,
                                    _texture_system->default_specular_texture
                                ),
-                               TextureUse::MapSpecular };
+                               TextureUse::MapSpecular,
+                               TextureFilter::BiLinear,
+                               TextureFilter::BiLinear,
+                               TextureRepeat::Repeat,
+                               TextureRepeat::Repeat,
+                               TextureRepeat::Repeat,
+                               nullptr };
     // Normal map
     material->normal_map   = { acquire_texture(
                                  config.normal_map_name,
                                  _texture_system->default_normal_texture
                              ),
-                               TextureUse::MapNormal };
+                               TextureUse::MapNormal,
+                               TextureFilter::BiLinear,
+                               TextureFilter::BiLinear,
+                               TextureRepeat::Repeat,
+                               TextureRepeat::Repeat,
+                               TextureRepeat::Repeat,
+                               nullptr };
     // TODO: Set other maps
 
     // Acquire resource from GPU
-    material->internal_id = shader->acquire_instance_resources();
+    material->acquire_map_resources();
 
     // Assign to reference
     MaterialRef material_ref {};
@@ -282,6 +317,7 @@ void MaterialSystem::destroy_material(Material* material) {
             "\" not properly initialized. Internal id not set."
         );
 
+    // Release Textures
     const Texture* diffuse_texture  = material->diffuse_map().texture;
     const Texture* specular_texture = material->specular_map().texture;
     const Texture* normal_texture   = material->normal_map().texture;
@@ -289,9 +325,8 @@ void MaterialSystem::destroy_material(Material* material) {
     if (specular_texture) _texture_system->release(specular_texture->name());
     if (normal_texture) _texture_system->release(normal_texture->name());
 
-    material->shader()->release_instance_resources( //
-        material->internal_id.value()
-    );
+    // Release texture map resources
+    material->release_map_resources();
     del(material);
 }
 

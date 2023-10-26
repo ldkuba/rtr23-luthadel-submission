@@ -64,8 +64,11 @@ Shader::Shader(const ShaderConfig config)
     }
 }
 Shader::~Shader() {
-    for (auto texture : _global_textures)
-        _texture_system->release(texture->name());
+    for (uint64 i = 0; i < _global_texture_maps.size(); i++) {
+        _texture_system->release(_global_texture_maps[i]->texture->name());
+        del(_global_texture_maps[i]);
+    }
+    _global_texture_maps.clear();
 }
 
 // ///////////////////// //
@@ -81,8 +84,13 @@ void Shader::bind_instance(const uint32 id) { _bound_instance_id = id; }
 void Shader::apply_global() {}
 void Shader::apply_instance() {}
 
-uint32 Shader::acquire_instance_resources() { return -1; }
-void   Shader::release_instance_resources(uint32 instance_id) {}
+uint32 Shader::acquire_instance_resources(const Vector<TextureMap*>& maps) {
+    return -1;
+}
+void Shader::release_instance_resources(uint32 instance_id) {}
+
+void Shader::acquire_texture_map_resources(TextureMap* texture_map) {}
+void Shader::release_texture_map_resources(TextureMap* texture_map) {}
 
 Result<uint16, InvalidArgument> Shader::get_uniform_index(const String name) {
     auto it = _uniforms_hash.find(name);
@@ -94,14 +102,14 @@ Result<uint16, InvalidArgument> Shader::get_uniform_index(const String name) {
 }
 
 Result<void, InvalidArgument> Shader::set_sampler(
-    const String name, const Texture* const texture
+    const String name, const TextureMap* const texture_map
 ) {
-    return set_uniform<const Texture>(name, texture);
+    return set_uniform<const TextureMap>(name, texture_map);
 }
 Result<void, InvalidArgument> Shader::set_sampler(
-    const uint16 id, const Texture* const texture
+    const uint16 id, const TextureMap* const texture_map
 ) {
-    return set_uniform<const Texture>(id, texture);
+    return set_uniform<const TextureMap>(id, texture_map);
 }
 
 // //////////////////////// //
@@ -128,8 +136,25 @@ void Shader::add_sampler(const ShaderUniformConfig& config) {
     // If global, push into the global list.
     uint32 location = 0;
     if (config.scope == ShaderScope::Global) {
-        location = _global_textures.size();
-        _global_textures.push_back(_texture_system->default_texture);
+        location = _global_texture_maps.size();
+
+        // Create default texture map
+        // NOTE: Can always be updated later
+        TextureMap default_map { nullptr,
+                                 TextureUse::Unknown,
+                                 TextureFilter::BiLinear,
+                                 TextureFilter::BiLinear,
+                                 TextureRepeat::Repeat,
+                                 TextureRepeat::Repeat,
+                                 TextureRepeat::Repeat,
+                                 nullptr };
+        acquire_texture_map_resources(&default_map);
+
+        // Allocate and push new global texture map
+        // NOTE: Allocation within shader only done here (for globals)
+        TextureMap* map = new (MemoryTag::Renderer) TextureMap(default_map);
+        map->texture    = _texture_system->default_texture;
+        _global_texture_maps.push_back(map);
     } else {
         // Otherwise, it's instance-level, so keep count of how many need to be
         // added during the resource acquisition.
