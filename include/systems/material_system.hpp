@@ -72,8 +72,8 @@ class MaterialSystem {
     const uint64 _max_material_count    = 1024;
     const String _default_material_name = "default";
 
-    Material*                         _default_material     = nullptr;
-    UnorderedMap<String, MaterialRef> _registered_materials = {};
+    Material*                         _default_material = nullptr;
+    UnorderedMap<String, MaterialRef> _registered_materials {};
 
     void create_default_material();
 

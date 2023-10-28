@@ -85,7 +85,7 @@ class TextureSystem {
     Texture* _default_specular_texture = nullptr;
     Texture* _default_normal_texture   = nullptr;
 
-    UnorderedMap<String, TextureRef> _registered_textures = {};
+    UnorderedMap<String, TextureRef> _registered_textures {};
 
     void create_default_textures();
     void destroy_default_textures();

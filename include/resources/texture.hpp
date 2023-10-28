@@ -38,14 +38,6 @@ class Texture {
     Property<uint64> total_size {
         GET { return _total_size; }
     };
-    /// @brief True if texture uses any transparency
-    Property<bool> has_transparency {
-        GET { return _has_transparency; }
-    };
-    /// @brief True if this texture can be written to
-    Property<bool> is_writable {
-        GET { return _is_writable; }
-    };
     /// @brief Pointer to internal texture data managed by the renderer
     Property<InternalTextureData*> internal_data {
         GET { return _internal_data; }
@@ -73,17 +65,31 @@ class Texture {
     );
     ~Texture() {}
 
+    /// @brief True if texture uses any transparency
+    bool has_transparency() { return _flags & HasTransparency; }
+    /// @brief True if this texture can be written to
+    bool is_writable() { return _flags & IsWritable; }
+    /// @brief True if this texture was created via wrapping
+    bool is_wrapped() { return _flags & IsWrapped; }
+
     const static uint32 max_name_length = 256;
 
   private:
+    typedef uint8 TextureFlagType;
+    enum TextureFlag : TextureFlagType {
+        HasTransparency = 0b001,
+        IsWritable      = 0b010,
+        IsWrapped       = 0b100
+    };
+
+    TextureFlagType _flags;
+
     String _name = "";
     int32  _width;
     int32  _height;
     int32  _channel_count;
     int32  _mip_levels;
     uint64 _total_size;
-    bool   _has_transparency;
-    bool   _is_writable;
 
     InternalTextureData* _internal_data;
 };

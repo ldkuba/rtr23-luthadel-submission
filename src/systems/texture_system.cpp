@@ -169,7 +169,7 @@ void TextureSystem::create_default_textures() {
     const uint32 channels          = 4;
     const uint32 pixel_count       = texture_dimension * texture_dimension;
 
-    byte pixels[pixel_count * channels] = {};
+    byte pixels[pixel_count * channels] {};
 
     // Default texture
     for (uint32 row = 0; row < texture_dimension; row++) {

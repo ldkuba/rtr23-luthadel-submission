@@ -27,7 +27,7 @@ VulkanRenderPass::VulkanRenderPass(
     auto has_depth    = clear_flags & RenderPassClearFlags::Depth;
 
     // === Get all attachment descriptions ===
-    Vector<vk::AttachmentDescription> attachments = {};
+    Vector<vk::AttachmentDescription> attachments {};
 
     // Color attachment
     auto color_load_op = ((clear_flags & RenderPassClearFlags::Color) != 0)
@@ -140,8 +140,8 @@ VulkanRenderPass::VulkanRenderPass(
     );
 
     // === Create render pass ===
-    std::array<vk::SubpassDescription, 1> subpasses    = { subpass };
-    std::array<vk::SubpassDependency, 1>  dependencies = { dependency };
+    std::array<vk::SubpassDescription, 1> subpasses { subpass };
+    std::array<vk::SubpassDependency, 1>  dependencies { dependency };
 
     vk::RenderPassCreateInfo create_info {};
     create_info.setAttachments(attachments);

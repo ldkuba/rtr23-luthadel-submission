@@ -9,7 +9,7 @@
 namespace ENGINE_NAMESPACE {
 
 // Supported extensions
-const std::vector<String> ImageLoader::_supported_extensions = {
+const std::vector<String> ImageLoader::_supported_extensions {
     ".png", ".jpg", ".tga", ".bmp"
 };
 
@@ -66,18 +66,6 @@ Result<Resource*, RuntimeError> ImageLoader::load(const String name) {
         String error_message = "Failed to load texture image.";
         Logger::error(RESOURCE_LOG, error_message);
         return Failure(error_message);
-    }
-
-    // Check for transparency
-    auto   has_transparency = false;
-    uint64 total_size       = image_width * image_height * req_channel_count;
-    if (image_channels > 3) {
-        for (uint64 i = 3; i < total_size; i += req_channel_count) {
-            if (image_pixels[i] < (stbi_uc) 255) {
-                has_transparency = true;
-                break;
-            }
-        }
     }
 
     // Return image data

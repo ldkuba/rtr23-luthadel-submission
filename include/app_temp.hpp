@@ -131,14 +131,14 @@ inline void TestApplication::run() {
 #endif
 
     /// Load GUI TEST
-    float32          side       = 128.0f;
-    Vector<Vertex2D> vertices2d = {
+    float32          side = 128.0f;
+    Vector<Vertex2D> vertices2d {
         { glm::vec2(0.0f, 0.0f), glm::vec2(0.0f, 0.0f) },
         { glm::vec2(side, side), glm::vec2(1.0f, 1.0f) },
         { glm::vec2(0.0f, side), glm::vec2(0.0f, 1.0f) },
         { glm::vec2(side, 0.0f), glm::vec2(1.0f, 0.0f) }
     };
-    Vector<uint32>   indices2d = { 2, 1, 0, 3, 0, 1 };
+    Vector<uint32>   indices2d { 2, 1, 0, 3, 0, 1 };
     GeometryConfig2D config2d { "ui",
                                 vertices2d,
                                 indices2d,

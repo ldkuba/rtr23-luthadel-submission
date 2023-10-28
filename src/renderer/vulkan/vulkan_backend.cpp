@@ -143,7 +143,7 @@ void VulkanBackend::resized(const uint32 width, const uint32 height) {
 Result<void, RuntimeError> VulkanBackend::begin_frame(const float32 delta_time
 ) {
     // Wait for previous frame to finish drawing
-    std::array<vk::Fence, 1> fences = { _fences_in_flight[_current_frame] };
+    std::array<vk::Fence, 1> fences { _fences_in_flight[_current_frame] };
     try {
         auto result = _device->handle().waitForFences(fences, true, uint64_max);
         if (result != vk::Result::eSuccess) {
@@ -204,13 +204,13 @@ Result<void, RuntimeError> VulkanBackend::end_frame(const float32 delta_time) {
     command_buffer->end();
 
     // Submit command buffer
-    vk::PipelineStageFlags wait_stages[] = {
+    vk::PipelineStageFlags wait_stages[] {
         vk::PipelineStageFlagBits::eColorAttachmentOutput
     };
-    std::array<vk::Semaphore, 1> wait_semaphores = {
+    std::array<vk::Semaphore, 1> wait_semaphores {
         _semaphores_image_available[_current_frame]
     };
-    std::array<vk::Semaphore, 1> signal_semaphores = {
+    std::array<vk::Semaphore, 1> signal_semaphores {
         _semaphores_render_finished[_current_frame]
     };
 
@@ -220,7 +220,7 @@ Result<void, RuntimeError> VulkanBackend::end_frame(const float32 delta_time) {
     submit_info.setSignalSemaphores(signal_semaphores);
     submit_info.setCommandBufferCount(1);
     submit_info.setPCommandBuffers(command_buffer);
-    std::array<vk::SubmitInfo, 1> submits = { submit_info };
+    std::array<vk::SubmitInfo, 1> submits { submit_info };
 
     try {
         _device->graphics_queue.submit(
@@ -287,8 +287,8 @@ void VulkanBackend::draw_geometry(Geometry* const geometry) {
     auto command_buffer = _command_buffer->handle;
 
     // Bind vertex buffer
-    std::array<vk::Buffer, 1>     vertex_buffers = { _vertex_buffer->handle };
-    std::array<vk::DeviceSize, 1> offsets = { buffer_data.vertex_offset };
+    std::array<vk::Buffer, 1>     vertex_buffers { _vertex_buffer->handle };
+    std::array<vk::DeviceSize, 1> offsets { buffer_data.vertex_offset };
     command_buffer->bindVertexBuffers(0, vertex_buffers, offsets);
 
     // Issue draw command

@@ -76,6 +76,33 @@ class Renderer {
     void destroy_texture(Texture* texture);
 
     /**
+     * @brief Create a writable texture object with no initial data.
+     * @param texture Texture to be uploaded
+     */
+    void create_writable_texture(Texture* texture);
+
+    /**
+     * @brief Resizes a texture. Internally texture is destroyed and recreated.
+     * @param texture Texture to be resized
+     * @param width New width in pixels
+     * @param height New Height in pixels
+     */
+    void resize_texture(
+        Texture* const texture, const uint32 width, const uint32 height
+    );
+
+    /**
+     * @brief Write data to provided texture. NOTE: This code wont block write
+     * requests for non-writable textures.
+     * @param texture Texture to be written to
+     * @param data Raw data to be written
+     * @param offset Offset in bytes from which write starts
+     */
+    void texture_write_data(
+        Texture* const texture, const Vector<byte>& data, const uint32 offset
+    );
+
+    /**
      * @brief Create a geometry and upload its relevant data to the GPU
      * @tparam VertexType Vertex (Vertex3D) or Vertex2D
      * @param geometry Geometry to be uploaded

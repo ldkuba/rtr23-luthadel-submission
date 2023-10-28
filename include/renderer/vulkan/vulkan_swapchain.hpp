@@ -88,11 +88,11 @@ class VulkanSwapchain {
     uint32 _current_image_index = 0;
 
     struct FramebufferRef {
-        Vector<VulkanFramebuffer*> framebuffers = {};
+        Vector<VulkanFramebuffer*> framebuffers {};
         bool                       multisampling;
         bool                       depth_testing;
     };
-    Vector<FramebufferRef> _framebuffer_sets = {};
+    Vector<FramebufferRef> _framebuffer_sets {};
 
     uint32 _width;
     uint32 _height;

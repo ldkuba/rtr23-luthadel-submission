@@ -21,8 +21,8 @@ Result<GeometryConfigArray*, RuntimeError> load_obj(
 
 // Supported extensions
 const std::vector<MeshLoader::MeshFileType>
-    MeshLoader::_supported_mesh_file_types = { { ".mesh", true, load_mesh },
-                                               { ".obj", false, load_obj } };
+    MeshLoader::_supported_mesh_file_types { { ".mesh", true, load_mesh },
+                                             { ".obj", false, load_obj } };
 
 // Constructor & Destructor
 MeshLoader::MeshLoader() {
@@ -238,7 +238,7 @@ Result<GeometryConfigArray*, RuntimeError> load_obj(
     config_array->configs.reserve(shapes.size());
 
     // Loop over shapes
-    Map<float32, std::pair<Vertex, uint32>> unique_vertices = {};
+    Map<float32, std::pair<Vertex, uint32>> unique_vertices {};
     for (const auto& shape : shapes) {
         Vector<Vertex3D> vertices { { MemoryTag::Geometry } };
         Vector<uint32>   indices { { MemoryTag::Geometry } };

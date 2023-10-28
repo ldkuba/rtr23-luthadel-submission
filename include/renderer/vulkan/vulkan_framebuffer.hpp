@@ -55,7 +55,7 @@ class VulkanFramebuffer {
     const vk::Device*                    _device;
     const vk::AllocationCallbacks* const _allocator;
 
-    vk::Framebuffer         _handle = {};
+    vk::Framebuffer         _handle {};
     const VulkanRenderPass* _render_pass;
 
     void create(

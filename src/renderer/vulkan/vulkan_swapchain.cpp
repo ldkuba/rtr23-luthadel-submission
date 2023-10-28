@@ -127,7 +127,7 @@ void VulkanSwapchain::compute_next_image_index(
 void VulkanSwapchain::present(
     const vk::ArrayProxyNoTemporaries<vk::Semaphore>& wait_for_semaphores
 ) {
-    std::array<vk::SwapchainKHR, 1> swapchains = { _handle };
+    std::array<vk::SwapchainKHR, 1> swapchains { _handle };
 
     // Present results
     vk::PresentInfoKHR present_info {};
@@ -335,10 +335,10 @@ void VulkanSwapchain::create_depth_resources() {
 }
 
 void VulkanSwapchain::find_depth_format() {
-    Vector<vk::Format>     candidates = { vk::Format::eD32Sfloat,
-                                          vk::Format::eD32SfloatS8Uint,
-                                          vk::Format::eD24UnormS8Uint };
-    vk::ImageTiling        tiling     = vk::ImageTiling::eOptimal;
+    Vector<vk::Format>     candidates { vk::Format::eD32Sfloat,
+                                    vk::Format::eD32SfloatS8Uint,
+                                    vk::Format::eD24UnormS8Uint };
+    vk::ImageTiling        tiling = vk::ImageTiling::eOptimal;
     vk::FormatFeatureFlags features =
         vk::FormatFeatureFlagBits::eDepthStencilAttachment;
 

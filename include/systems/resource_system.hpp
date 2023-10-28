@@ -45,7 +45,7 @@ class ResourceSystem {
     void                            unload(Resource* resource);
 
   private:
-    UnorderedMap<String, ResourceLoader*> _registered_loaders = {};
+    UnorderedMap<String, ResourceLoader*> _registered_loaders {};
 };
 
 } // namespace ENGINE_NAMESPACE

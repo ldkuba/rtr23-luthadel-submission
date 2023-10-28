@@ -445,7 +445,7 @@ uint32 VulkanShader::acquire_instance_resources( //
     for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++)
         layouts[i] = _descriptor_set_configs[_desc_set_index_instance]->layout;
 
-    vk::DescriptorSetAllocateInfo alloc_info = {};
+    vk::DescriptorSetAllocateInfo alloc_info {};
     alloc_info.setDescriptorPool(_descriptor_pool);
     alloc_info.setSetLayouts(layouts);
 
@@ -825,7 +825,7 @@ void VulkanShader::create_pipeline(
     multisampling_info.setAlphaToOneEnable(false);
 
     // === Depth and stencil testing ===
-    vk::PipelineDepthStencilStateCreateInfo depth_stencil = {};
+    vk::PipelineDepthStencilStateCreateInfo depth_stencil {};
     if (_render_pass->depth_testing()) {
         // Should depth testing be preformed
         depth_stencil.setDepthTestEnable(true);
@@ -889,7 +889,7 @@ void VulkanShader::create_pipeline(
     color_blend_state_info.setLogicOp(vk::LogicOp::eCopy);
 
     // === Dynamic state ===
-    std::array<vk::DynamicState, 3> dynamic_states = {
+    std::array<vk::DynamicState, 3> dynamic_states {
         vk::DynamicState::eViewport,
         vk::DynamicState::eScissor,
         vk::DynamicState::eLineWidth

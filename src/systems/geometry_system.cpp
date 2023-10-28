@@ -138,7 +138,7 @@ Geometry* GeometrySystem::generate_cube(
     float32 l = 0.5f;
 
     // Initialize vertices and indices for a cube
-    Vector<Vertex> vertices = {
+    Vector<Vertex> vertices {
         // Front
         { { -l, l, -l }, { 0.0f, 1.0f, 0.0f }, {}, {}, { 1.0f, 1.0f } },
         { { l, l, l }, { 0.0f, 1.0f, 0.0f }, {}, {}, { 0.0f, 0.0f } },
@@ -187,7 +187,7 @@ Geometry* GeometrySystem::generate_cube(
     generate_tangents(vertices, indices);
 
     // Crete & return geometry
-    GeometryConfig3D config = {
+    GeometryConfig3D config {
         name,           vertices,           indices,
         glm::vec3(0.0), glm::vec3(l, l, l), glm::vec3(-l, -l, -l),
         material_name,  auto_release
@@ -276,27 +276,27 @@ void GeometrySystem::create_default_geometries() {
     float f = 10.0f;
 
     // === Default for 3D ===
-    Vector<Vertex> vertices = { { glm::vec3(-0.5f * f, -0.5f * f, 0.0f),
-                                  glm::vec3(0.0f, 0.0f, 0.0f),
-                                  glm::vec4(0.0f),
-                                  glm::vec4(0.0f),
-                                  glm::vec2(0.0f, 0.0f) },
-                                { glm::vec3(0.5f * f, 0.5f * f, 0.0f),
-                                  glm::vec3(0.0f, 0.0f, 0.0f),
-                                  glm::vec4(0.0f),
-                                  glm::vec4(0.0f),
-                                  glm::vec2(1.0f, 1.0f) },
-                                { glm::vec3(-0.5f * f, 0.5f * f, 0.0f),
-                                  glm::vec3(0.0f, 0.0f, 0.0f),
-                                  glm::vec4(0.0f),
-                                  glm::vec4(0.0f),
-                                  glm::vec2(0.0f, 1.0f) },
-                                { glm::vec3(0.5f * f, -0.5f * f, 0.0f),
-                                  glm::vec3(0.0f, 0.0f, 0.0f),
-                                  glm::vec4(0.0f),
-                                  glm::vec4(0.0f),
-                                  glm::vec2(1.0f, 0.0f) } };
-    Vector<uint32> indices  = { 0, 1, 2, 0, 3, 1 };
+    Vector<Vertex> vertices { { glm::vec3(-0.5f * f, -0.5f * f, 0.0f),
+                                glm::vec3(0.0f, 0.0f, 0.0f),
+                                glm::vec4(0.0f),
+                                glm::vec4(0.0f),
+                                glm::vec2(0.0f, 0.0f) },
+                              { glm::vec3(0.5f * f, 0.5f * f, 0.0f),
+                                glm::vec3(0.0f, 0.0f, 0.0f),
+                                glm::vec4(0.0f),
+                                glm::vec4(0.0f),
+                                glm::vec2(1.0f, 1.0f) },
+                              { glm::vec3(-0.5f * f, 0.5f * f, 0.0f),
+                                glm::vec3(0.0f, 0.0f, 0.0f),
+                                glm::vec4(0.0f),
+                                glm::vec4(0.0f),
+                                glm::vec2(0.0f, 1.0f) },
+                              { glm::vec3(0.5f * f, -0.5f * f, 0.0f),
+                                glm::vec3(0.0f, 0.0f, 0.0f),
+                                glm::vec4(0.0f),
+                                glm::vec4(0.0f),
+                                glm::vec2(1.0f, 0.0f) } };
+    Vector<uint32> indices { 0, 1, 2, 0, 3, 1 };
 
     // Crete geometry
     _default_geometry =
@@ -305,14 +305,14 @@ void GeometrySystem::create_default_geometries() {
     _default_geometry->material = _material_system->default_material();
 
     // === Default for 2D ===
-    Vector<Vertex2D> vertices2d = {
+    Vector<Vertex2D> vertices2d {
         { glm::vec2(-0.5f * f, -0.5f * f), glm::vec2(0.0f, 0.0f) },
         { glm::vec2(0.5f * f, 0.5f * f), glm::vec2(1.0f, 1.0f) },
         { glm::vec2(-0.5f * f, 0.5f * f), glm::vec2(0.0f, 1.0f) },
         { glm::vec2(0.5f * f, -0.5f * f), glm::vec2(1.0f, 0.0f) }
     };
     // Note: counter clock-wise
-    Vector<uint32> indices2d = { 2, 1, 0, 3, 0, 1 };
+    Vector<uint32> indices2d { 2, 1, 0, 3, 0, 1 };
 
     // Create 2D geometry
     _default_2d_geometry =

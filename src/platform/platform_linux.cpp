@@ -41,8 +41,8 @@ Platform::Console::Console() {}
 Platform::Console::~Console() {}
 
 void Platform::Console::write(std::string message, uint32 kind, bool new_line) {
-    const char* color_string[] = { "0",    "0;41", "1;31", "1;33",
-                                   "1;32", "1;34", "1;30" };
+    const char* color_string[] { "0",    "0;41", "1;31", "1;33",
+                                 "1;32", "1;34", "1;30" };
     std::cout << "\033[" << color_string[kind] << "m" << message << "\033[0m";
     if (new_line) std::cout << std::endl;
 }

@@ -19,10 +19,10 @@ bool QueueFamilyIndices::is_complete() const {
             present_family.has_value());
 }
 Set<uint32> QueueFamilyIndices::get_unique_indices() const {
-    Set<uint32> unique_indices = { graphics_family.value_or(-1),
-                                   compute_family.value_or(-1),
-                                   transfer_family.value_or(-1),
-                                   present_family.value_or(-1) };
+    Set<uint32> unique_indices { graphics_family.value_or(-1),
+                                 compute_family.value_or(-1),
+                                 transfer_family.value_or(-1),
+                                 present_family.value_or(-1) };
     unique_indices.erase(-1);
     return unique_indices;
 }

@@ -195,35 +195,35 @@ void MaterialSystem::create_default_material() {
 
     // Set maps:
     // Diffuse
-    TextureMap diffuse_map         = { _texture_system->default_diffuse_texture,
-                                       TextureUse::MapDiffuse,
-                                       TextureFilter::BiLinear,
-                                       TextureFilter::BiLinear,
-                                       TextureRepeat::Repeat,
-                                       TextureRepeat::Repeat,
-                                       TextureRepeat::Repeat,
-                                       nullptr };
+    TextureMap diffuse_map { _texture_system->default_diffuse_texture,
+                             TextureUse::MapDiffuse,
+                             TextureFilter::BiLinear,
+                             TextureFilter::BiLinear,
+                             TextureRepeat::Repeat,
+                             TextureRepeat::Repeat,
+                             TextureRepeat::Repeat,
+                             nullptr };
     _default_material->diffuse_map = diffuse_map;
     // Specular
-    TextureMap specular_map = { _texture_system->default_specular_texture,
-                                TextureUse::MapSpecular,
-                                TextureFilter::BiLinear,
-                                TextureFilter::BiLinear,
-                                TextureRepeat::Repeat,
-                                TextureRepeat::Repeat,
-                                TextureRepeat::Repeat,
-                                nullptr };
+    TextureMap specular_map { _texture_system->default_specular_texture,
+                              TextureUse::MapSpecular,
+                              TextureFilter::BiLinear,
+                              TextureFilter::BiLinear,
+                              TextureRepeat::Repeat,
+                              TextureRepeat::Repeat,
+                              TextureRepeat::Repeat,
+                              nullptr };
     _default_material->specular_map = specular_map;
     // Normal
-    TextureMap normal_map           = { _texture_system->default_normal_texture,
-                                        TextureUse::MapNormal,
-                                        TextureFilter::BiLinear,
-                                        TextureFilter::BiLinear,
-                                        TextureRepeat::Repeat,
-                                        TextureRepeat::Repeat,
-                                        TextureRepeat::Repeat,
-                                        nullptr };
-    _default_material->normal_map   = normal_map;
+    TextureMap normal_map { _texture_system->default_normal_texture,
+                            TextureUse::MapNormal,
+                            TextureFilter::BiLinear,
+                            TextureFilter::BiLinear,
+                            TextureRepeat::Repeat,
+                            TextureRepeat::Repeat,
+                            TextureRepeat::Repeat,
+                            nullptr };
+    _default_material->normal_map = normal_map;
 
     // TODO: Set other maps
 

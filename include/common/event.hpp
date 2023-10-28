@@ -19,7 +19,7 @@ class Event;
 template<typename R, typename... Args>
 class Event<R(Args...)> {
   private:
-    Vector<Delegate<R, Args...>*> _callbacks = {};
+    Vector<Delegate<R, Args...>*> _callbacks {};
 
   public:
     Event() {}
@@ -116,7 +116,7 @@ class Event<R(Args...)> {
 template<typename... Args>
 class Event<void(Args...)> {
   private:
-    Vector<Delegate<void, Args...>*> _callbacks = {};
+    Vector<Delegate<void, Args...>*> _callbacks {};
 
   public:
     Event() {}

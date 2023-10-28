@@ -37,7 +37,7 @@ class VulkanSettings {
     constexpr static bool                       compute__family_required = true;
     constexpr static bool                       transfer_family_required = true;
     constexpr static bool                       present__family_required = true;
-    constexpr static vk::PhysicalDeviceFeatures required_device_features = {
+    constexpr static vk::PhysicalDeviceFeatures required_device_features {
         false, // robustBufferAccess
         false, // fullDrawIndexUint32
         false, // imageCubeArray

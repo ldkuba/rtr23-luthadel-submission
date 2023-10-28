@@ -68,11 +68,11 @@ class InputSystem {
   private:
     friend class Control;
 
-    Vector<Control*> _controls = {};
+    Vector<Control*> _controls {};
 
-    Control* _on_key_pressed_events[(InputCode) KeyCode::MAX_KEY_CODE]  = {};
-    Control* _on_key_released_events[(InputCode) KeyCode::MAX_KEY_CODE] = {};
-    Control* _on_key_hold_events[(InputCode) KeyCode::MAX_KEY_CODE]     = {};
+    Control* _on_key_pressed_events[(InputCode) KeyCode::MAX_KEY_CODE] {};
+    Control* _on_key_released_events[(InputCode) KeyCode::MAX_KEY_CODE] {};
+    Control* _on_key_hold_events[(InputCode) KeyCode::MAX_KEY_CODE] {};
 };
 
 } // namespace ENGINE_NAMESPACE
