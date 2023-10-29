@@ -101,6 +101,37 @@ void Renderer::destroy_texture(Texture* texture) {
     Logger::trace(RENDERER_LOG, "Texture destroyed.");
 }
 
+void Renderer::create_writable_texture(Texture* texture) {
+    Logger::trace(RENDERER_LOG, "Creating writable texture.");
+    _backend->create_writable_texture(texture);
+    Logger::trace(RENDERER_LOG, "Writable texture created.");
+}
+void Renderer::resize_texture(
+    Texture* const texture, const uint32 width, const uint32 height
+) {
+    Logger::trace(RENDERER_LOG, "Resizing texture.");
+    _backend->resize_texture(texture, width, height);
+    Logger::trace(RENDERER_LOG, "Texture resized.");
+}
+void Renderer::texture_write_data(
+    Texture* const texture, const Vector<byte>& data, const uint32 offset
+) {
+    Logger::trace(RENDERER_LOG, "Writing data to texture.");
+    _backend->texture_write_data(texture, data.data(), data.size(), offset);
+    Logger::trace(RENDERER_LOG, "Texture writing complete.");
+}
+
+void Renderer::texture_write_data(
+    Texture* const    texture,
+    const byte* const data,
+    const uint32      size,
+    const uint32      offset
+) {
+    Logger::trace(RENDERER_LOG, "Writing data to texture.");
+    _backend->texture_write_data(texture, data, size, offset);
+    Logger::trace(RENDERER_LOG, "Texture writing complete.");
+}
+
 void Renderer::destroy_geometry(Geometry* geometry) {
     _backend->destroy_geometry(geometry);
     Logger::trace(RENDERER_LOG, "Geometry destroyed.");

@@ -79,7 +79,6 @@ class VulkanSwapchain {
     const vk::RenderPass*                _render_pass;
 
     vk::SwapchainKHR        _handle;
-    Vector<vk::ImageView>   _image_views;
     vk::Format              _format;
     vk::Format              _depth_format;
     vk::Extent2D            _extent;
@@ -103,8 +102,9 @@ class VulkanSwapchain {
     void recreate();
 
     // Image resources
-    VulkanImage* _depth_image;
-    VulkanImage* _color_image;
+    Vector<Texture*> _render_textures {};
+    VulkanImage*     _depth_image;
+    VulkanImage*     _color_image;
 
     void create_color_resource();
     void create_depth_resources();

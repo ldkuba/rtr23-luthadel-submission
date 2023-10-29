@@ -20,7 +20,7 @@ class RendererBackend {
      * @param surface A pointer to the render surface
      */
     RendererBackend(Platform::Surface* const surface) {}
-    virtual ~RendererBackend() {}
+    virtual ~RendererBackend() {};
 
     // Prevent accidental copying
     RendererBackend(RendererBackend const&)            = delete;
@@ -42,7 +42,7 @@ class RendererBackend {
      * @param width New width in pixels
      * @param height New height in pixels
      */
-    virtual void resized(const uint32 width, const uint32 height) {}
+    virtual void resized(const uint32 width, const uint32 height) = 0;
 
     /**
      * @brief Preform operations in preparation for frame rendering
@@ -50,37 +50,35 @@ class RendererBackend {
      * @throws RuntimeError If a problem is encountered during the method
      * execution
      */
-    virtual Result<void, RuntimeError> begin_frame(const float32 delta_time) {
-        return {};
-    }
+    virtual Result<void, RuntimeError> begin_frame( //
+        const float32 delta_time
+    )                                                                      = 0;
     /**
      * @brief Complete all rendering operations for this frame
      * @param delta_time Time in seconds since the last frame
      * @throws RuntimeError If a problem is encountered during the method
      * execution
      */
-    virtual Result<void, RuntimeError> end_frame(const float32 delta_time) {
-        return {};
-    }
+    virtual Result<void, RuntimeError> end_frame(const float32 delta_time) = 0;
 
     /**
      * @brief Start recording of render pass commands
      *
      * @param render_pass_id Render pass id
      */
-    virtual void begin_render_pass(uint8 render_pass_id) {}
+    virtual void begin_render_pass(uint8 render_pass_id) = 0;
     /**
      * @brief End recording of render pass commands
      *
      * @param render_pass_id Render pass id
      */
-    virtual void end_render_pass(uint8 render_pass_id) {}
+    virtual void end_render_pass(uint8 render_pass_id)   = 0;
 
     /**
      * @brief Draw command for specified geometry
      * @param geometry Geometry to draw
      */
-    virtual void draw_geometry(Geometry* const geometry) {}
+    virtual void draw_geometry(Geometry* const geometry) = 0;
 
     /**
      * @brief Create a texture and upload its relevant data to the GPU
@@ -88,13 +86,44 @@ class RendererBackend {
      * @param texture Texture to be upload
      * @param data Raw texture image data
      */
-    virtual void create_texture(Texture* texture, const byte* const data) {}
+    virtual void create_texture(Texture* texture, const byte* const data) = 0;
     /**
      * @brief Destroy a texture and free its corresponding GPU resources
      *
      * @param texture Texture to be destroy
      */
-    virtual void destroy_texture(Texture* texture) {}
+    virtual void destroy_texture(Texture* texture)                        = 0;
+
+    /**
+     * @brief Create a writable texture object with no initial data.
+     * @param texture Texture to be uploaded
+     */
+    virtual void create_writable_texture(Texture* texture) = 0;
+
+    /**
+     * @brief Resizes a texture. Internally texture is destroyed and recreated.
+     * @param texture Texture to be resized
+     * @param width New width in pixels
+     * @param height New Height in pixels
+     */
+    virtual void resize_texture(
+        Texture* const texture, const uint32 width, const uint32 height
+    ) = 0;
+
+    /**
+     * @brief Write data to provided texture. NOTE: This code wont block write
+     * requests for non-writable textures.
+     * @param texture Texture to be written to
+     * @param data Raw data bytes to be written
+     * @param size Data size in bytes
+     * @param offset Offset in bytes from which write starts
+     */
+    virtual void texture_write_data(
+        Texture* const    texture,
+        const byte* const data,
+        const uint32      size,
+        const uint32      offset
+    ) = 0;
 
     /**
      * @brief Create a geometry and upload its relevant data to the GPU
@@ -107,7 +136,7 @@ class RendererBackend {
         Geometry*             geometry,
         const Vector<Vertex>& vertices,
         const Vector<uint32>& indices
-    ) {}
+    ) = 0;
     /**
      * @brief Create a 2D geometry and upload its relevant data to the GPU
      *
@@ -119,25 +148,25 @@ class RendererBackend {
         Geometry*               geometry,
         const Vector<Vertex2D>& vertices,
         const Vector<uint32>&   indices
-    ) {}
+    )                                                 = 0;
     /**
      * @brief Destroy geometry and free its corresponding GPU resources
      *
      * @param geometry Geometry to be destroyed
      */
-    virtual void destroy_geometry(Geometry* geometry) {}
+    virtual void destroy_geometry(Geometry* geometry) = 0;
 
     /**
      * @brief Create a shader object and upload relevant data to the GPU
      * @param config Shader configuration
      * @return Pointer referencing the shader created object
      */
-    virtual Shader* create_shader(const ShaderConfig config) { return nullptr; }
+    virtual Shader* create_shader(const ShaderConfig config) = 0;
     /**
      * @brief Destroy shader and free its corresponding GPU resources
      * @param shader Shader to be destroyed.
      */
-    virtual void    destroy_shader(Shader* shader) {}
+    virtual void    destroy_shader(Shader* shader)           = 0;
 
   private:
     uint64 _frame_number = 0;

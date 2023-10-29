@@ -61,7 +61,8 @@ class Texture {
         const int32  height,
         const int32  channel_count,
         const bool   has_transparency,
-        const bool   is_writable
+        const bool   is_writable = false,
+        const bool   is_wrapped  = false
     );
     ~Texture() {}
 
@@ -71,6 +72,15 @@ class Texture {
     bool is_writable() { return _flags & IsWritable; }
     /// @brief True if this texture was created via wrapping
     bool is_wrapped() { return _flags & IsWrapped; }
+
+    /**
+     * @brief Resizes a given texture. May only be called for writable textures.
+     * If texture isn't writable nothing will happen.
+     * @param texture Texture to be resized
+     * @param width New width in pixels
+     * @param height New height in pixels
+     */
+    Outcome resize(const uint32 width, const uint32 height);
 
     const static uint32 max_name_length = 256;
 

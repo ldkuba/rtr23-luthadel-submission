@@ -103,6 +103,21 @@ class Renderer {
     );
 
     /**
+     * @brief Write data to provided texture. NOTE: This code wont block write
+     * requests for non-writable textures.
+     * @param texture Texture to be written to
+     * @param data Raw data bytes to be written
+     * @param size Data size in bytes
+     * @param offset Offset in bytes from which write starts
+     */
+    void texture_write_data(
+        Texture* const    texture,
+        const byte* const data,
+        const uint32      size,
+        const uint32      offset
+    );
+
+    /**
      * @brief Create a geometry and upload its relevant data to the GPU
      * @tparam VertexType Vertex (Vertex3D) or Vertex2D
      * @param geometry Geometry to be uploaded

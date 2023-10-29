@@ -5,11 +5,16 @@
 
 namespace ENGINE_NAMESPACE {
 
+// Helper functions
 VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback_function(
     VkDebugUtilsMessageSeverityFlagBitsEXT      message_severity,
     VkDebugUtilsMessageTypeFlagsEXT             message_type,
     const VkDebugUtilsMessengerCallbackDataEXT* callback_data,
     void*                                       user_data
+);
+
+vk::Format channel_count_to_std_format(
+    uint8 chanel_count, vk::Format default_format = vk::Format::eR8G8B8A8Unorm
 );
 
 // Constructor
@@ -315,19 +320,6 @@ void VulkanBackend::create_texture(Texture* texture, const byte* const data) {
     // NOTE: assumes 8 bits per channel
     auto texture_format = vk::Format::eR8G8B8A8Srgb;
 
-    // Create staging buffer
-    auto staging_buffer =
-        new (MemoryTag::Temp) VulkanBuffer(_device, _allocator);
-    staging_buffer->create(
-        texture->total_size,
-        vk::BufferUsageFlagBits::eTransferSrc,
-        vk::MemoryPropertyFlagBits::eHostVisible |
-            vk::MemoryPropertyFlagBits::eHostCoherent
-    );
-
-    // Fill created memory with data
-    staging_buffer->load_data(data, 0, texture->total_size);
-
     // Create device side image
     // NOTE: Lots of assumptions here
     auto texture_image =
@@ -346,33 +338,14 @@ void VulkanBackend::create_texture(Texture* texture, const byte* const data) {
         vk::ImageAspectFlagBits::eColor
     );
 
-    auto command_buffer = _command_pool->begin_single_time_commands();
-
-    // Transition image to a layout optimal for data transfer
-    auto result = texture_image->transition_image_layout(
-        command_buffer,
-        vk::ImageLayout::eUndefined,
-        vk::ImageLayout::eTransferDstOptimal
-    );
-    if (result.has_error())
-        Logger::fatal(RENDERER_VULKAN_LOG, result.error().what());
-
-    // Copy buffer data to image
-    staging_buffer->copy_data_to_image(command_buffer, texture_image);
-
-    // Generate mipmaps, this also transitions image to a layout optimal for
-    // sampling
-    texture_image->generate_mipmaps(command_buffer);
-    _command_pool->end_single_time_commands(command_buffer);
-
-    // Cleanup
-    del(staging_buffer);
-
-    // Save internal data
+    // Create internal data
     VulkanTextureData* vulkan_texture_data =
         new (MemoryTag::GPUTexture) VulkanTextureData();
     vulkan_texture_data->image = texture_image;
     texture->internal_data     = vulkan_texture_data;
+
+    // Write data
+    texture_write_data(texture, data, texture->total_size, 0);
 
     Logger::trace(RENDERER_VULKAN_LOG, "Texture created.");
 }
@@ -385,6 +358,119 @@ void VulkanBackend::destroy_texture(Texture* texture) {
     if (data->image) del(data->image);
 
     Logger::trace(RENDERER_VULKAN_LOG, "Texture destroyed.");
+}
+
+void VulkanBackend::create_writable_texture(Texture* texture) {
+    // Get format
+    const auto texture_format =
+        channel_count_to_std_format(texture->channel_count);
+
+    // Create device side image
+    // NOTE: Lots of assumptions here
+    auto texture_image =
+        new (MemoryTag::GPUTexture) VulkanImage(_device, _allocator);
+    texture_image->create(
+        texture->width,
+        texture->height,
+        texture->mip_level_count,
+        vk::SampleCountFlagBits::e1,
+        texture_format,
+        vk::ImageTiling::eOptimal,
+        vk::ImageUsageFlagBits::eTransferSrc |
+            vk::ImageUsageFlagBits::eTransferDst |
+            vk::ImageUsageFlagBits::eSampled |
+            vk::ImageUsageFlagBits::eColorAttachment,
+        vk::MemoryPropertyFlagBits::eDeviceLocal,
+        vk::ImageAspectFlagBits::eColor
+    );
+
+    // Create internal data
+    VulkanTextureData* vulkan_texture_data =
+        new (MemoryTag::GPUTexture) VulkanTextureData();
+    vulkan_texture_data->image = texture_image;
+    texture->internal_data     = vulkan_texture_data;
+}
+
+void VulkanBackend::resize_texture(
+    Texture* const texture, const uint32 width, const uint32 height
+) {
+    if (!texture || !texture->internal_data) return;
+
+    // Destroy old image
+    const auto data = static_cast<VulkanTextureData*>(texture->internal_data());
+    del(data->image);
+
+    // Get format
+    const auto texture_format =
+        channel_count_to_std_format(texture->channel_count);
+
+    // Create new image
+    auto texture_image =
+        new (MemoryTag::GPUTexture) VulkanImage(_device, _allocator);
+    texture_image->create(
+        texture->width,
+        texture->height,
+        texture->mip_level_count,
+        vk::SampleCountFlagBits::e1,
+        texture_format,
+        vk::ImageTiling::eOptimal,
+        vk::ImageUsageFlagBits::eTransferSrc |
+            vk::ImageUsageFlagBits::eTransferDst |
+            vk::ImageUsageFlagBits::eSampled |
+            vk::ImageUsageFlagBits::eColorAttachment,
+        vk::MemoryPropertyFlagBits::eDeviceLocal,
+        vk::ImageAspectFlagBits::eColor
+    );
+
+    // Assign
+    data->image = texture_image;
+}
+
+void VulkanBackend::texture_write_data(
+    Texture* const    texture,
+    const byte* const data,
+    const uint32      size,
+    const uint32      offset
+) {
+    // Get image
+    const auto internal_data =
+        static_cast<VulkanTextureData*>(texture->internal_data());
+    const auto& image = internal_data->image;
+
+    // Create staging buffer
+    auto staging_buffer =
+        new (MemoryTag::Temp) VulkanBuffer(_device, _allocator);
+    staging_buffer->create(
+        texture->total_size,
+        vk::BufferUsageFlagBits::eTransferSrc,
+        vk::MemoryPropertyFlagBits::eHostVisible |
+            vk::MemoryPropertyFlagBits::eHostCoherent
+    );
+
+    // Fill created memory with data
+    staging_buffer->load_data(data, 0, texture->total_size);
+
+    auto command_buffer = _command_pool->begin_single_time_commands();
+
+    // Transition image to a layout optimal for data transfer
+    auto result = image->transition_image_layout(
+        command_buffer,
+        vk::ImageLayout::eUndefined,
+        vk::ImageLayout::eTransferDstOptimal
+    );
+    if (result.has_error())
+        Logger::fatal(RENDERER_VULKAN_LOG, result.error().what());
+
+    // Copy buffer data to image
+    staging_buffer->copy_data_to_image(command_buffer, image);
+
+    // Generate mipmaps, this also transitions image to a layout optimal for
+    // sampling
+    image->generate_mipmaps(command_buffer);
+    _command_pool->end_single_time_commands(command_buffer);
+
+    // Cleanup
+    del(staging_buffer);
 }
 
 // Geometry
@@ -727,6 +813,18 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback_function(
     }
 
     return VK_FALSE;
+}
+
+vk::Format channel_count_to_std_format(
+    uint8 chanel_count, vk::Format default_format
+) {
+    switch (chanel_count) {
+    case 1: return vk::Format::eR8Unorm;
+    case 2: return vk::Format::eR8G8Unorm;
+    case 3: return vk::Format::eR8G8B8Unorm;
+    case 4: return vk::Format::eR8G8B8A8Unorm;
+    default: return default_format;
+    }
 }
 
 /// TODO: TEMP CODE BELOW

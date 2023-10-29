@@ -48,6 +48,14 @@ class VulkanImage {
         : _device(device), _allocator(allocator) {}
     ~VulkanImage();
 
+    /// @brief Creates vulkan image object based on a preexisting vulkan image.
+    /// Usually used by internal components like swapchain.
+    /// @param width Image width in pixels
+    /// @param height Image height in pixels
+    void create(
+        const vk::Image handle, const uint32 width, const uint32 height
+    );
+
     /// @brief Creates and allocates vulkan image in device local memory
     /// @param width Image width
     /// @param height Image height
@@ -105,6 +113,17 @@ class VulkanImage {
         const vk::ImageAspectFlags aspect_flags
     );
 
+    /// @brief Creates and set an image view for current image
+    /// @param mip_levels Max number mipmaping levels
+    /// @param format Image format
+    /// @param aspect_flags Image aspect covered (eg. color, depth...)
+    /// @returns Image view
+    void create_view(
+        const uint32               mip_levels,
+        const vk::Format           format,
+        const vk::ImageAspectFlags aspect_flags
+    );
+
     /// @brief Transition image between layouts
     /// @param command_buffer Command buffer to witch the transition command
     /// will be submitted
@@ -123,21 +142,6 @@ class VulkanImage {
     /// will be submitted
     void generate_mipmaps(const vk::CommandBuffer& command_buffer) const;
 
-    /// @brief Creates an image view corresponding to the provided vk::Image
-    /// @param format Image format
-    /// @param aspect_flags Image aspect covered (eg. color, depth...)
-    /// @param image Image for which we want to create the view
-    /// @param device Device on which the image is stored
-    /// @param allocator Vulkan allocation callback
-    /// @returns Image view
-    static vk::ImageView get_view_from_image(
-        const vk::Format                     format,
-        const vk::ImageAspectFlags           aspect_flags,
-        const vk::Image&                     image,
-        const vk::Device&                    device,
-        const vk::AllocationCallbacks* const allocator
-    );
-
   private:
     const VulkanDevice*                  _device;
     const vk::AllocationCallbacks* const _allocator;
@@ -152,12 +156,6 @@ class VulkanImage {
     uint32               _mip_levels;
     vk::Format           _format;
     vk::ImageAspectFlags _aspect_flags;
-
-    void create_view(
-        const uint32               mip_levels,
-        const vk::Format           format,
-        const vk::ImageAspectFlags aspect_flags
-    );
 };
 
 } // namespace ENGINE_NAMESPACE

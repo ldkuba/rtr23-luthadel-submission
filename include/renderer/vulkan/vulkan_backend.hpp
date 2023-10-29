@@ -18,7 +18,7 @@ namespace ENGINE_NAMESPACE {
 class VulkanBackend : public RendererBackend {
   public:
     VulkanBackend(Platform::Surface* const surface);
-    ~VulkanBackend();
+    ~VulkanBackend() override;
 
     void resized(const uint32 width, const uint32 height) override;
 
@@ -32,6 +32,17 @@ class VulkanBackend : public RendererBackend {
 
     void create_texture(Texture* texture, const byte* const data) override;
     void destroy_texture(Texture* texture) override;
+
+    void create_writable_texture(Texture* texture) override;
+    void resize_texture(
+        Texture* const texture, const uint32 width, const uint32 height
+    ) override;
+    void texture_write_data(
+        Texture* const    texture,
+        const byte* const data,
+        const uint32      size,
+        const uint32      offset
+    ) override;
 
     void create_geometry(
         Geometry*             geometry,

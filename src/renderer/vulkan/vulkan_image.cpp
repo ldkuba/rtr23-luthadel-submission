@@ -18,6 +18,14 @@ VulkanImage::~VulkanImage() {
 // /////////////////////////// //
 
 void VulkanImage::create(
+    const vk::Image handle, const uint32 width, const uint32 height
+) {
+    _handle = handle;
+    _width  = width;
+    _height = height;
+}
+
+void VulkanImage::create(
     const uint32                  width,
     const uint32                  height,
     const uint32                  mip_levels,
@@ -135,6 +143,36 @@ void VulkanImage::create(
 #ifdef TRACE_FILE_VULKAN_IMAGE
     Logger::trace(RENDERER_VULKAN_LOG, "Image created.");
 #endif
+}
+
+void VulkanImage::create_view(
+    const uint32               mip_levels,
+    const vk::Format           format,
+    const vk::ImageAspectFlags aspect_flags
+) {
+    _has_view     = true;
+    _aspect_flags = aspect_flags;
+    // Construct image view
+    vk::ImageViewCreateInfo create_info {};
+    create_info.setImage(_handle); // Image for which we are creating a view
+    create_info.setViewType(vk::ImageViewType::e2D); // 2D image
+    create_info.setFormat(format);                   // Image format
+    create_info.subresourceRange.setAspectMask(aspect_flags
+    ); // Image aspect (eg. color, depth...)
+    // Mipmaping
+    create_info.subresourceRange.setBaseMipLevel(0
+    ); // Level to start mipmaping from
+    create_info.subresourceRange.setLevelCount(mip_levels
+    ); // Maximum number of mipmaping levels
+    // Image array
+    create_info.subresourceRange.setBaseArrayLayer(0);
+    create_info.subresourceRange.setLayerCount(1);
+
+    try {
+        _view = _device->handle().createImageView(create_info, _allocator);
+    } catch (const vk::SystemError& e) {
+        Logger::fatal(RENDERER_VULKAN_LOG, e.what());
+    }
 }
 
 Result<void, InvalidArgument> VulkanImage::transition_image_layout(
@@ -308,71 +346,6 @@ void VulkanImage::generate_mipmaps(const vk::CommandBuffer& command_buffer
         1,
         &barrier
     );
-}
-
-vk::ImageView VulkanImage::get_view_from_image(
-    const vk::Format                     format,
-    const vk::ImageAspectFlags           aspect_flags,
-    const vk::Image&                     image,
-    const vk::Device&                    device,
-    const vk::AllocationCallbacks* const allocator
-) {
-    // Construct image view
-    vk::ImageViewCreateInfo create_info {};
-    create_info.setImage(image); // Image for which we are creating a view
-    create_info.setViewType(vk::ImageViewType::e2D); // 2D image
-    create_info.setFormat(format);                   // Image format
-    create_info.subresourceRange.setAspectMask(aspect_flags
-    ); // Image aspect (eg. color, depth...)
-    // Mipmaping
-    create_info.subresourceRange.setBaseMipLevel(0
-    ); // Level to start mipmaping from
-    create_info.subresourceRange.setLevelCount(1
-    ); // Maximum number of mipmaping levels
-    // Image array
-    create_info.subresourceRange.setBaseArrayLayer(0);
-    create_info.subresourceRange.setLayerCount(1);
-
-    try {
-        return device.createImageView(create_info, allocator);
-    } catch (const vk::SystemError& e) {
-        Logger::fatal(RENDERER_VULKAN_LOG, e.what());
-    }
-    return vk::ImageView();
-}
-
-// //////////////////////////// //
-// VULKAN IMAGE PRIVATE METHODS //
-// //////////////////////////// //
-
-void VulkanImage::create_view(
-    const uint32               mip_levels,
-    const vk::Format           format,
-    const vk::ImageAspectFlags aspect_flags
-) {
-    _has_view     = true;
-    _aspect_flags = aspect_flags;
-    // Construct image view
-    vk::ImageViewCreateInfo create_info {};
-    create_info.setImage(_handle); // Image for which we are creating a view
-    create_info.setViewType(vk::ImageViewType::e2D); // 2D image
-    create_info.setFormat(format);                   // Image format
-    create_info.subresourceRange.setAspectMask(aspect_flags
-    ); // Image aspect (eg. color, depth...)
-    // Mipmaping
-    create_info.subresourceRange.setBaseMipLevel(0
-    ); // Level to start mipmaping from
-    create_info.subresourceRange.setLevelCount(mip_levels
-    ); // Maximum number of mipmaping levels
-    // Image array
-    create_info.subresourceRange.setBaseArrayLayer(0);
-    create_info.subresourceRange.setLayerCount(1);
-
-    try {
-        _view = _device->handle().createImageView(create_info, _allocator);
-    } catch (const vk::SystemError& e) {
-        Logger::fatal(RENDERER_VULKAN_LOG, e.what());
-    }
 }
 
 } // namespace ENGINE_NAMESPACE

@@ -44,44 +44,9 @@ Texture* TextureSystem::acquire(
 ) {
     Logger::trace(TEXTURE_SYS_LOG, "Texture \"", name, "\" requested.");
 
-    // Check name validity
-    if (name.length() > Texture::max_name_length) {
-        Logger::error(
-            TEXTURE_SYS_LOG,
-            "Texture couldn't be acquired. ",
-            "Maximum name length of a texture is ",
-            Texture::max_name_length,
-            " characters but ",
-            name.length(),
-            " character long name was passed. Default texture acquired instead."
-        );
-        return (default_fallback == nullptr) ? _default_texture
-                                             : default_fallback;
-    }
-    if (name.compare_ci(_default_texture_name) == 0) {
-        Logger::warning(
-            TEXTURE_SYS_LOG,
-            "To acquire the default texture from texture system use "
-            "default_texture property instead."
-        );
-        return _default_texture;
-    }
-    if (name.compare_ci(_default_specular_texture_name) == 0) {
-        Logger::warning(
-            TEXTURE_SYS_LOG,
-            "To acquire the default texture from texture system use "
-            "default_specular_texture property instead."
-        );
-        return _default_specular_texture;
-    }
-    if (name.compare_ci(_default_normal_texture_name) == 0) {
-        Logger::warning(
-            TEXTURE_SYS_LOG,
-            "To acquire the default texture from texture system use "
-            "default_normal_texture property instead."
-        );
-        return _default_normal_texture;
-    }
+    // Check if name is valid
+    const auto name_check_res = name_is_valid(name, default_fallback);
+    if (name_check_res.has_error()) return name_check_res.error();
 
     // If texture already exists, find it
     const auto key = name.lower_c();
@@ -90,13 +55,13 @@ Texture* TextureSystem::acquire(
     if (ref != _registered_textures.end()) {
         ref->second.reference_count++;
 
-        Logger::trace(TEXTURE_SYS_LOG, "Texture acquired.");
+        Logger::trace(TEXTURE_SYS_LOG, "Texture \"", name, "\" acquired.");
         return ref->second.handle;
     }
 
     // Texture wasn't found, load from asset folder
-    auto result = _resource_system->load(name, ResourceType::Image);
-    if (result.has_error()) {
+    auto load_res = _resource_system->load(name, ResourceType::Image);
+    if (load_res.has_error()) {
         Logger::error(
             TEXTURE_SYS_LOG,
             "Texture \"",
@@ -106,7 +71,7 @@ Texture* TextureSystem::acquire(
         return (default_fallback == nullptr) ? _default_texture
                                              : default_fallback;
     }
-    auto image = (Image*) result.value();
+    auto image = (Image*) load_res.value();
 
     // Create new texture
     auto texture = new (MemoryTag::Texture) Texture(
@@ -132,25 +97,74 @@ Texture* TextureSystem::acquire(
     return texture;
 }
 
+Texture* TextureSystem::acquire_writable(
+    const String name,
+    const uint32 width,
+    const uint32 height,
+    const uint8  channel_count,
+    const bool   has_transparency
+) {
+    Logger::trace(
+        TEXTURE_SYS_LOG, "Texture \"", name, "\" (writable) requested."
+    );
+
+    // Check if name is valid
+    const auto name_check_res = name_is_valid(name);
+    if (name_check_res.has_error()) return name_check_res.error();
+
+    // If texture already exists, find it
+    const auto key = name.lower_c();
+    auto       ref = _registered_textures.find(key);
+
+    if (ref != _registered_textures.end()) {
+        ref->second.reference_count++;
+
+        Logger::trace(TEXTURE_SYS_LOG, "Texture \"", name, "\" acquired.");
+        return ref->second.handle;
+    }
+
+    // Texture wasn't found, create new one
+    auto texture = new (MemoryTag::Texture)
+        Texture(name, width, height, channel_count, has_transparency, true);
+    texture->id = (uint64) texture;
+    // Upload it to GPU
+    _renderer->create_writable_texture(texture);
+
+    // Create its reference
+    TextureRef texture_ref { texture, 1, false };
+    _registered_textures[key] = texture_ref;
+
+    Logger::trace(TEXTURE_SYS_LOG, "Texture \"", name, "\" acquired.");
+    return texture;
+}
+
 void TextureSystem::release(const String name) {
     if (name.compare_ci(_default_texture_name) == 0 ||
+        name.compare_ci(_default_diffuse_texture_name) == 0 ||
         name.compare_ci(_default_specular_texture_name) == 0 ||
         name.compare_ci(_default_normal_texture_name) == 0) {
         return;
     }
 
+    // Find requested texture
     const auto key = name.lower_c();
     auto       ref = _registered_textures.find(key);
 
-    if (ref == _registered_textures.end() || ref->second.reference_count == 0) {
+    // If not found warn about improper use of this function
+    if (ref == _registered_textures.end()) {
         Logger::warning(
             TEXTURE_SYS_LOG, "Tried to release a non-existent texture: ", name
         );
         return;
     }
+    // If ref count is 0 this usually means that release is not managed by
+    // automatically
+    if (ref->second.reference_count == 0) return;
+
+    // Reduce ref count
     ref->second.reference_count--;
 
-    // Release resource if it isn't needed
+    // Release resource if needed
     if (ref->second.reference_count == 0 && ref->second.auto_release == true) {
         _renderer->destroy_texture(ref->second.handle);
         del(ref->second.handle);
@@ -158,6 +172,84 @@ void TextureSystem::release(const String name) {
     }
 
     Logger::trace(TEXTURE_SYS_LOG, "Texture \"", name, "\" released.");
+}
+
+Texture* TextureSystem::wrap_internal(
+    const String               name,
+    const uint32               width,
+    const uint32               height,
+    const uint8                channel_count,
+    const bool                 has_transparency,
+    const bool                 is_writable,
+    InternalTextureData* const internal_data
+) {
+    // TODO: CLEAR THIS UP
+    Logger::fatal("Unimplemented.");
+    return nullptr;
+
+    Logger::trace(
+        TEXTURE_SYS_LOG, "Texture wrap internal for \"", name, "\" called."
+    );
+
+    // Check if name is valid
+    const auto name_check_res = name_is_valid(name);
+    if (name_check_res.has_error()) return name_check_res.error();
+
+    // Create new texture
+    Texture* texture = new (MemoryTag::Texture) Texture(
+        name, width, height, channel_count, has_transparency, is_writable, true
+    );
+    texture->internal_data = internal_data;
+
+    // If texture already exists, find it and replace it
+    const auto key = name.lower_c();
+    auto       ref = _registered_textures.find(key);
+
+    if (ref != _registered_textures.end()) {
+        ref->second.reference_count++;
+
+        Logger::trace(
+            TEXTURE_SYS_LOG, "Texture \"", name, "\" internals wrapped."
+        );
+        return ref->second.handle;
+    }
+
+    // Texture wasn't found, add newly created one
+    texture->id = (uint64) texture;
+
+    // Create its reference
+    TextureRef texture_ref { texture, 1, false };
+    _registered_textures[key] = texture_ref;
+
+    Logger::trace(TEXTURE_SYS_LOG, "Texture \"", name, "\" internals wrapped.");
+    return texture;
+}
+
+void TextureSystem::resize(
+    Texture* const texture,
+    const uint32   width,
+    const uint32   height,
+    const bool     regenerate_internal_data
+) {
+    if (texture == nullptr) {
+        Logger::warning(
+            TEXTURE_SYS_LOG, "Resize attempted on an empty texture reference."
+        );
+        return;
+    }
+    if (texture->is_writable() == false) {
+        Logger::warning(
+            TEXTURE_SYS_LOG,
+            "Resize called for non-writable texture. Nothing was done."
+        );
+        return;
+    }
+
+    // Resize texture
+    texture->resize(width, height);
+    // Resize GPU resources
+    if (!texture->is_wrapped() && regenerate_internal_data)
+        _renderer->resize_texture(texture, width, height);
 }
 
 // ////////////////////////////// //
@@ -251,6 +343,59 @@ void TextureSystem::destroy_default_textures() {
         _renderer->destroy_texture(_default_normal_texture);
         del(_default_normal_texture);
     }
+}
+
+Result<void, Texture*> TextureSystem::name_is_valid(
+    const String& texture_name, Texture* const default_fallback
+) {
+    // Check name validity
+    if (texture_name.length() > Texture::max_name_length) {
+        Logger::error(
+            TEXTURE_SYS_LOG,
+            "Texture couldn't be acquired. ",
+            "Maximum name length of a texture is ",
+            Texture::max_name_length,
+            " characters but ",
+            texture_name.length(),
+            " character long name was passed. Default texture acquired instead."
+        );
+        return Failure(
+            (default_fallback == nullptr) ? _default_texture : default_fallback
+        );
+    }
+    if (texture_name.compare_ci(_default_texture_name) == 0) {
+        Logger::warning(
+            TEXTURE_SYS_LOG,
+            "To acquire the default texture from texture system use "
+            "default_texture property instead."
+        );
+        return Failure(_default_texture);
+    }
+    if (texture_name.compare_ci(_default_diffuse_texture_name) == 0) {
+        Logger::warning(
+            TEXTURE_SYS_LOG,
+            "To acquire the default diffuse texture from texture system use "
+            "default_diffuse_texture property instead."
+        );
+        return Failure(_default_diffuse_texture);
+    }
+    if (texture_name.compare_ci(_default_specular_texture_name) == 0) {
+        Logger::warning(
+            TEXTURE_SYS_LOG,
+            "To acquire the default specular texture from texture system use "
+            "default_specular_texture property instead."
+        );
+        return Failure(_default_specular_texture);
+    }
+    if (texture_name.compare_ci(_default_normal_texture_name) == 0) {
+        Logger::warning(
+            TEXTURE_SYS_LOG,
+            "To acquire the default normal texture from texture system use "
+            "default_normal_texture property instead."
+        );
+        return Failure(_default_normal_texture);
+    }
+    return {};
 }
 
 } // namespace ENGINE_NAMESPACE

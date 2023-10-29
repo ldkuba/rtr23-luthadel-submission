@@ -54,6 +54,12 @@ VulkanSwapchain::~VulkanSwapchain() {
             del(framebuffer);
         framebuffer_set.framebuffers.clear();
     }
+    for (auto& texture : _render_textures) {
+        auto data =
+            reinterpret_cast<VulkanTextureData*>(texture->internal_data());
+        _device->handle().waitIdle();
+        if (data->image) del(data->image);
+    }
     _framebuffer_sets.clear();
     Logger::trace(RENDERER_VULKAN_LOG, "Swapchain destroyed.");
 }
@@ -75,12 +81,14 @@ uint32 VulkanSwapchain::create_framebuffers(
 ) {
     Logger::trace(RENDERER_VULKAN_LOG, "Initializing framebuffers.");
 
-    Vector<VulkanFramebuffer*> framebuffers { _image_views.size() };
+    Vector<VulkanFramebuffer*> framebuffers { _render_textures.size() };
     for (uint32 i = 0; i < framebuffers.size(); i++) {
         Vector<vk::ImageView> attachments {};
         if (multisampling) attachments.push_back(_color_image->view());
         if (depth_testing) attachments.push_back(_depth_image->view());
-        attachments.push_back(_image_views[i]);
+        const auto data =
+            (VulkanTextureData*) _render_textures[i]->internal_data();
+        attachments.push_back(data->image->view);
 
         framebuffers[i] = new (MemoryTag::GPUBuffer) VulkanFramebuffer(
             &_device->handle(),
@@ -246,20 +254,65 @@ void VulkanSwapchain::create() {
     }
 
     // === Remember swapchain format and extent ===
-    _format       = surface_format.format;
-    this->_extent = extent;
+    _format = surface_format.format;
+    _extent = extent;
 
     // Retrieve handles to images created with the swapchain
     auto swapchain_images = _device->handle().getSwapchainImagesKHR(_handle);
+
+    // Check whether render textures already exist
+    if (_render_textures.empty()) {
+        // Create new swapchain images (render textures)
+        for (uint32 i = 0; i < swapchain_images.size(); i++) {
+            // Create unique name
+            const auto texture_name = String::build(
+                "__internal_vulkan_swapchain_render_texture_", i, "__"
+            );
+
+            // Create new wrapped texture (Not managed by the texture system)
+            Texture* const texture = new (MemoryTag::Texture) Texture(
+                texture_name,
+                _extent.width,
+                _extent.height,
+                4,     // Channel count
+                false, // Transparent
+                true,  // Writable
+                true   // Wrapped
+            );
+
+            // Fill internal data
+            auto internal_data   = new VulkanTextureData();
+            internal_data->image = new VulkanImage(_device, _allocator);
+            internal_data->image->create(
+                swapchain_images[i], _extent.width, _extent.height
+            );
+            texture->internal_data = internal_data;
+
+            _render_textures.push_back(texture);
+        }
+    } else {
+        // Just resize
+        for (uint32 i = 0; i < swapchain_images.size(); i++) {
+            // Resize texture
+            _render_textures[i]->resize(extent.width, extent.height);
+
+            // Resize image internal
+            auto internal_data = reinterpret_cast<VulkanTextureData*>(
+                _render_textures[i]->internal_data()
+            );
+            internal_data->image->create(
+                swapchain_images[i], _extent.width, _extent.height
+            );
+        }
+    }
+
     // Create swapchain image views
-    _image_views.resize(swapchain_images.size());
-    for (uint32 i = 0; i < swapchain_images.size(); i++) {
-        _image_views[i] = VulkanImage::get_view_from_image(
-            _format,
-            vk::ImageAspectFlagBits::eColor,
-            swapchain_images[i],
-            _device->handle(),
-            _allocator
+    for (const auto& texture : _render_textures) {
+        auto internal_data =
+            reinterpret_cast<VulkanTextureData*>(texture->internal_data());
+
+        internal_data->image->create_view(
+            1, _format, vk::ImageAspectFlagBits::eColor
         );
     }
 }
@@ -270,8 +323,13 @@ void VulkanSwapchain::destroy() {
     del(_depth_image);
 
     // Destroy image views
-    for (auto image_view : _image_views)
-        _device->handle().destroyImageView(image_view, _allocator);
+    for (const auto& texture : _render_textures) {
+        auto internal_data =
+            reinterpret_cast<VulkanTextureData*>(texture->internal_data());
+        _device->handle().destroyImageView(
+            internal_data->image->view, _allocator
+        );
+    }
 
     // Destroy handle
     _device->handle().destroySwapchainKHR(_handle, _allocator);
@@ -293,11 +351,20 @@ void VulkanSwapchain::recreate() {
     for (auto& framebuffer_set : _framebuffer_sets) {
         for (uint32 i = 0; i < framebuffer_set.framebuffers.size(); i++) {
             Vector<vk::ImageView> attachments {};
+
+            // Add swapchain attachment
+            const auto data =
+                (VulkanTextureData*) _render_textures[i]->internal_data();
+            attachments.push_back(data->image->view);
+
+            // Add color attachment for multisampling
             if (framebuffer_set.multisampling)
                 attachments.push_back(_color_image->view());
+
+            // Add depth attachment for depth testing
             if (framebuffer_set.depth_testing)
                 attachments.push_back(_depth_image->view());
-            attachments.push_back(_image_views[i]);
+
             framebuffer_set.framebuffers[i]->recreate(
                 _extent.width, _extent.height, attachments
             );
