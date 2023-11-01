@@ -45,28 +45,8 @@ VulkanBackend::VulkanBackend(Platform::Surface* const surface)
         _vulkan_surface
     );
 
-    // Create render pass
-    _main_render_pass = new (MemoryTag::Renderer) VulkanRenderPass(
-        &_device->handle(),
-        _allocator,
-        _swapchain,
-        { 0.0f, 0.0f, 0.0f, 1.0f }, // Clear color
-        RenderPassPosition::Beginning,
-        RenderPassClearFlags::Color | RenderPassClearFlags::Depth |
-            RenderPassClearFlags::Stencil,
-        true, // Multisampling
-        true  // Depth testing
-    );
-    _ui_render_pass = new (MemoryTag::Renderer) VulkanRenderPass(
-        &_device->handle(),
-        _allocator,
-        _swapchain,
-        { 0.0f, 0.0f, 0.0f, 0.0f }, // Clear color
-        RenderPassPosition::End,
-        RenderPassClearFlags::None,
-        false, // Multisampling
-        false  // Depth testing
-    );
+    // Create render pass registry
+    _registered_passes.reserve(initial_renderpass_count);
 
     // Create command pool
     _command_pool = new (MemoryTag::Renderer) VulkanCommandPool(
@@ -98,8 +78,10 @@ VulkanBackend::~VulkanBackend() {
     del(_vertex_buffer);
 
     // Render pass
-    del(_ui_render_pass);
-    del(_main_render_pass);
+    for (auto& pass : _registered_passes)
+        del(pass);
+    _registered_passes.clear();
+    _render_pass_table.clear();
 
     // Command pool
     del(_command_pool);
@@ -245,43 +227,17 @@ Result<void, RuntimeError> VulkanBackend::end_frame(const float32 delta_time) {
 }
 
 // Render pass
-void VulkanBackend::begin_render_pass(uint8 render_pass_id) {
+void VulkanBackend::begin_render_pass(
+    RenderPass* const pass, RenderTarget* const render_target
+) {
     // Begin render pass
-    switch (render_pass_id) {
-    case BuiltinRenderPass::World:
-        _main_render_pass->begin(*_command_buffer->handle);
-        break;
-    case BuiltinRenderPass::UI:
-        _ui_render_pass->begin(*_command_buffer->handle);
-        break;
-    default:
-        Logger::error(
-            RENDERER_VULKAN_LOG,
-            "Method begin_render_pass called on unrecognized render pass id: ",
-            render_pass_id,
-            "."
-        );
-        return;
-    }
+    const auto vulkan_pass = dynamic_cast<VulkanRenderPass* const>(pass);
+    vulkan_pass->begin(render_target, *_command_buffer->handle);
 }
-void VulkanBackend::end_render_pass(uint8 render_pass_id) {
+void VulkanBackend::end_render_pass(RenderPass* const pass) {
     // End render pass
-    switch (render_pass_id) {
-    case BuiltinRenderPass::World:
-        _main_render_pass->end(*_command_buffer->handle);
-        break;
-    case BuiltinRenderPass::UI:
-        _ui_render_pass->end(*_command_buffer->handle);
-        break;
-    default:
-        Logger::error(
-            RENDERER_VULKAN_LOG,
-            "Method end_render_pass called on unrecognized render pass id: ",
-            render_pass_id,
-            "."
-        );
-        return;
-    }
+    const auto vulkan_pass = dynamic_cast<VulkanRenderPass* const>(pass);
+    vulkan_pass->end(*_command_buffer->handle);
 }
 
 void VulkanBackend::draw_geometry(Geometry* const geometry) {
@@ -313,7 +269,9 @@ void VulkanBackend::draw_geometry(Geometry* const geometry) {
 }
 
 // Textures
-void VulkanBackend::create_texture(Texture* texture, const byte* const data) {
+void VulkanBackend::create_texture(
+    Texture* const texture, const byte* const data
+) {
     Logger::trace(RENDERER_VULKAN_LOG, "Creating texture.");
 
     // Image format
@@ -349,7 +307,7 @@ void VulkanBackend::create_texture(Texture* texture, const byte* const data) {
 
     Logger::trace(RENDERER_VULKAN_LOG, "Texture created.");
 }
-void VulkanBackend::destroy_texture(Texture* texture) {
+void VulkanBackend::destroy_texture(Texture* const texture) {
     if (texture == nullptr) return;
     if (texture->internal_data == nullptr) return;
     auto data = reinterpret_cast<VulkanTextureData*>(texture->internal_data());
@@ -360,7 +318,7 @@ void VulkanBackend::destroy_texture(Texture* texture) {
     Logger::trace(RENDERER_VULKAN_LOG, "Texture destroyed.");
 }
 
-void VulkanBackend::create_writable_texture(Texture* texture) {
+void VulkanBackend::create_writable_texture(Texture* const texture) {
     // Get format
     const auto texture_format =
         channel_count_to_std_format(texture->channel_count);
@@ -475,7 +433,7 @@ void VulkanBackend::texture_write_data(
 
 // Geometry
 void VulkanBackend::create_geometry(
-    Geometry*             geometry,
+    Geometry* const       geometry,
     const Vector<Vertex>& vertices,
     const Vector<uint32>& indices
 ) {
@@ -490,7 +448,7 @@ void VulkanBackend::create_geometry(
     );
 }
 void VulkanBackend::create_geometry(
-    Geometry*               geometry,
+    Geometry* const         geometry,
     const Vector<Vertex2D>& vertices,
     const Vector<uint32>&   indices
 ) {
@@ -504,7 +462,7 @@ void VulkanBackend::create_geometry(
         indices.data()
     );
 }
-void VulkanBackend::destroy_geometry(Geometry* geometry) {
+void VulkanBackend::destroy_geometry(Geometry* const geometry) {
     if (!geometry) {
         Logger::warning(
             RENDERER_VULKAN_LOG,
@@ -532,10 +490,12 @@ void VulkanBackend::destroy_geometry(Geometry* geometry) {
 Shader* VulkanBackend::create_shader(const ShaderConfig config) {
     Logger::trace(RENDERER_VULKAN_LOG, "Creating shader.");
 
-    // TODO: Render pass switch
-    auto render_pass = _main_render_pass;
-    if (config.render_pass_name.compare_ci("Renderpass.Builtin.UI") == 0)
-        render_pass = _ui_render_pass;
+    // Get render pass
+    const auto render_pass_res = get_render_pass(config.render_pass_name);
+    if (render_pass_res.has_error())
+        Logger::fatal(RENDERER_VULKAN_LOG, render_pass_res.error().what());
+    const auto render_pass =
+        dynamic_cast<VulkanRenderPass*>(render_pass_res.value());
 
     // Create shader
     auto shader = new (MemoryTag::Shader) /**/ VulkanShader(
@@ -545,9 +505,121 @@ Shader* VulkanBackend::create_shader(const ShaderConfig config) {
     Logger::trace(RENDERER_VULKAN_LOG, "Shader created.");
     return shader;
 }
-void VulkanBackend::destroy_shader(Shader* shader) {
+void VulkanBackend::destroy_shader(Shader* const shader) {
     del(shader);
     Logger::trace(RENDERER_VULKAN_LOG, "Shader destroyed.");
+}
+
+RenderTarget* VulkanBackend::create_render_target(
+    RenderPass* const       pass,
+    const uint32            width,
+    const uint32            height,
+    const Vector<Texture*>& attachments
+) {
+    const auto vulkan_pass = dynamic_cast<VulkanRenderPass*>(pass);
+
+    // Scan for image views needed for framebuffer
+    Vector<vk::ImageView> view_attachments { attachments.size() };
+    for (uint32 i = 0; i < attachments.size(); i++) {
+        const auto data = (VulkanTextureData*) attachments[i]->internal_data();
+        view_attachments[i] = data->image->view;
+    }
+
+    // Create render target appropriate framebuffer
+    const auto framebuffer = new (MemoryTag::Renderer) VulkanFramebuffer(
+        &_device->handle(),
+        _allocator,
+        vulkan_pass,
+        width,
+        height,
+        view_attachments
+    );
+
+    // Store to render target
+    const auto target = new (MemoryTag::Renderer)
+        RenderTarget(attachments, framebuffer, width, height);
+
+    // Sync to window resize
+    // TODO: Use `_sync_to_window_resize` bool
+    _swapchain->recreate_event.subscribe(target, &RenderTarget::resize);
+
+    return target;
+}
+void VulkanBackend::destroy_render_target(
+    RenderTarget* const render_target, const bool free_internal_data
+) {
+    const auto vk_framebuffer =
+        dynamic_cast<VulkanFramebuffer*>(render_target->framebuffer());
+    del(vk_framebuffer);
+    if (free_internal_data) render_target->free_attachments();
+    del(render_target);
+}
+
+RenderPass* VulkanBackend::create_render_pass(const RenderPass::Config& config
+) {
+    // Name is not empty
+    if (config.name.empty())
+        Logger::fatal(
+            RENDERER_VULKAN_LOG,
+            "Empty renderpass name passed. Initialization failed."
+        );
+
+    // There mustn't be a name collision
+    if (_render_pass_table.find(config.name) != _render_pass_table.end())
+        Logger::fatal(
+            RENDERER_VULKAN_LOG,
+            "Two renderpass configurations given with the same renderpass "
+            "name; `",
+            config.name,
+            "`. Initialization failed."
+        );
+
+    // Generate new pass id
+    const auto new_id = _registered_passes.size();
+
+    // Register pass
+    _render_pass_table[config.name] = new_id;
+
+    // Create and add this pass
+    const auto renderpass = new VulkanRenderPass(
+        &_device->handle(), _allocator, _swapchain, new_id, config
+    );
+    _registered_passes.push_back(renderpass);
+
+    return renderpass;
+}
+void VulkanBackend::destroy_render_pass(RenderPass* pass) {
+    const auto vulkan_pass = dynamic_cast<VulkanRenderPass*>(pass);
+    del(vulkan_pass);
+}
+
+Result<RenderPass*, RuntimeError> VulkanBackend::get_render_pass(
+    const String& name
+) const {
+    const auto pass_id = _render_pass_table.find(name);
+    if (pass_id == _render_pass_table.end())
+        return Failure(
+            String::build("No registered renderpass is named `", name, "`")
+        );
+    return _registered_passes[pass_id->second];
+}
+
+uint8 VulkanBackend::get_window_attachment_count() const {
+    return _swapchain->get_render_texture_count();
+}
+
+Texture* VulkanBackend::get_window_attachment(const uint8 index) const {
+    return _swapchain->get_render_texture(index);
+}
+Texture* VulkanBackend::get_depth_attachment() const {
+    return _swapchain->get_depth_texture();
+}
+Texture* VulkanBackend::get_color_attachment() const {
+    return _swapchain->get_color_texture();
+}
+
+uint8 VulkanBackend::get_current_window_attachment_index() const {
+    return _swapchain->get_current_index();
 }
 
 // /////////////////////////////// //
@@ -707,7 +779,7 @@ uint32 VulkanBackend::generate_geometry_id() {
 }
 
 void VulkanBackend::create_geometry_internal(
-    Geometry*         geometry,
+    Geometry* const   geometry,
     const uint32      vertex_size,
     const uint32      vertex_count,
     const void* const vertex_data,

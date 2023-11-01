@@ -25,15 +25,18 @@ class VulkanBackend : public RendererBackend {
     Result<void, RuntimeError> begin_frame(const float32 delta_time) override;
     Result<void, RuntimeError> end_frame(const float32 delta_time) override;
 
-    void begin_render_pass(uint8 render_pass_id) override;
-    void end_render_pass(uint8 render_pass_id) override;
+    void begin_render_pass(
+        RenderPass* const pass, RenderTarget* const render_target
+    ) override;
+    void end_render_pass(RenderPass* const pass) override;
 
     void draw_geometry(Geometry* const geometry) override;
 
-    void create_texture(Texture* texture, const byte* const data) override;
-    void destroy_texture(Texture* texture) override;
+    void create_texture(Texture* const texture, const byte* const data)
+        override;
+    void destroy_texture(Texture* const texture) override;
 
-    void create_writable_texture(Texture* texture) override;
+    void create_writable_texture(Texture* const texture) override;
     void resize_texture(
         Texture* const texture, const uint32 width, const uint32 height
     ) override;
@@ -45,19 +48,43 @@ class VulkanBackend : public RendererBackend {
     ) override;
 
     void create_geometry(
-        Geometry*             geometry,
+        Geometry* const       geometry,
         const Vector<Vertex>& vertices,
         const Vector<uint32>& indices
     ) override;
     void create_geometry(
-        Geometry*               geometry,
+        Geometry* const         geometry,
         const Vector<Vertex2D>& vertices,
         const Vector<uint32>&   indices
     ) override;
-    void destroy_geometry(Geometry* geometry) override;
+    void destroy_geometry(Geometry* const geometry) override;
 
     Shader* create_shader(const ShaderConfig config) override;
     void    destroy_shader(Shader* shader) override;
+
+    RenderTarget* create_render_target(
+        RenderPass* const       pass,
+        const uint32            width,
+        const uint32            height,
+        const Vector<Texture*>& attachments
+    ) override;
+    void destroy_render_target(
+        RenderTarget* const render_target, const bool free_internal_data = true
+    ) override;
+
+    RenderPass* create_render_pass(const RenderPass::Config& config) override;
+    void        destroy_render_pass(RenderPass* const pass) override;
+
+    Result<RenderPass*, RuntimeError> get_render_pass(const String& name
+    ) const override;
+
+    uint8 get_window_attachment_count() const override;
+
+    Texture* get_window_attachment(const uint8 index) const override;
+    Texture* get_depth_attachment() const override;
+    Texture* get_color_attachment() const override;
+
+    uint8 get_current_window_attachment_index() const override;
 
   private:
     // TODO: Custom allocator
@@ -93,8 +120,9 @@ class VulkanBackend : public RendererBackend {
     uint32           _current_frame = 0;
 
     // RENDER PASS
-    VulkanRenderPass* _main_render_pass;
-    VulkanRenderPass* _ui_render_pass;
+    UnorderedMap<String, uint16> _render_pass_table {};
+    Vector<VulkanRenderPass*>    _registered_passes {};
+    static constexpr const uint8 initial_renderpass_count = 32;
 
     // GEOMETRY CODE
     Map<uint32, VulkanGeometryData> _geometries;
@@ -120,7 +148,7 @@ class VulkanBackend : public RendererBackend {
 
     // Utility geometry methods
     void create_geometry_internal(
-        Geometry*         geometry,
+        Geometry* const   geometry,
         const uint32      vertex_size,
         const uint32      vertex_count,
         const void* const vertex_data,

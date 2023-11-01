@@ -4,6 +4,8 @@
 
 namespace ENGINE_NAMESPACE {
 
+Vector<vk::ImageView> get_view_attachments(const Vector<Texture*> attachments);
+
 // Constructor & Destructor
 VulkanFramebuffer::VulkanFramebuffer(
     const vk::Device* const              device,
@@ -20,18 +22,21 @@ VulkanFramebuffer::~VulkanFramebuffer() {
     _device->destroyFramebuffer(_handle, _allocator);
 }
 
-void VulkanFramebuffer::recreate(
-    const uint32                 width,
-    const uint32                 height,
-    const Vector<vk::ImageView>& attachments
-) {
-    _device->destroyFramebuffer(_handle, _allocator);
-    create(width, height, attachments);
-}
-
 // ///////////////////////////////// //
 // VULKAN FRAMEBUFFER PUBLIC METHODS //
 // ///////////////////////////////// //
+
+void VulkanFramebuffer::recreate(
+    const uint32 width, const uint32 height, const Vector<Texture*>& attachments
+) {
+    _device->destroyFramebuffer(_handle, _allocator);
+    const auto view_att = get_view_attachments(attachments);
+    create(width, height, view_att);
+}
+
+// ////////////////////////////////// //
+// VULKAN FRAMEBUFFER PRIVATE METHODS //
+// ////////////////////////////////// //
 
 void VulkanFramebuffer::create(
     const uint32                 width,
@@ -54,6 +59,19 @@ void VulkanFramebuffer::create(
     } catch (vk::SystemError e) {
         Logger::fatal(RENDERER_VULKAN_LOG, e.what());
     }
+}
+
+// /////////////////////////////////// //
+// VULKAN FRAMEBUFFER HELPER FUNCTIONS //
+// /////////////////////////////////// //
+
+Vector<vk::ImageView> get_view_attachments(const Vector<Texture*> attachments) {
+    Vector<vk::ImageView> view_attachments { attachments.size() };
+    for (uint32 i = 0; i < attachments.size(); i++) {
+        const auto data = (VulkanTextureData*) attachments[i]->internal_data();
+        view_attachments[i] = data->image->view;
+    }
+    return view_attachments;
 }
 
 } // namespace ENGINE_NAMESPACE

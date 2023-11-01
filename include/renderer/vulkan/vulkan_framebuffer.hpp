@@ -2,6 +2,7 @@
 
 #include "property.hpp"
 #include "logger.hpp"
+#include "renderer/renderer_types.hpp"
 #include <vulkan/vulkan.hpp>
 
 namespace ENGINE_NAMESPACE {
@@ -11,7 +12,7 @@ class VulkanRenderPass;
 /**
  * @brief Vulkan implementation of framebuffer object.
  */
-class VulkanFramebuffer {
+class VulkanFramebuffer : public FrameBuffer {
   public:
     /// @brief Handle to vk::Framebuffer
     Property<vk::Framebuffer> handle {
@@ -43,13 +44,13 @@ class VulkanFramebuffer {
      *
      * @param width New width in pixels
      * @param height New height in pixels
-     * @param attachments New list of attached Image views
+     * @param attachments New list of attached Textures
      */
     void recreate(
-        const uint32                 width,
-        const uint32                 height,
-        const Vector<vk::ImageView>& attachments
-    );
+        const uint32            width,
+        const uint32            height,
+        const Vector<Texture*>& attachments
+    ) override;
 
   private:
     const vk::Device*                    _device;

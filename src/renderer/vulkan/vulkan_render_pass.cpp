@@ -9,42 +9,42 @@ VulkanRenderPass::VulkanRenderPass(
     const vk::Device* const              device,
     const vk::AllocationCallbacks* const allocator,
     VulkanSwapchain* const               swapchain,
-    const std::array<float32, 4>         clear_color,
-    const RenderPassPosition             position,
-    const uint8                          clear_flags,
-    const bool                           multisampling,
-    const bool                           depth_testing
+    const uint16                         id,
+    const Config&                        config
 )
     : _device(device), _swapchain(swapchain), _allocator(allocator),
-      _multisampling_enabled(multisampling),
-      _depth_testing_enabled(depth_testing) {
+      RenderPass(id, config),
+      // TODO: Configurable
+      _depth(1.0), _stencil(0) {
 
     Logger::trace(RENDERER_VULKAN_LOG, "Creating render pass.");
 
     // Compute state
-    auto sample_count = (multisampling) ? _swapchain->msaa_samples
-                                        : vk::SampleCountFlagBits::e1;
-    auto has_depth    = clear_flags & RenderPassClearFlags::Depth;
+    auto sample_count = (_multisampling_enabled) ? _swapchain->msaa_samples
+                                                 : vk::SampleCountFlagBits::e1;
+    auto clear_depth  = _clear_flags & ClearFlags::Depth;
+
+    // Compute position
+    _has_prev = !config.prev_name.empty();
+    _has_next = !config.next_name.empty();
 
     // === Get all attachment descriptions ===
     Vector<vk::AttachmentDescription> attachments {};
 
     // Color attachment
-    auto color_load_op = ((clear_flags & RenderPassClearFlags::Color) != 0)
-                             ? vk::AttachmentLoadOp::eClear
-                             : vk::AttachmentLoadOp::eLoad;
-    auto color_initial_layout = ((position == RenderPassPosition::Beginning ||
-                                  position == RenderPassPosition::Only))
-                                    ? vk::ImageLayout::eUndefined
-                                    : vk::ImageLayout::eColorAttachmentOptimal;
-    auto color_final_layout   = ((position == RenderPassPosition::End ||
-                                position == RenderPassPosition::Only) &&
-                               !multisampling)
-                                    ? vk::ImageLayout::ePresentSrcKHR
-                                    : vk::ImageLayout::eColorAttachmentOptimal;
+    auto color_load_op        = ((_clear_flags & ClearFlags::Color) != 0)
+                                    ? vk::AttachmentLoadOp::eClear
+                                    : vk::AttachmentLoadOp::eLoad;
+    auto color_initial_layout = (_has_prev)
+                                    ? vk::ImageLayout::eColorAttachmentOptimal
+                                    : vk::ImageLayout::eUndefined;
+    auto color_final_layout   = (_has_next || _multisampling_enabled)
+                                    ? vk::ImageLayout::eColorAttachmentOptimal
+                                    : vk::ImageLayout::ePresentSrcKHR;
 
     vk::AttachmentDescription color_attachment {};
-    color_attachment.setFormat(_swapchain->get_color_attachment_format());
+    color_attachment.setFormat(_swapchain->get_color_attachment_format()
+    ); // TODO: Configure
     color_attachment.setSamples(sample_count);
     color_attachment.setLoadOp(color_load_op);
     color_attachment.setStoreOp(vk::AttachmentStoreOp::eStore);
@@ -61,11 +61,14 @@ VulkanRenderPass::VulkanRenderPass(
 
     // Depth attachment
     vk::AttachmentReference* depth_attachment_ref = nullptr;
-    if (has_depth) {
+    if (_depth_testing_enabled) {
         vk::AttachmentDescription depth_attachment {};
         depth_attachment.setFormat(_swapchain->get_depth_attachment_format());
         depth_attachment.setSamples(sample_count);
-        depth_attachment.setLoadOp(vk::AttachmentLoadOp::eClear);
+        depth_attachment.setLoadOp(
+            clear_depth ? vk::AttachmentLoadOp::eClear
+                        : vk::AttachmentLoadOp::eLoad
+        );
         depth_attachment.setStoreOp(vk::AttachmentStoreOp::eDontCare);
         depth_attachment.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
         depth_attachment.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
@@ -82,12 +85,10 @@ VulkanRenderPass::VulkanRenderPass(
 
     // Resolve attachment
     vk::AttachmentReference* color_attachment_resolve_ref = nullptr;
-    if (multisampling) {
+    if (_multisampling_enabled) {
         auto resolve_final_layout =
-            (position == RenderPassPosition::End ||
-             position == RenderPassPosition::Only)
-                ? vk::ImageLayout::ePresentSrcKHR
-                : vk::ImageLayout::eColorAttachmentOptimal;
+            (_has_prev) ? vk::ImageLayout::ePresentSrcKHR
+                        : vk::ImageLayout::eColorAttachmentOptimal;
         vk::AttachmentDescription resolve_attachment {};
         resolve_attachment.setFormat(_swapchain->get_color_attachment_format());
         resolve_attachment.setSamples(vk::SampleCountFlagBits::e1);
@@ -115,7 +116,7 @@ VulkanRenderPass::VulkanRenderPass(
     subpass.setPResolveAttachments(color_attachment_resolve_ref);
     // Preserve and input attachments not used
 
-    // === Subpass dependencies ===
+    // === Subpass dependencies === TODO: MAKE CONFIGURABLE
     // Controls image layout transitions between subpasses
     vk::SubpassDependency dependency {};
     // Refers to the implicit subpass before current render pass
@@ -159,21 +160,19 @@ VulkanRenderPass::VulkanRenderPass(
     if (depth_attachment_ref) del(depth_attachment_ref);
     if (color_attachment_resolve_ref) del(color_attachment_resolve_ref);
 
-    // === Create register framebuffers ===
-    _framebuffer_set_index =
-        _swapchain->create_framebuffers(this, multisampling, has_depth);
-
     // === Compute default clear values ===
     // Default background values of color and depth stencil for rendered area of
     // the render pass
-    if (clear_flags & RenderPassClearFlags::Color)
-        _clear_values[0].setColor({ clear_color });
-    if (has_depth) {
+    if (_clear_flags & ClearFlags::Color)
+        _clear_values[0].setColor(
+            { _clear_color.x, _clear_color.y, _clear_color.z, _clear_color.w }
+        );
+    if (clear_depth) {
         _clear_values.push_back({});
-        if (clear_flags & RenderPassClearFlags::Depth)
-            _clear_values[1].depthStencil.setDepth(1.0f);
-        if (clear_flags & RenderPassClearFlags::Stencil)
-            _clear_values[1].depthStencil.setStencil(0);
+        if (_clear_flags & ClearFlags::Depth)
+            _clear_values[1].depthStencil.setDepth(_depth);
+        if (_clear_flags & ClearFlags::Stencil)
+            _clear_values[1].depthStencil.setStencil(_stencil);
     }
 
     Logger::trace(RENDERER_VULKAN_LOG, "Render pass created.");
@@ -187,19 +186,23 @@ VulkanRenderPass::~VulkanRenderPass() {
 // VULKAN RENDER PASS PUBLIC METHODS //
 // ///////////////////////////////// //
 
-void VulkanRenderPass::begin(const vk::CommandBuffer& command_buffer) {
+void VulkanRenderPass::begin(
+    RenderTarget* const render_target, const vk::CommandBuffer& command_buffer
+) {
     // Get relevant framebuffer
-    auto framebuffer =
-        _swapchain->get_currently_used_framebuffer(_framebuffer_set_index);
+    const auto framebuffer =
+        dynamic_cast<VulkanFramebuffer*>(render_target->framebuffer());
 
     // Begin render pass
     vk::RenderPassBeginInfo render_pass_begin_info {};
-    render_pass_begin_info.setRenderPass(handle);
+    render_pass_begin_info.setRenderPass(_handle);
     render_pass_begin_info.setFramebuffer(framebuffer->handle());
     render_pass_begin_info.setClearValues(_clear_values);
     // Area of the surface to render to (here full surface)
-    render_pass_begin_info.renderArea.setOffset({ 0, 0 });
-    render_pass_begin_info.renderArea.setExtent(_swapchain->extent);
+    render_pass_begin_info.renderArea.setOffset({ (int32) _render_offset.x,
+                                                  (int32) _render_offset.y });
+    render_pass_begin_info.renderArea.setExtent({ render_target->width(),
+                                                  render_target->height() });
 
     command_buffer.beginRenderPass(
         render_pass_begin_info, vk::SubpassContents::eInline

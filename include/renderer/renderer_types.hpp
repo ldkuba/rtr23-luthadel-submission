@@ -2,6 +2,7 @@
 
 #include "math_libs.hpp"
 #include "serialization/serializer.hpp"
+#include "resources/texture.hpp"
 
 namespace ENGINE_NAMESPACE {
 
@@ -132,12 +133,31 @@ struct hash<ENGINE_NAMESPACE::Vertex> {
 namespace ENGINE_NAMESPACE {
 
 // -----------------------------------------------------------------------------
+// Frame buffer
+// -----------------------------------------------------------------------------
+
+/**
+ * @brief Generic abstract representation of a framebuffer.
+ */
+class FrameBuffer {
+  public:
+    /**
+     * @brief Recreates framebuffer object
+     *
+     * @param width New width in pixels
+     * @param height New height in pixels
+     * @param attachments New list of attached Textures
+     */
+    virtual void recreate(
+        const uint32            width,
+        const uint32            height,
+        const Vector<Texture*>& attachments
+    ) = 0;
+};
+
+// -----------------------------------------------------------------------------
 // Render data
 // -----------------------------------------------------------------------------
-/**
- * @brief List of builtin render passes
- */
-enum BuiltinRenderPass : uint8 { World = 0x1, UI = 0x2 };
 
 /**
  * @brief Render debug view modes

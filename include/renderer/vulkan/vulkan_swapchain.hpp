@@ -21,6 +21,9 @@ class VulkanSwapchain {
         GET { return _msaa_samples; }
     };
 
+    /// @brief Event that is evoked after swapchain recreation completes
+    Event<void(uint32, uint32)> recreate_event {};
+
     /**
      * @brief Construct a new Vulkan Swapchain object
      *
@@ -39,38 +42,38 @@ class VulkanSwapchain {
     );
     ~VulkanSwapchain();
 
-    /// @brief Change swapchain image extent
-    /// @param width New width
-    /// @param height New height
-    void   change_extent(const uint32 width, const uint32 height);
-    /// @brief Create used framebuffers
-    /// @param render_pass Render pass for which to create the framebuffers
-    /// @param multisampling If true enables multisampling
-    /// @param depth_testing If true enables depth testing
-    /// @returns Framebuffer set identifier
-    uint32 create_framebuffers(
-        const VulkanRenderPass* const render_pass,
-        bool                          multisampling,
-        bool                          depth_testing
-    );
+    /// @brief Current image index
+    uint8 get_current_index() const;
+    /// @brief Image / Render texture count
+    uint8 get_render_texture_count() const;
+
+    /// @brief Active render texture at @a index
+    Texture* get_render_texture(const uint8 index) const;
+    /// @brief Active depth texture for depth testing
+    Texture* get_depth_texture() const;
+    /// @brief Active color / resolve texture for multisampling
+    Texture* get_color_texture() const;
 
     /// @return Format currently used by the color attachment
     vk::Format get_color_attachment_format() const;
     /// @return Format currently used by the depth attachment
     vk::Format get_depth_attachment_format() const;
 
+    /// @brief Change swapchain image extent
+    /// @param width New width
+    /// @param height New height
+    void change_extent(const uint32 width, const uint32 height);
+
     /// @brief Compute the index of the next swapchain image for rendering
     /// @param signal_semaphore Semaphore to signal after acquisition
     void compute_next_image_index(const vk::Semaphore& signal_semaphore);
+
     /// @brief Present render results
     /// @param image_index Index of the image to present
     /// @param wait_for_semaphores Semaphores to wait on before presenting
     void present(
         const vk::ArrayProxyNoTemporaries<vk::Semaphore>& wait_for_semaphores
     );
-    /// @brief Get the framebuffer used in the current draw
-    /// @param index Framebuffer set identifier
-    VulkanFramebuffer* get_currently_used_framebuffer(const uint32 index);
 
   private:
     const VulkanDevice*                  _device;
@@ -81,30 +84,24 @@ class VulkanSwapchain {
     vk::SwapchainKHR        _handle;
     vk::Format              _format;
     vk::Format              _depth_format;
+    uint32                  _depth_format_channel_count;
     vk::Extent2D            _extent;
     vk::SampleCountFlagBits _msaa_samples;
 
     uint32 _current_image_index = 0;
 
-    struct FramebufferRef {
-        Vector<VulkanFramebuffer*> framebuffers {};
-        bool                       multisampling;
-        bool                       depth_testing;
-    };
-    Vector<FramebufferRef> _framebuffer_sets {};
-
     uint32 _width;
     uint32 _height;
     bool   _should_resize = false;
 
+    // Image resources
+    Vector<Texture*> _render_textures {};
+    Texture*         _depth_attachment {};
+    Texture*         _color_attachment {};
+
     void create();
     void destroy();
     void recreate();
-
-    // Image resources
-    Vector<Texture*> _render_textures {};
-    VulkanImage*     _depth_image;
-    VulkanImage*     _color_image;
 
     void create_color_resource();
     void create_depth_resources();

@@ -4,6 +4,7 @@
 
 #include "renderer_types.hpp"
 #include "resources/shader.hpp"
+#include "render_pass.hpp"
 
 namespace ENGINE_NAMESPACE {
 
@@ -64,15 +65,18 @@ class RendererBackend {
     /**
      * @brief Start recording of render pass commands
      *
-     * @param render_pass_id Render pass id
+     * @param pass Render pass to be used
+     * @param target Render target to be used
      */
-    virtual void begin_render_pass(uint8 render_pass_id) = 0;
+    virtual void begin_render_pass(
+        RenderPass* const pass, RenderTarget* const render_target
+    )                                                    = 0;
     /**
      * @brief End recording of render pass commands
      *
-     * @param render_pass_id Render pass id
+     * @param pass Render pass on which we want to end recording
      */
-    virtual void end_render_pass(uint8 render_pass_id)   = 0;
+    virtual void end_render_pass(RenderPass* const pass) = 0;
 
     /**
      * @brief Draw command for specified geometry
@@ -83,22 +87,24 @@ class RendererBackend {
     /**
      * @brief Create a texture and upload its relevant data to the GPU
      *
-     * @param texture Texture to be upload
+     * @param texture Texture to be uploaded
      * @param data Raw texture image data
      */
-    virtual void create_texture(Texture* texture, const byte* const data) = 0;
+    virtual void create_texture(
+        Texture* const texture, const byte* const data
+    )                                                    = 0;
     /**
      * @brief Destroy a texture and free its corresponding GPU resources
      *
      * @param texture Texture to be destroy
      */
-    virtual void destroy_texture(Texture* texture)                        = 0;
+    virtual void destroy_texture(Texture* const texture) = 0;
 
     /**
      * @brief Create a writable texture object with no initial data.
      * @param texture Texture to be uploaded
      */
-    virtual void create_writable_texture(Texture* texture) = 0;
+    virtual void create_writable_texture(Texture* const texture) = 0;
 
     /**
      * @brief Resizes a texture. Internally texture is destroyed and recreated.
@@ -133,7 +139,7 @@ class RendererBackend {
      * @param indices Array of index data used by the geometry
      */
     virtual void create_geometry(
-        Geometry*             geometry,
+        Geometry* const       geometry,
         const Vector<Vertex>& vertices,
         const Vector<uint32>& indices
     ) = 0;
@@ -145,7 +151,7 @@ class RendererBackend {
      * @param indices Array of index data used by the geometry
      */
     virtual void create_geometry(
-        Geometry*               geometry,
+        Geometry* const         geometry,
         const Vector<Vertex2D>& vertices,
         const Vector<uint32>&   indices
     )                                                 = 0;
@@ -166,7 +172,82 @@ class RendererBackend {
      * @brief Destroy shader and free its corresponding GPU resources
      * @param shader Shader to be destroyed.
      */
-    virtual void    destroy_shader(Shader* shader)           = 0;
+    virtual void    destroy_shader(Shader* const shader)     = 0;
+
+    /**
+     * @brief Create a render target object.
+     * @param pass Associated render pass
+     * @param width Render target width in pixels
+     * @param height Render target height in pixels
+     * @param attachments Array of target attachments (Textures)
+     * @returns RenderTarget* Created render target
+     */
+    virtual RenderTarget* create_render_target(
+        RenderPass* const       pass,
+        const uint32            width,
+        const uint32            height,
+        const Vector<Texture*>& attachments
+    ) = 0;
+    /**
+     * @brief Destroy provided render target
+     * @param render_target Target to be destroyed
+     * @param free_internal_data If true also frees internal render target GPU
+     * memory
+     */
+    virtual void destroy_render_target(
+        RenderTarget* const render_target, const bool free_internal_data = true
+    ) = 0;
+
+    /**
+     * @brief Create a render pass object
+     * @param config Render pass configurations
+     * @returns RenderPass* Created render pass
+     */
+    virtual RenderPass* create_render_pass(const RenderPass::Config& config
+    )                                                               = 0;
+    /**
+     * @brief Destroy provided render pass
+     * @param pass Render pass to be destroyed
+     */
+    virtual void        destroy_render_pass(RenderPass* const pass) = 0;
+
+    /**
+     * @brief Get a reference to a render pass object by name
+     *
+     * @param name Render pass name
+     * @return RenderPass* If render pass is found
+     * @throws RuntimeError otherwise
+     */
+    virtual Result<RenderPass*, RuntimeError> get_render_pass(const String& name
+    ) const = 0;
+
+    /**
+     * @return uint8 Window attachment count
+     */
+    virtual uint8 get_window_attachment_count() const = 0;
+
+    /**
+     * @brief Get the window attachment texture at the given index
+     * @param index Index of attachment we want to get. Must be within
+     * window attachment range.
+     * @return Texture* Requested window attachment texture if successful
+     * @throws RuntimeError otherwise
+     */
+    virtual Texture* get_window_attachment(const uint8 index) const = 0;
+    /**
+     * @return Texture* Main depth attachment texture if dept testing is enabled
+     */
+    virtual Texture* get_depth_attachment() const                   = 0;
+    /**
+     * @return Texture* Get main resolve color attachment if multisampling is
+     * enabled
+     */
+    virtual Texture* get_color_attachment() const                   = 0;
+
+    /**
+     * @return uint8 Current window attachment index
+     */
+    virtual uint8 get_current_window_attachment_index() const = 0;
 
   private:
     uint64 _frame_number = 0;

@@ -49,18 +49,28 @@ VulkanSwapchain::VulkanSwapchain(
 
 VulkanSwapchain::~VulkanSwapchain() {
     destroy();
-    for (auto& framebuffer_set : _framebuffer_sets) {
-        for (auto& framebuffer : framebuffer_set.framebuffers)
-            del(framebuffer);
-        framebuffer_set.framebuffers.clear();
+
+    // Clear color attachment
+    if (_color_attachment) {
+        if (_color_attachment->internal_data)
+            del(_color_attachment->internal_data);
+        del(_color_attachment);
     }
+    // Clear depth attachment
+    if (_depth_attachment) {
+        if (_depth_attachment->internal_data)
+            del(_depth_attachment->internal_data);
+        del(_depth_attachment);
+    }
+    // Clear render textures
     for (auto& texture : _render_textures) {
         auto data =
             reinterpret_cast<VulkanTextureData*>(texture->internal_data());
         _device->handle().waitIdle();
         if (data->image) del(data->image);
     }
-    _framebuffer_sets.clear();
+    _render_textures.clear();
+
     Logger::trace(RENDERER_VULKAN_LOG, "Swapchain destroyed.");
 }
 
@@ -74,35 +84,25 @@ void VulkanSwapchain::change_extent(const uint32 width, const uint32 height) {
     _should_resize = true;
 }
 
-uint32 VulkanSwapchain::create_framebuffers(
-    const VulkanRenderPass* const render_pass,
-    bool                          multisampling,
-    bool                          depth_testing
-) {
-    Logger::trace(RENDERER_VULKAN_LOG, "Initializing framebuffers.");
+uint8 VulkanSwapchain::get_current_index() const {
+    return _current_image_index;
+}
 
-    Vector<VulkanFramebuffer*> framebuffers { _render_textures.size() };
-    for (uint32 i = 0; i < framebuffers.size(); i++) {
-        Vector<vk::ImageView> attachments {};
-        if (multisampling) attachments.push_back(_color_image->view());
-        if (depth_testing) attachments.push_back(_depth_image->view());
-        const auto data =
-            (VulkanTextureData*) _render_textures[i]->internal_data();
-        attachments.push_back(data->image->view);
+uint8 VulkanSwapchain::get_render_texture_count() const {
+    return _render_textures.size();
+}
+Texture* VulkanSwapchain::get_render_texture(const uint8 index) const {
+    if (index >= _render_textures.size())
+        Logger::fatal(RENDERER_VULKAN_LOG, "Invalid swapchain index passed.");
+    return _render_textures[index];
+}
 
-        framebuffers[i] = new (MemoryTag::GPUBuffer) VulkanFramebuffer(
-            &_device->handle(),
-            _allocator,
-            render_pass,
-            _extent.width,
-            _extent.height,
-            attachments
-        );
-    }
-    _framebuffer_sets.push_back({ framebuffers, multisampling, depth_testing });
+Texture* VulkanSwapchain::get_depth_texture() const {
+    return _depth_attachment;
+}
 
-    Logger::trace(RENDERER_VULKAN_LOG, "Framebuffers initialized.");
-    return _framebuffer_sets.size() - 1;
+Texture* VulkanSwapchain::get_color_texture() const {
+    return _color_attachment;
 }
 
 vk::Format VulkanSwapchain::get_color_attachment_format() const {
@@ -156,22 +156,15 @@ void VulkanSwapchain::present(
             recreate();
             _should_resize = false;
         }
-        // TODO: Windows nvidia drivers throw this (probably). Can be handled
-        // without catching using pResults in present_info
-    } catch (vk::OutOfDateKHRError e) {
+    }
+    // TODO: Windows nvidia drivers throw this (probably). Can be handled
+    // without catching using pResults in present_info
+    catch (vk::OutOfDateKHRError e) {
         recreate();
         _should_resize = false;
     } catch (vk::SystemError e) {
         Logger::fatal(RENDERER_VULKAN_LOG, e.what());
     }
-}
-
-VulkanFramebuffer* VulkanSwapchain::get_currently_used_framebuffer(
-    const uint32 index
-) {
-    if (index > _framebuffer_sets.size())
-        Logger::fatal(RENDERER_VULKAN_LOG, "Framebuffer index out of range.");
-    return _framebuffer_sets[index].framebuffers[_current_image_index];
 }
 
 // //////////////////////////////// //
@@ -281,8 +274,10 @@ void VulkanSwapchain::create() {
             );
 
             // Fill internal data
-            auto internal_data   = new VulkanTextureData();
-            internal_data->image = new VulkanImage(_device, _allocator);
+            auto internal_data =
+                new (MemoryTag::GPUTexture) VulkanTextureData();
+            internal_data->image =
+                new (MemoryTag::GPUTexture) VulkanImage(_device, _allocator);
             internal_data->image->create(
                 swapchain_images[i], _extent.width, _extent.height
             );
@@ -319,8 +314,14 @@ void VulkanSwapchain::create() {
 
 void VulkanSwapchain::destroy() {
     // Destroy image resources
-    del(_color_image);
-    del(_depth_image);
+    if (_color_attachment && _color_attachment->internal_data) {
+        auto data = (VulkanTextureData*) _color_attachment->internal_data();
+        del(data->image);
+    }
+    if (_depth_attachment && _depth_attachment->internal_data) {
+        auto data = (VulkanTextureData*) _depth_attachment->internal_data();
+        del(data->image);
+    }
 
     // Destroy image views
     for (const auto& texture : _render_textures) {
@@ -347,34 +348,33 @@ void VulkanSwapchain::recreate() {
     create_color_resource();
     create_depth_resources();
 
-    // Framebuffer recreation
-    for (auto& framebuffer_set : _framebuffer_sets) {
-        for (uint32 i = 0; i < framebuffer_set.framebuffers.size(); i++) {
-            Vector<vk::ImageView> attachments {};
-
-            // Add swapchain attachment
-            const auto data =
-                (VulkanTextureData*) _render_textures[i]->internal_data();
-            attachments.push_back(data->image->view);
-
-            // Add color attachment for multisampling
-            if (framebuffer_set.multisampling)
-                attachments.push_back(_color_image->view());
-
-            // Add depth attachment for depth testing
-            if (framebuffer_set.depth_testing)
-                attachments.push_back(_depth_image->view());
-
-            framebuffer_set.framebuffers[i]->recreate(
-                _extent.width, _extent.height, attachments
-            );
-        }
-    }
+    // Recreate synced targets
+    recreate_event.invoke(_extent.width, _extent.height);
 }
 
 void VulkanSwapchain::create_color_resource() {
-    _color_image = new (MemoryTag::GPUTexture) VulkanImage(_device, _allocator);
-    _color_image->create(
+    if (_color_attachment == nullptr) {
+        // Create new wrapped texture (Not managed by the texture system)
+        _color_attachment = new (MemoryTag::Texture) Texture(
+            "__default_color_attachment_texture__",
+            _extent.width,
+            _extent.height,
+            4,     // Channel count
+            false, // Transparent
+            true,  // Writable
+            true   // Wrapped
+        );
+        _color_attachment->internal_data =
+            new (MemoryTag::GPUTexture) VulkanTextureData();
+    } else {
+        // Resize
+        _color_attachment->resize(_extent.width, _extent.height);
+    }
+
+    // Fill internal data
+    const auto data = (VulkanTextureData*) _color_attachment->internal_data();
+    data->image = new (MemoryTag::GPUTexture) VulkanImage(_device, _allocator);
+    data->image->create(
         _extent.width,
         _extent.height,
         1,
@@ -387,8 +387,28 @@ void VulkanSwapchain::create_color_resource() {
     );
 }
 void VulkanSwapchain::create_depth_resources() {
-    _depth_image = new (MemoryTag::GPUTexture) VulkanImage(_device, _allocator);
-    _depth_image->create(
+    if (_depth_attachment == nullptr) {
+        // Create new wrapped texture (Not managed by the texture system)
+        _depth_attachment = new (MemoryTag::Texture) Texture(
+            "__default_depth_attachment_texture__",
+            _extent.width,
+            _extent.height,
+            _depth_format_channel_count,
+            false, // Transparent
+            true,  // Writable
+            true   // Wrapped
+        );
+        _depth_attachment->internal_data =
+            new (MemoryTag::GPUTexture) VulkanTextureData();
+    } else {
+        // Resize
+        _depth_attachment->resize(_extent.width, _extent.height);
+    }
+
+    // Fill internal data
+    const auto data = (VulkanTextureData*) _depth_attachment->internal_data();
+    data->image = new (MemoryTag::GPUTexture) VulkanImage(_device, _allocator);
+    data->image->create(
         _extent.width,
         _extent.height,
         1,
@@ -402,24 +422,26 @@ void VulkanSwapchain::create_depth_resources() {
 }
 
 void VulkanSwapchain::find_depth_format() {
-    Vector<vk::Format>     candidates { vk::Format::eD32Sfloat,
-                                    vk::Format::eD32SfloatS8Uint,
-                                    vk::Format::eD24UnormS8Uint };
-    vk::ImageTiling        tiling = vk::ImageTiling::eOptimal;
+    // Potential depth formats with their channel count
+    Vector<std::pair<vk::Format, uint8>> candidates {
+        { vk::Format::eD32Sfloat, 4 },
+        { vk::Format::eD32SfloatS8Uint, 4 },
+        { vk::Format::eD24UnormS8Uint, 3 }
+    };
     vk::FormatFeatureFlags features =
         vk::FormatFeatureFlagBits::eDepthStencilAttachment;
 
-    // Find a format among the candidates that satisfies the tiling and feature
-    // requirements
+    // Find a format among the candidates that satisfies the tiling and
+    // feature requirements
     for (auto format : candidates) {
-        auto properties = _device->info().get_format_properties(format);
-        vk::FormatFeatureFlags supported_features;
-        if (tiling == vk::ImageTiling::eLinear &&
-            (features & properties.linearTilingFeatures) == features) {
-            _depth_format = format;
+        auto properties = _device->info().get_format_properties(format.first);
+        if ((features & properties.linearTilingFeatures) == features) {
+            _depth_format               = format.first;
+            _depth_format_channel_count = format.second;
             return;
-        } else if (tiling == vk::ImageTiling::eOptimal && (features & properties.optimalTilingFeatures) == features) {
-            _depth_format = format;
+        } else if ((features & properties.optimalTilingFeatures) == features) {
+            _depth_format               = format.first;
+            _depth_format_channel_count = format.second;
             return;
         }
     }

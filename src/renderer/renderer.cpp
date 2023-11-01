@@ -9,21 +9,81 @@ namespace ENGINE_NAMESPACE {
 Renderer::Renderer(
     const RendererBackendType backend_type, Platform::Surface* const surface
 ) {
+    // Setup on resize
     surface->resize_event.subscribe<Renderer>(this, &Renderer::on_resize);
+
+    // Setup backend
     switch (backend_type) {
     case Vulkan:
         _backend = new (MemoryTag::Renderer) VulkanBackend(surface);
-        return;
+        break;
+    default:
+        Logger::fatal(
+            RENDERER_LOG, "Unimplemented backend passed on initialization."
+        );
+    }
 
-    default: break;
+    // Setup render passes TODO: CONFIGURABLE
+    const String WORLD  = "Renderpass.Builtin.World";
+    const String UI     = "Renderpass.Builtin.UI";
+    const auto   width  = surface->get_width_in_pixels();
+    const auto   height = surface->get_height_in_pixels();
+
+    // Create render passes
+    _world_renderpass = _backend->create_render_pass({
+        WORLD,                                // Name
+        "",                                   // Prev
+        UI,                                   // Next
+        glm::vec2 { 0, 0 },                   // Draw offset
+        glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f }, // Clear color
+        RenderPass::ClearFlags::Color | RenderPass::ClearFlags::Depth |
+            RenderPass::ClearFlags::Stencil, // Clear flags
+        true,                                // Depth testing
+        true                                 // Multisampling
+    });
+    _ui_renderpass    = _backend->create_render_pass({
+        UI,                                   // Name
+        WORLD,                                // Prev
+        "",                                   // Next
+        glm::vec2 { 0, 0 },                   // Draw offset
+        glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f }, // Clear color
+        RenderPass::ClearFlags::None,         // Clear flags
+        false,                                // Depth testing
+        false                                 // Multisampling
+    });
+
+    // Create render targets
+    const auto count = _backend->get_window_attachment_count();
+    for (uint8 i = 0; i < count; i++) {
+        // Gather render target attachments
+        Vector<Texture*> attachments {};
+        attachments.push_back(_backend->get_color_attachment());
+        attachments.push_back(_backend->get_depth_attachment());
+        attachments.push_back(_backend->get_window_attachment(i));
+        // Add new render target
+        _world_renderpass->add_render_target(
+            create_render_target(_world_renderpass, width, height, attachments)
+        );
+        _ui_renderpass->add_render_target(create_render_target(
+            _ui_renderpass,
+            width,
+            height,
+            { _backend->get_window_attachment(i) }
+        ));
     }
 }
 Renderer::~Renderer() { del(_backend); }
 
 void Renderer::on_resize(const uint32 width, const uint32 height) {
+    // Update projection
     _projection = glm::perspective(
         glm::radians(45.0f), (float32) width / height, _near_plane, _far_plane
     );
+    _projection_ui = glm::ortho(
+        0.0f, (float32) width, (float32) height, 0.0f, -100.0f, 100.0f
+    );
+
+    // Update backend
     _backend->resized(width, height);
 }
 Result<void, RuntimeError> Renderer::draw_frame(
@@ -35,9 +95,13 @@ Result<void, RuntimeError> Renderer::draw_frame(
     auto result = _backend->begin_frame(delta_time);
     if (result.has_error()) { return {}; }
 
+    // Get current window att index
+    const auto att_index = _backend->get_current_window_attachment_index();
+
     // === World shader ===
     // Bind render pass
-    _backend->begin_render_pass(BuiltinRenderPass::World);
+    const auto current_target = _world_renderpass->render_targets()[att_index];
+    _backend->begin_render_pass(_world_renderpass, current_target);
     // Use shader
     material_shader->use();
     // Setup shader globals
@@ -57,10 +121,12 @@ Result<void, RuntimeError> Renderer::draw_frame(
     }
 
     // End renderpass
-    _backend->end_render_pass(BuiltinRenderPass::World);
+    _backend->end_render_pass(_world_renderpass);
 
     // === UI changes ===
-    _backend->begin_render_pass(BuiltinRenderPass::UI);
+    _backend->begin_render_pass(
+        _ui_renderpass, _ui_renderpass->render_targets()[att_index]
+    );
     ui_shader->use();
     update_ui_shader_globals();
 
@@ -78,7 +144,7 @@ Result<void, RuntimeError> Renderer::draw_frame(
     _backend->draw_geometry(ui_geo.geometry);
 
     // End renderpass
-    _backend->end_render_pass(BuiltinRenderPass::UI);
+    _backend->end_render_pass(_ui_renderpass);
 
     // === END FRAME ===
     result = _backend->end_frame(delta_time);
@@ -146,6 +212,40 @@ Shader* Renderer::create_shader(const ShaderConfig config) {
 void Renderer::destroy_shader(Shader* shader) {
     _backend->destroy_shader(shader);
     Logger::trace(RENDERER_LOG, "Shader destroyed.");
+}
+
+RenderTarget* Renderer::create_render_target(
+    RenderPass* const       pass,
+    const uint32            width,
+    const uint32            height,
+    const Vector<Texture*>& attachments
+) {
+    Logger::trace(RENDERER_LOG, "Creating render target.");
+    const auto res =
+        _backend->create_render_target(pass, width, height, attachments);
+    Logger::trace(RENDERER_LOG, "Render target created.");
+    return res;
+}
+void Renderer::destroy_render_target(
+    RenderTarget* const render_target, const bool free_internal_data
+) {
+    _backend->destroy_render_target(render_target, free_internal_data);
+    Logger::trace(RENDERER_LOG, "Render target destroyed.");
+}
+
+RenderPass* Renderer::create_render_pass(const RenderPass::Config& config) {
+    Logger::trace(RENDERER_LOG, "Creating render pass.");
+    const auto res = _backend->create_render_pass(config);
+    Logger::trace(RENDERER_LOG, "Render target created.");
+    return res;
+}
+void Renderer::destroy_render_pass(RenderPass* const pass) {
+    _backend->destroy_render_pass(pass);
+    Logger::trace(RENDERER_LOG, "Render pass destroyed.");
+}
+
+Result<RenderPass*, RuntimeError> Renderer::get_renderpass(const String& name) {
+    return _backend->get_render_pass(name);
 }
 
 // //////////////////////// //
