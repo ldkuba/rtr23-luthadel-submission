@@ -49,7 +49,7 @@ enum class ShaderStage : uint8 {
 };
 
 /// @brief Shader scope
-enum class ShaderScope : uint8 { Global, Instance, Local };
+enum class ShaderScope : uint8 { GlobalVert, GlobalFrag, InstanceVert, InstanceFrag, Local };
 
 /// @brief Structure containing all attribute relevant data
 struct ShaderAttribute {
@@ -305,13 +305,30 @@ class Shader {
     Vector<TextureMap*> _global_texture_maps {};
     uint8               _instance_texture_count;
 
+    /**
+     * @brief Set the uniform object
+     *
+     * @param id id of the uniform
+     * @param value value to set
+     * @param size only used if uniform type is custom, otherwise ignored
+     * @return Outcome
+     */
     virtual Outcome set_uniform(const uint16 id, void* value);
 
   private:
     void add_sampler(const ShaderUniformConfig& config);
+
+    /**
+     * @brief Add a uniform to the shader
+     * 
+     * @param config uniform config
+     * @param location location in buffer
+     * @param size only used for custom uniforms, otherwise ignored
+     */
     void add_uniform(
         const ShaderUniformConfig&  config,
-        const std::optional<uint32> location = std::optional<uint32>()
+        const std::optional<uint32> location = std::optional<uint32>(),
+        size_t                      size     = 0
     );
 };
 

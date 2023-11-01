@@ -92,8 +92,12 @@ class VulkanShader : public Shader {
     const uint32 _desc_set_index_global   = 0;
     const uint32 _desc_set_index_instance = 1;
 
-    const uint8 _bind_index_ubo     = 0;
-    const uint8 _bind_index_sampler = 1;
+    const uint8 _bind_index_vert_ubo = 0;
+    const uint8 _bind_index_frag_ubo = 1;
+    const uint8 _bind_index_sampler  = 2;
+
+    const uint8 _pool_size_index_uniform = 0;
+    const uint8 _pool_size_index_sampler = 1;
 
     vk::ShaderModule create_shader_module(
         const vk::ShaderStageFlagBits shader_stage
@@ -102,9 +106,12 @@ class VulkanShader : public Shader {
         const Vector<vk::ShaderStageFlagBits>& shader_stages
     ) const;
     Vector<vk::VertexInputAttributeDescription> compute_attributes() const;
-    Vector<VulkanDescriptorSetConfig*>          compute_uniforms(
-                 const Vector<vk::ShaderStageFlagBits>& shader_stages
-             ) const;
+
+    // TODO: For now all used shader staged are passed to each binding. Some
+    // bindings should only be available in a specific stage
+    Vector<VulkanDescriptorSetConfig*> compute_uniforms(
+        const Vector<vk::ShaderStageFlagBits>& shader_stages
+    ) const;
 
     void create_pipeline(
         const Vector<vk::PipelineShaderStageCreateInfo>& shader_stages,

@@ -8,10 +8,15 @@ stages=vertex,fragment
 attribute=vec2,in_position
 attribute=vec2,in_texcoord
 
-# Uniforms: type,scope,name
-# NOTE: For scope: 0=global, 1=instance, 2=local
+# Uniforms: type,scope,name,(optional)size
+# NOTE: For scope: 0=global_vert, 1=global_frag, 2=instance_vert, 3=instance_frag, 4=local
+# === Global Vert ===
 uniform=mat4,0,projection
 uniform=mat4,0,view
-uniform=vec4,1,diffuse_color
-uniform=sampler,1,diffuse_texture
-uniform=mat4,2,model
+# === Global Frag ===
+# === Instance Vert ===
+# === Instance Frag ===
+uniform=vec4,3,diffuse_color
+uniform=sampler,3,diffuse_texture
+# === Local ===
+uniform=mat4,4,model

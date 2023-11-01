@@ -11,16 +11,27 @@ attribute=vec3,in_tangent
 attribute=vec4,in_color
 attribute=vec2,in_texcoord
 
-# Uniforms: type,scope,name
-# NOTE: For scope: 0=global, 1=instance, 2=local
+# Uniforms: type,scope,name,(optional)size
+# NOTE: For scope: 0=global_vert, 1=global_frag, 2=instance_vert, 3=instance_frag, 4=local
+# === Global Vert ===
 uniform=mat4,0,projection
 uniform=mat4,0,view
 uniform=vec4,0,ambient_color
 uniform=vec3,0,view_position
 uniform=uint32,0,mode
-uniform=vec4,1,diffuse_color
-uniform=sampler,1,diffuse_texture
-uniform=sampler,1,specular_texture
-uniform=sampler,1,normal_texture
-uniform=float32,1,shininess
-uniform=mat4,2,model
+# === Global Frag ===
+# Color: 4*float32=16 + Direction: 4*float32=12 = 32 
+uniform=custom,1,directional_light,32
+uniform=uint32,1,num_point_lights
+# MaxPointLights: 10
+# (Color: 4*float32=16 + Position: 4*float32=16 + Constant: float32=4 + Linear: float32=4 + Quadratic: float32=4 + Padding: float32=4) = 48 * MaxPointLights: 10 = 480
+uniform=custom,1,point_lights,480
+# === Instance Vert ===
+# === Instance Frag ===
+uniform=sampler,3,diffuse_texture
+uniform=sampler,3,specular_texture
+uniform=sampler,3,normal_texture
+uniform=vec4,3,diffuse_color
+uniform=float32,3,shininess
+# === Local ===
+uniform=mat4,4,model

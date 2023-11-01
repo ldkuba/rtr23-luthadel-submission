@@ -38,7 +38,7 @@ Shader::Shader(const ShaderConfig config)
                 _name,
                 "."
             );
-        if (uniform.scope == ShaderScope::Instance && !_use_instances)
+        if ((uniform.scope == ShaderScope::InstanceVert || uniform.scope == ShaderScope::InstanceFrag) && !_use_instances)
             Logger::fatal(
                 SHADER_LOG,
                 "Adding instance uniform \"",
@@ -56,10 +56,9 @@ Shader::Shader(const ShaderConfig config)
         // Add uniform correctly
         switch (uniform.type) {
         case ShaderUniformType::sampler: add_sampler(uniform); break;
-        case ShaderUniformType::custom: // TODO: Implement
-            Logger::fatal(SHADER_LOG, "Custom uniform usage unimplemented.");
+        case ShaderUniformType::custom:
+            [[fallthrough]] default : add_uniform(uniform);
             break;
-        default: add_uniform(uniform); break;
         }
     }
 }
@@ -135,7 +134,7 @@ void Shader::add_sampler(const ShaderUniformConfig& config) {
 
     // If global, push into the global list.
     uint32 location = 0;
-    if (config.scope == ShaderScope::Global) {
+    if (config.scope == ShaderScope::GlobalVert || config.scope == ShaderScope::GlobalFrag) {
         location = _global_texture_maps.size();
 
         // Create default texture map
@@ -165,7 +164,9 @@ void Shader::add_sampler(const ShaderUniformConfig& config) {
     add_uniform(config, location);
 }
 void Shader::add_uniform(
-    const ShaderUniformConfig& config, const std::optional<uint32> location
+    const ShaderUniformConfig&  config,
+    const std::optional<uint32> location,
+    size_t                      size
 ) {
     ShaderUniform entry {};
     entry.index = _uniforms.size();
@@ -195,7 +196,7 @@ void Shader::add_uniform(
         // If this is sampler size & offset are implicitly 0
         if (!location.has_value() /* NOT a sampler */) {
             entry.size = config.size;
-            if (entry.scope == ShaderScope::Global) {
+            if (entry.scope == ShaderScope::GlobalVert || entry.scope == ShaderScope::GlobalFrag) {
                 entry.offset = _global_ubo_size;
                 _global_ubo_size += entry.size;
             } else {

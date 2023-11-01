@@ -55,16 +55,16 @@ VulkanShader::VulkanShader(
     // Assign
     auto instance_count =
         Shader::max_instance_count * VulkanSettings::max_frames_in_flight;
-    pool_sizes[_bind_index_ubo].setType( //
+    pool_sizes[_pool_size_index_uniform].setType( //
         vk::DescriptorType::eUniformBuffer
     );
-    pool_sizes[_bind_index_ubo].setDescriptorCount(
+    pool_sizes[_pool_size_index_uniform].setDescriptorCount(
         uniform_count * instance_count
     );
-    pool_sizes[_bind_index_sampler].setType(
+    pool_sizes[_pool_size_index_sampler].setType(
         vk::DescriptorType::eCombinedImageSampler
     );
-    pool_sizes[_bind_index_sampler].setDescriptorCount(
+    pool_sizes[_pool_size_index_sampler].setDescriptorCount(
         sampler_count * instance_count
     );
 
@@ -149,6 +149,7 @@ VulkanShader::VulkanShader(
         (uint64) _uniform_buffer->lock_memory(0, VK_WHOLE_SIZE);
 
     // === Allocate global descriptor sets ===
+    // Vertex
     // One per frame. Global is always the first set.
     std::array<vk::DescriptorSetLayout, VulkanSettings::max_frames_in_flight>
         global_layouts;
@@ -276,16 +277,27 @@ void VulkanShader::apply_global() {
     buffer_info.setRange(_global_ubo_stride);
 
     // Update descriptor sets.
-    vk::WriteDescriptorSet ubo_write {};
-    ubo_write.setDstSet(global_descriptor);
-    ubo_write.setDstBinding(_bind_index_ubo);
-    ubo_write.setDescriptorType(vk::DescriptorType::eUniformBuffer);
-    ubo_write.setDstArrayElement(0);
-    ubo_write.setDescriptorCount(1);
-    ubo_write.setPBufferInfo(&buffer_info);
-    descriptor_writes.push_back(ubo_write);
+    // Vertex
+    vk::WriteDescriptorSet ubo_vert_write {};
+    ubo_vert_write.setDstSet(global_descriptor);
+    ubo_vert_write.setDstBinding(_bind_index_vert_ubo);
+    ubo_vert_write.setDescriptorType(vk::DescriptorType::eUniformBuffer);
+    ubo_vert_write.setDstArrayElement(0);
+    ubo_vert_write.setDescriptorCount(1);
+    ubo_vert_write.setPBufferInfo(&buffer_info);
+    descriptor_writes.push_back(ubo_vert_write);
 
-    if (_descriptor_set_configs[_desc_set_index_global]->bindings.size() > 1) {
+    // Fragment
+    vk::WriteDescriptorSet ubo_frag_write {};
+    ubo_frag_write.setDstSet(global_descriptor);
+    ubo_frag_write.setDstBinding(_bind_index_frag_ubo);
+    ubo_frag_write.setDescriptorType(vk::DescriptorType::eUniformBuffer);
+    ubo_frag_write.setDstArrayElement(0);
+    ubo_frag_write.setDescriptorCount(1);
+    ubo_frag_write.setPBufferInfo(&buffer_info);
+    descriptor_writes.push_back(ubo_frag_write);
+
+    if (_descriptor_set_configs[_desc_set_index_global]->bindings.size() > 2) {
         // Iterate samplers.
         const auto& image_infos = get_image_infos(_global_texture_maps);
 
@@ -295,7 +307,7 @@ void VulkanShader::apply_global() {
         sampler_descriptor.setDescriptorType(
             vk::DescriptorType::eCombinedImageSampler
         );
-        ubo_write.setDstArrayElement(0);
+        ubo_vert_write.setDstArrayElement(0);
         sampler_descriptor.setImageInfo(image_infos);
         descriptor_writes.push_back(sampler_descriptor);
     }
@@ -346,20 +358,32 @@ void VulkanShader::apply_instance() {
         buffer_info.setOffset(object_state->offset);
         buffer_info.setRange(_ubo_stride);
 
-        vk::WriteDescriptorSet ubo_descriptor {};
-        ubo_descriptor.setDstSet(object_descriptor_set);
-        ubo_descriptor.setDstBinding(_bind_index_ubo);
-        ubo_descriptor.setDescriptorType(vk::DescriptorType::eUniformBuffer);
-        ubo_descriptor.setDescriptorCount(1);
-        ubo_descriptor.setPBufferInfo(&buffer_info);
+        // Vertex
+        vk::WriteDescriptorSet ubo_vert_write {};
+        ubo_vert_write.setDstSet(object_descriptor_set);
+        ubo_vert_write.setDstBinding(_bind_index_vert_ubo);
+        ubo_vert_write.setDescriptorType(vk::DescriptorType::eUniformBuffer);
+        ubo_vert_write.setDescriptorCount(1);
+        ubo_vert_write.setPBufferInfo(&buffer_info);
 
-        descriptor_writes.push_back(ubo_descriptor);
+        descriptor_writes.push_back(ubo_vert_write);
+
+        // Fragment
+        vk::WriteDescriptorSet ubo_frag_write {};
+        ubo_frag_write.setDstSet(object_descriptor_set);
+        ubo_frag_write.setDstBinding(_bind_index_frag_ubo);
+        ubo_frag_write.setDescriptorType(vk::DescriptorType::eUniformBuffer);
+        ubo_frag_write.setDescriptorCount(1);
+        ubo_frag_write.setPBufferInfo(&buffer_info);
+
+        descriptor_writes.push_back(ubo_frag_write);
+
         descriptor_set_id = 0; // TODO: Implement better id
 
         // Samplers will always be in the binding. If the binding count is less
-        // than 2, there are no samplers.
+        // than 3, there are no samplers.
         if (_descriptor_set_configs[_desc_set_index_instance]->bindings.size() >
-            1) {
+            2) {
             // Iterate samplers.
             const auto& image_infos =
                 get_image_infos(object_state->instance_texture_maps);
@@ -539,20 +563,23 @@ Outcome VulkanShader::set_uniform(const uint16 id, void* value) {
 
     // Bind scope
     if (_bound_scope != uniform.scope) {
-        if (uniform.scope == ShaderScope::Global)
+        if (uniform.scope == ShaderScope::GlobalVert ||
+            uniform.scope == ShaderScope::GlobalFrag)
             _bound_ubo_offset = _global_ubo_offset;
-        else if (uniform.scope == ShaderScope::Instance)
+        else if (uniform.scope == ShaderScope::InstanceVert || uniform.scope == ShaderScope::InstanceFrag)
             _bound_ubo_offset = _instance_states[_bound_instance_id]->offset;
         _bound_scope = uniform.scope;
     }
 
     // Inform the need for uniform reapplication
-    if (_bound_scope == ShaderScope::Instance)
+    if (_bound_scope == ShaderScope::InstanceVert ||
+        _bound_scope == ShaderScope::InstanceFrag)
         _instance_states[_bound_instance_id]->should_update = true;
 
     // If sampler
     if (uniform.type == ShaderUniformType::sampler) {
-        if (uniform.scope == ShaderScope::Global)
+        if (uniform.scope == ShaderScope::GlobalVert ||
+            uniform.scope == ShaderScope::GlobalFrag)
             _global_texture_maps[uniform.location] = (TextureMap*) value;
         else
             _instance_states[_bound_instance_id]
@@ -688,12 +715,23 @@ Vector<VulkanDescriptorSetConfig*> VulkanShader::compute_uniforms(
         new (MemoryTag::Renderer) VulkanDescriptorSetConfig();
 
     // UBO is always available and first.
-    vk::DescriptorSetLayoutBinding global_ubo_binding {};
-    global_ubo_binding.setBinding(_bind_index_ubo);
-    global_ubo_binding.setDescriptorCount(1);
-    global_ubo_binding.setDescriptorType(vk::DescriptorType::eUniformBuffer);
-    global_ubo_binding.setStageFlags(stage_flags);
-    global_desc_set_config->bindings.push_back(global_ubo_binding);
+    // Global vertex UBO binding
+    vk::DescriptorSetLayoutBinding global_vert_ubo_binding {};
+    global_vert_ubo_binding.setBinding(_bind_index_vert_ubo);
+    global_vert_ubo_binding.setDescriptorCount(1);
+    global_vert_ubo_binding.setDescriptorType(vk::DescriptorType::eUniformBuffer
+    );
+    global_vert_ubo_binding.setStageFlags(stage_flags);
+    global_desc_set_config->bindings.push_back(global_vert_ubo_binding);
+
+    // Global fragment UBO binding
+    vk::DescriptorSetLayoutBinding global_frag_ubo_binding {};
+    global_frag_ubo_binding.setBinding(_bind_index_frag_ubo);
+    global_frag_ubo_binding.setDescriptorCount(1);
+    global_frag_ubo_binding.setDescriptorType(vk::DescriptorType::eUniformBuffer
+    );
+    global_frag_ubo_binding.setStageFlags(stage_flags);
+    global_desc_set_config->bindings.push_back(global_frag_ubo_binding);
 
     desc_set_configs.push_back(global_desc_set_config);
 
@@ -705,14 +743,25 @@ Vector<VulkanDescriptorSetConfig*> VulkanShader::compute_uniforms(
         // Add a UBO to it, as instances should always have one available.
         // NOTE: Might be a good idea to only add this if it is going to be
         // used...
-        vk::DescriptorSetLayoutBinding instance_ubo_binding {};
-        instance_ubo_binding.setBinding(_bind_index_ubo);
-        instance_ubo_binding.setDescriptorCount(1);
-        instance_ubo_binding.setDescriptorType(
+        // Instance vertex UBO binding
+        vk::DescriptorSetLayoutBinding instance_vert_ubo_binding {};
+        instance_vert_ubo_binding.setBinding(_bind_index_vert_ubo);
+        instance_vert_ubo_binding.setDescriptorCount(1);
+        instance_vert_ubo_binding.setDescriptorType(
             vk::DescriptorType::eUniformBuffer
         );
-        instance_ubo_binding.setStageFlags(stage_flags);
-        instance_desc_set_config->bindings.push_back(instance_ubo_binding);
+        instance_vert_ubo_binding.setStageFlags(stage_flags);
+        instance_desc_set_config->bindings.push_back(instance_vert_ubo_binding);
+
+        // Instance vertex UBO binding
+        vk::DescriptorSetLayoutBinding instance_frag_ubo_binding {};
+        instance_frag_ubo_binding.setBinding(_bind_index_frag_ubo);
+        instance_frag_ubo_binding.setDescriptorCount(1);
+        instance_frag_ubo_binding.setDescriptorType(
+            vk::DescriptorType::eUniformBuffer
+        );
+        instance_frag_ubo_binding.setStageFlags(stage_flags);
+        instance_desc_set_config->bindings.push_back(instance_frag_ubo_binding);
 
         desc_set_configs.push_back(instance_desc_set_config);
     }
@@ -722,13 +771,17 @@ Vector<VulkanDescriptorSetConfig*> VulkanShader::compute_uniforms(
         // For samplers, the descriptor bindings need to be updated. Other types
         // of uniforms don't need anything to be done here.
         if (_uniforms[i].type == ShaderUniformType::sampler) {
-            const uint32 set_index =
-                (_uniforms[i].scope == ShaderScope::Global
-                     ? _desc_set_index_global
-                     : _desc_set_index_instance);
+            uint32 set_index;
+            if (_uniforms[i].scope == ShaderScope::GlobalVert ||
+                _uniforms[i].scope == ShaderScope::GlobalFrag) {
+                set_index = _desc_set_index_global;
+            } else {
+                set_index = _desc_set_index_instance;
+            }
+
             auto desc_set_config = desc_set_configs[set_index];
 
-            if (desc_set_config->bindings.size() < 2) {
+            if (desc_set_config->bindings.size() < 3) {
                 // There isn't a binding yet, meaning this is the first sampler
                 // to be added. Create the binding with a single descriptor for
                 // this sampler.

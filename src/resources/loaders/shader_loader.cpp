@@ -203,7 +203,7 @@ Result<Resource*, RuntimeError> ShaderLoader::load(const String name) {
                 Ok() {
                     auto uniform = uniform_res.value();
                     shader_uniforms.push_back(uniform);
-                    if (uniform.scope == ShaderScope::Instance)
+                    if (uniform.scope == ShaderScope::InstanceVert || uniform.scope == ShaderScope::InstanceFrag)
                         shader_has_instances = true;
                     if (uniform.scope == ShaderScope::Local)
                         shader_has_locals = true;
@@ -303,15 +303,17 @@ Result<ShaderUniformConfig, RuntimeErrorCode> parse_uniform_config(
 ) {
     auto uniform = uniform_line.split(',');
 
-    if (uniform.size() != 3) return Failure(RuntimeErrorCode(0));
+    // Custom uniforms have additional size parameter
+    if (uniform.size() < 3 || uniform.size() > 4) return Failure(RuntimeErrorCode(0));
 
     auto uniform_type  = uniform[0];
     auto uniform_scope = uniform[1];
     auto uniform_name  = uniform[2];
+
     uniform_type.trim();
     uniform_scope.trim();
     uniform_name.trim();
-
+    
     // Parse name
     ShaderUniformConfig uniform_config {};
     uniform_config.name = uniform_name;
@@ -355,16 +357,20 @@ Result<ShaderUniformConfig, RuntimeErrorCode> parse_uniform_config(
         uniform_config.size = 0; // Samplers dont have a size
     } else if (uniform_type.compare_ci("custom") == 0) {
         uniform_config.type = ShaderUniformType::custom;
-        uniform_config.size = 0; // Custom types manage their own size
+        auto uniform_size = uniform[3];
+        uniform_size.trim();
+        uniform_config.size = uniform_size.parse_as_uint8().value_or(0); 
     } else return Failure(RuntimeErrorCode(1, uniform_type));
 
     // Parse scope
     auto scope = uniform_scope.parse_as_uint8().value_or(-1);
 
     switch (scope) {
-    case 0: uniform_config.scope = ShaderScope::Global; break;
-    case 1: uniform_config.scope = ShaderScope::Instance; break;
-    case 2: uniform_config.scope = ShaderScope::Local; break;
+    case 0: uniform_config.scope = ShaderScope::GlobalVert; break;
+    case 1: uniform_config.scope = ShaderScope::GlobalFrag; break;
+    case 2: uniform_config.scope = ShaderScope::InstanceVert; break;
+    case 3: uniform_config.scope = ShaderScope::InstanceFrag; break;
+    case 4: uniform_config.scope = ShaderScope::Local; break;
     default: return Failure(RuntimeErrorCode(2));
     };
 
