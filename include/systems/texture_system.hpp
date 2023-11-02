@@ -134,7 +134,6 @@ class TextureSystem {
     Renderer*       _renderer;
     ResourceSystem* _resource_system;
 
-    const uint64 _max_texture_count             = 1024;
     const String _default_texture_name          = "default";
     const String _default_diffuse_texture_name  = "default_diff";
     const String _default_specular_texture_name = "default_spec";

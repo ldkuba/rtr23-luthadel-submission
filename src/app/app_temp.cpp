@@ -1,56 +1,25 @@
-#pragma once
+#include "app/app_temp.hpp"
 
-#include "logger.hpp"
-
-#include "math_libs.hpp"
-#include "systems/geometry_system.hpp"
-#include "systems/input/input_system.hpp"
-#include "resources/mesh.hpp"
-
-// TODO: TEMP
 #include "resources/loaders/mesh_loader.hpp"
 
 namespace ENGINE_NAMESPACE {
 
-class TestApplication {
-  public:
-    TestApplication();
-    ~TestApplication();
+// Constructor & Destructor
+TestApplication::TestApplication() {}
+TestApplication::~TestApplication() { del(_app_surface); }
 
-    void run();
+// /////////////////////// //
+// APP TEMP PUBLIC METHODS //
+// /////////////////////// //
 
-  private:
-    Platform::Surface* _app_surface =
-        Platform::Surface::get_instance(800, 600, std::string(APP_NAME));
+void TestApplication::run() {
+    // === Camera system ===
+    main_camera                     = _camera_system.default_camera;
+    main_camera->transform.position = glm::vec3(2, 2, 2);
+    main_camera->add_pitch(35);
+    main_camera->add_yaw(-135);
+    _app_renderer.set_active_camera(main_camera);
 
-    InputSystem    _input_system {};
-    ResourceSystem _resource_system {};
-
-    Renderer _app_renderer { RendererBackendType::Vulkan, _app_surface };
-
-    TextureSystem  _texture_system { &_app_renderer, &_resource_system };
-    ShaderSystem   _shader_system { &_app_renderer,
-                                  &_resource_system,
-                                  &_texture_system };
-    MaterialSystem _material_system {
-        &_app_renderer, &_resource_system, &_texture_system, &_shader_system
-    };
-    GeometrySystem _geometry_system { &_app_renderer, &_material_system };
-
-    float64 calculate_delta_time();
-
-    // TODO: TEMP
-    bool _app_should_close = false;
-    bool _cube_rotation    = false;
-
-    void setup_input();
-};
-// TODO: TEMP
-inline TestApplication::TestApplication() {}
-
-inline TestApplication::~TestApplication() { del(_app_surface); }
-
-inline void TestApplication::run() {
     // === Input system ===
     setup_input();
 
@@ -193,7 +162,11 @@ inline void TestApplication::run() {
     }
 }
 
-inline float64 TestApplication::calculate_delta_time() {
+// //////////////////////// //
+// APP TEMP PRIVATE METHODS //
+// //////////////////////// //
+
+float64 TestApplication::calculate_delta_time() {
     static auto start_time   = Platform::get_absolute_time();
     auto        current_time = Platform::get_absolute_time();
     auto        delta_time   = current_time - start_time;
@@ -216,7 +189,7 @@ inline float64 TestApplication::calculate_delta_time() {
                     .expect("ERROR :: CONTROL CREATION FAILED.");              \
     name->map_key(KeyCode::key)
 
-inline void TestApplication::setup_input() {
+void TestApplication::setup_input() {
     _input_system.register_input_source(_app_surface);
 
     // === Definitions ===
@@ -252,68 +225,52 @@ inline void TestApplication::setup_input() {
     close_app_control->event +=
         [&](float64, float64) { _app_should_close = true; };
 
-    // Camera: info
-    auto& camera_p = _app_renderer.camera_position;
-    auto& camera_d = _app_renderer.camera_look_dir;
-    camera_d       = glm::normalize(camera_d);
-
-    const static auto camera_u = glm::vec3(0.0f, 0.0f, 1.0f);
-
-    static float32 camera_speed   = 5.0f;
-    static float32 rotation_speed = 1.4f;
+    // Camera: info, TODO: TEMP
+    static const float32 camera_speed   = 5.0f;
+    static const float32 rotation_speed = 100.0f;
 
     // Camera: movement
-    camera_forward_c->event +=
-        [&](float32 dt, float32) { camera_p += camera_d * camera_speed * dt; };
-    camera_backwards_c->event +=
-        [&](float32 dt, float32) { camera_p -= camera_d * camera_speed * dt; };
-    camera_left_c->event += [&](float32 dt, float32) {
-        auto camera_l = glm::cross(camera_u, camera_d);
-        camera_l      = glm::normalize(camera_l);
-        camera_p += camera_l * camera_speed * dt;
+    camera_forward_c->event += [&](float32 dt, float32) {
+        main_camera->move_forwards(camera_speed * dt);
+    };
+    camera_backwards_c->event += [&](float32 dt, float32) {
+        main_camera->move_backwards(camera_speed * dt);
+    };
+    camera_left_c->event += [&](float32 dt, float32) { //
+        main_camera->move_left(camera_speed * dt);
     };
     camera_right_c->event += [&](float32 dt, float32) {
-        auto camera_l = glm::cross(camera_u, camera_d);
-        camera_l      = glm::normalize(camera_l);
-        camera_p -= camera_l * camera_speed * dt;
+        main_camera->move_right(camera_speed * dt);
     };
     camera_up_c->event +=
-        [&](float32 dt, float32) { camera_p += camera_u * camera_speed * dt; };
+        [&](float32 dt, float32) { main_camera->move_up(camera_speed * dt); };
     camera_down_c->event +=
-        [&](float32 dt, float32) { camera_p -= camera_u * camera_speed * dt; };
+        [&](float32 dt, float32) { main_camera->move_down(camera_speed * dt); };
 
     // Camera: rotation
-    camera_rotate_left_c->event += [&](float32 dt, float32) {
-        auto rot_mat =
-            glm::rotate(glm::mat4(1.0f), rotation_speed * dt, camera_u);
-        camera_d = rot_mat * glm::vec4(camera_d, 1.0f);
+    camera_rotate_right_c->event += [&](float32 dt, float32) { //
+        main_camera->add_yaw(-rotation_speed * dt);
     };
-    camera_rotate_right_c->event += [&](float32 dt, float32) {
-        auto rot_mat =
-            glm::rotate(glm::mat4(1.0f), -rotation_speed * dt, camera_u);
-        camera_d = rot_mat * glm::vec4(camera_d, 1.0f);
+    camera_rotate_left_c->event += [&](float32 dt, float32) { //
+        main_camera->add_yaw(rotation_speed * dt);
     };
     camera_rotate_up_c->event += [&](float32 dt, float32) {
-        auto camera_l = glm::cross(camera_d, camera_u);
-        auto rot_mat =
-            glm::rotate(glm::mat4(1.0f), rotation_speed * dt, camera_l);
-        camera_d = rot_mat * glm::vec4(camera_d, 1.0f);
+        main_camera->add_pitch(-rotation_speed * dt);
     };
     camera_rotate_down_c->event += [&](float32 dt, float32) {
-        auto camera_l = glm::cross(camera_d, camera_u);
-        auto rot_mat =
-            glm::rotate(glm::mat4(1.0f), -rotation_speed * dt, camera_l);
-        camera_d = rot_mat * glm::vec4(camera_d, 1.0f);
+        main_camera->add_pitch(rotation_speed * dt);
     };
 
     // Camera: other
     reset_camera->event += [&](float32, float32) {
-        camera_p = glm::vec3(2, 2, 2);
-        camera_d = glm::vec3(-1, -1, -1);
-        camera_d = glm::normalize(camera_d);
+        main_camera->reset();
+        main_camera->transform.position = glm::vec3(2, 2, 2);
+        main_camera->add_pitch(35);
+        main_camera->add_yaw(-135);
     };
-    camera_position->event +=
-        [&](float32, float32) { Logger::debug(camera_p); };
+    camera_position->event += [&](float32, float32) {
+        Logger::debug(main_camera->transform.position());
+    };
 
     // Rendering
     auto& r = _app_renderer;

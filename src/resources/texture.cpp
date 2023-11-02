@@ -3,9 +3,7 @@
 
 namespace ENGINE_NAMESPACE {
 
-// Statics values
-const uint32 Texture::max_name_length;
-
+// Constructor & Destructor
 Texture::Texture(
     const String name,
     const int32  width,
@@ -23,6 +21,10 @@ Texture::Texture(
     if (is_writable) _flags |= IsWritable;
     if (is_wrapped) _flags |= IsWrapped;
 }
+
+// ////////////////////// //
+// TEXTURE PUBLIC METHODS //
+// ////////////////////// //
 
 Outcome Texture::resize(const uint32 width, const uint32 height) {
     if (!is_writable()) return Outcome::Failed;

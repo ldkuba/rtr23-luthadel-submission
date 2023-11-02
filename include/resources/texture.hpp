@@ -44,6 +44,9 @@ class Texture {
         SET { _internal_data = value; }
     };
 
+    /// @brief Maximum length a texture name can have
+    const static constexpr uint32 max_name_length = 256;
+
     /**
      * @brief Construct a new Texture object
      *
@@ -81,8 +84,6 @@ class Texture {
      * @param height New height in pixels
      */
     Outcome resize(const uint32 width, const uint32 height);
-
-    const static uint32 max_name_length = 256;
 
   private:
     typedef uint8 TextureFlagType;

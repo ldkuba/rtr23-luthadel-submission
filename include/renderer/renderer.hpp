@@ -1,6 +1,7 @@
 #pragma once
 
 #include "renderer/vulkan/vulkan_backend.hpp"
+#include "camera.hpp"
 
 namespace ENGINE_NAMESPACE {
 
@@ -24,10 +25,6 @@ class Renderer {
     // TODO: TEMP TEST CODE BEGIN
     Shader* material_shader = nullptr;
     Shader* ui_shader       = nullptr;
-
-    glm::vec3 camera_position { 2.0f, 2.0f, 2.0f };
-    // glm::vec3 camera_position { -428.2226105, 685.6713255, 231.030861 };
-    glm::vec3 camera_look_dir { -1.0f, -1.0f, -1.0f };
     // TODO: TEMP TEST CODE END
 
     /**
@@ -193,8 +190,16 @@ class Renderer {
      */
     Result<RenderPass*, RuntimeError> get_renderpass(const String& name);
 
+    /**
+     * @brief Setup which camera is currently active
+     * @param camera Camera we wish to set as active
+     */
+    void set_active_camera(Camera* const camera);
+
   private:
     RendererBackend* _backend = nullptr;
+
+    Camera* _active_camera;
 
     DebugViewMode _view_mode = Default;
 

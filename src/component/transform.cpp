@@ -26,11 +26,11 @@ void Transform::rotate_by(const glm::quat rotation) {
     _is_dirty = true;
 }
 void Transform::rotate_by(const glm::vec3 axis, const float32 angle) {
-    _rotation = glm::rotate(_rotation, angle, axis);
+    _rotation = glm::angleAxis(angle, axis) * _rotation;
     _is_dirty = true;
 }
 void Transform::rotate_by_deg(const glm::vec3 axis, const float32 angle) {
-    _rotation = glm::rotate(_rotation, glm::radians(angle), axis);
+    _rotation = glm::angleAxis(glm::radians(angle), axis) * _rotation;
     _is_dirty = true;
 }
 void Transform::scale_by(const glm::vec3 scale) {

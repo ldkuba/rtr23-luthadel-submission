@@ -16,10 +16,6 @@ TextureSystem::TextureSystem(
     : _renderer(renderer), _resource_system(resource_system) {
     Logger::trace(TEXTURE_SYS_LOG, "Creating texture system.");
 
-    if (_max_texture_count == 0)
-        Logger::fatal(
-            TEXTURE_SYS_LOG, "Const _max_texture_count must be greater than 0."
-        );
     create_default_textures();
 
     Logger::trace(TEXTURE_SYS_LOG, "Texture system created.");
@@ -50,7 +46,7 @@ Texture* TextureSystem::acquire(
 
     // If texture already exists, find it
     const auto key = name.lower_c();
-    auto       ref = _registered_textures.find(key);
+    const auto ref = _registered_textures.find(key);
 
     if (ref != _registered_textures.end()) {
         ref->second.reference_count++;
@@ -148,7 +144,7 @@ void TextureSystem::release(const String name) {
 
     // Find requested texture
     const auto key = name.lower_c();
-    auto       ref = _registered_textures.find(key);
+    const auto ref = _registered_textures.find(key);
 
     // If not found warn about improper use of this function
     if (ref == _registered_textures.end()) {
@@ -349,6 +345,16 @@ Result<void, Texture*> TextureSystem::name_is_valid(
     const String& texture_name, Texture* const default_fallback
 ) {
     // Check name validity
+    if (texture_name.empty()) {
+        Logger::error(
+            TEXTURE_SYS_LOG,
+            "Texture couldn't be acquired. Empty name not allowed. Default "
+            "texture acquired instead."
+        );
+        return Failure(
+            (default_fallback == nullptr) ? _default_texture : default_fallback
+        );
+    }
     if (texture_name.length() > Texture::max_name_length) {
         Logger::error(
             TEXTURE_SYS_LOG,

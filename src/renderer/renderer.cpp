@@ -248,6 +248,10 @@ Result<RenderPass*, RuntimeError> Renderer::get_renderpass(const String& name) {
     return _backend->get_render_pass(name);
 }
 
+void Renderer::set_active_camera(Camera* const camera) {
+    _active_camera = camera;
+}
+
 // //////////////////////// //
 // RENDERER PRIVATE METHODS //
 // //////////////////////// //
@@ -280,18 +284,11 @@ Result<RenderPass*, RuntimeError> Renderer::get_renderpass(const String& name) {
 void Renderer::update_material_shader_globals() const {
     const auto shader = material_shader;
 
-    // Compute view matrix
-    glm::mat4 view = glm::lookAt(
-        camera_position,
-        camera_position + camera_look_dir,
-        glm::vec3(0.0f, 0.0f, 1.0f)
-    );
-
     // Apply globals
     set_uniform("projection", _projection);
-    set_uniform("view", view);
+    set_uniform("view", _active_camera->view());
     set_uniform("ambient_color", _ambient_color);
-    set_uniform("view_position", camera_position);
+    set_uniform("view_position", _active_camera->transform.position());
     set_uniform("mode", _view_mode);
     shader->apply_global();
 }
