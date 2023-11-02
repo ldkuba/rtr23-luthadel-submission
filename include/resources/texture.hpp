@@ -99,7 +99,7 @@ class Texture {
     int32  _width;
     int32  _height;
     int32  _channel_count;
-    int32  _mip_levels;
+    uint32  _mip_levels;
     uint64 _total_size;
 
     InternalTextureData* _internal_data;
