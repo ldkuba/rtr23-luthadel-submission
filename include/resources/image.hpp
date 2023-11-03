@@ -36,7 +36,7 @@ class Image : public Resource {
     )
         : Resource(name), _width(width), _height(height),
           _channel_count(channel_count), _pixels(pixels) {}
-    ~Image() { del(_pixels); }
+    ~Image() { delete _pixels; }
 
     /**
      * @brief Check for image transparency

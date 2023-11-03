@@ -73,7 +73,7 @@ Renderer::Renderer(
         ));
     }
 }
-Renderer::~Renderer() { del(_backend); }
+Renderer::~Renderer() { delete _backend; }
 
 // /////////////////////// //
 // RENDERER PUBLIC METHODS //

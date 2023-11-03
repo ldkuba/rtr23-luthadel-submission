@@ -75,7 +75,7 @@ void InputSystem::destroy_control(const String name) {
 
     // Delete control object
     _controls.erase(it);
-    del(control);
+    delete control;
 
     Logger::trace(INPUT_SYS_LOG, "Control \"", name, "\" destroyed.");
 }

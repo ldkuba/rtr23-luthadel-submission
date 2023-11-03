@@ -66,7 +66,7 @@ Shader::Shader(const ShaderConfig config)
 Shader::~Shader() {
     for (uint64 i = 0; i < _global_texture_maps.size(); i++) {
         _texture_system->release(_global_texture_maps[i]->texture->name());
-        del(_global_texture_maps[i]);
+        delete _global_texture_maps[i];
     }
     _global_texture_maps.clear();
 }

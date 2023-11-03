@@ -71,20 +71,20 @@ VulkanBackend::~VulkanBackend() {
     _device->handle().waitIdle();
 
     // Swapchain
-    del(_swapchain);
+    delete _swapchain;
 
     // TODO: TEMP VERTEX & INDEX BUFFER CODE
-    del(_index_buffer);
-    del(_vertex_buffer);
+    delete _index_buffer;
+    delete _vertex_buffer;
 
     // Render pass
     for (auto& pass : _registered_passes)
-        del(pass);
+        delete pass;
     _registered_passes.clear();
     _render_pass_table.clear();
 
     // Command pool
-    del(_command_pool);
+    delete _command_pool;
 
     // Synchronization code
     for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++) {
@@ -99,7 +99,7 @@ VulkanBackend::~VulkanBackend() {
     Logger::trace(RENDERER_VULKAN_LOG, "Synchronization objects destroyed.");
 
     // Device
-    del(_device);
+    delete _device;
     // Surface
     _vulkan_instance.destroySurfaceKHR(_vulkan_surface);
     // Validation layer
@@ -305,7 +305,7 @@ void VulkanBackend::destroy_texture(Texture* const texture) {
     auto data = reinterpret_cast<VulkanTextureData*>(texture->internal_data());
 
     _device->handle().waitIdle();
-    if (data->image) del(data->image);
+    if (data->image) delete data->image;
 
     Logger::trace(RENDERER_VULKAN_LOG, "Texture destroyed.");
 }
@@ -317,7 +317,7 @@ void VulkanBackend::resize_texture(
 
     // Destroy old image
     const auto data = static_cast<VulkanTextureData*>(texture->internal_data());
-    del(data->image);
+    delete data->image;
 
     // Get format
     const auto texture_format =
@@ -389,7 +389,7 @@ void VulkanBackend::texture_write_data(
     _command_pool->end_single_time_commands(command_buffer);
 
     // Cleanup
-    del(staging_buffer);
+    delete staging_buffer;
 }
 
 // -----------------------------------------------------------------------------
@@ -501,7 +501,7 @@ Shader* VulkanBackend::create_shader(const ShaderConfig config) {
     return shader;
 }
 void VulkanBackend::destroy_shader(Shader* const shader) {
-    del(shader);
+    delete shader;
     Logger::trace(RENDERER_VULKAN_LOG, "Shader destroyed.");
 }
 
@@ -549,9 +549,9 @@ void VulkanBackend::destroy_render_target(
 ) {
     const auto vk_framebuffer =
         dynamic_cast<VulkanFramebuffer*>(render_target->framebuffer());
-    del(vk_framebuffer);
+    delete vk_framebuffer;
     if (free_internal_data) render_target->free_attachments();
-    del(render_target);
+    delete render_target;
 }
 
 // -----------------------------------------------------------------------------
@@ -598,7 +598,7 @@ RenderPass* VulkanBackend::create_render_pass(const RenderPass::Config& config
 }
 void VulkanBackend::destroy_render_pass(RenderPass* pass) {
     const auto vulkan_pass = dynamic_cast<VulkanRenderPass*>(pass);
-    del(vulkan_pass);
+    delete vulkan_pass;
 }
 
 Result<RenderPass*, RuntimeError> VulkanBackend::get_render_pass(
@@ -829,7 +829,7 @@ void VulkanBackend::upload_data_to_buffer(
     _command_pool->end_single_time_commands(command_buffer);
 
     // Cleanup
-    del(staging_buffer);
+    delete staging_buffer;
 }
 // TODO: TEMP CODE END
 

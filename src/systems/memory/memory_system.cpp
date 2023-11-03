@@ -17,9 +17,29 @@ static_assert(
     "representation are used to recognize custom allocation)"
 );
 
-std::map<uint64, MemoryTag> MemorySystem::_memory_map = {};
-Allocator**                 MemorySystem::_allocator_array =
+MemoryMap   MemorySystem::_memory_map = {};
+Allocator** MemorySystem::_allocator_array =
     MemorySystem::initialize_allocator_array(MemorySystem::_memory_map);
+
+MemoryTag MemoryMap::get_first_before(const uint64 address) {
+    // Check for nullptr
+    if (address == 0) return MemoryTag::MAX_TAGS;
+
+    // Check if alive
+    if (_dying) return MemoryTag::MAX_TAGS;
+
+    // Find adequate memory tag
+    auto it = lower_bound(address);
+    if (it == end()) it--;
+    else if (it->first != address) {
+        // This is before begin?
+        if (it == begin()) return MemoryTag::MAX_TAGS;
+        it--;
+    }
+    const auto tag = it->second;
+
+    return tag;
+}
 
 // //////////////////////////// //
 // MEMORY SYSTEM PUBLIC METHODS //
@@ -78,18 +98,9 @@ void MemorySystem::print_usage(const MemoryTag tag) {
 MemoryTag MemorySystem::get_owner(void* p) {
     const auto address = (uint64) p;
 
-    // Check for nullptr
-    if (address == 0) return MemoryTag::MAX_TAGS;
-
-    // Find adequate memory tag
-    auto it = _memory_map.lower_bound(address);
-    if (it == _memory_map.end()) it--;
-    else if (it->first != address) {
-        // This is before begin?
-        if (it == _memory_map.begin()) return MemoryTag::MAX_TAGS;
-        it--;
-    }
-    const auto tag = it->second;
+    // Get tag
+    const auto tag = _memory_map.get_first_before(address);
+    if (tag == MemoryTag::MAX_TAGS) return tag;
 
     // Check if tag owns this memory
     if (!_allocator_array[(MemoryTagType) tag]->owns(p))
@@ -125,9 +136,7 @@ MemoryTag MemorySystem::get_owner(void* p) {
     allocator_array[(MemoryTagType) MemoryTag::tag] = allocator;               \
     memory_map[allocator->start()]                  = MemoryTag::tag
 
-Allocator** MemorySystem::initialize_allocator_array(
-    std::map<uint64, MemoryTag>& memory_map
-) {
+Allocator** MemorySystem::initialize_allocator_array(MemoryMap& memory_map) {
     const auto allocator_array =
         new Allocator*[(MemoryTagType) MemoryTag::MAX_TAGS]();
 
@@ -205,5 +214,3 @@ void operator delete(void* p) noexcept {
     else free(p);
 }
 void operator delete[](void* p) noexcept { ::operator delete(p); }
-void operator delete(void* p, bool) noexcept { ::operator delete(p); }
-void operator delete[](void* p, bool) noexcept { ::operator delete(p); }

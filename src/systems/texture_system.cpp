@@ -23,7 +23,7 @@ TextureSystem::TextureSystem(
 TextureSystem::~TextureSystem() {
     for (auto& texture : _registered_textures) {
         _renderer->destroy_texture(texture.second.handle);
-        del(texture.second.handle);
+        delete texture.second.handle;
     }
     _registered_textures.clear();
     destroy_default_textures();
@@ -163,7 +163,7 @@ void TextureSystem::release(const String name) {
     // Release resource if needed
     if (ref->second.reference_count == 0 && ref->second.auto_release == true) {
         _renderer->destroy_texture(ref->second.handle);
-        del(ref->second.handle);
+        delete ref->second.handle;
         _registered_textures.erase(key);
     }
 
@@ -325,19 +325,19 @@ void TextureSystem::create_default_textures() {
 void TextureSystem::destroy_default_textures() {
     if (_default_texture) {
         _renderer->destroy_texture(_default_texture);
-        del(_default_texture);
+        delete _default_texture;
     }
     if (_default_diffuse_texture) {
         _renderer->destroy_texture(_default_diffuse_texture);
-        del(_default_diffuse_texture);
+        delete _default_diffuse_texture;
     }
     if (_default_specular_texture) {
         _renderer->destroy_texture(_default_specular_texture);
-        del(_default_specular_texture);
+        delete _default_specular_texture;
     }
     if (_default_normal_texture) {
         _renderer->destroy_texture(_default_normal_texture);
-        del(_default_normal_texture);
+        delete _default_normal_texture;
     }
 }
 

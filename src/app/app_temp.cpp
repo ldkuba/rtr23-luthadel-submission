@@ -6,7 +6,7 @@ namespace ENGINE_NAMESPACE {
 
 // Constructor & Destructor
 TestApplication::TestApplication() {}
-TestApplication::~TestApplication() { del(_app_surface); }
+TestApplication::~TestApplication() { delete _app_surface; }
 
 // /////////////////////// //
 // APP TEMP PUBLIC METHODS //
@@ -34,7 +34,7 @@ void TestApplication::run() {
     // === Assign meshes ===
     Vector<Mesh*> meshes {};
 
-#define CURRENT_SCENE 2
+#define CURRENT_SCENE 0
 #if CURRENT_SCENE == 0
     // Create geometries
     Geometry* const geometry_1 =

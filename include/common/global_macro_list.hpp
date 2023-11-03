@@ -32,7 +32,6 @@
     -   ENGINE_NAMESPACE
     -   MEMORY_PADDING  Note: Memory padding used by allocators
     -   STRING_CONST(str)   Note: Used for custom "String" enum classes
-    -   del
 // Serialization extensions
     - serializable_attributes
 //  General, NOT FOR USE

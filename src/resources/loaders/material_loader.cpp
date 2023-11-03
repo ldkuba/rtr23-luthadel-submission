@@ -203,7 +203,7 @@ void MaterialLoader::unload(Resource* resource) {
     can_unload(ResourceType::Material, resource);
 
     MaterialConfig* res = (MaterialConfig*) resource;
-    del(res);
+    delete res;
 }
 
 // //////////////////////////////// //

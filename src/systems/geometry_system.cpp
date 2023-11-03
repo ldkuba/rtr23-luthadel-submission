@@ -125,7 +125,7 @@ void GeometrySystem::release(Geometry* geometry) {
     if (ref.auto_release && ref.reference_count < 1) {
         _material_system->release(ref.handle->material()->name);
         _renderer->destroy_geometry(ref.handle);
-        del(ref.handle);
+        delete ref.handle;
         _registered_geometries.erase(geometry->id.value());
     }
 

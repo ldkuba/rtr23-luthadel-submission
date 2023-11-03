@@ -29,7 +29,7 @@ MaterialSystem::~MaterialSystem() {
         destroy_material(material.second.handle);
     _registered_materials.clear();
     _default_material->release_map_resources();
-    del(_default_material);
+    delete _default_material;
 
     Logger::trace(MATERIAL_SYS_LOG, "Material system destroyed.");
 }
@@ -327,7 +327,7 @@ void MaterialSystem::destroy_material(Material* material) {
 
     // Release texture map resources
     material->release_map_resources();
-    del(material);
+    delete material;
 }
 
 } // namespace ENGINE_NAMESPACE

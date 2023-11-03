@@ -63,6 +63,18 @@ enum class MemoryTag : MemoryTagType {
     MAX_TAGS
 };
 
+class MemoryMap : public std::map<uint64, MemoryTag> {
+  public:
+    using std::map<uint64, MemoryTag>::map;
+
+    ~MemoryMap() { _dying = true; }
+
+    MemoryTag get_first_before(const uint64 address);
+
+  private:
+    bool _dying = false;
+};
+
 /**
  * @brief Memory system. Responsible for memory management and tracking, custom
  * allocators, allocations and deallocations for the engine. Collection of
@@ -105,12 +117,10 @@ class MemorySystem {
     static MemoryTag get_owner(void* ptr);
 
   private:
-    static std::map<uint64, MemoryTag> _memory_map;
-    static Allocator**                 _allocator_array;
+    static MemoryMap   _memory_map;
+    static Allocator** _allocator_array;
 
-    static Allocator** initialize_allocator_array(
-        std::map<uint64, MemoryTag>& memory_map
-    );
+    static Allocator** initialize_allocator_array(MemoryMap& memory_map);
 };
 
 } // namespace ENGINE_NAMESPACE
@@ -122,11 +132,6 @@ void* operator new[](std::size_t size, const ENGINE_NAMESPACE::MemoryTag tag);
 // Delete
 void operator delete(void* p) noexcept;
 void operator delete[](void* p) noexcept;
-void operator delete(void* p, bool) noexcept;
-void operator delete[](void* p, bool) noexcept;
-
-// New delete operator
-#define del(x) ::operator delete(x, true)
 
 // -----------------------------------------------------------------------------
 // Typed allocator
@@ -165,7 +170,7 @@ T* TAllocator<T>::allocate(const std::size_t n) const {
 }
 template<class T>
 void TAllocator<T>::deallocate(T* const p, std::size_t n) const noexcept {
-    del(p);
+    ::operator delete(p);
 }
 
 } // namespace ENGINE_NAMESPACE

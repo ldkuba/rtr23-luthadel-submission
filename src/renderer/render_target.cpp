@@ -31,7 +31,7 @@ void RenderTarget::add_attachments(const Vector<Texture*>& attachments) {
 }
 void RenderTarget::free_attachments() {
     for (const auto& att : _attachments)
-        del(att);
+        delete att;
     _attachments.clear();
 }
 
