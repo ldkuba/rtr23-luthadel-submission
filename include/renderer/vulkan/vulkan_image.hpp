@@ -124,6 +124,10 @@ class VulkanImage {
         const vk::ImageAspectFlags aspect_flags
     );
 
+    /// @brief Destroy currently set image view if it exists. Otherwise does
+    /// nothing.
+    void destroy_view();
+
     /// @brief Transition image between layouts
     /// @param command_buffer Command buffer to witch the transition command
     /// will be submitted

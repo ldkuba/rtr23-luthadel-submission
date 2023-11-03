@@ -105,12 +105,22 @@ class MemorySystem {
     static MemoryTag get_owner(void* ptr);
 
   private:
-    static std::map<uint64, MemoryTag> _memory_map;
-    static Allocator**                 _allocator_array;
+    class MemoryMap : public std::map<uint64, MemoryTag> {
+      public:
+        using std::map<uint64, MemoryTag>::map;
 
-    static Allocator** initialize_allocator_array(
-        std::map<uint64, MemoryTag>& memory_map
-    );
+        ~MemoryMap() { _dying = true; }
+
+        MemoryTag get_first_before(const uint64 address);
+
+      private:
+        bool _dying = false;
+    };
+
+    static MemoryMap   _memory_map;
+    static Allocator** _allocator_array;
+
+    static Allocator** initialize_allocator_array(MemoryMap& memory_map);
 };
 
 } // namespace ENGINE_NAMESPACE
@@ -120,13 +130,18 @@ void* operator new(std::size_t size, const ENGINE_NAMESPACE::MemoryTag tag);
 void* operator new[](std::size_t size, const ENGINE_NAMESPACE::MemoryTag tag);
 
 // Delete
-void operator delete(void* p) noexcept;
-void operator delete[](void* p) noexcept;
+// void operator delete(void* p) noexcept;
+// void operator delete[](void* p) noexcept;
 void operator delete(void* p, bool) noexcept;
 void operator delete[](void* p, bool) noexcept;
 
 // New delete operator
-#define del(x) ::operator delete(x, true)
+template<typename T>
+inline void del(T* p) {
+    p->~T();
+    ::operator delete(p, true);
+}
+// #define del(x) ::operator delete(x, true)
 
 // -----------------------------------------------------------------------------
 // Typed allocator
@@ -165,7 +180,7 @@ T* TAllocator<T>::allocate(const std::size_t n) const {
 }
 template<class T>
 void TAllocator<T>::deallocate(T* const p, std::size_t n) const noexcept {
-    del(p);
+    ::operator delete(p, true);
 }
 
 } // namespace ENGINE_NAMESPACE

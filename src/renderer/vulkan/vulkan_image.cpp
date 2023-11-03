@@ -5,9 +5,10 @@ namespace ENGINE_NAMESPACE {
 // #define TRACE_FILE_VULKAN_IMAGE
 
 VulkanImage::~VulkanImage() {
+    Logger::debug("DESTROYING :: ", (uint64) &_handle);
     if (_handle) _device->handle().destroyImage(_handle, _allocator);
     if (_memory) _device->handle().freeMemory(_memory, _allocator);
-    if (_has_view) _device->handle().destroyImageView(view, _allocator);
+    destroy_view();
 #ifdef TRACE_FILE_VULKAN_IMAGE
     Logger::trace(RENDERER_VULKAN_LOG, "Image destroyed.");
 #endif
@@ -23,6 +24,7 @@ void VulkanImage::create(
     _handle = handle;
     _width  = width;
     _height = height;
+    Logger::debug("CREATING :: ", (uint64) &_handle);
 }
 
 void VulkanImage::create(
@@ -173,6 +175,12 @@ void VulkanImage::create_view(
     } catch (const vk::SystemError& e) {
         Logger::fatal(RENDERER_VULKAN_LOG, e.what());
     }
+}
+
+void VulkanImage::destroy_view() {
+    if (!_has_view) return;
+    _device->handle().destroyImageView(_view, _allocator);
+    _has_view = false;
 }
 
 Result<void, InvalidArgument> VulkanImage::transition_image_layout(

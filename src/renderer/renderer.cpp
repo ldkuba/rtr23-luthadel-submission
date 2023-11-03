@@ -1,7 +1,5 @@
 #include "renderer/renderer.hpp"
 
-#include "resources/geometry.hpp"
-
 namespace ENGINE_NAMESPACE {
 
 #define RENDERER_LOG "Renderer :: "
@@ -167,31 +165,37 @@ void Renderer::on_resize(const uint32 width, const uint32 height) {
 void Renderer::create_texture(Texture* texture, const byte* const data) {
     Logger::trace(RENDERER_LOG, "Creating texture.");
     _backend->create_texture(texture, data);
-    Logger::trace(RENDERER_LOG, "Texture created.");
+    Logger::trace(RENDERER_LOG, "Texture created [", texture->name(), "].");
 }
 void Renderer::create_writable_texture(Texture* texture) {
     Logger::trace(RENDERER_LOG, "Creating writable texture.");
     _backend->create_writable_texture(texture);
-    Logger::trace(RENDERER_LOG, "Writable texture created.");
+    Logger::trace(
+        RENDERER_LOG, "Writable texture created [`", texture->name(), "`]."
+    );
 }
 void Renderer::destroy_texture(Texture* texture) {
     _backend->destroy_texture(texture);
-    Logger::trace(RENDERER_LOG, "Texture destroyed.");
+    Logger::trace(RENDERER_LOG, "Texture destroyed [`", texture->name(), "`].");
 }
 
 void Renderer::resize_texture(
     Texture* const texture, const uint32 width, const uint32 height
 ) {
-    Logger::trace(RENDERER_LOG, "Resizing texture.");
+    Logger::trace(RENDERER_LOG, "Resizing texture [", texture->name(), "].");
     _backend->resize_texture(texture, width, height);
-    Logger::trace(RENDERER_LOG, "Texture resized.");
+    Logger::trace(RENDERER_LOG, "Texture resized [", texture->name(), "].");
 }
 void Renderer::texture_write_data(
     Texture* const texture, const Vector<byte>& data, const uint32 offset
 ) {
-    Logger::trace(RENDERER_LOG, "Writing data to texture.");
+    Logger::trace(
+        RENDERER_LOG, "Writing data to texture [", texture->name(), "]."
+    );
     _backend->texture_write_data(texture, data.data(), data.size(), offset);
-    Logger::trace(RENDERER_LOG, "Texture writing complete.");
+    Logger::trace(
+        RENDERER_LOG, "Texture writing complete [", texture->name(), "]."
+    );
 }
 void Renderer::texture_write_data(
     Texture* const    texture,
@@ -199,9 +203,13 @@ void Renderer::texture_write_data(
     const uint32      size,
     const uint32      offset
 ) {
-    Logger::trace(RENDERER_LOG, "Writing data to texture.");
+    Logger::trace(
+        RENDERER_LOG, "Writing data to texture [", texture->name(), "]."
+    );
     _backend->texture_write_data(texture, data, size, offset);
-    Logger::trace(RENDERER_LOG, "Texture writing complete.");
+    Logger::trace(
+        RENDERER_LOG, "Texture writing complete [", texture->name(), "]."
+    );
 }
 
 // -----------------------------------------------------------------------------
@@ -210,7 +218,7 @@ void Renderer::texture_write_data(
 
 void Renderer::destroy_geometry(Geometry* geometry) {
     _backend->destroy_geometry(geometry);
-    Logger::trace(RENDERER_LOG, "Geometry destroyed.");
+    Logger::trace(RENDERER_LOG, "Geometry destroyed [", geometry->name(), "].");
 }
 
 // -----------------------------------------------------------------------------
@@ -220,12 +228,12 @@ void Renderer::destroy_geometry(Geometry* geometry) {
 Shader* Renderer::create_shader(const ShaderConfig config) {
     Logger::trace(RENDERER_LOG, "Creating shader.");
     auto ret = _backend->create_shader(config);
-    Logger::trace(RENDERER_LOG, "Shader created.");
+    Logger::trace(RENDERER_LOG, "Shader created [", config.name(), "].");
     return ret;
 }
 void Renderer::destroy_shader(Shader* shader) {
     _backend->destroy_shader(shader);
-    Logger::trace(RENDERER_LOG, "Shader destroyed.");
+    Logger::trace(RENDERER_LOG, "Shader destroyed [", shader->get_name(), "].");
 }
 
 // -----------------------------------------------------------------------------
@@ -258,12 +266,19 @@ void Renderer::destroy_render_target(
 RenderPass* Renderer::create_render_pass(const RenderPass::Config& config) {
     Logger::trace(RENDERER_LOG, "Creating render pass.");
     const auto res = _backend->create_render_pass(config);
-    Logger::trace(RENDERER_LOG, "Render target created.");
+    Logger::trace(
+        RENDERER_LOG,
+        "Render target created [",
+        res->id(),
+        " (",
+        config.name,
+        ")]."
+    );
     return res;
 }
 void Renderer::destroy_render_pass(RenderPass* const pass) {
     _backend->destroy_render_pass(pass);
-    Logger::trace(RENDERER_LOG, "Render pass destroyed.");
+    Logger::trace(RENDERER_LOG, "Render pass destroyed [", pass->id(), "].");
 }
 Result<RenderPass*, RuntimeError> Renderer::get_renderpass(const String& name) {
     return _backend->get_render_pass(name);

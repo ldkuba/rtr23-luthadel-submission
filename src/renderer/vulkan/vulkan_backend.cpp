@@ -79,7 +79,7 @@ VulkanBackend::~VulkanBackend() {
 
     // Render pass
     for (auto& pass : _registered_passes)
-        del(pass);
+        destroy_render_pass(pass);
     _registered_passes.clear();
     _render_pass_table.clear();
 
@@ -598,6 +598,12 @@ RenderPass* VulkanBackend::create_render_pass(const RenderPass::Config& config
 }
 void VulkanBackend::destroy_render_pass(RenderPass* pass) {
     const auto vulkan_pass = dynamic_cast<VulkanRenderPass*>(pass);
+
+    // Clear all targets
+    for (const auto& target : vulkan_pass->render_targets())
+        destroy_render_target(target);
+
+    // Destroy pass
     del(vulkan_pass);
 }
 
