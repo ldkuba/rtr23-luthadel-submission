@@ -20,23 +20,16 @@ class VulkanBackend : public RendererBackend {
     VulkanBackend(Platform::Surface* const surface);
     ~VulkanBackend() override;
 
-    void resized(const uint32 width, const uint32 height) override;
-
     Result<void, RuntimeError> begin_frame(const float32 delta_time) override;
     Result<void, RuntimeError> end_frame(const float32 delta_time) override;
 
-    void begin_render_pass(
-        RenderPass* const pass, RenderTarget* const render_target
-    ) override;
-    void end_render_pass(RenderPass* const pass) override;
+    void resized(const uint32 width, const uint32 height) override;
 
-    void draw_geometry(Geometry* const geometry) override;
-
+    // Texture
     void create_texture(Texture* const texture, const byte* const data)
         override;
-    void destroy_texture(Texture* const texture) override;
-
     void create_writable_texture(Texture* const texture) override;
+    void destroy_texture(Texture* const texture) override;
     void resize_texture(
         Texture* const texture, const uint32 width, const uint32 height
     ) override;
@@ -47,6 +40,7 @@ class VulkanBackend : public RendererBackend {
         const uint32      offset
     ) override;
 
+    // Geometry
     void create_geometry(
         Geometry* const       geometry,
         const Vector<Vertex>& vertices,
@@ -58,10 +52,13 @@ class VulkanBackend : public RendererBackend {
         const Vector<uint32>&   indices
     ) override;
     void destroy_geometry(Geometry* const geometry) override;
+    void draw_geometry(Geometry* const geometry) override;
 
+    // Shader
     Shader* create_shader(const ShaderConfig config) override;
     void    destroy_shader(Shader* shader) override;
 
+    // Render targets
     RenderTarget* create_render_target(
         RenderPass* const       pass,
         const uint32            width,
@@ -72,19 +69,18 @@ class VulkanBackend : public RendererBackend {
         RenderTarget* const render_target, const bool free_internal_data = true
     ) override;
 
+    // Render pass
     RenderPass* create_render_pass(const RenderPass::Config& config) override;
     void        destroy_render_pass(RenderPass* const pass) override;
-
     Result<RenderPass*, RuntimeError> get_render_pass(const String& name
     ) const override;
 
-    uint8 get_window_attachment_count() const override;
-
+    // Attachments
+    uint8    get_current_window_attachment_index() const override;
+    uint8    get_window_attachment_count() const override;
     Texture* get_window_attachment(const uint8 index) const override;
     Texture* get_depth_attachment() const override;
     Texture* get_color_attachment() const override;
-
-    uint8 get_current_window_attachment_index() const override;
 
   private:
     // TODO: Custom allocator
@@ -92,12 +88,6 @@ class VulkanBackend : public RendererBackend {
 
     vk::Instance               _vulkan_instance;
     vk::DebugUtilsMessengerEXT _debug_messenger;
-
-    vk::Instance               create_vulkan_instance() const;
-    vk::DebugUtilsMessengerEXT setup_debug_messenger() const;
-
-    bool all_validation_layers_are_available() const;
-    vk::DebugUtilsMessengerCreateInfoEXT debug_messenger_create_info() const;
 
     // Surface
     vk::SurfaceKHR _vulkan_surface;
@@ -109,8 +99,6 @@ class VulkanBackend : public RendererBackend {
         _semaphores_render_finished;
     std::array<vk::Fence, VulkanSettings::max_frames_in_flight>
         _fences_in_flight;
-
-    void create_sync_objects();
 
     // DEVICE CODE
     VulkanDevice* _device;
@@ -127,8 +115,6 @@ class VulkanBackend : public RendererBackend {
     // GEOMETRY CODE
     Map<uint32, VulkanGeometryData> _geometries;
 
-    uint32 generate_geometry_id();
-
     // COMMAND CODE
     VulkanCommandPool*   _command_pool;
     VulkanCommandBuffer* _command_buffer;
@@ -136,6 +122,16 @@ class VulkanBackend : public RendererBackend {
     // TODO: TEMP BUFFER CODE
     VulkanManagedBuffer* _vertex_buffer;
     VulkanManagedBuffer* _index_buffer;
+
+    // General methods
+    vk::Instance create_vulkan_instance() const;
+
+    // Debugger
+    vk::DebugUtilsMessengerEXT           setup_debug_messenger() const;
+    vk::DebugUtilsMessengerCreateInfoEXT debug_messenger_create_info() const;
+
+    // Sync method
+    void create_sync_objects();
 
     // Utility buffer methods
     void create_buffers();
@@ -147,15 +143,16 @@ class VulkanBackend : public RendererBackend {
     );
 
     // Utility geometry methods
-    void create_geometry_internal(
-        Geometry* const   geometry,
-        const uint32      vertex_size,
-        const uint32      vertex_count,
-        const void* const vertex_data,
-        const uint32      index_size,
-        const uint32      index_count,
-        const void* const index_data
-    );
+    uint32 generate_geometry_id();
+    void   create_geometry_internal(
+          Geometry* const   geometry,
+          const uint32      vertex_size,
+          const uint32      vertex_count,
+          const void* const vertex_data,
+          const uint32      index_size,
+          const uint32      index_count,
+          const void* const index_data
+      );
 };
 
 } // namespace ENGINE_NAMESPACE

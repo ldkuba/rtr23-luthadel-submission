@@ -39,13 +39,6 @@ class RendererBackend {
     uint64 get_current_frame() { return _frame_number; }
 
     /**
-     * @brief Inform renderer backend of a surface resize event
-     * @param width New width in pixels
-     * @param height New height in pixels
-     */
-    virtual void resized(const uint32 width, const uint32 height) = 0;
-
-    /**
      * @brief Preform operations in preparation for frame rendering
      * @param delta_time Time in seconds since the last frame
      * @throws RuntimeError If a problem is encountered during the method
@@ -63,26 +56,11 @@ class RendererBackend {
     virtual Result<void, RuntimeError> end_frame(const float32 delta_time) = 0;
 
     /**
-     * @brief Start recording of render pass commands
-     *
-     * @param pass Render pass to be used
-     * @param target Render target to be used
+     * @brief Inform renderer backend of a surface resize event
+     * @param width New width in pixels
+     * @param height New height in pixels
      */
-    virtual void begin_render_pass(
-        RenderPass* const pass, RenderTarget* const render_target
-    )                                                    = 0;
-    /**
-     * @brief End recording of render pass commands
-     *
-     * @param pass Render pass on which we want to end recording
-     */
-    virtual void end_render_pass(RenderPass* const pass) = 0;
-
-    /**
-     * @brief Draw command for specified geometry
-     * @param geometry Geometry to draw
-     */
-    virtual void draw_geometry(Geometry* const geometry) = 0;
+    virtual void resized(const uint32 width, const uint32 height) = 0;
 
     /**
      * @brief Create a texture and upload its relevant data to the GPU
@@ -92,19 +70,18 @@ class RendererBackend {
      */
     virtual void create_texture(
         Texture* const texture, const byte* const data
-    )                                                    = 0;
-    /**
-     * @brief Destroy a texture and free its corresponding GPU resources
-     *
-     * @param texture Texture to be destroy
-     */
-    virtual void destroy_texture(Texture* const texture) = 0;
-
+    )                                                            = 0;
     /**
      * @brief Create a writable texture object with no initial data.
      * @param texture Texture to be uploaded
      */
     virtual void create_writable_texture(Texture* const texture) = 0;
+    /**
+     * @brief Destroy a texture and free its corresponding GPU resources
+     *
+     * @param texture Texture to be destroy
+     */
+    virtual void destroy_texture(Texture* const texture)         = 0;
 
     /**
      * @brief Resizes a texture. Internally texture is destroyed and recreated.
@@ -154,13 +131,18 @@ class RendererBackend {
         Geometry* const         geometry,
         const Vector<Vertex2D>& vertices,
         const Vector<uint32>&   indices
-    )                                                 = 0;
+    )                                                    = 0;
     /**
      * @brief Destroy geometry and free its corresponding GPU resources
      *
      * @param geometry Geometry to be destroyed
      */
-    virtual void destroy_geometry(Geometry* geometry) = 0;
+    virtual void destroy_geometry(Geometry* geometry)    = 0;
+    /**
+     * @brief Draw command for specified geometry
+     * @param geometry Geometry to draw
+     */
+    virtual void draw_geometry(Geometry* const geometry) = 0;
 
     /**
      * @brief Create a shader object and upload relevant data to the GPU
@@ -210,7 +192,6 @@ class RendererBackend {
      * @param pass Render pass to be destroyed
      */
     virtual void        destroy_render_pass(RenderPass* const pass) = 0;
-
     /**
      * @brief Get a reference to a render pass object by name
      *
@@ -219,12 +200,16 @@ class RendererBackend {
      * @throws RuntimeError otherwise
      */
     virtual Result<RenderPass*, RuntimeError> get_render_pass(const String& name
-    ) const = 0;
+    ) const                                                         = 0;
 
+    /**
+     * @return uint8 Current window attachment index
+     */
+    virtual uint8 get_current_window_attachment_index() const = 0;
     /**
      * @return uint8 Window attachment count
      */
-    virtual uint8 get_window_attachment_count() const = 0;
+    virtual uint8 get_window_attachment_count() const         = 0;
 
     /**
      * @brief Get the window attachment texture at the given index
@@ -243,11 +228,6 @@ class RendererBackend {
      * enabled
      */
     virtual Texture* get_color_attachment() const                   = 0;
-
-    /**
-     * @return uint8 Current window attachment index
-     */
-    virtual uint8 get_current_window_attachment_index() const = 0;
 
   private:
     uint64 _frame_number = 0;

@@ -33,13 +33,15 @@ class VulkanRenderPass : public RenderPass {
      * @param device Vulkan device reference
      * @param allocator Allocation callback used
      * @param swapchain Swapchain reference
+     * @param command_buffer Buffer on which commands will be issued
      * @param id Unique vulkan render pass identifier
      * @param config Render pass configurations
      */
     VulkanRenderPass(
         const vk::Device* const              device,
         const vk::AllocationCallbacks* const allocator,
-        VulkanSwapchain* const               swapchain,
+        const VulkanSwapchain* const         swapchain,
+        const VulkanCommandBuffer* const     command_buffer,
         const uint16                         id,
         const Config&                        config
     );
@@ -47,19 +49,15 @@ class VulkanRenderPass : public RenderPass {
 
     /// @brief Begin render pass
     /// @param render_target Targeted to be used
-    /// @param command_buffer Buffer to store begin command
-    void begin(
-        RenderTarget* const      render_target,
-        const vk::CommandBuffer& command_buffer
-    );
+    void begin(RenderTarget* const render_target) override;
     /// @brief End render pass
-    /// @param command_buffer  Buffer to store end command
-    void end(const vk::CommandBuffer& command_buffer);
+    void end() override;
 
   private:
     const vk::Device*                    _device;
     const vk::AllocationCallbacks* const _allocator;
-    VulkanSwapchain* const               _swapchain;
+    const VulkanSwapchain* const         _swapchain;
+    const VulkanCommandBuffer* const     _command_buffer;
 
     // Internal data
     vk::RenderPass _handle;

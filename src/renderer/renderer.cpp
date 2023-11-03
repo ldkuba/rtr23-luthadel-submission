@@ -6,6 +6,7 @@ namespace ENGINE_NAMESPACE {
 
 #define RENDERER_LOG "Renderer :: "
 
+// Constructor & Destructor
 Renderer::Renderer(
     const RendererBackendType backend_type, Platform::Surface* const surface
 ) {
@@ -74,18 +75,10 @@ Renderer::Renderer(
 }
 Renderer::~Renderer() { del(_backend); }
 
-void Renderer::on_resize(const uint32 width, const uint32 height) {
-    // Update projection
-    _projection = glm::perspective(
-        glm::radians(45.0f), (float32) width / height, _near_plane, _far_plane
-    );
-    _projection_ui = glm::ortho(
-        0.0f, (float32) width, (float32) height, 0.0f, -100.0f, 100.0f
-    );
+// /////////////////////// //
+// RENDERER PUBLIC METHODS //
+// /////////////////////// //
 
-    // Update backend
-    _backend->resized(width, height);
-}
 Result<void, RuntimeError> Renderer::draw_frame(
     const RenderPacket* const render_data, const float32 delta_time
 ) {
@@ -100,8 +93,7 @@ Result<void, RuntimeError> Renderer::draw_frame(
 
     // === World shader ===
     // Bind render pass
-    const auto current_target = _world_renderpass->render_targets()[att_index];
-    _backend->begin_render_pass(_world_renderpass, current_target);
+    _world_renderpass->begin(att_index);
     // Use shader
     material_shader->use();
     // Setup shader globals
@@ -121,12 +113,10 @@ Result<void, RuntimeError> Renderer::draw_frame(
     }
 
     // End renderpass
-    _backend->end_render_pass(_world_renderpass);
+    _world_renderpass->end();
 
     // === UI changes ===
-    _backend->begin_render_pass(
-        _ui_renderpass, _ui_renderpass->render_targets()[att_index]
-    );
+    _ui_renderpass->begin(att_index);
     ui_shader->use();
     update_ui_shader_globals();
 
@@ -144,7 +134,7 @@ Result<void, RuntimeError> Renderer::draw_frame(
     _backend->draw_geometry(ui_geo.geometry);
 
     // End renderpass
-    _backend->end_render_pass(_ui_renderpass);
+    _ui_renderpass->end();
 
     // === END FRAME ===
     result = _backend->end_frame(delta_time);
@@ -157,21 +147,38 @@ Result<void, RuntimeError> Renderer::draw_frame(
     return {};
 }
 
+void Renderer::on_resize(const uint32 width, const uint32 height) {
+    // Update projection
+    _projection = glm::perspective(
+        glm::radians(45.0f), (float32) width / height, _near_plane, _far_plane
+    );
+    _projection_ui = glm::ortho(
+        0.0f, (float32) width, (float32) height, 0.0f, -100.0f, 100.0f
+    );
+
+    // Update backend
+    _backend->resized(width, height);
+}
+
+// -----------------------------------------------------------------------------
+// Texture
+// -----------------------------------------------------------------------------
+
 void Renderer::create_texture(Texture* texture, const byte* const data) {
     Logger::trace(RENDERER_LOG, "Creating texture.");
     _backend->create_texture(texture, data);
     Logger::trace(RENDERER_LOG, "Texture created.");
+}
+void Renderer::create_writable_texture(Texture* texture) {
+    Logger::trace(RENDERER_LOG, "Creating writable texture.");
+    _backend->create_writable_texture(texture);
+    Logger::trace(RENDERER_LOG, "Writable texture created.");
 }
 void Renderer::destroy_texture(Texture* texture) {
     _backend->destroy_texture(texture);
     Logger::trace(RENDERER_LOG, "Texture destroyed.");
 }
 
-void Renderer::create_writable_texture(Texture* texture) {
-    Logger::trace(RENDERER_LOG, "Creating writable texture.");
-    _backend->create_writable_texture(texture);
-    Logger::trace(RENDERER_LOG, "Writable texture created.");
-}
 void Renderer::resize_texture(
     Texture* const texture, const uint32 width, const uint32 height
 ) {
@@ -186,7 +193,6 @@ void Renderer::texture_write_data(
     _backend->texture_write_data(texture, data.data(), data.size(), offset);
     Logger::trace(RENDERER_LOG, "Texture writing complete.");
 }
-
 void Renderer::texture_write_data(
     Texture* const    texture,
     const byte* const data,
@@ -198,10 +204,18 @@ void Renderer::texture_write_data(
     Logger::trace(RENDERER_LOG, "Texture writing complete.");
 }
 
+// -----------------------------------------------------------------------------
+// Geometry
+// -----------------------------------------------------------------------------
+
 void Renderer::destroy_geometry(Geometry* geometry) {
     _backend->destroy_geometry(geometry);
     Logger::trace(RENDERER_LOG, "Geometry destroyed.");
 }
+
+// -----------------------------------------------------------------------------
+// Shader
+// -----------------------------------------------------------------------------
 
 Shader* Renderer::create_shader(const ShaderConfig config) {
     Logger::trace(RENDERER_LOG, "Creating shader.");
@@ -213,6 +227,10 @@ void Renderer::destroy_shader(Shader* shader) {
     _backend->destroy_shader(shader);
     Logger::trace(RENDERER_LOG, "Shader destroyed.");
 }
+
+// -----------------------------------------------------------------------------
+// Render target
+// -----------------------------------------------------------------------------
 
 RenderTarget* Renderer::create_render_target(
     RenderPass* const       pass,
@@ -233,6 +251,10 @@ void Renderer::destroy_render_target(
     Logger::trace(RENDERER_LOG, "Render target destroyed.");
 }
 
+// -----------------------------------------------------------------------------
+// Render pass
+// -----------------------------------------------------------------------------
+
 RenderPass* Renderer::create_render_pass(const RenderPass::Config& config) {
     Logger::trace(RENDERER_LOG, "Creating render pass.");
     const auto res = _backend->create_render_pass(config);
@@ -243,10 +265,13 @@ void Renderer::destroy_render_pass(RenderPass* const pass) {
     _backend->destroy_render_pass(pass);
     Logger::trace(RENDERER_LOG, "Render pass destroyed.");
 }
-
 Result<RenderPass*, RuntimeError> Renderer::get_renderpass(const String& name) {
     return _backend->get_render_pass(name);
 }
+
+// -----------------------------------------------------------------------------
+// Camera
+// -----------------------------------------------------------------------------
 
 void Renderer::set_active_camera(Camera* const camera) {
     _active_camera = camera;

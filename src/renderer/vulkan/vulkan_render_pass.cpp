@@ -8,12 +8,13 @@ namespace ENGINE_NAMESPACE {
 VulkanRenderPass::VulkanRenderPass(
     const vk::Device* const              device,
     const vk::AllocationCallbacks* const allocator,
-    VulkanSwapchain* const               swapchain,
+    const VulkanSwapchain* const         swapchain,
+    const VulkanCommandBuffer* const     command_buffer,
     const uint16                         id,
     const Config&                        config
 )
-    : _device(device), _swapchain(swapchain), _allocator(allocator),
-      RenderPass(id, config),
+    : _device(device), _swapchain(swapchain), _command_buffer(command_buffer),
+      _allocator(allocator), RenderPass(id, config),
       // TODO: Configurable
       _depth(1.0), _stencil(0) {
 
@@ -186,9 +187,7 @@ VulkanRenderPass::~VulkanRenderPass() {
 // VULKAN RENDER PASS PUBLIC METHODS //
 // ///////////////////////////////// //
 
-void VulkanRenderPass::begin(
-    RenderTarget* const render_target, const vk::CommandBuffer& command_buffer
-) {
+void VulkanRenderPass::begin(RenderTarget* const render_target) {
     // Get relevant framebuffer
     const auto framebuffer =
         dynamic_cast<VulkanFramebuffer*>(render_target->framebuffer());
@@ -204,13 +203,11 @@ void VulkanRenderPass::begin(
     render_pass_begin_info.renderArea.setExtent({ render_target->width(),
                                                   render_target->height() });
 
-    command_buffer.beginRenderPass(
+    _command_buffer->handle->beginRenderPass(
         render_pass_begin_info, vk::SubpassContents::eInline
     );
 }
 
-void VulkanRenderPass::end(const vk::CommandBuffer& command_buffer) {
-    command_buffer.endRenderPass();
-}
+void VulkanRenderPass::end() { _command_buffer->handle->endRenderPass(); }
 
 } // namespace ENGINE_NAMESPACE

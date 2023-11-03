@@ -62,6 +62,33 @@ class RenderPass {
     virtual ~RenderPass() {}
 
     /**
+     * @brief Start recording of render pass commands
+     * @param index Render target to be used (index of)
+     */
+    void begin(const uint32 index) {
+        if (index >= _render_targets.size())
+            Logger::fatal(
+                "RenderPass :: Render target index out of range. Target count "
+                "is `",
+                _render_targets.size(),
+                "`, but index `",
+                index,
+                "` was passed."
+            );
+        begin(_render_targets[index]);
+    }
+
+    /**
+     * @brief Start recording of render pass commands
+     * @param target Render target to be used
+     */
+    virtual void begin(RenderTarget* const render_target) = 0;
+    /**
+     * @brief End recording of render pass commands
+     */
+    virtual void end()                                    = 0;
+
+    /**
      * @brief Add render target to its associated render pass
      * @param target Target to be added
      */

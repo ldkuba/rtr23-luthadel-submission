@@ -43,13 +43,6 @@ class Renderer {
     Renderer& operator=(Renderer const&) = delete;
 
     /**
-     * @brief Inform renderer of a surface resize event
-     *
-     * @param width New width in pixels
-     * @param height New height in pixels
-     */
-    void on_resize(const uint32 width, const uint32 height);
-    /**
      * @brief Draw to the surface
      *
      * @param render_data Data about everything that needs to be rendered
@@ -61,22 +54,29 @@ class Renderer {
     );
 
     /**
+     * @brief Inform renderer of a surface resize event
+     *
+     * @param width New width in pixels
+     * @param height New height in pixels
+     */
+    void on_resize(const uint32 width, const uint32 height);
+
+    /**
      * @brief Create a texture and upload its relevant data to the GPU
      * @param texture Texture to be upload
      * @param data Raw texture image data
      */
     void create_texture(Texture* texture, const byte* const data);
     /**
-     * @brief Destroy a texture and free its corresponding GPU resources
-     * @param texture Texture to be destroy
-     */
-    void destroy_texture(Texture* texture);
-
-    /**
      * @brief Create a writable texture object with no initial data.
      * @param texture Texture to be uploaded
      */
     void create_writable_texture(Texture* texture);
+    /**
+     * @brief Destroy a texture and free its corresponding GPU resources
+     * @param texture Texture to be destroy
+     */
+    void destroy_texture(Texture* texture);
 
     /**
      * @brief Resizes a texture. Internally texture is destroyed and recreated.
@@ -180,7 +180,6 @@ class Renderer {
      * @param pass Render pass to be destroyed
      */
     void        destroy_render_pass(RenderPass* const pass);
-
     /**
      * @brief Get renderpass with a given name
      *

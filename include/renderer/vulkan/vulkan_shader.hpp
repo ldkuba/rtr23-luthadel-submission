@@ -36,10 +36,10 @@ class VulkanShader : public Shader {
     /**
      * @brief Construct a new Vulkan Shader object.
      * @param config Shader configuration used
-     * @param device Device on which the shader will be used
+     * @param device Device on which this shader will be used
      * @param allocator Custom allocation callback
-     * @param render_pass Pointer to the render pass used by this shader
-     * off disk
+     * @param render_pass Render pass used by this shader
+     * @param command_buffer Buffer on which commands will be issued
      */
     VulkanShader(
         const ShaderConfig                   config,
