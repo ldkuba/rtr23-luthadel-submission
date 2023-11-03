@@ -63,18 +63,6 @@ enum class MemoryTag : MemoryTagType {
     MAX_TAGS
 };
 
-class MemoryMap : public std::map<uint64, MemoryTag> {
-  public:
-    using std::map<uint64, MemoryTag>::map;
-
-    ~MemoryMap() { _dying = true; }
-
-    MemoryTag get_first_before(const uint64 address);
-
-  private:
-    bool _dying = false;
-};
-
 /**
  * @brief Memory system. Responsible for memory management and tracking, custom
  * allocators, allocations and deallocations for the engine. Collection of
@@ -117,6 +105,18 @@ class MemorySystem {
     static MemoryTag get_owner(void* ptr);
 
   private:
+    class MemoryMap : public std::map<uint64, MemoryTag> {
+      public:
+        using std::map<uint64, MemoryTag>::map;
+
+        ~MemoryMap() { _dying = true; }
+
+        MemoryTag get_first_before(const uint64 address);
+
+      private:
+        bool _dying = false;
+    };
+
     static MemoryMap   _memory_map;
     static Allocator** _allocator_array;
 

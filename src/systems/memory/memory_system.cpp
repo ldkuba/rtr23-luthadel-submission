@@ -17,29 +17,9 @@ static_assert(
     "representation are used to recognize custom allocation)"
 );
 
-MemoryMap   MemorySystem::_memory_map = {};
-Allocator** MemorySystem::_allocator_array =
+MemorySystem::MemoryMap MemorySystem::_memory_map = {};
+Allocator**             MemorySystem::_allocator_array =
     MemorySystem::initialize_allocator_array(MemorySystem::_memory_map);
-
-MemoryTag MemoryMap::get_first_before(const uint64 address) {
-    // Check for nullptr
-    if (address == 0) return MemoryTag::MAX_TAGS;
-
-    // Check if alive
-    if (_dying) return MemoryTag::MAX_TAGS;
-
-    // Find adequate memory tag
-    auto it = lower_bound(address);
-    if (it == end()) it--;
-    else if (it->first != address) {
-        // This is before begin?
-        if (it == begin()) return MemoryTag::MAX_TAGS;
-        it--;
-    }
-    const auto tag = it->second;
-
-    return tag;
-}
 
 // //////////////////////////// //
 // MEMORY SYSTEM PUBLIC METHODS //
@@ -194,23 +174,46 @@ Allocator** MemorySystem::initialize_allocator_array(MemoryMap& memory_map) {
     return allocator_array;
 }
 
+// -----------------------------------------------------------------------------
+// Memory map
+// -----------------------------------------------------------------------------
+
+MemoryTag MemorySystem::MemoryMap::get_first_before(const uint64 address) {
+    // Check for nullptr
+    if (address == 0) return MemoryTag::MAX_TAGS;
+
+    // Check if alive
+    if (_dying) return MemoryTag::MAX_TAGS;
+
+    // Find adequate memory tag
+    auto it = lower_bound(address);
+    if (it == end()) it--;
+    else if (it->first != address) {
+        // This is before begin?
+        if (it == begin()) return MemoryTag::MAX_TAGS;
+        it--;
+    }
+    const auto tag = it->second;
+
+    return tag;
+}
+
 } // namespace ENGINE_NAMESPACE
 
 using namespace ENGINE_NAMESPACE;
 
 // New
-void* operator new(std::size_t size, ENGINE_NAMESPACE::MemoryTag tag) {
-    return ENGINE_NAMESPACE::MemorySystem::allocate(size + MEMORY_PADDING, tag);
+void* operator new(std::size_t size, MemoryTag tag) {
+    return MemorySystem::allocate(size + MEMORY_PADDING, tag);
 }
-void* operator new[](std::size_t size, const ENGINE_NAMESPACE::MemoryTag tag) {
+void* operator new[](std::size_t size, const MemoryTag tag) {
     return operator new(size, tag);
 }
 
 // Delete
 void operator delete(void* p) noexcept {
-    const auto tag = ENGINE_NAMESPACE::MemorySystem::get_owner(p);
-    if (tag != engine_namespace::MemoryTag::MAX_TAGS)
-        ENGINE_NAMESPACE::MemorySystem::deallocate(p, tag);
+    const auto tag = MemorySystem::get_owner(p);
+    if (tag != MemoryTag::MAX_TAGS) MemorySystem::deallocate(p, tag);
     else free(p);
 }
 void operator delete[](void* p) noexcept { ::operator delete(p); }
