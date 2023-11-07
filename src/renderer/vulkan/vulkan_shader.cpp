@@ -130,7 +130,8 @@ VulkanShader::VulkanShader(
     // buffer resizing.
     uint64 total_buffer_size = /* global + (locals) */
         _global_ubo_stride + (_ubo_stride * Shader::max_instance_count);
-    _uniform_buffer = new VulkanManagedBuffer(_device, _allocator);
+    _uniform_buffer =
+        new (MemoryTag::GPUBuffer) VulkanManagedBuffer(_device, _allocator);
     _uniform_buffer->create(
         total_buffer_size,
         vk::BufferUsageFlagBits::eTransferDst |
@@ -429,10 +430,16 @@ uint32 VulkanShader::acquire_instance_resources( //
     // Initialize texture maps
     auto& texture_maps = instance_state->instance_texture_maps;
     texture_maps.resize(_instance_texture_count);
-    for (uint32 i = 0; i < _instance_texture_count; i++) {
+    for (uint32 i = 0; i < maps.size() && i < _instance_texture_count; i++) {
         texture_maps[i] = maps[i];
         if (!maps[i]->texture)
             texture_maps[i]->texture = _texture_system->default_texture;
+    }
+    for (uint32 i = maps.size(); i < _instance_texture_count; i++) {
+        texture_maps[i]          = new (MemoryTag::Texture) TextureMap();
+        texture_maps[i]->texture = _texture_system->default_texture;
+        texture_maps[i]->use     = TextureUse::Unknown;
+        acquire_texture_map_resources(texture_maps[i]);
     }
 
     // Allocate some space in the UBO - by the stride, not the size.

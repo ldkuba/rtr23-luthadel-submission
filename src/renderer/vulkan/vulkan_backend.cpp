@@ -584,7 +584,7 @@ RenderPass* VulkanBackend::create_render_pass(const RenderPass::Config& config
     _render_pass_table[config.name] = new_id;
 
     // Create and add this pass
-    const auto renderpass = new VulkanRenderPass(
+    const auto renderpass = new (MemoryTag::GPUBuffer) VulkanRenderPass(
         &_device->handle(),
         _allocator,
         _swapchain,

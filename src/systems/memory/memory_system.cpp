@@ -211,15 +211,16 @@ void* operator new[](std::size_t size, const MemoryTag tag) {
 }
 
 // Delete
-// void operator delete(void* p) noexcept {
-//     const auto tag = MemorySystem::get_owner(p);
-//     if (tag != MemoryTag::MAX_TAGS) MemorySystem::deallocate(p, tag);
-//     else free(p);
-// }
-// void operator delete[](void* p) noexcept { ::operator delete(p); }
-void operator delete(void* p, bool) noexcept {
+void operator delete(void* p) noexcept {
     const auto tag = MemorySystem::get_owner(p);
     if (tag != MemoryTag::MAX_TAGS) MemorySystem::deallocate(p, tag);
     else free(p);
 }
-void operator delete[](void* p, bool) noexcept { ::operator delete(p); }
+void operator delete[](void* p) noexcept { ::operator delete(p); }
+// void operator delete(void* p, bool) noexcept {
+//     const auto tag = MemorySystem::get_owner(p);
+//     if (tag != MemoryTag::MAX_TAGS) MemorySystem::deallocate(p, tag);
+//     else free(p);
+// }
+// void operator delete[](void* p, bool) noexcept { ::operator delete(p, true);
+// }

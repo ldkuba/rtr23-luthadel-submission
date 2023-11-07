@@ -67,7 +67,10 @@ VulkanSwapchain::~VulkanSwapchain() {
         auto data =
             reinterpret_cast<VulkanTextureData*>(texture->internal_data());
         _device->handle().waitIdle();
-        // if (data->image) del(data->image);
+        if (data->image) {
+            data->image->create(nullptr, 0, 0);
+            del(data->image);
+        }
     }
     _render_textures.clear();
 

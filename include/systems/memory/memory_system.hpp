@@ -130,18 +130,14 @@ void* operator new(std::size_t size, const ENGINE_NAMESPACE::MemoryTag tag);
 void* operator new[](std::size_t size, const ENGINE_NAMESPACE::MemoryTag tag);
 
 // Delete
-// void operator delete(void* p) noexcept;
-// void operator delete[](void* p) noexcept;
-void operator delete(void* p, bool) noexcept;
-void operator delete[](void* p, bool) noexcept;
+void operator delete(void* p) noexcept;
+void operator delete[](void* p) noexcept;
 
 // New delete operator
 template<typename T>
 inline void del(T* p) {
-    p->~T();
-    ::operator delete(p, true);
+    delete p;
 }
-// #define del(x) ::operator delete(x, true)
 
 // -----------------------------------------------------------------------------
 // Typed allocator
@@ -180,7 +176,7 @@ T* TAllocator<T>::allocate(const std::size_t n) const {
 }
 template<class T>
 void TAllocator<T>::deallocate(T* const p, std::size_t n) const noexcept {
-    ::operator delete(p, true);
+    ::operator delete(p);
 }
 
 } // namespace ENGINE_NAMESPACE

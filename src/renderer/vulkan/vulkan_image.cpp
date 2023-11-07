@@ -5,7 +5,6 @@ namespace ENGINE_NAMESPACE {
 // #define TRACE_FILE_VULKAN_IMAGE
 
 VulkanImage::~VulkanImage() {
-    Logger::debug("DESTROYING :: ", (uint64) &_handle);
     if (_handle) _device->handle().destroyImage(_handle, _allocator);
     if (_memory) _device->handle().freeMemory(_memory, _allocator);
     destroy_view();
@@ -24,7 +23,6 @@ void VulkanImage::create(
     _handle = handle;
     _width  = width;
     _height = height;
-    Logger::debug("CREATING :: ", (uint64) &_handle);
 }
 
 void VulkanImage::create(
