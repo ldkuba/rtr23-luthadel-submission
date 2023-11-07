@@ -398,7 +398,7 @@ uint32 VulkanShader::acquire_instance_resources( //
     const Vector<TextureMap*>& maps
 ) {
     uint32 instance_id    = _instance_states.size();
-    auto   instance_state = new (MemoryTag::Renderer) VulkanInstanceState();
+    auto   instance_state = new (MemoryTag::Shader) VulkanInstanceState();
 
     // Check if map count fits
     auto instance_texture_count =
@@ -436,7 +436,7 @@ uint32 VulkanShader::acquire_instance_resources( //
             texture_maps[i]->texture = _texture_system->default_texture;
     }
     for (uint32 i = maps.size(); i < _instance_texture_count; i++) {
-        texture_maps[i]          = new (MemoryTag::Texture) TextureMap();
+        texture_maps[i]          = new (MemoryTag::TextureMap) TextureMap();
         texture_maps[i]->texture = _texture_system->default_texture;
         texture_maps[i]->use     = TextureUse::Unknown;
         acquire_texture_map_resources(texture_maps[i]);
@@ -692,7 +692,7 @@ Vector<VulkanDescriptorSetConfig*> VulkanShader::compute_uniforms(
     // === Process uniforms ===
     // Global descriptor set config
     auto global_desc_set_config =
-        new (MemoryTag::Renderer) VulkanDescriptorSetConfig();
+        new (MemoryTag::Shader) VulkanDescriptorSetConfig();
 
     // UBO is always available and first.
     vk::DescriptorSetLayoutBinding global_ubo_binding {};
@@ -707,7 +707,7 @@ Vector<VulkanDescriptorSetConfig*> VulkanShader::compute_uniforms(
     if (_use_instances) {
         // If using instances, add a second descriptor set.
         auto instance_desc_set_config =
-            new (MemoryTag::Renderer) VulkanDescriptorSetConfig();
+            new (MemoryTag::Shader) VulkanDescriptorSetConfig();
 
         // Add a UBO to it, as instances should always have one available.
         // NOTE: Might be a good idea to only add this if it is going to be

@@ -63,7 +63,7 @@ class Material {
         GET { return _shininess; }
     };
     /// @brief Material's diffuse map
-    Property<TextureMap> diffuse_map {
+    Property<TextureMap*> diffuse_map {
         GET { return _diffuse_map; }
         SET {
             _diffuse_map     = value;
@@ -71,7 +71,7 @@ class Material {
         }
     };
     /// @brief Material's specular map
-    Property<TextureMap> specular_map {
+    Property<TextureMap*> specular_map {
         GET { return _specular_map; }
         SET {
             _specular_map    = value;
@@ -79,7 +79,7 @@ class Material {
         }
     };
     /// @brief Material's normal map
-    Property<TextureMap> normal_map {
+    Property<TextureMap*> normal_map {
         GET { return _normal_map; }
         SET {
             _normal_map      = value;
@@ -124,9 +124,9 @@ class Material {
   private:
     String        _name = "";
     Shader* const _shader;
-    TextureMap    _diffuse_map;
-    TextureMap    _specular_map;
-    TextureMap    _normal_map;
+    TextureMap*   _diffuse_map  = nullptr;
+    TextureMap*   _specular_map = nullptr;
+    TextureMap*   _normal_map   = nullptr;
     glm::vec4     _diffuse_color;
     float32       _shininess;
     bool          _update_required = true;

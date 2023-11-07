@@ -525,7 +525,7 @@ RenderTarget* VulkanBackend::create_render_target(
     }
 
     // Create render target appropriate framebuffer
-    const auto framebuffer = new (MemoryTag::Renderer) VulkanFramebuffer(
+    const auto framebuffer = new (MemoryTag::GPUBuffer) VulkanFramebuffer(
         &_device->handle(),
         _allocator,
         vulkan_pass,
@@ -535,7 +535,7 @@ RenderTarget* VulkanBackend::create_render_target(
     );
 
     // Store to render target
-    const auto target = new (MemoryTag::Renderer)
+    const auto target = new (MemoryTag::GPUBuffer)
         RenderTarget(attachments, framebuffer, width, height);
 
     // Sync to window resize

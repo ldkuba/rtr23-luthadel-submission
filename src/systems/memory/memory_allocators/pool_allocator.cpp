@@ -30,7 +30,7 @@ PoolAllocator::PoolAllocator(const uint64 total_size, const uint64 chunk_size)
 void* PoolAllocator::allocate(
     const uint64 allocation_size, const uint64 alignment
 ) {
-    if (allocation_size != this->_chunk_size)
+    if (allocation_size > this->_chunk_size)
         Logger::fatal(
             ALLOCATOR_LOG,
             "Allocation size for pool allocator must be equal to chunk size."

@@ -49,6 +49,7 @@ enum class MemoryTag : MemoryTagType {
     // Resources
     Resource,
     Texture,
+    TextureMap,
     MaterialInstance,
     Geometry,
     Shader,
@@ -136,7 +137,8 @@ void operator delete[](void* p) noexcept;
 // New delete operator
 template<typename T>
 inline void del(T* p) {
-    delete p;
+    p->~T();
+    ::operator delete(p);
 }
 
 // -----------------------------------------------------------------------------
