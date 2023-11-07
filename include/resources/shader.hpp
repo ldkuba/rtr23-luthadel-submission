@@ -303,7 +303,7 @@ class Shader {
 
     // Textures
     Vector<TextureMap*> _global_texture_maps {};
-    uint8               _instance_texture_count;
+    uint8               _instance_texture_count = 0;
 
     virtual Outcome set_uniform(const uint16 id, void* value);
 

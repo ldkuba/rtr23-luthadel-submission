@@ -152,7 +152,7 @@ void Shader::add_sampler(const ShaderUniformConfig& config) {
 
         // Allocate and push new global texture map
         // NOTE: Allocation within shader only done here (for globals)
-        TextureMap* map = new (MemoryTag::Renderer) TextureMap(default_map);
+        TextureMap* map = new (MemoryTag::TextureMap) TextureMap(default_map);
         map->texture    = _texture_system->default_texture;
         _global_texture_maps.push_back(map);
     } else {

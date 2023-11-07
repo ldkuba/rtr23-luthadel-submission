@@ -49,6 +49,7 @@ enum class MemoryTag : MemoryTagType {
     // Resources
     Resource,
     Texture,
+    TextureMap,
     MaterialInstance,
     Geometry,
     Shader,
@@ -132,6 +133,13 @@ void* operator new[](std::size_t size, const ENGINE_NAMESPACE::MemoryTag tag);
 // Delete
 void operator delete(void* p) noexcept;
 void operator delete[](void* p) noexcept;
+
+// New delete operator
+template<typename T>
+inline void del(T* p) {
+    p->~T();
+    ::operator delete(p);
+}
 
 // -----------------------------------------------------------------------------
 // Typed allocator

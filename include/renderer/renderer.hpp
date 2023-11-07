@@ -2,6 +2,7 @@
 
 #include "renderer/vulkan/vulkan_backend.hpp"
 #include "camera.hpp"
+#include "resources/geometry.hpp"
 
 namespace ENGINE_NAMESPACE {
 
@@ -242,7 +243,7 @@ void Renderer::create_geometry(
     static const char* const RENDERER_LOG = "Renderer :: ";
     Logger::trace(RENDERER_LOG, "Creating geometry.");
     _backend->create_geometry(geometry, vertices, indices);
-    Logger::trace(RENDERER_LOG, "Geometry created.");
+    Logger::trace(RENDERER_LOG, "Geometry created [", geometry->name(), "].");
 }
 
 } // namespace ENGINE_NAMESPACE

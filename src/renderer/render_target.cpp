@@ -29,10 +29,6 @@ void RenderTarget::add_attachments(const Vector<Texture*>& attachments) {
     for (const auto& att : attachments)
         _attachments.push_back(att);
 }
-void RenderTarget::free_attachments() {
-    for (const auto& att : _attachments)
-        delete att;
-    _attachments.clear();
-}
+void RenderTarget::free_attachments() { _attachments.clear(); }
 
 } // namespace ENGINE_NAMESPACE

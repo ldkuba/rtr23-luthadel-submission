@@ -79,7 +79,7 @@ VulkanBackend::~VulkanBackend() {
 
     // Render pass
     for (auto& pass : _registered_passes)
-        delete pass;
+        destroy_render_pass(pass);
     _registered_passes.clear();
     _render_pass_table.clear();
 
@@ -525,7 +525,7 @@ RenderTarget* VulkanBackend::create_render_target(
     }
 
     // Create render target appropriate framebuffer
-    const auto framebuffer = new (MemoryTag::Renderer) VulkanFramebuffer(
+    const auto framebuffer = new (MemoryTag::GPUBuffer) VulkanFramebuffer(
         &_device->handle(),
         _allocator,
         vulkan_pass,
@@ -535,7 +535,7 @@ RenderTarget* VulkanBackend::create_render_target(
     );
 
     // Store to render target
-    const auto target = new (MemoryTag::Renderer)
+    const auto target = new (MemoryTag::GPUBuffer)
         RenderTarget(attachments, framebuffer, width, height);
 
     // Sync to window resize
@@ -584,7 +584,7 @@ RenderPass* VulkanBackend::create_render_pass(const RenderPass::Config& config
     _render_pass_table[config.name] = new_id;
 
     // Create and add this pass
-    const auto renderpass = new VulkanRenderPass(
+    const auto renderpass = new (MemoryTag::GPUBuffer) VulkanRenderPass(
         &_device->handle(),
         _allocator,
         _swapchain,
@@ -598,7 +598,13 @@ RenderPass* VulkanBackend::create_render_pass(const RenderPass::Config& config
 }
 void VulkanBackend::destroy_render_pass(RenderPass* pass) {
     const auto vulkan_pass = dynamic_cast<VulkanRenderPass*>(pass);
-    delete vulkan_pass;
+
+    // Clear all targets
+    for (const auto& target : vulkan_pass->render_targets())
+        destroy_render_target(target);
+
+    // Destroy pass
+    del(vulkan_pass);
 }
 
 Result<RenderPass*, RuntimeError> VulkanBackend::get_render_pass(

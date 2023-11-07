@@ -34,7 +34,7 @@ void TestApplication::run() {
     // === Assign meshes ===
     Vector<Mesh*> meshes {};
 
-#define CURRENT_SCENE 0
+#define CURRENT_SCENE 2
 #if CURRENT_SCENE == 0
     // Create geometries
     Geometry* const geometry_1 =
@@ -88,7 +88,7 @@ void TestApplication::run() {
         geometries.push_back(_geometry_system.acquire(*config));
 
     // Add mesh
-    Mesh* mesh = new Mesh(geometries);
+    Mesh* mesh = new (MemoryTag::Temp) Mesh(geometries);
 #    if CURRENT_SCENE == 2 || CURRENT_SCENE == 1
 #        if CURRENT_SCENE == 2
     mesh->transform.scale_by(0.02f);

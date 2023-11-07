@@ -130,13 +130,18 @@ Allocator** MemorySystem::initialize_allocator_array(MemoryMap& memory_map) {
     lal(init_allocator, MB);
 
     // Pools
-    uint64 max_texture_count  = 1024;
-    uint64 max_material_count = 1024;
+    uint64 max_texture_count     = 1024;
+    uint64 max_texture_map_count = 1024;
+    uint64 max_material_count    = 1024;
 
-    uint64 texture_size  = sizeof(Texture) + MEMORY_PADDING;
-    uint64 material_size = sizeof(Material) + MEMORY_PADDING;
+    uint64 texture_size     = get_aligned(sizeof(Texture), MEMORY_PADDING);
+    uint64 texture_map_size = get_aligned(sizeof(TextureMap), MEMORY_PADDING);
+    uint64 material_size    = get_aligned(sizeof(Material), MEMORY_PADDING);
 
     pal(texture_pool, max_texture_count * texture_size, texture_size);
+    pal(texture_map_pool,
+        max_texture_map_count * texture_map_size,
+        texture_map_size);
     pal(material_pool, max_material_count * material_size, material_size);
 
     // Assign allocators
@@ -160,6 +165,7 @@ Allocator** MemorySystem::initialize_allocator_array(MemoryMap& memory_map) {
     // Resources
     assign_allocator(Resource, resource_allocator);
     assign_allocator(Texture, texture_pool);
+    assign_allocator(TextureMap, texture_map_pool);
     assign_allocator(MaterialInstance, material_pool);
     assign_allocator(Geometry, geom_allocator);
     assign_allocator(Shader, resource_allocator);
@@ -204,7 +210,7 @@ using namespace ENGINE_NAMESPACE;
 
 // New
 void* operator new(std::size_t size, MemoryTag tag) {
-    return MemorySystem::allocate(size + MEMORY_PADDING, tag);
+    return MemorySystem::allocate(size, tag);
 }
 void* operator new[](std::size_t size, const MemoryTag tag) {
     return operator new(size, tag);

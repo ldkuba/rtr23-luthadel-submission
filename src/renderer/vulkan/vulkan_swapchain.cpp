@@ -53,21 +53,24 @@ VulkanSwapchain::~VulkanSwapchain() {
     // Clear color attachment
     if (_color_attachment) {
         if (_color_attachment->internal_data)
-            delete _color_attachment->internal_data;
-        delete _color_attachment;
+            del(_color_attachment->internal_data());
+        del(_color_attachment);
     }
     // Clear depth attachment
     if (_depth_attachment) {
         if (_depth_attachment->internal_data)
-            delete _depth_attachment->internal_data;
-        delete _depth_attachment;
+            del(_depth_attachment->internal_data());
+        del(_depth_attachment);
     }
     // Clear render textures
     for (auto& texture : _render_textures) {
         auto data =
             reinterpret_cast<VulkanTextureData*>(texture->internal_data());
         _device->handle().waitIdle();
-        if (data->image) delete data->image;
+        if (data->image) {
+            data->image->create(nullptr, 0, 0);
+            del(data->image);
+        }
     }
     _render_textures.clear();
 
@@ -327,9 +330,7 @@ void VulkanSwapchain::destroy() {
     for (const auto& texture : _render_textures) {
         auto internal_data =
             reinterpret_cast<VulkanTextureData*>(texture->internal_data());
-        _device->handle().destroyImageView(
-            internal_data->image->view, _allocator
-        );
+        internal_data->image->destroy_view();
     }
 
     // Destroy handle

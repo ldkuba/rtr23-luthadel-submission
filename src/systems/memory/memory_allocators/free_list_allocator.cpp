@@ -18,14 +18,18 @@ FreeListAllocator::FreeListAllocator(
 // FREE LIST ALLOCATOR PUBLIC METHODS //
 // ////////////////////////////////// //
 
+#define FREE_LIST_ALLOCATION_SIZE_WAR 0
+
 void* FreeListAllocator::allocate(const uint64 size, const uint64 alignment) {
     if (size < sizeof(Node))
+#if FREE_LIST_ALLOCATION_SIZE_WAR == 1
         Logger::warning(
             ALLOCATOR_LOG,
             "Free list allocation size should be bigger then or equal to ",
             sizeof(Node),
             ", which is sizeof(Node)."
         );
+#endif
     if (alignment < 4)
         Logger::fatal(
             ALLOCATOR_LOG, "Free list allocation alignment must be at least 4."
