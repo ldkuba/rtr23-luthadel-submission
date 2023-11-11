@@ -53,8 +53,10 @@ enum class MemoryTag : MemoryTagType {
     MaterialInstance,
     Geometry,
     Shader,
+    RenderView,
     // === Game allocations ===
     Game,
+    Control,
     Job,
     Transform,
     Entity,

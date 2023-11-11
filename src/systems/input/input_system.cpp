@@ -39,7 +39,7 @@ Result<Control*, RuntimeError> InputSystem::create_control(
     }
 
     // If control can be created create it
-    Control* new_control = new (MemoryTag::Unknown) Control(name, type, this);
+    Control* new_control = new (MemoryTag::Control) Control(name, type, this);
     _controls.push_back(new_control);
 
     Logger::trace(INPUT_SYS_LOG, "Control \"", name, "\" created.");

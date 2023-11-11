@@ -70,11 +70,11 @@ class Texture {
     ~Texture() {}
 
     /// @brief True if texture uses any transparency
-    bool has_transparency() { return _flags & HasTransparency; }
+    bool has_transparency() const { return _flags & HasTransparency; }
     /// @brief True if this texture can be written to
-    bool is_writable() { return _flags & IsWritable; }
+    bool is_writable() const { return _flags & IsWritable; }
     /// @brief True if this texture was created via wrapping
-    bool is_wrapped() { return _flags & IsWrapped; }
+    bool is_wrapped() const { return _flags & IsWrapped; }
 
     /**
      * @brief Resizes a given texture. May only be called for writable textures.
@@ -99,7 +99,7 @@ class Texture {
     int32  _width;
     int32  _height;
     int32  _channel_count;
-    uint32  _mip_levels;
+    uint32 _mip_levels;
     uint64 _total_size;
 
     InternalTextureData* _internal_data;

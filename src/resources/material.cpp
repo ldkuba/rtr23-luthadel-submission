@@ -1,5 +1,7 @@
 #include "resources/material.hpp"
 
+#include "systems/shader_system.hpp"
+
 namespace ENGINE_NAMESPACE {
 
 #define MATERIAL_LOG "Material :: "
@@ -21,9 +23,6 @@ Material::~Material() {}
 // /////////////////////// //
 // MATERIAL PUBLIC METHODS //
 // /////////////////////// //
-
-#define BUILTIN_MATERIAL_SHADER_NAME "builtin.material_shader"
-#define BUILTIN_UI_SHADER_NAME "builtin.ui_shader"
 
 #define set_uniform(uniform_name, uniform_value)                               \
     {                                                                          \
@@ -89,7 +88,8 @@ void Material::apply_instance() {
     if (_update_required) {
         set_uniform("diffuse_color", _diffuse_color);
         set_sampler("diffuse_texture", _diffuse_map);
-        if (_shader->get_name().compare_ci("builtin.material_shader") == 0) {
+        if (_shader->get_name().compare_ci(ShaderSystem::BuiltIn::MaterialShader
+            ) == 0) {
             set_uniform("shininess", _shininess);
             set_sampler("specular_texture", _specular_map);
             set_sampler("normal_texture", _normal_map);

@@ -18,21 +18,60 @@ void TestApplication::run() {
     main_camera->transform.position = glm::vec3(2, 2, 2);
     main_camera->add_pitch(35);
     main_camera->add_yaw(-135);
-    _app_renderer.set_active_camera(main_camera);
 
     // === Input system ===
     setup_input();
 
     // === Renderer ===
     _app_renderer.material_shader =
-        _shader_system.acquire("builtin.material_shader").expect("ERR1");
+        _shader_system.acquire(ShaderSystem::BuiltIn::MaterialShader)
+            .expect("ERR1");
     _app_renderer.ui_shader =
-        _shader_system.acquire("builtin.ui_shader").expect("ERR2");
+        _shader_system.acquire(ShaderSystem::BuiltIn::UIShader).expect("ERR2");
 
     _app_renderer.material_shader->reload();
 
+    // === Render views ===
+    // Get width & height
+    const auto width  = _app_surface->get_width_in_pixels();
+    const auto height = _app_surface->get_height_in_pixels();
+
+    // Configure
+    RenderView::Config opaque_world_view_config {
+        "world_opaque",
+        ShaderSystem::BuiltIn::MaterialShader,
+        width,
+        height,
+        RenderView::Type::World,
+        RenderView::ViewMatrixSource::SceneCamera,
+        RenderView::ProjectionMatrixSource::DefaultPerspective,
+        { _app_renderer.get_renderpass(Renderer::Builtin::WorldPass)
+              .expect("ERR3") }
+    };
+    RenderView::Config ui_view_config {
+        "ui",
+        ShaderSystem::BuiltIn::UIShader,
+        width,
+        height,
+        RenderView::Type::UI,
+        RenderView::ViewMatrixSource::SceneCamera,
+        RenderView::ProjectionMatrixSource::DefaultPerspective,
+        { _app_renderer.get_renderpass(Renderer::Builtin::UIPass)
+              .expect("ERR4") }
+    };
+
+    // Create
+    const auto res_owv = _render_view_system.create(opaque_world_view_config);
+    const auto res_uiv = _render_view_system.create(ui_view_config);
+    if (res_owv.has_error() || res_uiv.has_error())
+        Logger::fatal("Render view creation failed.");
+
+    _ow_render_view = dynamic_cast<RenderViewWorld*>(res_owv.value());
+    _ui_render_view = dynamic_cast<RenderViewUI*>(res_uiv.value());
+
     // === Assign meshes ===
     Vector<Mesh*> meshes {};
+    Vector<Mesh*> ui_meshes {};
 
 #define CURRENT_SCENE 2
 #if CURRENT_SCENE == 0
@@ -100,6 +139,7 @@ void TestApplication::run() {
 #endif
 
     /// Load GUI TEST
+    // Create geometry
     float32          side = 128.0f;
     Vector<Vertex2D> vertices2d {
         { glm::vec2(0.0f, 0.0f), glm::vec2(0.0f, 0.0f) },
@@ -117,16 +157,18 @@ void TestApplication::run() {
                                 "test_ui_material" };
     const auto       geom_2d = _geometry_system.acquire(config2d);
 
-    // === Construct render packet ===
-    RenderPacket packet {};
+    // Create mesh
+    Mesh* mesh_ui = new Mesh(geom_2d);
+    ui_meshes.push_back(mesh_ui);
 
-    // Add 3D meshes
-    for (const auto mesh : meshes)
-        mesh->add_geometry_to_render_packet(packet);
+    // === Mesh render data ===
+    // Create mesh data
+    MeshRenderData world_mesh_data { meshes };
+    MeshRenderData ui_mesh_data { ui_meshes };
 
-    // Add UI
-    packet.ui_geometry_data.geometry = geom_2d;
-    packet.ui_geometry_data.model    = glm::mat4(1.f);
+    // Set mesh data
+    _ow_render_view->set_render_data_ref(&world_mesh_data);
+    _ui_render_view->set_render_data_ref(&ui_mesh_data);
 
     // === Main loop ===
     while (!_app_surface->should_close() && _app_should_close == false) {
@@ -139,20 +181,16 @@ void TestApplication::run() {
             float rotation_speed = 1.0f * delta_time;
             for (auto& mesh : meshes) {
                 mesh->transform.rotate_by(
-#if CURRENT_SCENE == 2 || CURRENT_SCENE == 1
-                    glm::vec3(0.0f, 1.0f, 0.0f),
-#else
-                    glm::vec3(0.0f, 0.0f, 1.0f),
-#endif
-                    rotation_speed
+                    glm::vec3(0.0f, 0.0f, 1.0f), rotation_speed
                 );
             }
-
-            // Readd everything
-            packet.geometry_data.clear();
-            for (const auto mesh : meshes)
-                mesh->add_geometry_to_render_packet(packet);
         }
+
+        // Construct render packet
+        RenderPacket packet {};
+        // Add views
+        packet.view_data.push_back(_ow_render_view->on_build_pocket());
+        packet.view_data.push_back(_ui_render_view->on_build_pocket());
 
         auto result = _app_renderer.draw_frame(&packet, delta_time);
         if (result.has_error()) {
@@ -273,13 +311,13 @@ void TestApplication::setup_input() {
     };
 
     // Rendering
-    auto& r = _app_renderer;
+    auto& rv = _ow_render_view;
     mode_0_c->event +=
-        [&r](float32, float32) { r.view_mode = DebugViewMode::Default; };
+        [&rv](float32, float32) { rv->render_mode = DebugViewMode::Default; };
     mode_1_c->event +=
-        [&r](float32, float32) { r.view_mode = DebugViewMode::Lighting; };
+        [&rv](float32, float32) { rv->render_mode = DebugViewMode::Lighting; };
     mode_2_c->event +=
-        [&r](float32, float32) { r.view_mode = DebugViewMode::Normals; };
+        [&rv](float32, float32) { rv->render_mode = DebugViewMode::Normals; };
 
     // Other
     spin_cube->event +=

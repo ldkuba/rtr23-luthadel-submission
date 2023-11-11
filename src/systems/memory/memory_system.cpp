@@ -1,6 +1,8 @@
 #include "systems/memory/memory_system.hpp"
 
+#include "component/transform.hpp"
 #include "resources/material.hpp"
+#include "systems/input/control.hpp"
 
 namespace ENGINE_NAMESPACE {
 
@@ -108,8 +110,10 @@ MemoryTag MemorySystem::get_owner(void* p) {
 #define lal(name, size)                                                        \
     auto name = new LinearAllocator(size);                                     \
     name->init();
-#define pal(name, size, chunk_size)                                            \
-    auto name = new PoolAllocator(size, chunk_size);                           \
+
+#define pal(name, type, count)                                                 \
+    uint64 name##_size = get_aligned(sizeof(type), MEMORY_PADDING);            \
+    auto   name        = new PoolAllocator(count * name##_size, name##_size);  \
     name->init();
 
 #define assign_allocator(tag, allocator)                                       \
@@ -128,21 +132,14 @@ Allocator** MemorySystem::initialize_allocator_array(MemoryMap& memory_map) {
     fal(resource_allocator, MB);
     fal(geom_allocator, 128 * MB);
     lal(init_allocator, MB);
+    lal(permanent_allocator, MB);
 
     // Pools
-    uint64 max_texture_count     = 1024;
-    uint64 max_texture_map_count = 1024;
-    uint64 max_material_count    = 1024;
-
-    uint64 texture_size     = get_aligned(sizeof(Texture), MEMORY_PADDING);
-    uint64 texture_map_size = get_aligned(sizeof(TextureMap), MEMORY_PADDING);
-    uint64 material_size    = get_aligned(sizeof(Material), MEMORY_PADDING);
-
-    pal(texture_pool, max_texture_count * texture_size, texture_size);
-    pal(texture_map_pool,
-        max_texture_map_count * texture_map_size,
-        texture_map_size);
-    pal(material_pool, max_material_count * material_size, material_size);
+    pal(texture_pool, Texture, 1024);
+    pal(texture_map_pool, TextureMap, 1024);
+    pal(material_pool, Material, 1024);
+    pal(control_pool, Control, 256);
+    pal(transform_pool, Transform, 256);
 
     // Assign allocators
     assign_allocator(Unknown, unknown_allocator);
@@ -168,11 +165,13 @@ Allocator** MemorySystem::initialize_allocator_array(MemoryMap& memory_map) {
     assign_allocator(TextureMap, texture_map_pool);
     assign_allocator(MaterialInstance, material_pool);
     assign_allocator(Geometry, geom_allocator);
-    assign_allocator(Shader, resource_allocator);
+    assign_allocator(Shader, permanent_allocator);
+    assign_allocator(RenderView, permanent_allocator);
     // Game
     assign_allocator(Game, init_allocator);
+    assign_allocator(Control, control_pool);
     assign_allocator(Job, unknown_allocator);
-    assign_allocator(Transform, unknown_allocator);
+    assign_allocator(Transform, transform_pool);
     assign_allocator(Entity, unknown_allocator);
     assign_allocator(EntityNode, unknown_allocator);
     assign_allocator(Scene, unknown_allocator);

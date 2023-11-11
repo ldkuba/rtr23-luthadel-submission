@@ -11,6 +11,13 @@ namespace ENGINE_NAMESPACE {
  */
 class ShaderSystem {
   public:
+    struct BuiltIn {
+        constexpr static const char* const MaterialShader =
+            "builtin.material_shader";
+        constexpr static const char* const UIShader = "builtin.ui_shader";
+    };
+
+  public:
     /**
      * @brief Construct a new Shader System object
      *

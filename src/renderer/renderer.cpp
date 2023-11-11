@@ -1,5 +1,7 @@
 #include "renderer/renderer.hpp"
 
+#include "renderer/views/render_view.hpp"
+
 namespace ENGINE_NAMESPACE {
 
 #define RENDERER_LOG "Renderer :: "
@@ -23,16 +25,14 @@ Renderer::Renderer(
     }
 
     // Setup render passes TODO: CONFIGURABLE
-    const String WORLD  = "Renderpass.Builtin.World";
-    const String UI     = "Renderpass.Builtin.UI";
-    const auto   width  = surface->get_width_in_pixels();
-    const auto   height = surface->get_height_in_pixels();
+    const auto width  = surface->get_width_in_pixels();
+    const auto height = surface->get_height_in_pixels();
 
     // Create render passes
     _world_renderpass = _backend->create_render_pass({
-        WORLD,                                // Name
+        Builtin::WorldPass,                   // Name
         "",                                   // Prev
-        UI,                                   // Next
+        Builtin::UIPass,                      // Next
         glm::vec2 { 0, 0 },                   // Draw offset
         glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f }, // Clear color
         RenderPass::ClearFlags::Color | RenderPass::ClearFlags::Depth |
@@ -41,8 +41,8 @@ Renderer::Renderer(
         true                                 // Multisampling
     });
     _ui_renderpass    = _backend->create_render_pass({
-        UI,                                   // Name
-        WORLD,                                // Prev
+        Builtin::UIPass,                      // Name
+        Builtin::WorldPass,                   // Prev
         "",                                   // Next
         glm::vec2 { 0, 0 },                   // Draw offset
         glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f }, // Clear color
@@ -89,52 +89,13 @@ Result<void, RuntimeError> Renderer::draw_frame(
     // Get current window att index
     const auto att_index = _backend->get_current_window_attachment_index();
 
-    // === World shader ===
-    // Bind render pass
-    _world_renderpass->begin(att_index);
-    // Use shader
-    material_shader->use();
-    // Setup shader globals
-    update_material_shader_globals();
+    // Render each view
+    for (auto& data : render_data->view_data)
+        data.view->on_render(
+            this, data, _backend->get_current_frame(), att_index
+        );
 
-    // Draw geometries
-    for (const auto& geo_data : render_data->geometry_data) {
-        // Update material instance
-        Material* const geo_material = geo_data.geometry->material;
-        geo_material->apply_instance();
-
-        // Apply local
-        update_material_shader_locals(geo_data.model);
-
-        // Draw geometry
-        _backend->draw_geometry(geo_data.geometry);
-    }
-
-    // End renderpass
-    _world_renderpass->end();
-
-    // === UI changes ===
-    _ui_renderpass->begin(att_index);
-    ui_shader->use();
-    update_ui_shader_globals();
-
-    // Get UI geometry
-    const auto ui_geo = render_data->ui_geometry_data;
-
-    // Update instance
-    Material* ui_material = ui_geo.geometry->material;
-    ui_material->apply_instance();
-
-    // Update local
-    update_ui_shader_locals(ui_geo.model);
-
-    // Draw UI
-    _backend->draw_geometry(ui_geo.geometry);
-
-    // End renderpass
-    _ui_renderpass->end();
-
-    // === END FRAME ===
+    // End frame
     result = _backend->end_frame(delta_time);
 
     if (result.has_error()) {
@@ -145,16 +106,11 @@ Result<void, RuntimeError> Renderer::draw_frame(
     return {};
 }
 
-void Renderer::on_resize(const uint32 width, const uint32 height) {
-    // Update projection
-    _projection = glm::perspective(
-        glm::radians(45.0f), (float32) width / height, _near_plane, _far_plane
-    );
-    _projection_ui = glm::ortho(
-        0.0f, (float32) width, (float32) height, 0.0f, -100.0f, 100.0f
-    );
+void Renderer::draw_geometry(Geometry* const geometry) {
+    _backend->draw_geometry(geometry);
+}
 
-    // Update backend
+void Renderer::on_resize(const uint32 width, const uint32 height) {
     _backend->resized(width, height);
 }
 
@@ -282,71 +238,6 @@ void Renderer::destroy_render_pass(RenderPass* const pass) {
 }
 Result<RenderPass*, RuntimeError> Renderer::get_renderpass(const String& name) {
     return _backend->get_render_pass(name);
-}
-
-// -----------------------------------------------------------------------------
-// Camera
-// -----------------------------------------------------------------------------
-
-void Renderer::set_active_camera(Camera* const camera) {
-    _active_camera = camera;
-}
-
-// //////////////////////// //
-// RENDERER PRIVATE METHODS //
-// //////////////////////// //
-
-#define set_uniform(uniform_name, uniform_value)                               \
-    {                                                                          \
-        auto uniform_id_res = shader->get_uniform_index(uniform_name);         \
-        if (uniform_id_res.has_error()) {                                      \
-            Logger::error(                                                     \
-                RENDERER_LOG,                                                  \
-                "Shader set_uniform method failed. No uniform is named \"",    \
-                uniform_name,                                                  \
-                "\". Nothing was done."                                        \
-            );                                                                 \
-            return;                                                            \
-        }                                                                      \
-        auto uniform_id = uniform_id_res.value();                              \
-        auto set_result = shader->set_uniform(uniform_id, &uniform_value);     \
-        if (set_result.has_error()) {                                          \
-            Logger::error(                                                     \
-                RENDERER_LOG,                                                  \
-                "Shader set_uniform method failed for \"",                     \
-                uniform_name,                                                  \
-                "\". Nothing was done"                                         \
-            );                                                                 \
-            return;                                                            \
-        }                                                                      \
-    }
-
-void Renderer::update_material_shader_globals() const {
-    const auto shader = material_shader;
-
-    // Apply globals
-    set_uniform("projection", _projection);
-    set_uniform("view", _active_camera->view());
-    set_uniform("ambient_color", _ambient_color);
-    set_uniform("view_position", _active_camera->transform.position());
-    set_uniform("mode", _view_mode);
-    shader->apply_global();
-}
-void Renderer::update_ui_shader_globals() const {
-    const auto shader = ui_shader;
-
-    // Apply globals
-    set_uniform("projection", _projection_ui);
-    set_uniform("view", _view_ui);
-    shader->apply_global();
-}
-void Renderer::update_material_shader_locals(const glm::mat4 model) const {
-    const auto shader = material_shader;
-    set_uniform("model", model);
-}
-void Renderer::update_ui_shader_locals(const glm::mat4 model) const {
-    const auto shader = ui_shader;
-    set_uniform("model", model);
 }
 
 } // namespace ENGINE_NAMESPACE

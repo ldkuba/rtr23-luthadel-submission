@@ -17,12 +17,13 @@ enum RendererBackendType { Vulkan };
  */
 class Renderer {
   public:
-    /// @brief Debug render view mode used
-    Property<DebugViewMode> view_mode {
-        GET { return _view_mode; }
-        SET { _view_mode = value; }
+    struct Builtin {
+        constexpr static const char* const WorldPass =
+            "Renderpass.Builtin.World";
+        constexpr static const char* const UIPass = "Renderpass.Builtin.UI";
     };
 
+  public:
     // TODO: TEMP TEST CODE BEGIN
     Shader* material_shader = nullptr;
     Shader* ui_shader       = nullptr;
@@ -53,6 +54,8 @@ class Renderer {
     Result<void, RuntimeError> draw_frame(
         const RenderPacket* const render_data, const float32 delta_time
     );
+
+    void draw_geometry(Geometry* const geometry);
 
     /**
      * @brief Inform renderer of a surface resize event
@@ -190,48 +193,12 @@ class Renderer {
      */
     Result<RenderPass*, RuntimeError> get_renderpass(const String& name);
 
-    /**
-     * @brief Setup which camera is currently active
-     * @param camera Camera we wish to set as active
-     */
-    void set_active_camera(Camera* const camera);
-
   private:
     RendererBackend* _backend = nullptr;
-
-    Camera* _active_camera;
-
-    DebugViewMode _view_mode = Default;
 
     // TODO: View configurable
     RenderPass* _world_renderpass;
     RenderPass* _ui_renderpass;
-
-    // TODO: Temp camera info
-    float32   _near_plane = 0.01f;
-    float32   _far_plane  = 1000.0f;
-    glm::mat4 _projection = glm::perspective(
-        glm::radians(45.0f), 800.0f / 600.0f, _near_plane, _far_plane
-    );
-
-    // TODO: Default should be from scene
-    glm::vec4 _ambient_color = glm::vec4(0.25f, 0.25f, 0.25f, 1.0f);
-
-    // TODO: Should be in UI
-    glm::mat4 _projection_ui =
-        glm::ortho(0.0f, 800.f, 600.0f, 0.0f, -100.0f, 100.0f);
-    glm::mat4 _view_ui = glm::mat4(
-        glm::vec4(1.0f, 0.0f, 0.0f, 0.0f),
-        glm::vec4(0.0f, 1.0f, 0.0f, 0.0f),
-        glm::vec4(0.0f, 0.0f, 1.0f, 0.0f),
-        glm::vec4(0.0f, 0.0f, 0.0f, 1.0f)
-    );
-
-    // TODO: Possibly temporary, but not 100% sure
-    void update_material_shader_globals() const;
-    void update_material_shader_locals(const glm::mat4 model) const;
-    void update_ui_shader_globals() const;
-    void update_ui_shader_locals(const glm::mat4 model) const;
 };
 
 template<typename VertexType>

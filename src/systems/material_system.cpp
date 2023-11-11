@@ -177,12 +177,10 @@ void MaterialSystem::release(const String name) {
 // MATERIAL SYSTEM PRIVATE METHODS //
 // /////////////////////////////// //
 
-#define DEFAULT_MATERIAL_SHADER_NAME "builtin.material_shader"
-
 void MaterialSystem::create_default_material() {
     // Get shader
-    auto shader =
-        _shader_system->acquire(DEFAULT_MATERIAL_SHADER_NAME).value_or(nullptr);
+    auto shader = _shader_system->acquire(ShaderSystem::BuiltIn::MaterialShader)
+                      .value_or(nullptr);
     if (shader == nullptr)
         Logger::fatal(
             MATERIAL_SYS_LOG,
