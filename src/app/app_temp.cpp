@@ -147,15 +147,13 @@ void TestApplication::run() {
         { glm::vec2(0.0f, side), glm::vec2(0.0f, 1.0f) },
         { glm::vec2(side, 0.0f), glm::vec2(1.0f, 0.0f) }
     };
-    Vector<uint32>   indices2d { 2, 1, 0, 3, 0, 1 };
-    GeometryConfig2D config2d { "ui",
-                                vertices2d,
-                                indices2d,
-                                glm::vec3(side / 2.0f),
-                                glm::vec3(side),
-                                glm::vec3(0),
-                                "test_ui_material" };
-    const auto       geom_2d = _geometry_system.acquire(config2d);
+    Vector<uint32>     indices2d { 2, 1, 0, 3, 0, 1 };
+    Geometry::Config2D config2d { "ui",
+                                  vertices2d,
+                                  indices2d,
+                                  { glm::vec3(0), glm::vec3(side) },
+                                  "test_ui_material" };
+    const auto         geom_2d = _geometry_system.acquire(config2d);
 
     // Create mesh
     Mesh* mesh_ui = new Mesh(geom_2d);

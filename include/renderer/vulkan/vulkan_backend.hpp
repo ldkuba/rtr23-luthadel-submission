@@ -42,9 +42,9 @@ class VulkanBackend : public RendererBackend {
 
     // Geometry
     void create_geometry(
-        Geometry* const       geometry,
-        const Vector<Vertex>& vertices,
-        const Vector<uint32>& indices
+        Geometry* const         geometry,
+        const Vector<Vertex3D>& vertices,
+        const Vector<uint32>&   indices
     ) override;
     void create_geometry(
         Geometry* const         geometry,

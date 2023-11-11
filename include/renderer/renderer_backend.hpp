@@ -116,9 +116,9 @@ class RendererBackend {
      * @param indices Array of index data used by the geometry
      */
     virtual void create_geometry(
-        Geometry* const       geometry,
-        const Vector<Vertex>& vertices,
-        const Vector<uint32>& indices
+        Geometry* const         geometry,
+        const Vector<Vertex3D>& vertices,
+        const Vector<uint32>&   indices
     ) = 0;
     /**
      * @brief Create a 2D geometry and upload its relevant data to the GPU

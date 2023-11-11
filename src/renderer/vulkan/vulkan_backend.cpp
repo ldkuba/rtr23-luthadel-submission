@@ -397,13 +397,13 @@ void VulkanBackend::texture_write_data(
 // -----------------------------------------------------------------------------
 
 void VulkanBackend::create_geometry(
-    Geometry* const       geometry,
-    const Vector<Vertex>& vertices,
-    const Vector<uint32>& indices
+    Geometry* const         geometry,
+    const Vector<Vertex3D>& vertices,
+    const Vector<uint32>&   indices
 ) {
     create_geometry_internal(
         geometry,
-        sizeof(Vertex),
+        sizeof(Vertex3D),
         vertices.size(),
         vertices.data(),
         sizeof(uint32),
@@ -787,7 +787,7 @@ void VulkanBackend::create_sync_objects() {
 void VulkanBackend::create_buffers() {
     // Create vertex buffer
     // TODO: NOT LIKE THIS, values choosen arbitrarily
-    vk::DeviceSize vertex_buffer_size = sizeof(Vertex) * 1024 * 1024;
+    vk::DeviceSize vertex_buffer_size = sizeof(Vertex3D) * 1024 * 1024;
     _vertex_buffer =
         new (MemoryTag::GPUBuffer) VulkanManagedBuffer(_device, _allocator);
     _vertex_buffer->create(

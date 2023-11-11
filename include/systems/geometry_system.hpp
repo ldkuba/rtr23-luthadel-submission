@@ -48,7 +48,14 @@ class GeometrySystem {
      * @param config Geometry configuration
      * @returns Created geometry resource
      */
-    Geometry* acquire(const GeometryConfig& config);
+    Geometry* acquire(const Geometry::Config2D& config);
+    /**
+     * @brief Creates new geometry resource and load its material
+     *
+     * @param config Geometry configuration
+     * @returns Created geometry resource
+     */
+    Geometry* acquire(const Geometry::Config3D& config);
 
     /**
      * @brief Releases geometry resource. Geometry system will automatically
@@ -103,7 +110,9 @@ class GeometrySystem {
 
     UnorderedMap<uint32, GeometryRef> _registered_geometries {};
 
-    void create_default_geometries();
+    template<uint8 Dim>
+    Geometry* acquire_internal(const Geometry::Config<Dim>& config);
+    void      create_default_geometries();
 };
 
 } // namespace ENGINE_NAMESPACE

@@ -58,47 +58,11 @@ inline uint32 generate_id() { // TODO: TEMP
     static uint32 id = 0;
     return id++;
 }
-Geometry* GeometrySystem::acquire(const GeometryConfig& config) {
-    Logger::trace(
-        GEOMETRY_SYS_LOG, "Geometry \"", config.name, "\" requested."
-    );
-
-    // Crete new geometry
-    const auto geometry = new (MemoryTag::Resource) Geometry(config.name);
-
-    // Create on GPU
-    auto config2d = dynamic_cast<const GeometryConfig2D*>(&config);
-    auto config3d = dynamic_cast<const GeometryConfig3D*>(&config);
-
-    if (config2d)
-        _renderer->create_geometry(
-            geometry, config2d->vertices, config.indices
-        );
-    else if (config3d)
-        _renderer->create_geometry(
-            geometry, config3d->vertices, config.indices
-        );
-    else Logger::fatal(GEOMETRY_SYS_LOG, "Geometry config couldn't be parsed.");
-
-    // Acquire material
-    if (config.material_name.length() != 0) {
-        geometry->material = _material_system->acquire(config.material_name);
-        if (!geometry->material)
-            geometry->material = _material_system->default_material();
-    } else geometry->material = _material_system->default_material();
-
-    // Generate unique id
-    auto id      = generate_id();
-    geometry->id = id;
-
-    // Register new slot
-    auto& ref           = _registered_geometries[id];
-    ref.handle          = geometry;
-    ref.auto_release    = config.auto_release;
-    ref.reference_count = 1;
-
-    Logger::trace(GEOMETRY_SYS_LOG, "Geometry \"", config.name, "\" acquired.");
-    return geometry;
+Geometry* GeometrySystem::acquire(const Geometry::Config2D& config) {
+    return acquire_internal(config);
+}
+Geometry* GeometrySystem::acquire(const Geometry::Config3D& config) {
+    return acquire_internal(config);
 }
 
 void GeometrySystem::release(Geometry* geometry) {
@@ -138,7 +102,7 @@ Geometry* GeometrySystem::generate_cube(
     float32 l = 0.5f;
 
     // Initialize vertices and indices for a cube
-    Vector<Vertex> vertices {
+    Vector<Vertex3D> vertices {
         // Front
         { { -l, l, -l }, { 0.0f, 1.0f, 0.0f }, {}, {}, { 1.0f, 1.0f } },
         { { l, l, l }, { 0.0f, 1.0f, 0.0f }, {}, {}, { 0.0f, 0.0f } },
@@ -187,11 +151,9 @@ Geometry* GeometrySystem::generate_cube(
     generate_tangents(vertices, indices);
 
     // Crete & return geometry
-    GeometryConfig3D config {
-        name,           vertices,           indices,
-        glm::vec3(0.0), glm::vec3(l, l, l), glm::vec3(-l, -l, -l),
-        material_name,  auto_release
-    };
+    Geometry::Config3D config { name,          vertices,
+                                indices,       { { l, l, l }, { -l, -l, -l } },
+                                material_name, auto_release };
     return acquire(config);
 }
 
@@ -206,9 +168,9 @@ void GeometrySystem::generate_normals(
     // Loops trough all triangles, compute cumulative normal vector
     for (uint32 i = 0; i < indices.size(); i += 3) {
         // Triangle vertices
-        Vertex& v0 = vertices[indices[i + 0]];
-        Vertex& v1 = vertices[indices[i + 1]];
-        Vertex& v2 = vertices[indices[i + 2]];
+        Vertex3D& v0 = vertices[indices[i + 0]];
+        Vertex3D& v1 = vertices[indices[i + 1]];
+        Vertex3D& v2 = vertices[indices[i + 2]];
 
         // Triangle edges
         glm::vec3 edge1 = v1.position - v0.position;
@@ -233,9 +195,9 @@ void GeometrySystem::generate_tangents(
     // Loops trough all triangles
     for (uint32 i = 0; i < indices.size(); i += 3) {
         // Triangle vertices
-        Vertex& v0 = vertices[indices[i + 0]];
-        Vertex& v1 = vertices[indices[i + 1]];
-        Vertex& v2 = vertices[indices[i + 2]];
+        Vertex3D& v0 = vertices[indices[i + 0]];
+        Vertex3D& v1 = vertices[indices[i + 1]];
+        Vertex3D& v2 = vertices[indices[i + 2]];
 
         // Triangle edges
         glm::vec3 edge1 = v1.position - v0.position;
@@ -272,31 +234,77 @@ void GeometrySystem::generate_tangents(
 // GEOMETRY SYSTEM PRIVATE METHODS //
 // /////////////////////////////// //
 
+template<uint8 Dim>
+Geometry* GeometrySystem::acquire_internal(const Geometry::Config<Dim>& config
+) {
+    Logger::trace(
+        GEOMETRY_SYS_LOG, "Geometry \"", config.name, "\" requested."
+    );
+
+    // Crete new geometry
+    Geometry* geometry = nullptr;
+    if constexpr (Dim == 2)
+        geometry =
+            new (MemoryTag::Resource) Geometry2D(config.name, config.bbox);
+    if constexpr (Dim == 3)
+        geometry =
+            new (MemoryTag::Resource) Geometry3D(config.name, config.bbox);
+    if (geometry == nullptr)
+        Logger::fatal(
+            GEOMETRY_SYS_LOG,
+            "Unsupported geometry dimension count requested [",
+            Dim,
+            "]. Geometry acquisition failed."
+        );
+
+    // Create on GPU
+    _renderer->create_geometry(geometry, config.vertices, config.indices);
+
+    // Acquire material
+    if (config.material_name.length() != 0) {
+        geometry->material = _material_system->acquire(config.material_name);
+        if (!geometry->material)
+            geometry->material = _material_system->default_material();
+    } else geometry->material = _material_system->default_material();
+
+    // Generate unique id
+    auto id      = generate_id();
+    geometry->id = id;
+
+    // Register new slot
+    auto& ref           = _registered_geometries[id];
+    ref.handle          = geometry;
+    ref.auto_release    = config.auto_release;
+    ref.reference_count = 1;
+
+    Logger::trace(GEOMETRY_SYS_LOG, "Geometry \"", config.name, "\" acquired.");
+    return geometry;
+}
 void GeometrySystem::create_default_geometries() {
     float f = 10.0f;
 
     // === Default for 3D ===
-    Vector<Vertex> vertices { { glm::vec3(-0.5f * f, -0.5f * f, 0.0f),
-                                glm::vec3(0.0f, 0.0f, 0.0f),
-                                glm::vec4(0.0f),
-                                glm::vec4(0.0f),
-                                glm::vec2(0.0f, 0.0f) },
-                              { glm::vec3(0.5f * f, 0.5f * f, 0.0f),
-                                glm::vec3(0.0f, 0.0f, 0.0f),
-                                glm::vec4(0.0f),
-                                glm::vec4(0.0f),
-                                glm::vec2(1.0f, 1.0f) },
-                              { glm::vec3(-0.5f * f, 0.5f * f, 0.0f),
-                                glm::vec3(0.0f, 0.0f, 0.0f),
-                                glm::vec4(0.0f),
-                                glm::vec4(0.0f),
-                                glm::vec2(0.0f, 1.0f) },
-                              { glm::vec3(0.5f * f, -0.5f * f, 0.0f),
-                                glm::vec3(0.0f, 0.0f, 0.0f),
-                                glm::vec4(0.0f),
-                                glm::vec4(0.0f),
-                                glm::vec2(1.0f, 0.0f) } };
-    Vector<uint32> indices { 0, 1, 2, 0, 3, 1 };
+    Vector<Vertex3D> vertices { { glm::vec3(-0.5f * f, -0.5f * f, 0.0f),
+                                  glm::vec3(0.0f, 0.0f, 0.0f),
+                                  glm::vec4(0.0f),
+                                  glm::vec4(0.0f),
+                                  glm::vec2(0.0f, 0.0f) },
+                                { glm::vec3(0.5f * f, 0.5f * f, 0.0f),
+                                  glm::vec3(0.0f, 0.0f, 0.0f),
+                                  glm::vec4(0.0f),
+                                  glm::vec4(0.0f),
+                                  glm::vec2(1.0f, 1.0f) },
+                                { glm::vec3(-0.5f * f, 0.5f * f, 0.0f),
+                                  glm::vec3(0.0f, 0.0f, 0.0f),
+                                  glm::vec4(0.0f),
+                                  glm::vec4(0.0f),
+                                  glm::vec2(0.0f, 1.0f) },
+                                { glm::vec3(0.5f * f, -0.5f * f, 0.0f),
+                                  glm::vec3(0.0f, 0.0f, 0.0f),
+                                  glm::vec4(0.0f),
+                                  glm::vec4(0.0f),
+                                  glm::vec2(1.0f, 0.0f) } };
+    Vector<uint32>   indices { 0, 1, 2, 0, 3, 1 };
 
     // Crete geometry
     _default_geometry =

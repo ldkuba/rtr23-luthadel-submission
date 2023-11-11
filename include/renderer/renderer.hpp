@@ -125,11 +125,11 @@ class Renderer {
      * @param vertices Array of vertex data used by the geometry
      * @param indices Array of index data used by the geometry
      */
-    template<typename VertexType>
+    template<uint8 Dim>
     void create_geometry(
-        Geometry*                 geometry,
-        const Vector<VertexType>& vertices,
-        const Vector<uint32>&     indices
+        Geometry*                  geometry,
+        const Vector<Vertex<Dim>>& vertices,
+        const Vector<uint32>&      indices
     );
     /**
      * @brief Destroy geometry and free its corresponding GPU resources
@@ -201,11 +201,11 @@ class Renderer {
     RenderPass* _ui_renderpass;
 };
 
-template<typename VertexType>
+template<uint8 Dim>
 void Renderer::create_geometry(
-    Geometry*                 geometry,
-    const Vector<VertexType>& vertices,
-    const Vector<uint32>&     indices
+    Geometry*                  geometry,
+    const Vector<Vertex<Dim>>& vertices,
+    const Vector<uint32>&      indices
 ) {
     static const char* const RENDERER_LOG = "Renderer :: ";
     Logger::trace(RENDERER_LOG, "Creating geometry.");

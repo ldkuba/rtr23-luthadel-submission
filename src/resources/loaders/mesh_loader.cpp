@@ -145,13 +145,8 @@ Result<GeometryConfigArray*, RuntimeError> load_mesh(
 
         // Read geometry
         switch (dim_count) {
-        case 2: {
-            auto config = new (MemoryTag::Geometry) GeometryConfig2D();
-            read        = config->deserialize(&serializer, buffer, buffer_pos);
-            config_array->configs.push_back(config);
-        } break;
         case 3: {
-            auto config = new (MemoryTag::Geometry) GeometryConfig3D();
+            auto config = new (MemoryTag::Geometry) Geometry::Config3D();
             read        = config->deserialize(&serializer, buffer, buffer_pos);
             config_array->configs.push_back(config);
         } break;
@@ -192,7 +187,7 @@ namespace ENGINE_NAMESPACE {
 // Local helper
 String               create_mat_file(const MaterialConfig& config);
 Result<uint32, bool> fuzzy_get_index(
-    Map<float32, std::pair<Vertex, uint32>> vertex_map, Vertex vertex
+    Map<float32, std::pair<Vertex3D, uint32>>& vertex_map, Vertex3D& vertex
 );
 
 Result<GeometryConfigArray*, RuntimeError> load_obj(
@@ -239,7 +234,7 @@ Result<GeometryConfigArray*, RuntimeError> load_obj(
     config_array->configs.reserve(shapes.size());
 
     // Loop over shapes
-    Map<float32, std::pair<Vertex, uint32>> unique_vertices {};
+    Map<float32, std::pair<Vertex3D, uint32>> unique_vertices {};
     for (const auto& shape : shapes) {
         Vector<Vertex3D> vertices { { MemoryTag::Geometry } };
         Vector<uint32>   indices { { MemoryTag::Geometry } };
@@ -249,7 +244,7 @@ Result<GeometryConfigArray*, RuntimeError> load_obj(
         // Load vertices, indices and extent
         unique_vertices.clear();
         for (const auto& index : shape.mesh.indices) {
-            Vertex vertex {};
+            Vertex3D vertex {};
 
             // Load position
             const auto x    = attributes.vertices[3 * index.vertex_index + 0];
@@ -296,9 +291,6 @@ Result<GeometryConfigArray*, RuntimeError> load_obj(
             indices.push_back(new_index);
         }
 
-        // Compute center
-        glm::vec3 center = (extent_max + extent_min) / 2.0f;
-
         // Compute tangents
         GeometrySystem::generate_tangents(vertices, indices);
 
@@ -316,16 +308,15 @@ Result<GeometryConfigArray*, RuntimeError> load_obj(
             (mat_id >= 0) ? material_configs[mat_id] : "";
 
         // Save as new geometry 3D of this object
-        GeometryConfig3D* config = new (MemoryTag::Geometry) GeometryConfig3D(
-            name + "_" + shape.name,
-            vertices,
-            indices,
-            center,
-            extent_max,
-            extent_min,
-            material_name, // TODO:
-            true
-        );
+        Geometry::Config3D* config =
+            new (MemoryTag::Geometry) Geometry::Config3D(
+                name + "_" + shape.name,
+                vertices,
+                indices,
+                { extent_min, extent_max },
+                material_name, // TODO:
+                true
+            );
         config_array->configs.push_back(config);
     }
 
@@ -341,7 +332,7 @@ Result<GeometryConfigArray*, RuntimeError> load_obj(
 }
 
 Result<uint32, bool> fuzzy_get_index(
-    Map<float32, std::pair<Vertex, uint32>> vertex_map, Vertex vertex
+    Map<float32, std::pair<Vertex3D, uint32>>& vertex_map, Vertex3D& vertex
 ) {
     const auto key  = vertex.position.x;
     const auto from = vertex_map.lower_bound(key - Epsilon32);
