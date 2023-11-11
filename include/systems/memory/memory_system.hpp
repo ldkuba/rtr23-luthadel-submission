@@ -23,7 +23,7 @@ typedef uint16 MemoryTagType;
 
 /**
  * @brief Memory tag used for allocation. Indicates what custom allocator, if
- * any, should be used for given allocation. Usually used with @a new.
+ * any, should be used for given allocation. Usually used with @p new.
  */
 enum class MemoryTag : MemoryTagType {
     // For temporary use. Should be assigned one of the below or have a new

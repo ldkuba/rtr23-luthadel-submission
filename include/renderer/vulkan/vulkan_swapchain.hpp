@@ -47,7 +47,7 @@ class VulkanSwapchain {
     /// @brief Image / Render texture count
     uint8 get_render_texture_count() const;
 
-    /// @brief Active render texture at @a index
+    /// @brief Active render texture at @p index
     Texture* get_render_texture(const uint8 index) const;
     /// @brief Active depth texture for depth testing
     Texture* get_depth_texture() const;
