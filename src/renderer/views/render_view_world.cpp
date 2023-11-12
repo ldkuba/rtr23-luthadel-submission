@@ -6,6 +6,7 @@ namespace ENGINE_NAMESPACE {
 
 #define RENDER_VIEW_WORLD_LOG "RenderViewWorld :: "
 
+// Constructor & Destructor
 RenderViewWorld::RenderViewWorld(
     const Config&       config,
     ShaderSystem* const shader_system,
@@ -52,17 +53,47 @@ RenderViewPacket RenderViewWorld::on_build_pocket() {
     static Vector<GeometryRenderData> geometries_data {};
     geometries_data.clear();
 
+    // TODO: Performance :/
+    typedef std::pair<float32, GeometryRenderData> TGeomData;
+
+    static Vector<TGeomData> transparent_geometries {};
+    transparent_geometries.clear();
+
     // Check if render data is set
     if (_render_data != nullptr) {
+        // Add all opaque geometries
         for (const auto& mesh : _render_data->meshes) {
             const auto model_matrix = mesh->transform.world();
             for (auto* const geom : mesh->geometries()) {
+                const GeometryRenderData render_data { geom, model_matrix };
                 // TODO: Add something in material to check for transparency.
                 if (geom->material()->diffuse_map()->texture->has_transparency(
                     ) == false)
-                    geometries_data.push_back({ geom, model_matrix });
+                    geometries_data.push_back(render_data);
+                else {
+                    const auto geom3d   = dynamic_cast<Geometry3D*>(geom);
+                    const auto center   = geom3d->bbox.get_center();
+                    const auto distance = glm::distance(
+                        _world_camera->transform.position(),
+                        { model_matrix * glm::vec4(center, 1) }
+                    );
+                    transparent_geometries.push_back({ distance, render_data });
+                }
             }
         }
+
+        // Sort transparent geometry list
+        std::sort(
+            transparent_geometries.begin(),
+            transparent_geometries.end(),
+            [](const TGeomData& x, const TGeomData& y) -> bool {
+                return x.first < y.first;
+            }
+        );
+
+        // Add all transparent geometries
+        for (const auto& t_geom : transparent_geometries)
+            geometries_data.push_back(t_geom.second);
     } else {
         Logger::warning(
             RENDER_VIEW_WORLD_LOG,

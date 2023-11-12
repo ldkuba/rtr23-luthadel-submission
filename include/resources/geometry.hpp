@@ -85,22 +85,24 @@ class Geometry2D : public Geometry {
   public:
     typedef AxisAlignedBBox<2> BBox;
 
-    Geometry2D(const String& name, const BBox& bbox)
-        : Geometry(name), _bbox(bbox) {}
+    /// @brief Axis aligned bounding box containing all of geometry.
+    BBox bbox;
 
-  private:
-    BBox _bbox;
+    Geometry2D(const String& name, const BBox& bbox)
+        : Geometry(name), bbox(bbox) {}
 };
 
 class Geometry3D : public Geometry {
   public:
     typedef AxisAlignedBBox<3> BBox;
 
+    /// @brief Axis aligned bounding box containing all of geometry.
+    BBox bbox;
+
     Geometry3D(const String& name, const BBox& bbox)
-        : Geometry(name), _bbox(bbox) {}
+        : Geometry(name), bbox(bbox) {}
 
   private:
-    AxisAlignedBBox<3> _bbox;
 };
 
 /**
