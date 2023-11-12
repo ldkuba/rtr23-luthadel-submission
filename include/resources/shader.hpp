@@ -9,130 +9,133 @@ namespace ENGINE_NAMESPACE {
 
 class TextureSystem;
 
-/// @brief Supported shader attribute types
-enum class ShaderAttributeType : uint8 {
-    float32,
-    vec2,
-    vec3,
-    vec4,
-    int8,
-    int16,
-    int32,
-    uint8,
-    uint16,
-    uint32,
-    COUNT
-};
-/// @brief Supported uniform types
-enum class ShaderUniformType : uint8 {
-    float32,
-    vec2,
-    vec3,
-    vec4,
-    int8,
-    int16,
-    int32,
-    uint8,
-    uint16,
-    uint32,
-    matrix4,
-    sampler,
-    custom
-};
-
-/// @brief Shader stages available
-enum class ShaderStage : uint8 {
-    Vertex   = 0x1,
-    Geometry = 0x2,
-    Fragment = 0x4,
-    Compute  = 0x8
-};
-
-/// @brief Shader scope
-enum class ShaderScope : uint8 { Global, Instance, Local };
-
-/// @brief Structure containing all attribute relevant data
-struct ShaderAttribute {
-    String              name;
-    uint32              size;
-    ShaderAttributeType type;
-};
-/// @brief Shader uniform configuration
-struct ShaderUniformConfig {
-    String            name;
-    uint8             size;
-    uint32            location;
-    ShaderUniformType type;
-    ShaderScope       scope;
-};
-/// @brief Structure containing all uniform relevant data
-struct ShaderUniform {
-    uint64            offset;
-    uint16            size;
-    uint16            location;
-    uint16            index;
-    uint8             set_index;
-    ShaderScope       scope;
-    ShaderUniformType type;
-};
-
-/**
- * @brief Shader configuration resource. Usually this resource is loaded from a
- * .shadercfg file.
- */
-class ShaderConfig : public Resource {
-  public:
-    TextureSystem*                    texture_system = nullptr;
-    const String                      render_pass_name;
-    const uint8                       shader_stages;
-    const Vector<ShaderAttribute>     attributes;
-    const Vector<ShaderUniformConfig> uniforms;
-    const bool                        use_instances;
-    const bool                        use_locals;
-
-    ShaderConfig(
-        const String&                      name,
-        const String&                      render_pass_name,
-        const uint8                        shader_stages,
-        const Vector<ShaderAttribute>&     attributes,
-        const Vector<ShaderUniformConfig>& uniforms,
-        const bool                         use_instances,
-        const bool                         use_locals
-    )
-        : Resource(name), render_pass_name(render_pass_name),
-          shader_stages(shader_stages), attributes(attributes),
-          uniforms(uniforms), use_instances(use_instances),
-          use_locals(use_locals) {}
-    ~ShaderConfig() {}
-};
-
-/// @brief Push constant range description
-struct PushConstantRange {
-    uint64 offset;
-    uint64 size;
-};
-
-/**
- * @brief An instance-level shader state.
- */
-struct InstanceState {
-    uint64 offset;
-    bool   should_update = true;
-
-    Vector<TextureMap*> instance_texture_maps;
-};
-
 /**
  * @brief Frontend (API agnostic) representation of a shader.
  */
 class Shader {
+  public:
+    /// @brief Supported shader attribute types
+    enum class AttributeType : uint8 {
+        float32,
+        vec2,
+        vec3,
+        vec4,
+        int8,
+        int16,
+        int32,
+        uint8,
+        uint16,
+        uint32,
+        COUNT
+    };
+    /// @brief Supported uniform types
+    enum class UniformType : uint8 {
+        float32,
+        vec2,
+        vec3,
+        vec4,
+        int8,
+        int16,
+        int32,
+        uint8,
+        uint16,
+        uint32,
+        matrix4,
+        sampler,
+        custom
+    };
+
+    /// @brief Shader stages available
+    enum class Stage : uint8 {
+        Vertex   = 0x1,
+        Geometry = 0x2,
+        Fragment = 0x4,
+        Compute  = 0x8
+    };
+
+    /// @brief Shader scope
+    enum class Scope : uint8 { Global, Instance, Local };
+
+    /// @brief Structure containing all attribute relevant data
+    struct Attribute {
+        String        name;
+        uint32        size;
+        AttributeType type;
+    };
+
+    /// @brief Structure containing all uniform relevant data
+    struct Uniform {
+        /// @brief Shader uniform configuration
+        struct Config {
+            String      name;
+            uint8       size;
+            uint32      location;
+            UniformType type;
+            Scope       scope;
+        };
+
+        uint64      offset;
+        uint16      size;
+        uint16      location;
+        uint16      index;
+        uint8       set_index;
+        Scope       scope;
+        UniformType type;
+    };
+
+    /**
+     * @brief Shader configuration resource. Usually this resource is loaded
+     * from a .shadercfg file.
+     */
+    class Config : public Resource {
+      public:
+        TextureSystem*                texture_system = nullptr;
+        const String                  render_pass_name;
+        const uint8                   shader_stages;
+        const Vector<Attribute>       attributes;
+        const Vector<Uniform::Config> uniforms;
+        const bool                    use_instances;
+        const bool                    use_locals;
+
+        Config(
+            const String&                  name,
+            const String&                  render_pass_name,
+            const uint8                    shader_stages,
+            const Vector<Attribute>&       attributes,
+            const Vector<Uniform::Config>& uniforms,
+            const bool                     use_instances,
+            const bool                     use_locals
+        )
+            : Resource(name), render_pass_name(render_pass_name),
+              shader_stages(shader_stages), attributes(attributes),
+              uniforms(uniforms), use_instances(use_instances),
+              use_locals(use_locals) {}
+        ~Config() {}
+    };
+
+    /// @brief Push constant range description
+    struct PushConstantRange {
+        uint64 offset;
+        uint64 size;
+    };
+
+    /**
+     * @brief An instance-level shader state.
+     */
+    struct InstanceState {
+        uint64 offset;
+        bool   should_update = true;
+
+        Vector<TextureMap*> instance_texture_maps;
+    };
+
   public:
     /**
      * @brief Construct a new Shader object
      *
      * @param config Shader configurations
      */
-    Shader(const ShaderConfig config);
+    Shader(const Config config);
     virtual ~Shader();
 
     // TODO: TEMP
@@ -183,6 +186,7 @@ class Shader {
      */
     virtual void   release_instance_resources(uint32 instance_id);
 
+    // TODO: Doesn't belong here most likely
     virtual void acquire_texture_map_resources(TextureMap* texture_map);
     virtual void release_texture_map_resources(TextureMap* texture_map);
 
@@ -272,22 +276,23 @@ class Shader {
     uint64 _required_ubo_alignment;
 
     // Currently bound
-    ShaderScope _bound_scope;
-    uint32      _bound_instance_id;
-    uint32      _bound_ubo_offset;
+    Scope  _bound_scope;
+    uint32 _bound_instance_id;
+    uint32 _bound_ubo_offset;
 
     // Attributes
-    Vector<ShaderAttribute> _attributes {};
-    uint16                  _attribute_stride = 0;
+    Vector<Attribute> _attributes {};
+    uint16            _attribute_stride = 0;
 
     // Uniforms
     UnorderedMap<String, uint32> _uniforms_hash {};
-    Vector<ShaderUniform>        _uniforms {};
+    Vector<Uniform>              _uniforms {};
 
     // Global uniforms
-    uint64 _global_ubo_size   = 0;
-    uint64 _global_ubo_stride = 0;
-    uint64 _global_ubo_offset = 0;
+    bool   _globals_should_update = true;
+    uint64 _global_ubo_size       = 0;
+    uint64 _global_ubo_stride     = 0;
+    uint64 _global_ubo_offset     = 0;
 
     // Instance uniforms
     uint64 _ubo_size   = 0;
@@ -308,9 +313,9 @@ class Shader {
     virtual Outcome set_uniform(const uint16 id, void* value);
 
   private:
-    void add_sampler(const ShaderUniformConfig& config);
+    void add_sampler(const Uniform::Config& config);
     void add_uniform(
-        const ShaderUniformConfig&  config,
+        const Uniform::Config&      config,
         const std::optional<uint32> location = std::optional<uint32>()
     );
 };

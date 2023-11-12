@@ -8,30 +8,31 @@
 namespace ENGINE_NAMESPACE {
 
 /**
- * @brief Configuration for descriptor set. Contains layout and binding
- * description.
- */
-struct VulkanDescriptorSetConfig {
-    vk::DescriptorSetLayout                layout;
-    Vector<vk::DescriptorSetLayoutBinding> bindings;
-};
-
-/**
- * @brief Vulkan implementation of instance-level shader state.
- */
-struct VulkanInstanceState : public InstanceState {
-    std::array<vk::DescriptorSet, VulkanSettings::max_frames_in_flight>
-        descriptor_set;
-    std::array<std::optional<uint32>, VulkanSettings::max_frames_in_flight>
-        descriptor_set_ids;
-};
-
-/**
  * @brief  Vulkan implementation of generic shader. This uses a set of inputs
  * and parameters, as well as the shader programs contained in SPIR-V files to
  * construct a shader for use in rendering.
  */
 class VulkanShader : public Shader {
+  public:
+    /**
+     * @brief Configuration for descriptor set. Contains layout and binding
+     * description.
+     */
+    struct VulkanDescriptorSetConfig {
+        vk::DescriptorSetLayout                layout;
+        Vector<vk::DescriptorSetLayoutBinding> bindings;
+    };
+
+    /**
+     * @brief Vulkan implementation of instance-level shader state.
+     */
+    struct VulkanInstanceState : public InstanceState {
+        std::array<vk::DescriptorSet, VulkanSettings::max_frames_in_flight>
+            descriptor_set;
+        std::array<std::optional<uint32>, VulkanSettings::max_frames_in_flight>
+            descriptor_set_ids;
+    };
+
   public:
     /**
      * @brief Construct a new Vulkan Shader object.
@@ -42,7 +43,7 @@ class VulkanShader : public Shader {
      * @param command_buffer Buffer on which commands will be issued
      */
     VulkanShader(
-        const ShaderConfig                   config,
+        const Config                         config,
         const VulkanDevice* const            device,
         const vk::AllocationCallbacks* const allocator,
         const VulkanRenderPass* const        render_pass,

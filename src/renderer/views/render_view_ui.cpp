@@ -74,10 +74,10 @@ void RenderViewUI::on_resize(const uint32 width, const uint32 height) {
 }
 
 void RenderViewUI::on_render(
-    Renderer*               renderer,
+    Renderer* const         renderer,
     const RenderViewPacket& packet,
-    uint64                  frame_number,
-    uint64                  render_target_index
+    const uint64            frame_number,
+    const uint64            render_target_index
 ) {
     for (const auto& pass : _passes) {
         // Bind pass

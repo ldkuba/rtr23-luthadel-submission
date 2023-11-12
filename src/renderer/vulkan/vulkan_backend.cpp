@@ -482,7 +482,7 @@ void VulkanBackend::draw_geometry(Geometry* const geometry) {
 // Shader
 // -----------------------------------------------------------------------------
 
-Shader* VulkanBackend::create_shader(const ShaderConfig config) {
+Shader* VulkanBackend::create_shader(const Shader::Config config) {
     Logger::trace(RENDERER_VULKAN_LOG, "Creating shader.");
 
     // Get render pass

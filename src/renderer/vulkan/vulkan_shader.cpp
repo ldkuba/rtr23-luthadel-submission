@@ -11,7 +11,7 @@ vk::Filter             convert_filter_type(const TextureFilter filter);
 
 // Constructor & Destructor
 VulkanShader::VulkanShader(
-    const ShaderConfig                   config,
+    const Config                         config,
     const VulkanDevice* const            device,
     const vk::AllocationCallbacks* const allocator,
     const VulkanRenderPass* const        render_pass,
@@ -23,13 +23,13 @@ VulkanShader::VulkanShader(
     // === Process shader config ===
     // Translate stage info to vulkan flags
     Vector<vk::ShaderStageFlagBits> shader_stages {};
-    if (config.shader_stages & (uint8) ShaderStage::Vertex)
+    if (config.shader_stages & (uint8) Stage::Vertex)
         shader_stages.push_back(vk::ShaderStageFlagBits::eVertex);
-    if (config.shader_stages & (uint8) ShaderStage::Geometry)
+    if (config.shader_stages & (uint8) Stage::Geometry)
         shader_stages.push_back(vk::ShaderStageFlagBits::eGeometry);
-    if (config.shader_stages & (uint8) ShaderStage::Fragment)
+    if (config.shader_stages & (uint8) Stage::Fragment)
         shader_stages.push_back(vk::ShaderStageFlagBits::eFragment);
-    if (config.shader_stages & (uint8) ShaderStage::Compute)
+    if (config.shader_stages & (uint8) Stage::Compute)
         shader_stages.push_back(vk::ShaderStageFlagBits::eCompute);
 
     // Compute shader stage infos
@@ -48,8 +48,8 @@ VulkanShader::VulkanShader(
     auto sampler_count = 0;
     auto uniform_count = 0;
     for (const auto& uniform : _uniforms) {
-        if (uniform.type == ShaderUniformType::sampler) sampler_count++;
-        else if (uniform.scope != ShaderScope::Local) uniform_count++;
+        if (uniform.type == UniformType::sampler) sampler_count++;
+        else if (uniform.scope != Scope::Local) uniform_count++;
     }
 
     // Assign
@@ -267,42 +267,47 @@ void VulkanShader::apply_global() {
     vk::DescriptorSet& global_descriptor =
         _global_descriptor_sets[_command_buffer->current_frame];
 
-    static Vector<vk::WriteDescriptorSet> descriptor_writes {};
-    descriptor_writes.clear();
+    if (_globals_should_update) {
+        static Vector<vk::WriteDescriptorSet> descriptor_writes {};
+        descriptor_writes.clear();
 
-    // Apply UBO first
-    vk::DescriptorBufferInfo buffer_info {};
-    buffer_info.setBuffer(_uniform_buffer->handle);
-    buffer_info.setOffset(_global_ubo_offset);
-    buffer_info.setRange(_global_ubo_stride);
+        // Apply UBO first
+        vk::DescriptorBufferInfo buffer_info {};
+        buffer_info.setBuffer(_uniform_buffer->handle);
+        buffer_info.setOffset(_global_ubo_offset);
+        buffer_info.setRange(_global_ubo_stride);
 
-    // Update descriptor sets.
-    vk::WriteDescriptorSet ubo_write {};
-    ubo_write.setDstSet(global_descriptor);
-    ubo_write.setDstBinding(_bind_index_ubo);
-    ubo_write.setDescriptorType(vk::DescriptorType::eUniformBuffer);
-    ubo_write.setDstArrayElement(0);
-    ubo_write.setDescriptorCount(1);
-    ubo_write.setPBufferInfo(&buffer_info);
-    descriptor_writes.push_back(ubo_write);
-
-    if (_descriptor_set_configs[_desc_set_index_global]->bindings.size() > 1) {
-        // Iterate samplers.
-        const auto& image_infos = get_image_infos(_global_texture_maps);
-
-        vk::WriteDescriptorSet sampler_descriptor {};
-        sampler_descriptor.setDstSet(global_descriptor);
-        sampler_descriptor.setDstBinding(_bind_index_sampler);
-        sampler_descriptor.setDescriptorType(
-            vk::DescriptorType::eCombinedImageSampler
-        );
+        // Update descriptor sets.
+        vk::WriteDescriptorSet ubo_write {};
+        ubo_write.setDstSet(global_descriptor);
+        ubo_write.setDstBinding(_bind_index_ubo);
+        ubo_write.setDescriptorType(vk::DescriptorType::eUniformBuffer);
         ubo_write.setDstArrayElement(0);
-        sampler_descriptor.setImageInfo(image_infos);
-        descriptor_writes.push_back(sampler_descriptor);
-    }
+        ubo_write.setDescriptorCount(1);
+        ubo_write.setPBufferInfo(&buffer_info);
+        descriptor_writes.push_back(ubo_write);
 
-    // Throws no exceptions
-    _device->handle().updateDescriptorSets(descriptor_writes, nullptr);
+        if (_descriptor_set_configs[_desc_set_index_global]->bindings.size() >
+            1) {
+            // Iterate samplers.
+            const auto& image_infos = get_image_infos(_global_texture_maps);
+
+            vk::WriteDescriptorSet sampler_descriptor {};
+            sampler_descriptor.setDstSet(global_descriptor);
+            sampler_descriptor.setDstBinding(_bind_index_sampler);
+            sampler_descriptor.setDescriptorType(
+                vk::DescriptorType::eCombinedImageSampler
+            );
+            ubo_write.setDstArrayElement(0);
+            sampler_descriptor.setImageInfo(image_infos);
+            descriptor_writes.push_back(sampler_descriptor);
+        }
+
+        // Throws no exceptions
+        _device->handle().updateDescriptorSets(descriptor_writes, nullptr);
+
+        _globals_should_update = false;
+    }
 
     // Bind the global descriptor set to be updated.
     _command_buffer->handle->bindDescriptorSets(
@@ -546,20 +551,21 @@ Outcome VulkanShader::set_uniform(const uint16 id, void* value) {
 
     // Bind scope
     if (_bound_scope != uniform.scope) {
-        if (uniform.scope == ShaderScope::Global)
+        if (uniform.scope == Scope::Global)
             _bound_ubo_offset = _global_ubo_offset;
-        else if (uniform.scope == ShaderScope::Instance)
+        else if (uniform.scope == Scope::Instance)
             _bound_ubo_offset = _instance_states[_bound_instance_id]->offset;
         _bound_scope = uniform.scope;
     }
 
     // Inform the need for uniform reapplication
-    if (_bound_scope == ShaderScope::Instance)
+    if (_bound_scope == Scope::Global) _globals_should_update = true;
+    else if (_bound_scope == Scope::Instance)
         _instance_states[_bound_instance_id]->should_update = true;
 
     // If sampler
-    if (uniform.type == ShaderUniformType::sampler) {
-        if (uniform.scope == ShaderScope::Global)
+    if (uniform.type == UniformType::sampler) {
+        if (uniform.scope == Scope::Global)
             _global_texture_maps[uniform.location] = (TextureMap*) value;
         else
             _instance_states[_bound_instance_id]
@@ -568,7 +574,7 @@ Outcome VulkanShader::set_uniform(const uint16 id, void* value) {
     }
 
     // If other uniform
-    if (uniform.scope == ShaderScope::Local) {
+    if (uniform.scope == Scope::Local) {
         _command_buffer->handle->pushConstants(
             _pipeline_layout,
             vk::ShaderStageFlagBits::eVertex |
@@ -646,18 +652,18 @@ Vector<vk::VertexInputAttributeDescription> VulkanShader::compute_attributes(
 ) const {
     // Static lookup table for our types->Vulkan ones.
     static vk::Format* types = 0;
-    static vk::Format  t[(uint8) ShaderAttributeType::COUNT];
+    static vk::Format  t[(uint8) AttributeType::COUNT];
     if (!types) {
-        t[(uint8) ShaderAttributeType::int8]    = vk::Format::eR8Sint;
-        t[(uint8) ShaderAttributeType::int16]   = vk::Format::eR16Sint;
-        t[(uint8) ShaderAttributeType::int32]   = vk::Format::eR32Sint;
-        t[(uint8) ShaderAttributeType::uint8]   = vk::Format::eR8Uint;
-        t[(uint8) ShaderAttributeType::uint16]  = vk::Format::eR16Uint;
-        t[(uint8) ShaderAttributeType::uint32]  = vk::Format::eR32Uint;
-        t[(uint8) ShaderAttributeType::float32] = vk::Format::eR32Sfloat;
-        t[(uint8) ShaderAttributeType::vec2]    = vk::Format::eR32G32Sfloat;
-        t[(uint8) ShaderAttributeType::vec3]    = vk::Format::eR32G32B32Sfloat;
-        t[(uint8) ShaderAttributeType::vec4] = vk::Format::eR32G32B32A32Sfloat;
+        t[(uint8) AttributeType::int8]    = vk::Format::eR8Sint;
+        t[(uint8) AttributeType::int16]   = vk::Format::eR16Sint;
+        t[(uint8) AttributeType::int32]   = vk::Format::eR32Sint;
+        t[(uint8) AttributeType::uint8]   = vk::Format::eR8Uint;
+        t[(uint8) AttributeType::uint16]  = vk::Format::eR16Uint;
+        t[(uint8) AttributeType::uint32]  = vk::Format::eR32Uint;
+        t[(uint8) AttributeType::float32] = vk::Format::eR32Sfloat;
+        t[(uint8) AttributeType::vec2]    = vk::Format::eR32G32Sfloat;
+        t[(uint8) AttributeType::vec3]    = vk::Format::eR32G32B32Sfloat;
+        t[(uint8) AttributeType::vec4]    = vk::Format::eR32G32B32A32Sfloat;
 
         types = t;
     }
@@ -679,7 +685,7 @@ Vector<vk::VertexInputAttributeDescription> VulkanShader::compute_attributes(
     return attributes;
 }
 
-Vector<VulkanDescriptorSetConfig*> VulkanShader::compute_uniforms(
+Vector<VulkanShader::VulkanDescriptorSetConfig*> VulkanShader::compute_uniforms(
     const Vector<vk::ShaderStageFlagBits>& shader_stages
 ) const {
     Vector<VulkanDescriptorSetConfig*> desc_set_configs {};
@@ -728,9 +734,9 @@ Vector<VulkanDescriptorSetConfig*> VulkanShader::compute_uniforms(
     for (uint32 i = 0; i < _uniforms.size(); ++i) {
         // For samplers, the descriptor bindings need to be updated. Other types
         // of uniforms don't need anything to be done here.
-        if (_uniforms[i].type == ShaderUniformType::sampler) {
+        if (_uniforms[i].type == UniformType::sampler) {
             const uint32 set_index =
-                (_uniforms[i].scope == ShaderScope::Global
+                (_uniforms[i].scope == Scope::Global
                      ? _desc_set_index_global
                      : _desc_set_index_instance);
             auto desc_set_config = desc_set_configs[set_index];

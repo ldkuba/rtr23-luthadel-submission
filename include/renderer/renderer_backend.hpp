@@ -149,12 +149,12 @@ class RendererBackend {
      * @param config Shader configuration
      * @return Pointer referencing the shader created object
      */
-    virtual Shader* create_shader(const ShaderConfig config) = 0;
+    virtual Shader* create_shader(const Shader::Config config) = 0;
     /**
      * @brief Destroy shader and free its corresponding GPU resources
      * @param shader Shader to be destroyed.
      */
-    virtual void    destroy_shader(Shader* const shader)     = 0;
+    virtual void    destroy_shader(Shader* const shader)       = 0;
 
     /**
      * @brief Create a render target object.

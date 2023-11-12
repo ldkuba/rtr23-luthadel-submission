@@ -55,7 +55,7 @@ class VulkanBackend : public RendererBackend {
     void draw_geometry(Geometry* const geometry) override;
 
     // Shader
-    Shader* create_shader(const ShaderConfig config) override;
+    Shader* create_shader(const Shader::Config config) override;
     void    destroy_shader(Shader* shader) override;
 
     // Render targets

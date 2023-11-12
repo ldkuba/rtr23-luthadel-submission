@@ -181,7 +181,7 @@ void Renderer::destroy_geometry(Geometry* geometry) {
 // Shader
 // -----------------------------------------------------------------------------
 
-Shader* Renderer::create_shader(const ShaderConfig config) {
+Shader* Renderer::create_shader(const Shader::Config config) {
     Logger::trace(RENDERER_LOG, "Creating shader.");
     auto ret = _backend->create_shader(config);
     Logger::trace(RENDERER_LOG, "Shader created [", config.name(), "].");

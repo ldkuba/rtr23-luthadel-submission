@@ -6,7 +6,8 @@ namespace ENGINE_NAMESPACE {
 
 #define SHADER_LOG "Shader :: "
 
-PushConstantRange get_aligned_range(
+// Helper functions
+Shader::PushConstantRange get_aligned_range(
     uint64 offset, uint64 size, uint64 granularity
 );
 
@@ -14,7 +15,7 @@ PushConstantRange get_aligned_range(
 const uint32 Shader::max_name_length;
 
 // Constructor & Destructor
-Shader::Shader(const ShaderConfig config)
+Shader::Shader(const Config config)
     : _texture_system(config.texture_system), _name(config.name),
       _use_instances(config.use_instances), _use_locals(config.use_locals),
       _bound_instance_id(0) {
@@ -38,14 +39,14 @@ Shader::Shader(const ShaderConfig config)
                 _name,
                 "."
             );
-        if (uniform.scope == ShaderScope::Instance && !_use_instances)
+        if (uniform.scope == Scope::Instance && !_use_instances)
             Logger::fatal(
                 SHADER_LOG,
                 "Adding instance uniform \"",
                 uniform.name,
                 "\" for a shader that doesn't use instances isn't possible."
             );
-        if (uniform.scope == ShaderScope::Local && !_use_locals)
+        if (uniform.scope == Scope::Local && !_use_locals)
             Logger::fatal(
                 SHADER_LOG,
                 "Adding local uniform \"",
@@ -55,8 +56,8 @@ Shader::Shader(const ShaderConfig config)
 
         // Add uniform correctly
         switch (uniform.type) {
-        case ShaderUniformType::sampler: add_sampler(uniform); break;
-        case ShaderUniformType::custom: // TODO: Implement
+        case UniformType::sampler: add_sampler(uniform); break;
+        case UniformType::custom: // TODO: Implement
             Logger::fatal(SHADER_LOG, "Custom uniform usage unimplemented.");
             break;
         default: add_uniform(uniform); break;
@@ -124,8 +125,8 @@ Outcome Shader::set_uniform(const uint16 id, void* value) {
 // SHADER PRIVATE METHODS //
 // ////////////////////// //
 
-void Shader::add_sampler(const ShaderUniformConfig& config) {
-    if (config.scope == ShaderScope::Local)
+void Shader::add_sampler(const Uniform::Config& config) {
+    if (config.scope == Scope::Local)
         Logger::fatal(
             SHADER_LOG,
             "Error while adding sampler \"",
@@ -135,7 +136,7 @@ void Shader::add_sampler(const ShaderUniformConfig& config) {
 
     // If global, push into the global list.
     uint32 location = 0;
-    if (config.scope == ShaderScope::Global) {
+    if (config.scope == Scope::Global) {
         location = _global_texture_maps.size();
 
         // Create default texture map
@@ -165,9 +166,9 @@ void Shader::add_sampler(const ShaderUniformConfig& config) {
     add_uniform(config, location);
 }
 void Shader::add_uniform(
-    const ShaderUniformConfig& config, const std::optional<uint32> location
+    const Uniform::Config& config, const std::optional<uint32> location
 ) {
-    ShaderUniform entry {};
+    Uniform entry {};
     entry.index = _uniforms.size();
     entry.scope = config.scope;
     entry.type  = config.type;
@@ -176,7 +177,7 @@ void Shader::add_uniform(
     if (location.has_value()) entry.location = location.value();
     else entry.location = entry.index;
 
-    if (config.scope == ShaderScope::Local) {
+    if (config.scope == Scope::Local) {
         // Push a new aligned range (align to 4, as required by Vulkan spec)
         entry.set_index = -1;
         PushConstantRange range =
@@ -195,7 +196,7 @@ void Shader::add_uniform(
         // If this is sampler size & offset are implicitly 0
         if (!location.has_value() /* NOT a sampler */) {
             entry.size = config.size;
-            if (entry.scope == ShaderScope::Global) {
+            if (entry.scope == Scope::Global) {
                 entry.offset = _global_ubo_size;
                 _global_ubo_size += entry.size;
             } else {
@@ -213,7 +214,7 @@ void Shader::add_uniform(
 // SHADER HELPER FUNCTIONS //
 // /////////////////////// //
 
-PushConstantRange get_aligned_range(
+Shader::PushConstantRange get_aligned_range(
     uint64 offset, uint64 size, uint64 granularity
 ) {
     return { get_aligned(offset, granularity),

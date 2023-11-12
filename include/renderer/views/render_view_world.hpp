@@ -22,10 +22,10 @@ class RenderViewWorld : public RenderView {
     virtual RenderViewPacket on_build_pocket() override;
     virtual void on_resize(const uint32 width, const uint32 height) override;
     virtual void on_render(
-        Renderer*               renderer,
+        Renderer* const         renderer,
         const RenderViewPacket& packet,
-        uint64                  frame_number,
-        uint64                  render_target_index
+        const uint64            frame_number,
+        const uint64            render_target_index
     ) override;
 
   protected:

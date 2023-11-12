@@ -142,7 +142,7 @@ class Renderer {
      * @param config Shader configuration
      * @return Pointer referencing the shader created object
      */
-    Shader* create_shader(const ShaderConfig config);
+    Shader* create_shader(const Shader::Config config);
     /**
      * @brief Destroy shader and free its corresponding GPU resources
      * @param shader Shader to be destroyed.

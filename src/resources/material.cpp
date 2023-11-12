@@ -88,6 +88,7 @@ void Material::apply_instance() {
     if (_update_required) {
         set_uniform("diffuse_color", _diffuse_color);
         set_sampler("diffuse_texture", _diffuse_map);
+        // TODO: TEMP  CHECK
         if (_shader->get_name().compare_ci(ShaderSystem::BuiltIn::MaterialShader
             ) == 0) {
             set_uniform("shininess", _shininess);

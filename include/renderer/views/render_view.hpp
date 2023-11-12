@@ -57,10 +57,10 @@ class RenderView {
     virtual RenderViewPacket on_build_pocket()                      = 0;
     virtual void on_resize(const uint32 width, const uint32 height) = 0;
     virtual void on_render(
-        Renderer*               renderer,
+        Renderer* const         renderer,
         const RenderViewPacket& packet,
-        uint64                  frame_number,
-        uint64                  render_target_index
+        const uint64            frame_number,
+        const uint64            render_target_index
     ) = 0;
 
   protected:

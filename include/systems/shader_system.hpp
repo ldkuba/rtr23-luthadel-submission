@@ -45,7 +45,7 @@ class ShaderSystem {
      * @returns Plain pointer to the created shader
      * @throws RuntimeError if creation fails for some reason
      */
-    Result<Shader*, RuntimeError> create(ShaderConfig config);
+    Result<Shader*, RuntimeError> create(Shader::Config config);
     /**
      * @brief Acquire a shader by name. If shader of the given name isn't
      * previously cashed it will be loaded from the shader config asset with the
