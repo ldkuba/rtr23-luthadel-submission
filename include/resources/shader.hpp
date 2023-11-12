@@ -130,7 +130,7 @@ class Shader {
     };
 
   public:
-    uint64 rendered_frame_number = 0;
+    uint64 rendered_frame_number = -1;
 
   public:
     /**
