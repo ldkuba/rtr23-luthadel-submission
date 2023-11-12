@@ -27,7 +27,7 @@ class RenderViewUI : public RenderView {
     glm::mat4 _proj_matrix;
     // uint32 _render_mode; // TODO: Maybe
 
-    virtual void apply_globals() const;
+    virtual void apply_globals(const uint64 frame_number) const;
     virtual void apply_locals(const glm::mat4 model) const;
 };
 

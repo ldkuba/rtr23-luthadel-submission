@@ -39,7 +39,7 @@ class RenderViewWorld : public RenderView {
 
     DebugViewMode _render_mode = DebugViewMode::Default;
 
-    virtual void apply_globals() const;
+    virtual void apply_globals(const uint64 frame_number) const;
     virtual void apply_locals(const glm::mat4 model) const;
 };
 

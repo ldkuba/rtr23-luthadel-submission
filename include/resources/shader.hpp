@@ -130,6 +130,9 @@ class Shader {
     };
 
   public:
+    uint64 rendered_frame_number = 0;
+
+  public:
     /**
      * @brief Construct a new Shader object
      *

@@ -87,7 +87,7 @@ void RenderViewUI::on_render(
         _shader->use();
 
         // Apply globals
-        apply_globals();
+        apply_globals(frame_number);
 
         // Draw geometries
         for (const auto& geo_data : packet.geometry_data) {
@@ -136,11 +136,17 @@ void RenderViewUI::on_render(
         }                                                                      \
     }
 
-void RenderViewUI::apply_globals() const {
-    // Apply globals
+void RenderViewUI::apply_globals(const uint64 frame_number) const {
+    // Globals can be updated only once per frame
+    if (frame_number == _shader->rendered_frame_number) return;
+
+    // Apply globals update
     set_uniform("projection", _proj_matrix);
     set_uniform("view", _view_matrix);
     _shader->apply_global();
+
+    // Update render frame number
+    _shader->rendered_frame_number = frame_number;
 }
 void RenderViewUI::apply_locals(const glm::mat4 model) const {
     set_uniform("model", model);
