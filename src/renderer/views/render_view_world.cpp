@@ -87,7 +87,7 @@ RenderViewPacket RenderViewWorld::on_build_pocket() {
             transparent_geometries.begin(),
             transparent_geometries.end(),
             [](const TGeomData& x, const TGeomData& y) -> bool {
-                return x.first < y.first;
+                return x.first > y.first;
             }
         );
 
