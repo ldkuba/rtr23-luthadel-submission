@@ -24,12 +24,13 @@ void TestApplication::run() {
 
     // === Renderer ===
     _app_renderer.material_shader =
-        _shader_system.acquire(ShaderSystem::BuiltIn::MaterialShader)
-            .expect("ERR1");
+        _shader_system.acquire(Shader::BuiltIn::MaterialShader).expect("ERR1");
     _app_renderer.ui_shader =
-        _shader_system.acquire(ShaderSystem::BuiltIn::UIShader).expect("ERR2");
+        _shader_system.acquire(Shader::BuiltIn::UIShader).expect("ERR2");
 
     _app_renderer.material_shader->reload();
+
+    _app_renderer.link_with_systems(&_texture_system);
 
     // === Render views ===
     // Get width & height
@@ -39,24 +40,24 @@ void TestApplication::run() {
     // Configure
     RenderView::Config opaque_world_view_config {
         "world_opaque",
-        ShaderSystem::BuiltIn::MaterialShader,
+        Shader::BuiltIn::MaterialShader,
         width,
         height,
         RenderView::Type::World,
         RenderView::ViewMatrixSource::SceneCamera,
         RenderView::ProjectionMatrixSource::DefaultPerspective,
-        { _app_renderer.get_renderpass(Renderer::Builtin::WorldPass)
+        { _app_renderer.get_renderpass(RenderPass::BuiltIn::WorldPass)
               .expect("ERR3") }
     };
     RenderView::Config ui_view_config {
         "ui",
-        ShaderSystem::BuiltIn::UIShader,
+        Shader::BuiltIn::UIShader,
         width,
         height,
         RenderView::Type::UI,
         RenderView::ViewMatrixSource::SceneCamera,
         RenderView::ProjectionMatrixSource::DefaultPerspective,
-        { _app_renderer.get_renderpass(Renderer::Builtin::UIPass)
+        { _app_renderer.get_renderpass(RenderPass::BuiltIn::UIPass)
               .expect("ERR4") }
     };
 

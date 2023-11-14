@@ -13,7 +13,7 @@ class RenderView {
     /**
      * @brief Render view known types. They have logic associated.
      */
-    enum class Type { World, UI, Custom };
+    enum class Type { World, UI, Skybox, Custom };
     /**
      * @brief Render view known `view matrix` source.
      */

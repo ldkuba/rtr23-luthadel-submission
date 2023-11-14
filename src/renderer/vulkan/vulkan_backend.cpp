@@ -12,10 +12,10 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback_function(
     const VkDebugUtilsMessengerCallbackDataEXT* callback_data,
     void*                                       user_data
 );
-vk::Format channel_count_to_std_format(
-    uint8 chanel_count, vk::Format default_format = vk::Format::eR8G8B8A8Unorm
-);
 bool all_validation_layers_are_available();
+
+vk::SamplerAddressMode convert_repeat_type(const Texture::Repeat repeat);
+vk::Filter             convert_filter_type(const Texture::Filter filter);
 
 // Constructor
 VulkanBackend::VulkanBackend(Platform::Surface* const surface)
@@ -229,23 +229,23 @@ void VulkanBackend::resized(const uint32 width, const uint32 height) {
 // Textures
 // -----------------------------------------------------------------------------
 
-void VulkanBackend::create_texture(
-    Texture* const texture, const byte* const data
+Texture* VulkanBackend::create_texture(
+    const Texture::Config& config, const byte* const data
 ) {
     Logger::trace(RENDERER_VULKAN_LOG, "Creating texture.");
 
-    // Image format
-    // NOTE: assumes 8 bits per channel
-    auto texture_format = vk::Format::eR8G8B8A8Srgb;
+    // Get format
+    const auto texture_format =
+        VulkanTexture::channel_count_to_SRGB(config.channel_count);
 
     // Create device side image
     // NOTE: Lots of assumptions here
     auto texture_image =
         new (MemoryTag::GPUTexture) VulkanImage(_device, _allocator);
     texture_image->create(
-        texture->width,
-        texture->height,
-        texture->mip_level_count,
+        config.width,
+        config.height,
+        config.mip_level_count,
         vk::SampleCountFlagBits::e1,
         texture_format,
         vk::ImageTiling::eOptimal,
@@ -256,31 +256,32 @@ void VulkanBackend::create_texture(
         vk::ImageAspectFlagBits::eColor
     );
 
-    // Create internal data
-    VulkanTextureData* vulkan_texture_data =
-        new (MemoryTag::GPUTexture) VulkanTextureData();
-    vulkan_texture_data->image = texture_image;
-    texture->internal_data     = vulkan_texture_data;
+    // Create texture
+    const auto texture = new (MemoryTag::Texture
+    ) VulkanTexture(config, texture_image, _command_pool, _device, _allocator);
 
     // Write data
-    texture_write_data(texture, data, texture->total_size, 0);
+    texture->write(data, texture->total_size, 0);
 
     Logger::trace(RENDERER_VULKAN_LOG, "Texture created.");
+    return texture;
 }
 
-void VulkanBackend::create_writable_texture(Texture* const texture) {
+Texture* VulkanBackend::create_writable_texture(const Texture::Config& config) {
+    Logger::trace(RENDERER_VULKAN_LOG, "Creating texture.");
+
     // Get format
     const auto texture_format =
-        channel_count_to_std_format(texture->channel_count);
+        VulkanTexture::channel_count_to_UNORM(config.channel_count);
 
     // Create device side image
     // NOTE: Lots of assumptions here
     auto texture_image =
         new (MemoryTag::GPUTexture) VulkanImage(_device, _allocator);
     texture_image->create(
-        texture->width,
-        texture->height,
-        texture->mip_level_count,
+        config.width,
+        config.height,
+        config.mip_level_count,
         vk::SampleCountFlagBits::e1,
         texture_format,
         vk::ImageTiling::eOptimal,
@@ -292,104 +293,76 @@ void VulkanBackend::create_writable_texture(Texture* const texture) {
         vk::ImageAspectFlagBits::eColor
     );
 
-    // Create internal data
-    VulkanTextureData* vulkan_texture_data =
-        new (MemoryTag::GPUTexture) VulkanTextureData();
-    vulkan_texture_data->image = texture_image;
-    texture->internal_data     = vulkan_texture_data;
+    // Create texture
+    const auto texture = new (MemoryTag::Texture
+    ) VulkanTexture(config, texture_image, _command_pool, _device, _allocator);
+
+    Logger::trace(RENDERER_VULKAN_LOG, "Texture created.");
+    return texture;
 }
 
 void VulkanBackend::destroy_texture(Texture* const texture) {
     if (texture == nullptr) return;
-    if (texture->internal_data == nullptr) return;
-    auto data = reinterpret_cast<VulkanTextureData*>(texture->internal_data());
+
+    auto vt = reinterpret_cast<VulkanTexture*>(texture);
 
     _device->handle().waitIdle();
-    if (data->image) delete data->image;
+    del(vt);
 
     Logger::trace(RENDERER_VULKAN_LOG, "Texture destroyed.");
 }
 
-void VulkanBackend::resize_texture(
-    Texture* const texture, const uint32 width, const uint32 height
+// -----------------------------------------------------------------------------
+// Texture map
+// -----------------------------------------------------------------------------
+
+Texture::Map* VulkanBackend::create_texture_map(
+    const Texture::Map::Config& config
 ) {
-    if (!texture || !texture->internal_data) return;
+    Logger::trace(RENDERER_VULKAN_LOG, "Creating texture map.");
 
-    // Destroy old image
-    const auto data = static_cast<VulkanTextureData*>(texture->internal_data());
-    delete data->image;
-
-    // Get format
-    const auto texture_format =
-        channel_count_to_std_format(texture->channel_count);
-
-    // Create new image
-    auto texture_image =
-        new (MemoryTag::GPUTexture) VulkanImage(_device, _allocator);
-    texture_image->create(
-        texture->width,
-        texture->height,
-        texture->mip_level_count,
-        vk::SampleCountFlagBits::e1,
-        texture_format,
-        vk::ImageTiling::eOptimal,
-        vk::ImageUsageFlagBits::eTransferSrc |
-            vk::ImageUsageFlagBits::eTransferDst |
-            vk::ImageUsageFlagBits::eSampled |
-            vk::ImageUsageFlagBits::eColorAttachment,
-        vk::MemoryPropertyFlagBits::eDeviceLocal,
-        vk::ImageAspectFlagBits::eColor
+    // TODO: Additional configurable settings
+    // Create sampler
+    vk::SamplerCreateInfo sampler_info {};
+    sampler_info.setAddressModeU(convert_repeat_type(config.repeat_u));
+    sampler_info.setAddressModeV(convert_repeat_type(config.repeat_v));
+    sampler_info.setAddressModeW(convert_repeat_type(config.repeat_w));
+    sampler_info.setMagFilter(convert_filter_type(config.filter_magnify));
+    sampler_info.setMinFilter(convert_filter_type(config.filter_minify));
+    sampler_info.setAnisotropyEnable(true);
+    sampler_info.setMaxAnisotropy(_device->info().max_sampler_anisotropy);
+    sampler_info.setBorderColor(vk::BorderColor::eIntOpaqueBlack);
+    sampler_info.setUnnormalizedCoordinates(false);
+    sampler_info.setCompareEnable(false);
+    sampler_info.setCompareOp(vk::CompareOp::eAlways);
+    // Mipmap settings
+    sampler_info.setMipmapMode(vk::SamplerMipmapMode::eLinear);
+    sampler_info.setMipLodBias(0.0f);
+    sampler_info.setMinLod(0.0f);
+    sampler_info.setMaxLod( //
+        static_cast<float32>(config.texture->mip_level_count)
     );
 
-    // Assign
-    data->image = texture_image;
+    vk::Sampler texture_sampler;
+    try {
+        texture_sampler =
+            _device->handle().createSampler(sampler_info, _allocator);
+    } catch (vk::SystemError e) {
+        Logger::fatal(RENDERER_VULKAN_LOG, e.what());
+    }
+
+    // Create texture map
+    const auto texture_map =
+        new (MemoryTag::TextureMap) VulkanTexture::Map(config, texture_sampler);
+
+    Logger::trace(RENDERER_VULKAN_LOG, "Texture map created.");
+    return texture_map;
 }
-
-void VulkanBackend::texture_write_data(
-    Texture* const    texture,
-    const byte* const data,
-    const uint32      size,
-    const uint32      offset
-) {
-    // Get image
-    const auto internal_data =
-        static_cast<VulkanTextureData*>(texture->internal_data());
-    const auto& image = internal_data->image;
-
-    // Create staging buffer
-    auto staging_buffer =
-        new (MemoryTag::Temp) VulkanBuffer(_device, _allocator);
-    staging_buffer->create(
-        texture->total_size,
-        vk::BufferUsageFlagBits::eTransferSrc,
-        vk::MemoryPropertyFlagBits::eHostVisible |
-            vk::MemoryPropertyFlagBits::eHostCoherent
-    );
-
-    // Fill created memory with data
-    staging_buffer->load_data(data, 0, texture->total_size);
-
-    auto command_buffer = _command_pool->begin_single_time_commands();
-
-    // Transition image to a layout optimal for data transfer
-    auto result = image->transition_image_layout(
-        command_buffer,
-        vk::ImageLayout::eUndefined,
-        vk::ImageLayout::eTransferDstOptimal
-    );
-    if (result.has_error())
-        Logger::fatal(RENDERER_VULKAN_LOG, result.error().what());
-
-    // Copy buffer data to image
-    staging_buffer->copy_data_to_image(command_buffer, image);
-
-    // Generate mipmaps, this also transitions image to a layout optimal for
-    // sampling
-    image->generate_mipmaps(command_buffer);
-    _command_pool->end_single_time_commands(command_buffer);
-
-    // Cleanup
-    delete staging_buffer;
+void VulkanBackend::destroy_texture_map(Texture::Map* map) {
+    if (!map) return;
+    auto v_map = static_cast<VulkanTexture::Map*>(map);
+    if (v_map->sampler) _device->handle().destroySampler(v_map->sampler);
+    del(v_map);
 }
 
 // -----------------------------------------------------------------------------
@@ -482,7 +455,11 @@ void VulkanBackend::draw_geometry(Geometry* const geometry) {
 // Shader
 // -----------------------------------------------------------------------------
 
-Shader* VulkanBackend::create_shader(const Shader::Config config) {
+Shader* VulkanBackend::create_shader(
+    Renderer* const       renderer,
+    TextureSystem* const  texture_system,
+    const Shader::Config& config
+) {
     Logger::trace(RENDERER_VULKAN_LOG, "Creating shader.");
 
     // Get render pass
@@ -493,15 +470,21 @@ Shader* VulkanBackend::create_shader(const Shader::Config config) {
         dynamic_cast<VulkanRenderPass*>(render_pass_res.value());
 
     // Create shader
-    auto shader = new (MemoryTag::Shader) /**/ VulkanShader(
-        config, _device, _allocator, render_pass, _command_buffer
+    auto shader = new (MemoryTag::Shader) VulkanShader(
+        renderer,
+        texture_system,
+        config,
+        _device,
+        _allocator,
+        render_pass,
+        _command_buffer
     );
 
     Logger::trace(RENDERER_VULKAN_LOG, "Shader created.");
     return shader;
 }
 void VulkanBackend::destroy_shader(Shader* const shader) {
-    delete shader;
+    del(shader);
     Logger::trace(RENDERER_VULKAN_LOG, "Shader destroyed.");
 }
 
@@ -520,8 +503,8 @@ RenderTarget* VulkanBackend::create_render_target(
     // Scan for image views needed for framebuffer
     Vector<vk::ImageView> view_attachments { attachments.size() };
     for (uint32 i = 0; i < attachments.size(); i++) {
-        const auto data = (VulkanTextureData*) attachments[i]->internal_data();
-        view_attachments[i] = data->image->view;
+        const auto v_texture = (VulkanTexture*) attachments[i];
+        view_attachments[i]  = v_texture->image()->view;
     }
 
     // Create render target appropriate framebuffer
@@ -957,18 +940,6 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback_function(
     return VK_FALSE;
 }
 
-vk::Format channel_count_to_std_format(
-    uint8 chanel_count, vk::Format default_format
-) {
-    switch (chanel_count) {
-    case 1: return vk::Format::eR8Unorm;
-    case 2: return vk::Format::eR8G8Unorm;
-    case 3: return vk::Format::eR8G8B8Unorm;
-    case 4: return vk::Format::eR8G8B8A8Unorm;
-    default: return default_format;
-    }
-}
-
 bool all_validation_layers_are_available() {
     auto available_layers = vk::enumerateInstanceLayerProperties();
 
@@ -984,6 +955,44 @@ bool all_validation_layers_are_available() {
     }
 
     return true;
+}
+
+vk::SamplerAddressMode convert_repeat_type(const Texture::Repeat repeat) {
+    switch (repeat) {
+    case Texture::Repeat::Repeat: //
+        return vk::SamplerAddressMode::eRepeat;
+    case Texture::Repeat::MirroredRepeat:
+        return vk::SamplerAddressMode::eMirroredRepeat;
+    case Texture::Repeat::ClampToEdge:
+        return vk::SamplerAddressMode::eClampToEdge;
+    case Texture::Repeat::ClampToBorder:
+        return vk::SamplerAddressMode::eClampToBorder;
+    default:
+        Logger::warning(
+            RENDERER_VULKAN_LOG,
+            "Conversion of repeat type ",
+            (int32) repeat,
+            " not supported. Function `convert_repeat_type` will default to "
+            "repeat."
+        );
+        return vk::SamplerAddressMode::eRepeat;
+    }
+}
+
+vk::Filter convert_filter_type(const Texture::Filter filter) {
+    switch (filter) {
+    case Texture::Filter::NearestNeighbour: return vk::Filter::eNearest;
+    case Texture::Filter::BiLinear: return vk::Filter::eLinear;
+    default:
+        Logger::warning(
+            RENDERER_VULKAN_LOG,
+            "Conversion of filter mode ",
+            (int32) filter,
+            " not supported. Function `convert_filter_type` will default to "
+            "linear."
+        );
+        return vk::Filter::eLinear;
+    }
 }
 
 } // namespace ENGINE_NAMESPACE

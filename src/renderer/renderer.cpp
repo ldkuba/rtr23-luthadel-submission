@@ -8,14 +8,14 @@ namespace ENGINE_NAMESPACE {
 
 // Constructor & Destructor
 Renderer::Renderer(
-    const RendererBackendType backend_type, Platform::Surface* const surface
+    const RendererBackend::Type backend_type, Platform::Surface* const surface
 ) {
     // Setup on resize
     surface->resize_event.subscribe<Renderer>(this, &Renderer::on_resize);
 
     // Setup backend
     switch (backend_type) {
-    case Vulkan:
+    case RendererBackend::Type::Vulkan:
         _backend = new (MemoryTag::Renderer) VulkanBackend(surface);
         break;
     default:
@@ -30,9 +30,9 @@ Renderer::Renderer(
 
     // Create render passes
     _world_renderpass = _backend->create_render_pass({
-        Builtin::WorldPass,                   // Name
+        RenderPass::BuiltIn::WorldPass,       // Name
         "",                                   // Prev
-        Builtin::UIPass,                      // Next
+        RenderPass::BuiltIn::UIPass,          // Next
         glm::vec2 { 0, 0 },                   // Draw offset
         glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f }, // Clear color
         RenderPass::ClearFlags::Color | RenderPass::ClearFlags::Depth |
@@ -41,8 +41,8 @@ Renderer::Renderer(
         true                                 // Multisampling
     });
     _ui_renderpass    = _backend->create_render_pass({
-        Builtin::UIPass,                      // Name
-        Builtin::WorldPass,                   // Prev
+        RenderPass::BuiltIn::UIPass,          // Name
+        RenderPass::BuiltIn::WorldPass,       // Prev
         "",                                   // Next
         glm::vec2 { 0, 0 },                   // Draw offset
         glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f }, // Clear color
@@ -118,53 +118,53 @@ void Renderer::on_resize(const uint32 width, const uint32 height) {
 // Texture
 // -----------------------------------------------------------------------------
 
-void Renderer::create_texture(Texture* texture, const byte* const data) {
+Texture* Renderer::create_texture(
+    const Texture::Config& config, const byte* const data
+) {
     Logger::trace(RENDERER_LOG, "Creating texture.");
-    _backend->create_texture(texture, data);
+    const auto texture = _backend->create_texture(config, data);
     Logger::trace(RENDERER_LOG, "Texture created [", texture->name(), "].");
+    return texture;
 }
-void Renderer::create_writable_texture(Texture* texture) {
+Texture* Renderer::create_writable_texture(const Texture::Config& config) {
     Logger::trace(RENDERER_LOG, "Creating writable texture.");
-    _backend->create_writable_texture(texture);
+    const auto texture = _backend->create_writable_texture(config);
     Logger::trace(
         RENDERER_LOG, "Writable texture created [`", texture->name(), "`]."
     );
+    return texture;
 }
 void Renderer::destroy_texture(Texture* texture) {
     _backend->destroy_texture(texture);
     Logger::trace(RENDERER_LOG, "Texture destroyed [`", texture->name(), "`].");
 }
 
-void Renderer::resize_texture(
-    Texture* const texture, const uint32 width, const uint32 height
-) {
-    Logger::trace(RENDERER_LOG, "Resizing texture [", texture->name(), "].");
-    _backend->resize_texture(texture, width, height);
-    Logger::trace(RENDERER_LOG, "Texture resized [", texture->name(), "].");
+// -----------------------------------------------------------------------------
+// Texture map
+// -----------------------------------------------------------------------------
+
+Texture::Map* Renderer::create_texture_map(const Texture::Map::Config& config) {
+    Logger::trace(RENDERER_LOG, "Creating texture map.");
+    const auto map = _backend->create_texture_map(config);
+    Logger::trace(
+        RENDERER_LOG,
+        "Texture map created [",
+        map->texture->name(),
+        " - ",
+        (uint32) map->use,
+        "]."
+    );
+    return map;
 }
-void Renderer::texture_write_data(
-    Texture* const texture, const Vector<byte>& data, const uint32 offset
-) {
+void Renderer::destroy_texture_map(Texture::Map* map) {
+    _backend->destroy_texture_map(map);
     Logger::trace(
-        RENDERER_LOG, "Writing data to texture [", texture->name(), "]."
-    );
-    _backend->texture_write_data(texture, data.data(), data.size(), offset);
-    Logger::trace(
-        RENDERER_LOG, "Texture writing complete [", texture->name(), "]."
-    );
-}
-void Renderer::texture_write_data(
-    Texture* const    texture,
-    const byte* const data,
-    const uint32      size,
-    const uint32      offset
-) {
-    Logger::trace(
-        RENDERER_LOG, "Writing data to texture [", texture->name(), "]."
-    );
-    _backend->texture_write_data(texture, data, size, offset);
-    Logger::trace(
-        RENDERER_LOG, "Texture writing complete [", texture->name(), "]."
+        RENDERER_LOG,
+        "Texture map destroyed [`",
+        map->texture->name(),
+        " - ",
+        (uint32) map->use,
+        "`]."
     );
 }
 
@@ -181,9 +181,9 @@ void Renderer::destroy_geometry(Geometry* geometry) {
 // Shader
 // -----------------------------------------------------------------------------
 
-Shader* Renderer::create_shader(const Shader::Config config) {
+Shader* Renderer::create_shader(const Shader::Config& config) {
     Logger::trace(RENDERER_LOG, "Creating shader.");
-    auto ret = _backend->create_shader(config);
+    auto ret = _backend->create_shader(this, _texture_system, config);
     Logger::trace(RENDERER_LOG, "Shader created [", config.name(), "].");
     return ret;
 }

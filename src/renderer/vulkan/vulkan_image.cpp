@@ -28,7 +28,7 @@ void VulkanImage::create(
 void VulkanImage::create(
     const uint32                  width,
     const uint32                  height,
-    const uint32                  mip_levels,
+    const uint8                   mip_levels,
     const vk::SampleCountFlagBits number_of_samples,
     const vk::Format              format,
     const vk::ImageTiling         tiling,
@@ -95,7 +95,7 @@ void VulkanImage::create(
 void VulkanImage::create(
     const uint32                  width,
     const uint32                  height,
-    const uint32                  mip_levels,
+    const uint8                   mip_levels,
     const vk::SampleCountFlagBits number_of_samples,
     const vk::Format              format,
     const vk::ImageTiling         tiling,
@@ -129,7 +129,7 @@ void VulkanImage::create(
 
 void VulkanImage::create(
     const vk::Image            image,
-    const uint32               mip_levels,
+    const uint8                mip_levels,
     const vk::Format           format,
     const vk::ImageAspectFlags aspect_flags
 ) {
@@ -146,7 +146,7 @@ void VulkanImage::create(
 }
 
 void VulkanImage::create_view(
-    const uint32               mip_levels,
+    const uint8                mip_levels,
     const vk::Format           format,
     const vk::ImageAspectFlags aspect_flags
 ) {

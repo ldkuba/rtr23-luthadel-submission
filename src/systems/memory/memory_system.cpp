@@ -4,6 +4,9 @@
 #include "resources/material.hpp"
 #include "systems/input/control.hpp"
 
+// TODO: Temp solution
+#include "renderer/vulkan/vulkan_texture.hpp"
+
 namespace ENGINE_NAMESPACE {
 
 #define MEMORY_SYS_LOG "MemorySystem :: "
@@ -135,8 +138,8 @@ Allocator** MemorySystem::initialize_allocator_array(MemoryMap& memory_map) {
     lal(permanent_allocator, MB);
 
     // Pools
-    pal(texture_pool, Texture, 1024);
-    pal(texture_map_pool, TextureMap, 1024);
+    pal(texture_pool, VulkanTexture, 1024);
+    pal(texture_map_pool, VulkanTexture::Map, 1024);
     pal(material_pool, Material, 1024);
     pal(control_pool, Control, 256);
     pal(transform_pool, Transform, 256);

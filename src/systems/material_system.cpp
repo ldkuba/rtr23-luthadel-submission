@@ -29,7 +29,10 @@ MaterialSystem::~MaterialSystem() {
         destroy_material(material.second.handle);
     _registered_materials.clear();
     _default_material->release_map_resources();
-    delete _default_material;
+    _renderer->destroy_texture_map(_default_material->diffuse_map);
+    _renderer->destroy_texture_map(_default_material->specular_map);
+    _renderer->destroy_texture_map(_default_material->normal_map);
+    del(_default_material);
 
     Logger::trace(MATERIAL_SYS_LOG, "Material system destroyed.");
 }
@@ -179,7 +182,7 @@ void MaterialSystem::release(const String name) {
 
 void MaterialSystem::create_default_material() {
     // Get shader
-    auto shader = _shader_system->acquire(ShaderSystem::BuiltIn::MaterialShader)
+    auto shader = _shader_system->acquire(Shader::BuiltIn::MaterialShader)
                       .value_or(nullptr);
     if (shader == nullptr)
         Logger::fatal(
@@ -193,35 +196,34 @@ void MaterialSystem::create_default_material() {
 
     // Set maps:
     // Diffuse
-    _default_material->diffuse_map = new (MemoryTag::TextureMap)
-        TextureMap { _texture_system->default_diffuse_texture,
-                     TextureUse::MapDiffuse,
-                     TextureFilter::BiLinear,
-                     TextureFilter::BiLinear,
-                     TextureRepeat::Repeat,
-                     TextureRepeat::Repeat,
-                     TextureRepeat::Repeat,
-                     nullptr };
+    _default_material->diffuse_map = _renderer->create_texture_map(
+        { _texture_system->default_diffuse_texture,
+          Texture::Use::MapDiffuse,
+          Texture::Filter::BiLinear,
+          Texture::Filter::BiLinear,
+          Texture::Repeat::Repeat,
+          Texture::Repeat::Repeat,
+          Texture::Repeat::Repeat }
+    );
     // Specular
-    _default_material->specular_map = new (MemoryTag::TextureMap)
-        TextureMap { _texture_system->default_specular_texture,
-                     TextureUse::MapSpecular,
-                     TextureFilter::BiLinear,
-                     TextureFilter::BiLinear,
-                     TextureRepeat::Repeat,
-                     TextureRepeat::Repeat,
-                     TextureRepeat::Repeat,
-                     nullptr };
+    _default_material->specular_map = _renderer->create_texture_map(
+        { _texture_system->default_specular_texture,
+          Texture::Use::MapSpecular,
+          Texture::Filter::BiLinear,
+          Texture::Filter::BiLinear,
+          Texture::Repeat::Repeat,
+          Texture::Repeat::Repeat,
+          Texture::Repeat::Repeat }
+    );
     // Normal
-    _default_material->normal_map = new (MemoryTag::TextureMap)
-        TextureMap { _texture_system->default_normal_texture,
-                     TextureUse::MapNormal,
-                     TextureFilter::BiLinear,
-                     TextureFilter::BiLinear,
-                     TextureRepeat::Repeat,
-                     TextureRepeat::Repeat,
-                     TextureRepeat::Repeat,
-                     nullptr };
+    _default_material->normal_map =
+        _renderer->create_texture_map({ _texture_system->default_normal_texture,
+                                        Texture::Use::MapNormal,
+                                        Texture::Filter::BiLinear,
+                                        Texture::Filter::BiLinear,
+                                        Texture::Repeat::Repeat,
+                                        Texture::Repeat::Repeat,
+                                        Texture::Repeat::Repeat });
 
     // TODO: Set other maps
 
@@ -236,7 +238,7 @@ void MaterialSystem::create_default_material() {
                         : or_default
 
 Result<MaterialSystem::MaterialRef, RuntimeError> //
-MaterialSystem::create_material(const MaterialConfig config) {
+MaterialSystem::create_material(const MaterialConfig& config) {
     // Get shader
     auto shader = _shader_system->acquire(config.shader).value_or(nullptr);
     if (shader == nullptr) {
@@ -254,44 +256,42 @@ MaterialSystem::create_material(const MaterialConfig config) {
 
     // TODO: Make filter and repeat configurable
     // Diffuse map
-    material->diffuse_map = new (MemoryTag::TextureMap)
-        TextureMap { acquire_texture(
-                         config.diffuse_map_name,
-                         _texture_system->default_diffuse_texture
-                     ),
-                     TextureUse::MapDiffuse,
-                     TextureFilter::BiLinear,
-                     TextureFilter::BiLinear,
-                     TextureRepeat::Repeat,
-                     TextureRepeat::Repeat,
-                     TextureRepeat::Repeat,
-                     nullptr };
+    material->diffuse_map = _renderer->create_texture_map(
+        { acquire_texture(
+              config.diffuse_map_name, _texture_system->default_diffuse_texture
+          ),
+          Texture::Use::MapDiffuse,
+          Texture::Filter::BiLinear,
+          Texture::Filter::BiLinear,
+          Texture::Repeat::Repeat,
+          Texture::Repeat::Repeat,
+          Texture::Repeat::Repeat }
+    );
     // Specular map
-    material->specular_map = new (MemoryTag::TextureMap)
-        TextureMap { acquire_texture(
-                         config.specular_map_name,
-                         _texture_system->default_specular_texture
-                     ),
-                     TextureUse::MapSpecular,
-                     TextureFilter::BiLinear,
-                     TextureFilter::BiLinear,
-                     TextureRepeat::Repeat,
-                     TextureRepeat::Repeat,
-                     TextureRepeat::Repeat,
-                     nullptr };
+    material->specular_map = _renderer->create_texture_map(
+        { acquire_texture(
+              config.specular_map_name,
+              _texture_system->default_specular_texture
+          ),
+          Texture::Use::MapSpecular,
+          Texture::Filter::BiLinear,
+          Texture::Filter::BiLinear,
+          Texture::Repeat::Repeat,
+          Texture::Repeat::Repeat,
+          Texture::Repeat::Repeat }
+    );
     // Normal map
-    material->normal_map = new (MemoryTag::TextureMap)
-        TextureMap { acquire_texture(
-                         config.normal_map_name,
-                         _texture_system->default_normal_texture
-                     ),
-                     TextureUse::MapNormal,
-                     TextureFilter::BiLinear,
-                     TextureFilter::BiLinear,
-                     TextureRepeat::Repeat,
-                     TextureRepeat::Repeat,
-                     TextureRepeat::Repeat,
-                     nullptr };
+    material->normal_map = _renderer->create_texture_map(
+        { acquire_texture(
+              config.normal_map_name, _texture_system->default_normal_texture
+          ),
+          Texture::Use::MapNormal,
+          Texture::Filter::BiLinear,
+          Texture::Filter::BiLinear,
+          Texture::Repeat::Repeat,
+          Texture::Repeat::Repeat,
+          Texture::Repeat::Repeat }
+    );
     // TODO: Set other maps
 
     // Acquire resource from GPU
@@ -318,17 +318,29 @@ void MaterialSystem::destroy_material(Material* material) {
             "\" not properly initialized. Internal id not set."
         );
 
-    // Release Textures
-    const Texture* diffuse_texture  = material->diffuse_map()->texture;
-    const Texture* specular_texture = material->specular_map()->texture;
-    const Texture* normal_texture   = material->normal_map()->texture;
-    if (diffuse_texture) _texture_system->release(diffuse_texture->name());
-    if (specular_texture) _texture_system->release(specular_texture->name());
-    if (normal_texture) _texture_system->release(normal_texture->name());
+    // Release Textures & Texture map resources
+    if (material->diffuse_map()) {
+        const Texture* diffuse_texture = material->diffuse_map()->texture;
+        if (diffuse_texture) _texture_system->release(diffuse_texture->name());
+        _renderer->destroy_texture_map(material->diffuse_map());
+    }
+    if (material->specular_map()) {
+        const Texture* specular_texture = material->specular_map()->texture;
+        if (specular_texture)
+            _texture_system->release(specular_texture->name());
+        _renderer->destroy_texture_map(material->specular_map());
+    }
+    if (material->normal_map()) {
+        const Texture* normal_texture = material->normal_map()->texture;
+        if (normal_texture) _texture_system->release(normal_texture->name());
+        _renderer->destroy_texture_map(material->normal_map());
+    }
 
-    // Release texture map resources
+    // Release GPU map resources
     material->release_map_resources();
-    delete material;
+
+    // Delete material
+    del(material);
 }
 
 } // namespace ENGINE_NAMESPACE

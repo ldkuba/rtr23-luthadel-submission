@@ -85,45 +85,6 @@ class TextureSystem {
     /// @param name Name of the released texture
     void release(const String name);
 
-    /**
-     * @brief Wraps provided internal data within a Texture. Won't be
-     * auto-releases resource.
-     *
-     * @param Name Name of the requested texture
-     * @param width Texture width in pixels
-     * @param height Texture height in pixels
-     * @param channel_count Number of channels per pixel
-     * @param has_transparency Indicates whether the texture will have
-     * transparency
-     * @param is_writable Indicates whether the texture can be written to
-     * @param internal_data Internal data that will be set for this texture
-     * @return Texture* Requested texture resource
-     */
-    Texture* wrap_internal(
-        const String               name,
-        const uint32               width,
-        const uint32               height,
-        const uint8                channel_count,
-        const bool                 has_transparency,
-        const bool                 is_writable,
-        InternalTextureData* const internal_data
-    );
-
-    /**
-     * @brief Resizes a given texture. May only be called for writable textures.
-     * @param texture Texture to be resized
-     * @param width New width in pixels
-     * @param height New height in pixels
-     * @param regenerate_internal_data If true internal data of this texture
-     * will be regenerated
-     */
-    void resize(
-        Texture* const texture,
-        const uint32   width,
-        const uint32   height,
-        const bool     regenerate_internal_data = true
-    );
-
   private:
     struct TextureRef {
         Texture* handle;

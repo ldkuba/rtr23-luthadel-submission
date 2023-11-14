@@ -23,7 +23,7 @@ RenderViewWorld::RenderViewWorld(
             "Material shader will be used. This could result in some undefined "
             "behaviour."
         );
-        res = shader_system->acquire(ShaderSystem::BuiltIn::MaterialShader);
+        res = shader_system->acquire(Shader::BuiltIn::MaterialShader);
     }
 
     // Setup values

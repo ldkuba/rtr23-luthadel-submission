@@ -16,6 +16,12 @@ namespace ENGINE_NAMESPACE {
 class RendererBackend {
   public:
     /**
+     * @brief List of supported backend APIs
+     */
+    enum class Type { Vulkan };
+
+  public:
+    /**
      * @brief Construct a new Renderer Backend object
      *
      * @param surface A pointer to the render surface
@@ -65,48 +71,38 @@ class RendererBackend {
     /**
      * @brief Create a texture and upload its relevant data to the GPU
      *
-     * @param texture Texture to be uploaded
-     * @param data Raw texture image data
+     * @param config Texture configuration under which texture will be created
+     * @param data Raw texture image byte data
+     * @return Texture* Created texture
      */
-    virtual void create_texture(
-        Texture* const texture, const byte* const data
-    )                                                            = 0;
+    virtual Texture* create_texture(
+        const Texture::Config& config, const byte* const data
+    )                                                                       = 0;
     /**
      * @brief Create a writable texture object with no initial data.
-     * @param texture Texture to be uploaded
+     * @param config Texture configuration under which texture will be created
+     * @return Texture* Created texture
      */
-    virtual void create_writable_texture(Texture* const texture) = 0;
+    virtual Texture* create_writable_texture(const Texture::Config& config) = 0;
     /**
      * @brief Destroy a texture and free its corresponding GPU resources
-     *
      * @param texture Texture to be destroy
      */
-    virtual void destroy_texture(Texture* const texture)         = 0;
+    virtual void     destroy_texture(Texture* const texture)                = 0;
 
     /**
-     * @brief Resizes a texture. Internally texture is destroyed and recreated.
-     * @param texture Texture to be resized
-     * @param width New width in pixels
-     * @param height New Height in pixels
+     * @brief Create a texture map according to provided configuration
+     * @param config Configuration under which texture map will be created
+     * @return Texture::Map* Created texture map
      */
-    virtual void resize_texture(
-        Texture* const texture, const uint32 width, const uint32 height
-    ) = 0;
-
+    virtual Texture::Map* create_texture_map( //
+        const Texture::Map::Config& config
+    )                                                            = 0;
     /**
-     * @brief Write data to provided texture. NOTE: This code wont block write
-     * requests for non-writable textures.
-     * @param texture Texture to be written to
-     * @param data Raw data bytes to be written
-     * @param size Data size in bytes
-     * @param offset Offset in bytes from which write starts
+     * @brief Destroy given texture map
+     * @param map Map to be destroyed
      */
-    virtual void texture_write_data(
-        Texture* const    texture,
-        const byte* const data,
-        const uint32      size,
-        const uint32      offset
-    ) = 0;
+    virtual void          destroy_texture_map(Texture::Map* map) = 0;
 
     /**
      * @brief Create a geometry and upload its relevant data to the GPU
@@ -146,15 +142,22 @@ class RendererBackend {
 
     /**
      * @brief Create a shader object and upload relevant data to the GPU
+     *
+     * @param renderer Renderer under which this shader is created
+     * @param texture_system Reference to the texture system
      * @param config Shader configuration
-     * @return Pointer referencing the shader created object
+     * @return Shader* Created shader object
      */
-    virtual Shader* create_shader(const Shader::Config config) = 0;
+    virtual Shader* create_shader(
+        Renderer* const       renderer,
+        TextureSystem* const  texture_system,
+        const Shader::Config& config
+    )                                                 = 0;
     /**
      * @brief Destroy shader and free its corresponding GPU resources
      * @param shader Shader to be destroyed.
      */
-    virtual void    destroy_shader(Shader* const shader)       = 0;
+    virtual void destroy_shader(Shader* const shader) = 0;
 
     /**
      * @brief Create a render target object.

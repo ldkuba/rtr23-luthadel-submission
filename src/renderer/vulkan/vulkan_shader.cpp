@@ -6,19 +6,19 @@
 
 namespace ENGINE_NAMESPACE {
 
-vk::SamplerAddressMode convert_repeat_type(const TextureRepeat repeat);
-vk::Filter             convert_filter_type(const TextureFilter filter);
-
 // Constructor & Destructor
 VulkanShader::VulkanShader(
-    const Config                         config,
+    Renderer* const                      renderer,
+    TextureSystem* const                 texture_system,
+    const Config&                        config,
     const VulkanDevice* const            device,
     const vk::AllocationCallbacks* const allocator,
     const VulkanRenderPass* const        render_pass,
     const VulkanCommandBuffer* const     command_buffer
 )
-    : Shader(config), _device(device), _allocator(allocator),
-      _render_pass(render_pass), _command_buffer(command_buffer) {
+    : Shader(renderer, texture_system, config), _device(device),
+      _allocator(allocator), _render_pass(render_pass),
+      _command_buffer(command_buffer) {
 
     // === Process shader config ===
     // Translate stage info to vulkan flags
@@ -400,7 +400,7 @@ void VulkanShader::apply_instance() {
 }
 
 uint32 VulkanShader::acquire_instance_resources( //
-    const Vector<TextureMap*>& maps
+    const Vector<Texture::Map*>& maps
 ) {
     uint32 instance_id    = _instance_states.size();
     auto   instance_state = new (MemoryTag::Shader) VulkanInstanceState();
@@ -435,16 +435,10 @@ uint32 VulkanShader::acquire_instance_resources( //
     // Initialize texture maps
     auto& texture_maps = instance_state->instance_texture_maps;
     texture_maps.resize(_instance_texture_count);
-    for (uint32 i = 0; i < maps.size() && i < _instance_texture_count; i++) {
+    for (uint32 i = 0; i < _instance_texture_count; i++) {
         texture_maps[i] = maps[i];
         if (!maps[i]->texture)
             texture_maps[i]->texture = _texture_system->default_texture;
-    }
-    for (uint32 i = maps.size(); i < _instance_texture_count; i++) {
-        texture_maps[i]          = new (MemoryTag::TextureMap) TextureMap();
-        texture_maps[i]->texture = _texture_system->default_texture;
-        texture_maps[i]->use     = TextureUse::Unknown;
-        acquire_texture_map_resources(texture_maps[i]);
     }
 
     // Allocate some space in the UBO - by the stride, not the size.
@@ -498,50 +492,6 @@ void VulkanShader::release_instance_resources(uint32 instance_id) {
     _instance_states[instance_id] = nullptr;
 }
 
-void VulkanShader::acquire_texture_map_resources(TextureMap* texture_map) {
-    // TODO: Additional configurable settings
-    // Create sampler
-    vk::SamplerCreateInfo sampler_info {};
-    sampler_info.setAddressModeU(convert_repeat_type(texture_map->repeat_u));
-    sampler_info.setAddressModeV(convert_repeat_type(texture_map->repeat_v));
-    sampler_info.setAddressModeW(convert_repeat_type(texture_map->repeat_w));
-    sampler_info.setMagFilter(convert_filter_type(texture_map->filter_magnify));
-    sampler_info.setMinFilter(convert_filter_type(texture_map->filter_minify));
-    sampler_info.setAnisotropyEnable(true);
-    sampler_info.setMaxAnisotropy(_device->info().max_sampler_anisotropy);
-    sampler_info.setBorderColor(vk::BorderColor::eIntOpaqueBlack);
-    sampler_info.setUnnormalizedCoordinates(false);
-    sampler_info.setCompareEnable(false);
-    sampler_info.setCompareOp(vk::CompareOp::eAlways);
-    // Mipmap settings
-    sampler_info.setMipmapMode(vk::SamplerMipmapMode::eLinear);
-    sampler_info.setMipLodBias(0.0f);
-    sampler_info.setMinLod(0.0f);
-    sampler_info.setMaxLod(
-        static_cast<float32>(texture_map->texture->mip_level_count)
-    );
-
-    vk::Sampler texture_sampler;
-    try {
-        texture_sampler =
-            _device->handle().createSampler(sampler_info, _allocator);
-    } catch (vk::SystemError e) {
-        Logger::fatal(RENDERER_VULKAN_LOG, e.what());
-    }
-
-    const auto vulkan_texture_map_data =
-        new (MemoryTag::GPUTexture) VulkanTextureMapData();
-    vulkan_texture_map_data->sampler = texture_sampler;
-    texture_map->internal_data       = vulkan_texture_map_data;
-}
-void VulkanShader::release_texture_map_resources(TextureMap* texture_map) {
-    if (!texture_map) return;
-    if (!texture_map->internal_data) return;
-    auto data =
-        reinterpret_cast<VulkanTextureMapData*>(texture_map->internal_data);
-    if (data->sampler) _device->handle().destroySampler(data->sampler);
-}
-
 // /////////////////////////////// //
 // VULKAN SHADER PROTECTED METHODS //
 // /////////////////////////////// //
@@ -566,10 +516,11 @@ Outcome VulkanShader::set_uniform(const uint16 id, void* value) {
     // If sampler
     if (uniform.type == UniformType::sampler) {
         if (uniform.scope == Scope::Global)
-            _global_texture_maps[uniform.location] = (TextureMap*) value;
+            _global_texture_maps[uniform.location] = (Texture::Map*) value;
         else
             _instance_states[_bound_instance_id]
-                ->instance_texture_maps[uniform.location] = (TextureMap*) value;
+                ->instance_texture_maps[uniform.location] =
+                (Texture::Map*) value;
         return Outcome::Successful;
     }
 
@@ -998,24 +949,21 @@ void VulkanShader::create_pipeline(
 }
 
 Vector<vk::DescriptorImageInfo>& VulkanShader::get_image_infos(
-    const Vector<TextureMap*>& texture_maps
+    const Vector<Texture::Map*>& texture_maps
 ) const {
     static Vector<vk::DescriptorImageInfo> image_infos {};
     image_infos.clear();
 
     for (uint32 i = 0; i < texture_maps.size(); ++i) {
         // TODO: only update in the list if actually needing an update.
-        const auto tm = texture_maps[i];
-
-        VulkanTextureData* t_data =
-            (VulkanTextureData*) tm->texture->internal_data();
-        VulkanTextureMapData* tm_data =
-            (VulkanTextureMapData*) tm->internal_data;
+        const auto tm = static_cast<const VulkanTexture::Map*>(texture_maps[i]);
+        const auto t =
+            static_cast<const VulkanTexture*>(texture_maps[i]->texture);
 
         vk::DescriptorImageInfo image_info {};
         image_info.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
-        image_info.setImageView(t_data->image->view);
-        image_info.setSampler(tm_data->sampler);
+        image_info.setImageView(t->image()->view);
+        image_info.setSampler(tm->sampler);
         image_infos.push_back(image_info);
 
         // TODO: change up descriptor state to handle this properly.
@@ -1027,48 +975,6 @@ Vector<vk::DescriptorImageInfo>& VulkanShader::get_image_infos(
     }
 
     return image_infos;
-}
-
-// ////////////////////////////// //
-// VULKAN SHADER HELPER FUNCTIONS //
-// ////////////////////////////// //
-
-vk::SamplerAddressMode convert_repeat_type(const TextureRepeat repeat) {
-    switch (repeat) {
-    case TextureRepeat::Repeat: //
-        return vk::SamplerAddressMode::eRepeat;
-    case TextureRepeat::MirroredRepeat:
-        return vk::SamplerAddressMode::eMirroredRepeat;
-    case TextureRepeat::ClampToEdge:
-        return vk::SamplerAddressMode::eClampToEdge;
-    case TextureRepeat::ClampToBorder:
-        return vk::SamplerAddressMode::eClampToBorder;
-    default:
-        Logger::warning(
-            RENDERER_VULKAN_LOG,
-            "Conversion of repeat type ",
-            (int32) repeat,
-            " not supported. Function `convert_repeat_type` will default to "
-            "repeat."
-        );
-        return vk::SamplerAddressMode::eRepeat;
-    }
-}
-
-vk::Filter convert_filter_type(const TextureFilter filter) {
-    switch (filter) {
-    case TextureFilter::NearestNeighbour: return vk::Filter::eNearest;
-    case TextureFilter::BiLinear: return vk::Filter::eLinear;
-    default:
-        Logger::warning(
-            RENDERER_VULKAN_LOG,
-            "Conversion of filter mode ",
-            (int32) filter,
-            " not supported. Function `convert_filter_type` will default to "
-            "linear."
-        );
-        return vk::Filter::eLinear;
-    }
 }
 
 } // namespace ENGINE_NAMESPACE

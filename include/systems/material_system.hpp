@@ -78,7 +78,7 @@ class MaterialSystem {
     void create_default_material();
 
     Result<MaterialRef, RuntimeError> create_material(
-        const MaterialConfig config
+        const MaterialConfig& config
     );
     void destroy_material(Material* material);
 };

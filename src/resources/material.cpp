@@ -89,8 +89,8 @@ void Material::apply_instance() {
         set_uniform("diffuse_color", _diffuse_color);
         set_sampler("diffuse_texture", _diffuse_map);
         // TODO: TEMP  CHECK
-        if (_shader->get_name().compare_ci(ShaderSystem::BuiltIn::MaterialShader
-            ) == 0) {
+        if (_shader->get_name().compare_ci(Shader::BuiltIn::MaterialShader) ==
+            0) {
             set_uniform("shininess", _shininess);
             set_sampler("specular_texture", _specular_map);
             set_sampler("normal_texture", _normal_map);
@@ -102,26 +102,16 @@ void Material::apply_instance() {
 
 void Material::acquire_map_resources() {
     // Gather texture map pointer list
-    Vector<TextureMap*> texture_maps;
+    Vector<Texture::Map*> texture_maps;
     if (_diffuse_map != nullptr) texture_maps.push_back(_diffuse_map);
     if (_specular_map != nullptr) texture_maps.push_back(_specular_map);
     if (_normal_map != nullptr) texture_maps.push_back(_normal_map);
-
-    // Acquire texture maps
-    for (const auto texture_map : texture_maps)
-        _shader->acquire_texture_map_resources(texture_map);
 
     // Acquire shader instance
     internal_id = _shader->acquire_instance_resources(texture_maps);
 }
 
 void Material::release_map_resources() {
-    if (_diffuse_map != nullptr)
-        _shader->release_texture_map_resources(_diffuse_map);
-    if (_specular_map != nullptr)
-        _shader->release_texture_map_resources(_specular_map);
-    if (_normal_map != nullptr)
-        _shader->release_texture_map_resources(_normal_map);
     _shader->release_instance_resources(internal_id.value());
 }
 

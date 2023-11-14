@@ -12,13 +12,13 @@ namespace ENGINE_NAMESPACE {
  * @brief Predefined resourse types
  */
 struct ResourceType {
-    STRING_CONST(Text);
-    STRING_CONST(Binary);
-    STRING_CONST(Image);
-    STRING_CONST(Material);
-    STRING_CONST(StaticMesh);
-    STRING_CONST(Shader);
-    STRING_CONST(Mesh);
+    STRING_ENUM(Text);
+    STRING_ENUM(Binary);
+    STRING_ENUM(Image);
+    STRING_ENUM(Material);
+    STRING_ENUM(StaticMesh);
+    STRING_ENUM(Shader);
+    STRING_ENUM(Mesh);
     static bool is_custom(const String type) {
         return (
             (type.compare_ci(Text) != 0) &&       //

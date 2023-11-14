@@ -9,6 +9,15 @@ namespace ENGINE_NAMESPACE {
  */
 class RenderPass {
   public:
+    /**
+     * @brief List of standard builtin render passes
+     */
+    struct BuiltIn {
+        StringEnum WorldPass = "Renderpass.Builtin.World";
+        StringEnum UIPass    = "Renderpass.Builtin.UI";
+    };
+
+    /// @brief Type used by clear flags
     typedef uint8 ClearFlagType;
 
     /**

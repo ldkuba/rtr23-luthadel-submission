@@ -21,6 +21,8 @@ class VulkanShader : public Shader {
     struct VulkanDescriptorSetConfig {
         vk::DescriptorSetLayout                layout;
         Vector<vk::DescriptorSetLayoutBinding> bindings;
+        std::optional<uint8>                   uniform_index;
+        std::optional<uint8>                   sampler_index;
     };
 
     /**
@@ -36,6 +38,8 @@ class VulkanShader : public Shader {
   public:
     /**
      * @brief Construct a new Vulkan Shader object.
+     * @param renderer Reference to renderer which owns this shader
+     * @param texture_system Reference to a texture system
      * @param config Shader configuration used
      * @param device Device on which this shader will be used
      * @param allocator Custom allocation callback
@@ -43,7 +47,9 @@ class VulkanShader : public Shader {
      * @param command_buffer Buffer on which commands will be issued
      */
     VulkanShader(
-        const Config                         config,
+        Renderer* const                      renderer,
+        TextureSystem* const                 texture_system,
+        const Config&                        config,
         const VulkanDevice* const            device,
         const vk::AllocationCallbacks* const allocator,
         const VulkanRenderPass* const        render_pass,
@@ -59,11 +65,9 @@ class VulkanShader : public Shader {
     void apply_global() override;
     void apply_instance() override;
 
-    uint32 acquire_instance_resources(const Vector<TextureMap*>& maps) override;
+    uint32 acquire_instance_resources(const Vector<Texture::Map*>& maps
+    ) override;
     void   release_instance_resources(uint32 instance_id) override;
-
-    void acquire_texture_map_resources(TextureMap* texture_map) override;
-    void release_texture_map_resources(TextureMap* texture_map) override;
 
     const static uint32 max_descriptor_sets = 1024; // TODO: Maybe make dynamic
 
@@ -114,7 +118,7 @@ class VulkanShader : public Shader {
     );
 
     Vector<vk::DescriptorImageInfo>& get_image_infos(
-        const Vector<TextureMap*>& texture_maps
+        const Vector<Texture::Map*>& texture_maps
     ) const;
 };
 

@@ -223,9 +223,9 @@ PhysicalDeviceInfo VulkanDevice::get_physical_device_info(
         device_info.memory_size_in_gb[i] =
             1.0f * device_memory.memoryHeaps[i].size / 1024.f / 1024.f / 1024.f;
         // Local size
-        device_info.memory_is_local[i] = (bool
-        ) (device_memory.memoryHeaps[i].flags &
-           vk::MemoryHeapFlagBits::eDeviceLocal);
+        device_info.memory_is_local[i] =
+            (bool) (device_memory.memoryHeaps[i].flags &
+                    vk::MemoryHeapFlagBits::eDeviceLocal);
     }
     for (uint32 i = 0; i < device_memory.memoryTypeCount; i++) {
         // Memory types

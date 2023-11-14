@@ -8,12 +8,22 @@
 namespace ENGINE_NAMESPACE {
 
 class TextureSystem;
+class Renderer;
 
 /**
  * @brief Frontend (API agnostic) representation of a shader.
  */
 class Shader {
   public:
+    /**
+     * @brief List of builtin shaders.
+     */
+    struct BuiltIn {
+        StringEnum MaterialShader = "builtin.material_shader";
+        StringEnum UIShader       = "builtin.ui_shader";
+        StringEnum SkyboxShader   = "builtin.skybox_shader";
+    };
+
     /// @brief Supported shader attribute types
     enum class AttributeType : uint8 {
         float32,
@@ -56,6 +66,9 @@ class Shader {
     /// @brief Shader scope
     enum class Scope : uint8 { Global, Instance, Local };
 
+    /// @brief Determines what face culling mode will be used during rendering
+    enum class CullMode { None, Front, Back, Both };
+
     /// @brief Structure containing all attribute relevant data
     struct Attribute {
         String        name;
@@ -89,11 +102,11 @@ class Shader {
      */
     class Config : public Resource {
       public:
-        TextureSystem*                texture_system = nullptr;
         const String                  render_pass_name;
         const uint8                   shader_stages;
         const Vector<Attribute>       attributes;
         const Vector<Uniform::Config> uniforms;
+        const CullMode                cull_mode;
         const bool                    use_instances;
         const bool                    use_locals;
 
@@ -103,13 +116,14 @@ class Shader {
             const uint8                    shader_stages,
             const Vector<Attribute>&       attributes,
             const Vector<Uniform::Config>& uniforms,
+            const CullMode                 cull_mode,
             const bool                     use_instances,
             const bool                     use_locals
         )
             : Resource(name), render_pass_name(render_pass_name),
               shader_stages(shader_stages), attributes(attributes),
-              uniforms(uniforms), use_instances(use_instances),
-              use_locals(use_locals) {}
+              uniforms(uniforms), cull_mode(cull_mode),
+              use_instances(use_instances), use_locals(use_locals) {}
         ~Config() {}
     };
 
@@ -126,7 +140,7 @@ class Shader {
         uint64 offset;
         bool   should_update = true;
 
-        Vector<TextureMap*> instance_texture_maps;
+        Vector<Texture::Map*> instance_texture_maps;
     };
 
   public:
@@ -138,7 +152,18 @@ class Shader {
      *
      * @param config Shader configurations
      */
-    Shader(const Config config);
+
+    /**
+     * @brief Construct a new Shader object
+     * @param renderer Renderer which owns this shader
+     * @param texture_system Texture system reference
+     * @param config Shader configuration used
+     */
+    Shader(
+        Renderer* const      renderer,
+        TextureSystem* const texture_system,
+        const Config&        config
+    );
     virtual ~Shader();
 
     // TODO: TEMP
@@ -180,18 +205,17 @@ class Shader {
     /**
      * @brief Acquires resources required for initialization of a shader
      * instance
+     * @param maps Maps used by this shader. Need to be pre-initialized.
      * @return uint32 instance id
      */
-    virtual uint32 acquire_instance_resources(const Vector<TextureMap*>& maps);
+    virtual uint32 acquire_instance_resources( //
+        const Vector<Texture::Map*>& maps
+    );
     /**
      * @brief Release previously acquired instance resources
      * @param instance_id Id of instance to be released
      */
     virtual void   release_instance_resources(uint32 instance_id);
-
-    // TODO: Doesn't belong here most likely
-    virtual void acquire_texture_map_resources(TextureMap* texture_map);
-    virtual void release_texture_map_resources(TextureMap* texture_map);
 
     /**
      * @brief Get the the index of a requested uniform
@@ -254,7 +278,7 @@ class Shader {
      * @throws InvalidArgument exception if no sampler is found
      */
     Result<void, InvalidArgument> set_sampler(
-        const String name, const TextureMap* const texture_map
+        const String name, const Texture::Map* const texture_map
     );
     /**
      * @brief Set the sampler texture by sampler id
@@ -264,7 +288,7 @@ class Shader {
      * @throws InvalidArgument exception if no sampler is found
      */
     Result<void, InvalidArgument> set_sampler(
-        const uint16 id, const TextureMap* const texture_map
+        const uint16 id, const Texture::Map* const texture_map
     );
 
     const static uint32 max_name_length    = 256;
@@ -272,6 +296,7 @@ class Shader {
 
   protected:
     TextureSystem* _texture_system;
+    Renderer*      _renderer;
 
     String _name;
     bool   _use_instances;
@@ -310,8 +335,8 @@ class Shader {
     Vector<InstanceState*> _instance_states;
 
     // Textures
-    Vector<TextureMap*> _global_texture_maps {};
-    uint8               _instance_texture_count = 0;
+    Vector<Texture::Map*> _global_texture_maps {};
+    uint8                 _instance_texture_count = 0;
 
     virtual Outcome set_uniform(const uint16 id, void* value);
 

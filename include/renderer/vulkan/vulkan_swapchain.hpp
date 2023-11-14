@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vulkan_image.hpp"
+#include "vulkan_texture.hpp"
 #include "vulkan_framebuffer.hpp"
 
 namespace ENGINE_NAMESPACE {
@@ -95,9 +95,9 @@ class VulkanSwapchain {
     bool   _should_resize = false;
 
     // Image resources
-    Vector<Texture*> _render_textures {};
-    Texture*         _depth_attachment {};
-    Texture*         _color_attachment {};
+    Vector<VulkanTexture*> _render_textures {};
+    VulkanTexture*         _depth_attachment {};
+    VulkanTexture*         _color_attachment {};
 
     void create();
     void destroy();

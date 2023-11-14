@@ -25,7 +25,7 @@ class TestApplication {
         Platform::Surface::get_instance(800, 600, std::string(APP_NAME));
 
     // Renderer
-    Renderer _app_renderer { RendererBackendType::Vulkan, _app_surface };
+    Renderer _app_renderer { RendererBackend::Type::Vulkan, _app_surface };
 
     // Main camera
     Camera* main_camera {};

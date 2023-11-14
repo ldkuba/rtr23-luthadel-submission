@@ -26,19 +26,17 @@ class VulkanBackend : public RendererBackend {
     void resized(const uint32 width, const uint32 height) override;
 
     // Texture
-    void create_texture(Texture* const texture, const byte* const data)
-        override;
-    void create_writable_texture(Texture* const texture) override;
-    void destroy_texture(Texture* const texture) override;
-    void resize_texture(
-        Texture* const texture, const uint32 width, const uint32 height
+    Texture* create_texture(
+        const Texture::Config& config, const byte* const data
     ) override;
-    void texture_write_data(
-        Texture* const    texture,
-        const byte* const data,
-        const uint32      size,
-        const uint32      offset
+    Texture* create_writable_texture(const Texture::Config& config) override;
+    void     destroy_texture(Texture* const texture) override;
+
+    // Texture map
+    Texture::Map* create_texture_map( //
+        const Texture::Map::Config& config
     ) override;
+    void          destroy_texture_map(Texture::Map* map) override;
 
     // Geometry
     void create_geometry(
@@ -55,8 +53,12 @@ class VulkanBackend : public RendererBackend {
     void draw_geometry(Geometry* const geometry) override;
 
     // Shader
-    Shader* create_shader(const Shader::Config config) override;
-    void    destroy_shader(Shader* shader) override;
+    Shader* create_shader(
+        Renderer* const       renderer,
+        TextureSystem* const  texture_system,
+        const Shader::Config& config
+    ) override;
+    void destroy_shader(Shader* shader) override;
 
     // Render targets
     RenderTarget* create_render_target(

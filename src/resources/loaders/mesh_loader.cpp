@@ -211,8 +211,8 @@ Result<GeometryConfigArray*, RuntimeError> load_obj(
     for (const auto& material : materials) {
         const auto material_name = create_mat_file(
             { material.name,
-              ShaderSystem::BuiltIn::MaterialShader, // Note: OBJ doesn't hold
-                                                     // this info
+              Shader::BuiltIn::MaterialShader, // Note: OBJ doesn't hold
+                                               // this info
               material.diffuse_texname,
               material.specular_texname,
               material.bump_texname,

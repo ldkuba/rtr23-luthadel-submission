@@ -20,7 +20,7 @@ RenderViewUI::RenderViewUI(
             "shader will be used. This could result in some undefined "
             "behaviour."
         );
-        res = shader_system->acquire(ShaderSystem::BuiltIn::UIShader);
+        res = shader_system->acquire(Shader::BuiltIn::UIShader);
     }
 
     // Setup values

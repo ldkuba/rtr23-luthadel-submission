@@ -5,15 +5,15 @@
 
 namespace ENGINE_NAMESPACE {
 
-#define LOG_WARNING_ENABLED 1
-#define LOG_INFO_ENABLED 1
-#define LOG_DEBUG_ENABLED 1
-#define LOG_VERBOSE_ENABLED 0
-
 class Logger {
   private:
     Logger() {}
     ~Logger() {}
+
+    const static bool log_warning;
+    const static bool log_info;
+    const static bool log_debug;
+    const static bool log_verbose;
 
   public:
     /**
@@ -51,10 +51,9 @@ class Logger {
      */
     template<typename... Args>
     static void warning(const Args&... message) {
-#if LOG_WARNING_ENABLED
+        if (!log_warning) return;
         auto full_message = String::build(String("WAR"), " :: ", message...);
         Platform::Console::write(full_message, 3, true);
-#endif
     }
 
     /**
@@ -66,10 +65,9 @@ class Logger {
      */
     template<typename... Args>
     static void log(const Args&... message) {
-#if LOG_INFO_ENABLED
+        if (!log_info) return;
         auto full_message = String::build(String("INF"), " :: ", message...);
         Platform::Console::write(full_message, 4, true);
-#endif
     }
     /**
      * @brief Logs given debug message if LOG_DEBUG_ENABLED is set to one.
@@ -80,10 +78,9 @@ class Logger {
      */
     template<typename... Args>
     static void debug(const Args&... message) {
-#if LOG_DEBUG_ENABLED
+        if (!log_debug) return;
         auto full_message = String::build(String("DEB"), " :: ", message...);
         Platform::Console::write(full_message, 5, true);
-#endif
     }
     /**
      * @brief Logs given trace message if LOG_VERBOSE_ENABLED is set to one.
@@ -94,10 +91,9 @@ class Logger {
      */
     template<typename... Args>
     static void trace(const Args&... message) {
-#if LOG_VERBOSE_ENABLED
+        if (!log_verbose) return;
         auto full_message = String::build(String("VER"), " :: ", message...);
         Platform::Console::write(full_message, 0, true);
-#endif
     }
 
     // Classes for error data auto-reporting
@@ -153,20 +149,16 @@ class Logger {
         const String _file;
         const uint32 _line;
     };
+};
+
+// #undef error
+// #define error __REPORT_ERROR__(__PRETTY_FUNCTION__, __FILE__, __LINE__)
 
 #undef fatal
 #define fatal __REPORT_FATAL__(__PRETTY_FUNCTION__, __FILE__, __LINE__)
+
 #define LOG_LOCATION                                                           \
     "\n :: File \"", __FILE__, "\", line ", __LINE__, ". Function ",           \
         __PRETTY_FUNCTION__, "."
 
-    // #undef error
-    // #define error __REPORT_ERROR__(__func__, __FILE__, __LINE__)
-};
-
 } // namespace ENGINE_NAMESPACE
-
-#undef LOG_WARNING_ENABLED
-#undef LOG_INFO_ENABLED
-#undef LOG_DEBUG_ENABLED
-#undef LOG_VERBOSE_ENABLED

@@ -7,22 +7,10 @@
 namespace ENGINE_NAMESPACE {
 
 /**
- * @brief List of supported backend APIs
- */
-enum RendererBackendType { Vulkan };
-
-/**
  * @brief The renderer frontend. Interacts with the device using the backend, in
  * a API agnostic way.
  */
 class Renderer {
-  public:
-    struct Builtin {
-        constexpr static const char* const WorldPass =
-            "Renderpass.Builtin.World";
-        constexpr static const char* const UIPass = "Renderpass.Builtin.UI";
-    };
-
   public:
     // TODO: TEMP TEST CODE BEGIN
     Shader* material_shader = nullptr;
@@ -36,7 +24,8 @@ class Renderer {
      * @param surface A pointer to the render surface
      */
     Renderer(
-        const RendererBackendType backend_type, Platform::Surface* const surface
+        const RendererBackend::Type backend_type,
+        Platform::Surface* const    surface
     );
     ~Renderer();
 
@@ -70,53 +59,40 @@ class Renderer {
      * @param texture Texture to be upload
      * @param data Raw texture image data
      */
-    void create_texture(Texture* texture, const byte* const data);
+
+    /**
+     * @brief Create a texture and upload its relevant data to the GPU
+     *
+     * @param config Texture configuration under which texture will be created
+     * @param data Raw texture image byte data
+     * @return Texture* Created texture
+     */
+    Texture* create_texture(
+        const Texture::Config& config, const byte* const data
+    );
     /**
      * @brief Create a writable texture object with no initial data.
-     * @param texture Texture to be uploaded
+     * @param config Texture configuration under which texture will be created
+     * @return Texture* Created texture
      */
-    void create_writable_texture(Texture* texture);
+    Texture* create_writable_texture(const Texture::Config& texture);
     /**
      * @brief Destroy a texture and free its corresponding GPU resources
      * @param texture Texture to be destroy
      */
-    void destroy_texture(Texture* texture);
+    void     destroy_texture(Texture* texture);
 
     /**
-     * @brief Resizes a texture. Internally texture is destroyed and recreated.
-     * @param texture Texture to be resized
-     * @param width New width in pixels
-     * @param height New Height in pixels
+     * @brief Create a texture map according to provided configuration
+     * @param config Configuration under which texture map will be created
+     * @return Texture::Map* Created texture map
      */
-    void resize_texture(
-        Texture* const texture, const uint32 width, const uint32 height
-    );
-
+    Texture::Map* create_texture_map(const Texture::Map::Config& config);
     /**
-     * @brief Write data to provided texture. NOTE: This code wont block write
-     * requests for non-writable textures.
-     * @param texture Texture to be written to
-     * @param data Raw data to be written
-     * @param offset Offset in bytes from which write starts
+     * @brief Destroy given texture map
+     * @param map Map to be destroyed
      */
-    void texture_write_data(
-        Texture* const texture, const Vector<byte>& data, const uint32 offset
-    );
-
-    /**
-     * @brief Write data to provided texture. NOTE: This code wont block write
-     * requests for non-writable textures.
-     * @param texture Texture to be written to
-     * @param data Raw data bytes to be written
-     * @param size Data size in bytes
-     * @param offset Offset in bytes from which write starts
-     */
-    void texture_write_data(
-        Texture* const    texture,
-        const byte* const data,
-        const uint32      size,
-        const uint32      offset
-    );
+    void          destroy_texture_map(Texture::Map* map);
 
     /**
      * @brief Create a geometry and upload its relevant data to the GPU
@@ -140,9 +116,9 @@ class Renderer {
     /**
      * @brief Create a shader object and upload relevant data to the GPU
      * @param config Shader configuration
-     * @return Pointer referencing the shader created object
+     * @return Shader* Created shader object
      */
-    Shader* create_shader(const Shader::Config config);
+    Shader* create_shader(const Shader::Config& config);
     /**
      * @brief Destroy shader and free its corresponding GPU resources
      * @param shader Shader to be destroyed.
@@ -193,8 +169,19 @@ class Renderer {
      */
     Result<RenderPass*, RuntimeError> get_renderpass(const String& name);
 
+    /**
+     * @brief Link renderer with already initialized systems which use it
+     * @param texture_system Reference to texture system
+     */
+    void link_with_systems(TextureSystem* const texture_system) {
+        _texture_system = texture_system;
+    }
+
   private:
     RendererBackend* _backend = nullptr;
+
+    // System references
+    TextureSystem* _texture_system = nullptr;
 
     // TODO: View configurable
     RenderPass* _world_renderpass;

@@ -40,7 +40,6 @@ Result<Shader*, RuntimeError> ShaderSystem::create(Shader::Config config) {
         Logger::error(SHADER_SYS_LOG, error_message);
         return Failure(error_message);
     }
-    config.texture_system = _texture_system;
 
     if (_registered_shaders.contains(config.name)) {
         Logger::warning(

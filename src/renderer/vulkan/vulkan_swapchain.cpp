@@ -51,25 +51,15 @@ VulkanSwapchain::~VulkanSwapchain() {
     destroy();
 
     // Clear color attachment
-    if (_color_attachment) {
-        if (_color_attachment->internal_data)
-            del(_color_attachment->internal_data());
-        del(_color_attachment);
-    }
+    if (_color_attachment) del(_color_attachment);
     // Clear depth attachment
-    if (_depth_attachment) {
-        if (_depth_attachment->internal_data)
-            del(_depth_attachment->internal_data());
-        del(_depth_attachment);
-    }
+    if (_depth_attachment) del(_depth_attachment);
     // Clear render textures
     for (auto& texture : _render_textures) {
-        auto data =
-            reinterpret_cast<VulkanTextureData*>(texture->internal_data());
         _device->handle().waitIdle();
-        if (data->image) {
-            data->image->create(nullptr, 0, 0);
-            del(data->image);
+        if (texture->image()) {
+            texture->image()->create(nullptr, 0, 0);
+            del(texture->image());
         }
     }
     _render_textures.clear();
@@ -265,73 +255,75 @@ void VulkanSwapchain::create() {
                 "__internal_vulkan_swapchain_render_texture_", i, "__"
             );
 
-            // Create new wrapped texture (Not managed by the texture system)
-            Texture* const texture = new (MemoryTag::Texture) Texture(
-                texture_name,
-                _extent.width,
-                _extent.height,
-                4,     // Channel count
-                false, // Transparent
-                true,  // Writable
-                true   // Wrapped
-            );
-
-            // Fill internal data
-            auto internal_data =
-                new (MemoryTag::GPUTexture) VulkanTextureData();
-            internal_data->image =
+            // Create vulkan image
+            const auto image =
                 new (MemoryTag::GPUTexture) VulkanImage(_device, _allocator);
-            internal_data->image->create(
-                swapchain_images[i], _extent.width, _extent.height
-            );
-            texture->internal_data = internal_data;
+            image->create(swapchain_images[i], _extent.width, _extent.height);
 
+            // Create new wrapped texture (Not managed by the texture system)
+            VulkanTexture* const texture =
+                new (MemoryTag::Texture) VulkanTexture(
+                    {
+                        texture_name,
+                        _extent.width,
+                        _extent.height,
+                        4,     // Channel count
+                        false, // Mipmaping
+                        false, // Transparent
+                        true,  // Writable
+                        true   // Wrapped
+                    },
+                    image,
+                    nullptr,
+                    _device,
+                    _allocator
+                );
+
+            // Add this texture
             _render_textures.push_back(texture);
         }
     } else {
         // Just resize
         for (uint32 i = 0; i < swapchain_images.size(); i++) {
             // Resize texture
-            _render_textures[i]->resize(extent.width, extent.height);
+            const auto res =
+                _render_textures[i]->resize(extent.width, extent.height);
 
-            // Resize image internal
-            auto internal_data = reinterpret_cast<VulkanTextureData*>(
-                _render_textures[i]->internal_data()
-            );
-            internal_data->image->create(
+            if (res.failed())
+                Logger::fatal(
+                    RENDERER_VULKAN_LOG,
+                    "Swapchain resize failed. Something terribly wrong must "
+                    "have happened."
+                );
+
+            // Recreate image
+            _render_textures[i]->image()->create(
                 swapchain_images[i], _extent.width, _extent.height
             );
         }
     }
 
     // Create swapchain image views
-    for (const auto& texture : _render_textures) {
-        auto internal_data =
-            reinterpret_cast<VulkanTextureData*>(texture->internal_data());
-
-        internal_data->image->create_view(
+    for (const auto& texture : _render_textures)
+        texture->image()->create_view(
             1, _format, vk::ImageAspectFlagBits::eColor
         );
-    }
 }
 
 void VulkanSwapchain::destroy() {
     // Destroy image resources
-    if (_color_attachment && _color_attachment->internal_data) {
-        auto data = (VulkanTextureData*) _color_attachment->internal_data();
-        delete data->image;
+    if (_color_attachment && _color_attachment->image) {
+        del(_color_attachment->image());
+        _color_attachment->image = nullptr;
     }
-    if (_depth_attachment && _depth_attachment->internal_data) {
-        auto data = (VulkanTextureData*) _depth_attachment->internal_data();
-        delete data->image;
+    if (_depth_attachment && _depth_attachment->image) {
+        del(_depth_attachment->image());
+        _depth_attachment->image = nullptr;
     }
 
     // Destroy image views
-    for (const auto& texture : _render_textures) {
-        auto internal_data =
-            reinterpret_cast<VulkanTextureData*>(texture->internal_data());
-        internal_data->image->destroy_view();
-    }
+    for (const auto& texture : _render_textures)
+        texture->image()->destroy_view();
 
     // Destroy handle
     _device->handle().destroySwapchainKHR(_handle, _allocator);
@@ -354,28 +346,32 @@ void VulkanSwapchain::recreate() {
 }
 
 void VulkanSwapchain::create_color_resource() {
-    if (_color_attachment == nullptr) {
+    if (_color_attachment == nullptr)
         // Create new wrapped texture (Not managed by the texture system)
-        _color_attachment = new (MemoryTag::Texture) Texture(
-            "__default_color_attachment_texture__",
-            _extent.width,
-            _extent.height,
-            4,     // Channel count
-            false, // Transparent
-            true,  // Writable
-            true   // Wrapped
+        _color_attachment = new (MemoryTag::Texture) VulkanTexture(
+            {
+                "__default_color_attachment_texture__",
+                _extent.width,
+                _extent.height,
+                4,     // Channel count
+                false, // Mipmaping
+                false, // Transparent
+                true,  // Writable
+                true   // Wrapped
+            },
+            nullptr,
+            nullptr,
+            _device,
+            _allocator
         );
-        _color_attachment->internal_data =
-            new (MemoryTag::GPUTexture) VulkanTextureData();
-    } else {
+    else
         // Resize
         _color_attachment->resize(_extent.width, _extent.height);
-    }
 
-    // Fill internal data
-    const auto data = (VulkanTextureData*) _color_attachment->internal_data();
-    data->image = new (MemoryTag::GPUTexture) VulkanImage(_device, _allocator);
-    data->image->create(
+    // Create new vulkan image
+    _color_attachment->image =
+        new (MemoryTag::GPUTexture) VulkanImage(_device, _allocator);
+    _color_attachment->image()->create(
         _extent.width,
         _extent.height,
         1,
@@ -388,28 +384,32 @@ void VulkanSwapchain::create_color_resource() {
     );
 }
 void VulkanSwapchain::create_depth_resources() {
-    if (_depth_attachment == nullptr) {
+    if (_depth_attachment == nullptr)
         // Create new wrapped texture (Not managed by the texture system)
-        _depth_attachment = new (MemoryTag::Texture) Texture(
-            "__default_depth_attachment_texture__",
-            _extent.width,
-            _extent.height,
-            _depth_format_channel_count,
-            false, // Transparent
-            true,  // Writable
-            true   // Wrapped
+        _depth_attachment = new (MemoryTag::Texture) VulkanTexture(
+            {
+                "__default_depth_attachment_texture__",
+                _extent.width,
+                _extent.height,
+                _depth_format_channel_count,
+                false, // Mipmaping
+                false, // Transparent
+                true,  // Writable
+                true   // Wrapped
+            },
+            nullptr,
+            nullptr,
+            _device,
+            _allocator
         );
-        _depth_attachment->internal_data =
-            new (MemoryTag::GPUTexture) VulkanTextureData();
-    } else {
+    else
         // Resize
         _depth_attachment->resize(_extent.width, _extent.height);
-    }
 
-    // Fill internal data
-    const auto data = (VulkanTextureData*) _depth_attachment->internal_data();
-    data->image = new (MemoryTag::GPUTexture) VulkanImage(_device, _allocator);
-    data->image->create(
+    // Create new vulkan image
+    _depth_attachment->image =
+        new (MemoryTag::GPUTexture) VulkanImage(_device, _allocator);
+    _depth_attachment->image()->create(
         _extent.width,
         _extent.height,
         1,

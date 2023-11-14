@@ -31,7 +31,7 @@ class VulkanImage {
         GET { return _height; }
     };
     /// @brief Number of mipmap levels used
-    Property<uint32> mip_levels {
+    Property<uint8> mip_levels {
         GET { return _mip_levels; }
     };
 
@@ -69,7 +69,7 @@ class VulkanImage {
     void create(
         const uint32                  width,
         const uint32                  height,
-        const uint32                  mip_levels,
+        const uint8                   mip_levels,
         const vk::SampleCountFlagBits number_of_samples,
         const vk::Format              format,
         const vk::ImageTiling         tiling,
@@ -92,7 +92,7 @@ class VulkanImage {
     void create(
         const uint32                  width,
         const uint32                  height,
-        const uint32                  mip_levels,
+        const uint8                   mip_levels,
         const vk::SampleCountFlagBits number_of_samples,
         const vk::Format              format,
         const vk::ImageTiling         tiling,
@@ -108,7 +108,7 @@ class VulkanImage {
     /// @param aspect_flags Image aspect covered (eg. color, depth...)
     void create(
         const vk::Image            image,
-        const uint32               mip_levels,
+        const uint8                mip_levels,
         const vk::Format           format,
         const vk::ImageAspectFlags aspect_flags
     );
@@ -119,7 +119,7 @@ class VulkanImage {
     /// @param aspect_flags Image aspect covered (eg. color, depth...)
     /// @returns Image view
     void create_view(
-        const uint32               mip_levels,
+        const uint8                mip_levels,
         const vk::Format           format,
         const vk::ImageAspectFlags aspect_flags
     );
@@ -157,7 +157,7 @@ class VulkanImage {
 
     uint32               _width;
     uint32               _height;
-    uint32               _mip_levels;
+    uint8                _mip_levels;
     vk::Format           _format;
     vk::ImageAspectFlags _aspect_flags;
 };

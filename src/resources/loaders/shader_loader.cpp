@@ -7,12 +7,13 @@
 namespace ENGINE_NAMESPACE {
 
 struct ShaderVars {
-    STRING_CONST(version);
-    STRING_CONST(name);
-    STRING_CONST(renderpass);
-    STRING_CONST(stages);
-    STRING_CONST(attribute);
-    STRING_CONST(uniform);
+    STRING_ENUM(version);
+    STRING_ENUM(name);
+    STRING_ENUM(renderpass);
+    STRING_ENUM(stages);
+    STRING_ENUM(cull_mode);
+    STRING_ENUM(attribute);
+    STRING_ENUM(uniform);
 };
 
 Result<Shader::Attribute, RuntimeErrorCode> parse_attribute_config(
@@ -40,8 +41,9 @@ Result<Resource*, RuntimeError> ShaderLoader::load(const String name) {
     uint8                           shader_stages           = 0;
     Vector<Shader::Attribute>       shader_attributes       = {};
     Vector<Shader::Uniform::Config> shader_uniforms         = {};
-    bool                            shader_has_instances    = false;
-    bool                            shader_has_locals       = false;
+    Shader::CullMode                shader_cull_mode = Shader::CullMode::Back;
+    bool                            shader_has_instances = false;
+    bool                            shader_has_locals    = false;
 
     // Load material configuration from file
     String file_name = name + ".shadercfg";
@@ -142,6 +144,17 @@ Result<Resource*, RuntimeError> ShaderLoader::load(const String name) {
                     );
             }
         }
+        // CULL MODE
+        else if (setting_var.compare(ShaderVars::cull_mode) == 0) {
+            if (setting_val.compare("none"))
+                shader_cull_mode = Shader::CullMode::None;
+            else if (setting_val.compare("front"))
+                shader_cull_mode = Shader::CullMode::Back;
+            else if (setting_val.compare("back"))
+                shader_cull_mode = Shader::CullMode::Front;
+            else if (setting_val.compare("both"))
+                shader_cull_mode = Shader::CullMode::Both;
+        }
         // ATTRIBUTES
         else if (setting_var.compare(ShaderVars::attribute) == 0) {
             auto attribute = parse_attribute_config(setting_val);
@@ -233,6 +246,7 @@ Result<Resource*, RuntimeError> ShaderLoader::load(const String name) {
         shader_stages,
         shader_attributes,
         shader_uniforms,
+        shader_cull_mode,
         shader_has_instances,
         shader_has_locals
     );
