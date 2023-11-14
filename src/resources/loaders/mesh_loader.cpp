@@ -185,7 +185,7 @@ Result<GeometryConfigArray*, RuntimeError> load_mesh(
 namespace ENGINE_NAMESPACE {
 
 // Local helper
-String               create_mat_file(const MaterialConfig& config);
+String               create_mat_file(const Material::Config& config);
 Result<uint32, bool> fuzzy_get_index(
     Map<float32, std::pair<Vertex3D, uint32>>& vertex_map, Vertex3D& vertex
 );
@@ -350,7 +350,7 @@ Result<uint32, bool> fuzzy_get_index(
 
 #define write_setting(setting) file->write_ln(#setting, "=", config.setting);
 
-String create_mat_file(const MaterialConfig& config) {
+String create_mat_file(const Material::Config& config) {
     // Material path
     auto full_path = String::build(
         ResourceSystem::base_path, "/", MAT_PATH, "/", config.name, ".mat"

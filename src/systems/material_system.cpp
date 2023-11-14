@@ -81,7 +81,7 @@ Material* MaterialSystem::acquire(const String name) {
         );
         return _default_material;
     }
-    auto material_config = (MaterialConfig*) config_result.value();
+    auto material_config = (Material::Config*) config_result.value();
 
     // Create material with loaded configs
     auto material_result = create_material(*material_config);
@@ -99,7 +99,7 @@ Material* MaterialSystem::acquire(const String name) {
     Logger::trace(MATERIAL_SYS_LOG, "Material \"", name, "\" acquired.");
     return material_ref.handle;
 }
-Material* MaterialSystem::acquire(const MaterialConfig& config) {
+Material* MaterialSystem::acquire(const Material::Config& config) {
     Logger::trace(
         MATERIAL_SYS_LOG, "Material \"", config.name, "\" requested."
     );
@@ -238,7 +238,7 @@ void MaterialSystem::create_default_material() {
                         : or_default
 
 Result<MaterialSystem::MaterialRef, RuntimeError> //
-MaterialSystem::create_material(const MaterialConfig& config) {
+MaterialSystem::create_material(const Material::Config& config) {
     // Get shader
     auto shader = _shader_system->acquire(config.shader).value_or(nullptr);
     if (shader == nullptr) {

@@ -184,7 +184,7 @@ Result<Resource*, RuntimeError> MaterialLoader::load(const String name) {
     }
 
     // Create material config
-    auto material_config = new (MemoryTag::Resource) MaterialConfig(
+    auto material_config = new (MemoryTag::Resource) Material::Config(
         mat_name,
         mat_shader,
         mat_diffuse_map_name,
@@ -202,7 +202,7 @@ Result<Resource*, RuntimeError> MaterialLoader::load(const String name) {
 void MaterialLoader::unload(Resource* resource) {
     can_unload(ResourceType::Material, resource);
 
-    MaterialConfig* res = (MaterialConfig*) resource;
+    Material::Config* res = (Material::Config*) resource;
     delete res;
 }
 
