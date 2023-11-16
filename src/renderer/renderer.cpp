@@ -29,18 +29,28 @@ Renderer::Renderer(
     const auto height = surface->get_height_in_pixels();
 
     // Create render passes
-    _world_renderpass = _backend->create_render_pass({
-        RenderPass::BuiltIn::WorldPass,       // Name
+    _skybox_renderpass = _backend->create_render_pass({
+        RenderPass::BuiltIn::SkyboxPass,      // Name
         "",                                   // Prev
+        RenderPass::BuiltIn::WorldPass,       // Next
+        glm::vec2 { 0, 0 },                   // Draw offset
+        glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f }, // Clear color
+        RenderPass::ClearFlags::Color,        // Clear flags
+        false,                                // Depth testing
+        true                                  // Multisampling
+    });
+    _world_renderpass  = _backend->create_render_pass({
+        RenderPass::BuiltIn::WorldPass,       // Name
+        RenderPass::BuiltIn::SkyboxPass,      // Prev
         RenderPass::BuiltIn::UIPass,          // Next
         glm::vec2 { 0, 0 },                   // Draw offset
         glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f }, // Clear color
-        RenderPass::ClearFlags::Color | RenderPass::ClearFlags::Depth |
+        RenderPass::ClearFlags::Depth |
             RenderPass::ClearFlags::Stencil, // Clear flags
         true,                                // Depth testing
         true                                 // Multisampling
     });
-    _ui_renderpass    = _backend->create_render_pass({
+    _ui_renderpass     = _backend->create_render_pass({
         RenderPass::BuiltIn::UIPass,          // Name
         RenderPass::BuiltIn::WorldPass,       // Prev
         "",                                   // Next
@@ -52,24 +62,9 @@ Renderer::Renderer(
     });
 
     // Create render targets
-    const auto count = _backend->get_window_attachment_count();
-    for (uint8 i = 0; i < count; i++) {
-        // Gather render target attachments
-        Vector<Texture*> attachments {};
-        attachments.push_back(_backend->get_color_attachment());
-        attachments.push_back(_backend->get_depth_attachment());
-        attachments.push_back(_backend->get_window_attachment(i));
-        // Add new render target
-        _world_renderpass->add_render_target(
-            create_render_target(_world_renderpass, width, height, attachments)
-        );
-        _ui_renderpass->add_render_target(create_render_target(
-            _ui_renderpass,
-            width,
-            height,
-            { _backend->get_window_attachment(i) }
-        ));
-    }
+    _world_renderpass->add_window_as_render_target();
+    _ui_renderpass->add_window_as_render_target();
+    _skybox_renderpass->add_window_as_render_target();
 }
 Renderer::~Renderer() { delete _backend; }
 
@@ -190,29 +185,6 @@ Shader* Renderer::create_shader(const Shader::Config& config) {
 void Renderer::destroy_shader(Shader* shader) {
     _backend->destroy_shader(shader);
     Logger::trace(RENDERER_LOG, "Shader destroyed [", shader->get_name(), "].");
-}
-
-// -----------------------------------------------------------------------------
-// Render target
-// -----------------------------------------------------------------------------
-
-RenderTarget* Renderer::create_render_target(
-    RenderPass* const       pass,
-    const uint32            width,
-    const uint32            height,
-    const Vector<Texture*>& attachments
-) {
-    Logger::trace(RENDERER_LOG, "Creating render target.");
-    const auto res =
-        _backend->create_render_target(pass, width, height, attachments);
-    Logger::trace(RENDERER_LOG, "Render target created.");
-    return res;
-}
-void Renderer::destroy_render_target(
-    RenderTarget* const render_target, const bool free_internal_data
-) {
-    _backend->destroy_render_target(render_target, free_internal_data);
-    Logger::trace(RENDERER_LOG, "Render target destroyed.");
 }
 
 // -----------------------------------------------------------------------------

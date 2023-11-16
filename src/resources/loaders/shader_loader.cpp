@@ -42,8 +42,6 @@ Result<Resource*, RuntimeError> ShaderLoader::load(const String name) {
     Vector<Shader::Attribute>       shader_attributes       = {};
     Vector<Shader::Uniform::Config> shader_uniforms         = {};
     Shader::CullMode                shader_cull_mode = Shader::CullMode::Back;
-    bool                            shader_has_instances = false;
-    bool                            shader_has_locals    = false;
 
     // Load material configuration from file
     String file_name = name + ".shadercfg";
@@ -216,10 +214,6 @@ Result<Resource*, RuntimeError> ShaderLoader::load(const String name) {
                 Ok() {
                     auto uniform = uniform_res.value();
                     shader_uniforms.push_back(uniform);
-                    if (uniform.scope == Shader::Scope::Instance)
-                        shader_has_instances = true;
-                    if (uniform.scope == Shader::Scope::Local)
-                        shader_has_locals = true;
                 }
             }
         }
@@ -246,9 +240,7 @@ Result<Resource*, RuntimeError> ShaderLoader::load(const String name) {
         shader_stages,
         shader_attributes,
         shader_uniforms,
-        shader_cull_mode,
-        shader_has_instances,
-        shader_has_locals
+        shader_cull_mode
     );
     shader_config->full_path   = file_path;
     shader_config->loader_type = ResourceType::Shader;

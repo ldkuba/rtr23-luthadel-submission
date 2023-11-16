@@ -259,6 +259,7 @@ void VulkanSwapchain::create() {
             const auto image =
                 new (MemoryTag::GPUTexture) VulkanImage(_device, _allocator);
             image->create(swapchain_images[i], _extent.width, _extent.height);
+            image->format = _format;
 
             // Create new wrapped texture (Not managed by the texture system)
             VulkanTexture* const texture =
@@ -305,9 +306,7 @@ void VulkanSwapchain::create() {
 
     // Create swapchain image views
     for (const auto& texture : _render_textures)
-        texture->image()->create_view(
-            1, _format, vk::ImageAspectFlagBits::eColor
-        );
+        texture->image()->create_view(vk::ImageAspectFlagBits::eColor);
 }
 
 void VulkanSwapchain::destroy() {
@@ -371,7 +370,7 @@ void VulkanSwapchain::create_color_resource() {
     // Create new vulkan image
     _color_attachment->image =
         new (MemoryTag::GPUTexture) VulkanImage(_device, _allocator);
-    _color_attachment->image()->create(
+    _color_attachment->image()->create_2d(
         _extent.width,
         _extent.height,
         1,
@@ -409,7 +408,7 @@ void VulkanSwapchain::create_depth_resources() {
     // Create new vulkan image
     _depth_attachment->image =
         new (MemoryTag::GPUTexture) VulkanImage(_device, _allocator);
-    _depth_attachment->image()->create(
+    _depth_attachment->image()->create_2d(
         _extent.width,
         _extent.height,
         1,

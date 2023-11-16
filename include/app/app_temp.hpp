@@ -9,6 +9,7 @@
 #include "resources/mesh.hpp"
 #include "renderer/views/render_view_world.hpp"
 #include "renderer/views/render_view_ui.hpp"
+#include "renderer/views/render_view_skybox.hpp"
 
 namespace ENGINE_NAMESPACE {
 
@@ -52,8 +53,11 @@ class TestApplication {
     bool _app_should_close = false;
     bool _cube_rotation    = false;
 
-    RenderViewWorld* _ow_render_view;
-    RenderViewUI*    _ui_render_view;
+    RenderViewWorld*  _ow_render_view;
+    RenderViewUI*     _ui_render_view;
+    RenderViewSkybox* _sb_render_view;
+
+    Skybox default_skybox { 0, 0, 0 };
 
     void setup_input();
 };

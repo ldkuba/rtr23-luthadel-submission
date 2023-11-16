@@ -15,6 +15,7 @@ class Renderer {
     // TODO: TEMP TEST CODE BEGIN
     Shader* material_shader = nullptr;
     Shader* ui_shader       = nullptr;
+    Shader* skybox_shader   = nullptr;
     // TODO: TEMP TEST CODE END
 
     /**
@@ -126,30 +127,6 @@ class Renderer {
     void    destroy_shader(Shader* shader);
 
     /**
-     * @brief Create a render target object.
-     * @param pass Associated render pass
-     * @param width Render target width in pixels
-     * @param height Render target height in pixels
-     * @param attachments Array of target attachments (Textures)
-     * @returns RenderTarget* Created render target
-     */
-    RenderTarget* create_render_target(
-        RenderPass* const       pass,
-        const uint32            width,
-        const uint32            height,
-        const Vector<Texture*>& attachments
-    );
-    /**
-     * @brief Destroy provided render target
-     * @param render_target Target to be destroyed
-     * @param free_internal_data If true also frees internal render target GPU
-     * memory
-     */
-    void destroy_render_target(
-        RenderTarget* const render_target, const bool free_internal_data = true
-    );
-
-    /**
      * @brief Create a render pass object
      * @param config Render pass configurations
      * @returns RenderPass* Created render pass
@@ -186,6 +163,7 @@ class Renderer {
     // TODO: View configurable
     RenderPass* _world_renderpass;
     RenderPass* _ui_renderpass;
+    RenderPass* _skybox_renderpass;
 };
 
 template<uint8 Dim>

@@ -236,25 +236,46 @@ Texture* VulkanBackend::create_texture(
 
     // Get format
     const auto texture_format =
-        VulkanTexture::channel_count_to_SRGB(config.channel_count);
+        VulkanTexture::channel_count_to_UNORM(config.channel_count);
 
     // Create device side image
     // NOTE: Lots of assumptions here
     auto texture_image =
         new (MemoryTag::GPUTexture) VulkanImage(_device, _allocator);
-    texture_image->create(
-        config.width,
-        config.height,
-        config.mip_level_count,
-        vk::SampleCountFlagBits::e1,
-        texture_format,
-        vk::ImageTiling::eOptimal,
-        vk::ImageUsageFlagBits::eTransferSrc |
-            vk::ImageUsageFlagBits::eTransferDst |
-            vk::ImageUsageFlagBits::eSampled,
-        vk::MemoryPropertyFlagBits::eDeviceLocal,
-        vk::ImageAspectFlagBits::eColor
-    );
+    if (config.type == Texture::Type::T2D) {
+        texture_image->create_2d(
+            config.width,
+            config.height,
+            config.mip_level_count,
+            vk::SampleCountFlagBits::e1,
+            texture_format,
+            vk::ImageTiling::eOptimal,
+            vk::ImageUsageFlagBits::eTransferSrc |
+                vk::ImageUsageFlagBits::eTransferDst |
+                vk::ImageUsageFlagBits::eSampled,
+            vk::MemoryPropertyFlagBits::eDeviceLocal,
+            vk::ImageAspectFlagBits::eColor
+        );
+    } else if (config.type == Texture::Type::TCube) {
+        texture_image->create_cube(
+            config.width,
+            config.height,
+            config.mip_level_count,
+            vk::SampleCountFlagBits::e1,
+            texture_format,
+            vk::ImageTiling::eOptimal,
+            vk::ImageUsageFlagBits::eTransferSrc |
+                vk::ImageUsageFlagBits::eTransferDst |
+                vk::ImageUsageFlagBits::eSampled,
+            vk::MemoryPropertyFlagBits::eDeviceLocal,
+            vk::ImageAspectFlagBits::eColor
+        );
+    } else {
+        Logger::fatal(
+            RENDERER_VULKAN_LOG,
+            "Creation of this texture type is unimplemented."
+        );
+    }
 
     // Create texture
     const auto texture = new (MemoryTag::Texture
@@ -278,7 +299,7 @@ Texture* VulkanBackend::create_writable_texture(const Texture::Config& config) {
     // NOTE: Lots of assumptions here
     auto texture_image =
         new (MemoryTag::GPUTexture) VulkanImage(_device, _allocator);
-    texture_image->create(
+    texture_image->create_2d(
         config.width,
         config.height,
         config.mip_level_count,
@@ -489,55 +510,6 @@ void VulkanBackend::destroy_shader(Shader* const shader) {
 }
 
 // -----------------------------------------------------------------------------
-// Render target
-// -----------------------------------------------------------------------------
-
-RenderTarget* VulkanBackend::create_render_target(
-    RenderPass* const       pass,
-    const uint32            width,
-    const uint32            height,
-    const Vector<Texture*>& attachments
-) {
-    const auto vulkan_pass = dynamic_cast<VulkanRenderPass*>(pass);
-
-    // Scan for image views needed for framebuffer
-    Vector<vk::ImageView> view_attachments { attachments.size() };
-    for (uint32 i = 0; i < attachments.size(); i++) {
-        const auto v_texture = (VulkanTexture*) attachments[i];
-        view_attachments[i]  = v_texture->image()->view;
-    }
-
-    // Create render target appropriate framebuffer
-    const auto framebuffer = new (MemoryTag::GPUBuffer) VulkanFramebuffer(
-        &_device->handle(),
-        _allocator,
-        vulkan_pass,
-        width,
-        height,
-        view_attachments
-    );
-
-    // Store to render target
-    const auto target = new (MemoryTag::GPUBuffer)
-        RenderTarget(attachments, framebuffer, width, height);
-
-    // Sync to window resize
-    // TODO: Use `_sync_to_window_resize` bool
-    _swapchain->recreate_event.subscribe(target, &RenderTarget::resize);
-
-    return target;
-}
-void VulkanBackend::destroy_render_target(
-    RenderTarget* const render_target, const bool free_internal_data
-) {
-    const auto vk_framebuffer =
-        dynamic_cast<VulkanFramebuffer*>(render_target->framebuffer());
-    delete vk_framebuffer;
-    if (free_internal_data) render_target->free_attachments();
-    delete render_target;
-}
-
-// -----------------------------------------------------------------------------
 // Render pass
 // -----------------------------------------------------------------------------
 
@@ -568,12 +540,12 @@ RenderPass* VulkanBackend::create_render_pass(const RenderPass::Config& config
 
     // Create and add this pass
     const auto renderpass = new (MemoryTag::GPUBuffer) VulkanRenderPass(
+        new_id,
+        config,
         &_device->handle(),
         _allocator,
-        _swapchain,
         _command_buffer,
-        new_id,
-        config
+        _swapchain
     );
     _registered_passes.push_back(renderpass);
 
@@ -581,12 +553,6 @@ RenderPass* VulkanBackend::create_render_pass(const RenderPass::Config& config
 }
 void VulkanBackend::destroy_render_pass(RenderPass* pass) {
     const auto vulkan_pass = dynamic_cast<VulkanRenderPass*>(pass);
-
-    // Clear all targets
-    for (const auto& target : vulkan_pass->render_targets())
-        destroy_render_target(target);
-
-    // Destroy pass
     del(vulkan_pass);
 }
 

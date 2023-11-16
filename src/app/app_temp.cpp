@@ -6,7 +6,16 @@ namespace ENGINE_NAMESPACE {
 
 // Constructor & Destructor
 TestApplication::TestApplication() {}
-TestApplication::~TestApplication() { delete _app_surface; }
+TestApplication::~TestApplication() {
+    // Temp
+    _app_renderer.skybox_shader->release_instance_resources(
+        default_skybox.instance_id
+    );
+    _texture_system.release(default_skybox.cube_map()->texture->name());
+    _app_renderer.destroy_texture_map(default_skybox.cube_map);
+
+    delete _app_surface;
+}
 
 // /////////////////////// //
 // APP TEMP PUBLIC METHODS //
@@ -24,9 +33,14 @@ void TestApplication::run() {
 
     // === Renderer ===
     _app_renderer.material_shader =
-        _shader_system.acquire(Shader::BuiltIn::MaterialShader).expect("ERR1");
-    _app_renderer.ui_shader =
-        _shader_system.acquire(Shader::BuiltIn::UIShader).expect("ERR2");
+        _shader_system.acquire(Shader::BuiltIn::MaterialShader)
+            .expect("Failed to load builtin material shader.");
+    _app_renderer.ui_shader = //
+        _shader_system.acquire(Shader::BuiltIn::UIShader)
+            .expect("Failed to load builtin ui shader.");
+    _app_renderer.skybox_shader =
+        _shader_system.acquire(Shader::BuiltIn::SkyboxShader)
+            .expect("Failed to load builtin skybox shader.");
 
     _app_renderer.material_shader->reload();
 
@@ -38,6 +52,17 @@ void TestApplication::run() {
     const auto height = _app_surface->get_height_in_pixels();
 
     // Configure
+    RenderView::Config skybox_view_config {
+        "skybox",
+        Shader::BuiltIn::SkyboxShader,
+        width,
+        height,
+        RenderView::Type::Skybox,
+        RenderView::ViewMatrixSource::SceneCamera,
+        RenderView::ProjectionMatrixSource::DefaultPerspective,
+        { _app_renderer.get_renderpass(RenderPass::BuiltIn::SkyboxPass)
+              .expect("Renderpass not found.") }
+    };
     RenderView::Config opaque_world_view_config {
         "world_opaque",
         Shader::BuiltIn::MaterialShader,
@@ -47,7 +72,7 @@ void TestApplication::run() {
         RenderView::ViewMatrixSource::SceneCamera,
         RenderView::ProjectionMatrixSource::DefaultPerspective,
         { _app_renderer.get_renderpass(RenderPass::BuiltIn::WorldPass)
-              .expect("ERR3") }
+              .expect("Renderpass not found.") }
     };
     RenderView::Config ui_view_config {
         "ui",
@@ -58,17 +83,19 @@ void TestApplication::run() {
         RenderView::ViewMatrixSource::SceneCamera,
         RenderView::ProjectionMatrixSource::DefaultPerspective,
         { _app_renderer.get_renderpass(RenderPass::BuiltIn::UIPass)
-              .expect("ERR4") }
+              .expect("Renderpass not found.") }
     };
 
     // Create
     const auto res_owv = _render_view_system.create(opaque_world_view_config);
     const auto res_uiv = _render_view_system.create(ui_view_config);
-    if (res_owv.has_error() || res_uiv.has_error())
+    const auto res_sbv = _render_view_system.create(skybox_view_config);
+    if (res_owv.has_error() || res_uiv.has_error() || res_sbv.has_error())
         Logger::fatal("Render view creation failed.");
 
     _ow_render_view = dynamic_cast<RenderViewWorld*>(res_owv.value());
     _ui_render_view = dynamic_cast<RenderViewUI*>(res_uiv.value());
+    _sb_render_view = dynamic_cast<RenderViewSkybox*>(res_sbv.value());
 
     // === Assign meshes ===
     Vector<Mesh*> meshes {};
@@ -156,11 +183,34 @@ void TestApplication::run() {
                                   "test_ui_material" };
     const auto         geom_2d = _geometry_system.acquire(config2d);
 
+    /// Load skybox
+    // Create geometry
+    Geometry* const skybox_geometry =
+        _geometry_system.generate_cube("cube", "");
+
+    // Create texture map
+    const auto skybox_map =
+        _app_renderer.create_texture_map(Texture::Map::Config {
+            _texture_system.acquire_cube("skybox/skybox", true),
+            Texture::Use::MapCube,
+            Texture::Filter::BiLinear,
+            Texture::Filter::BiLinear,
+            Texture::Repeat::Repeat,
+            Texture::Repeat::Repeat,
+            Texture::Repeat::Repeat });
+
+    // Acquire instance resources
+    const auto skybox_instance_id =
+        _app_renderer.skybox_shader->acquire_instance_resources({ skybox_map });
+
+    // Create skybox
+    default_skybox = { skybox_instance_id, skybox_map, skybox_geometry };
+
+    // === Mesh render data ===
     // Create mesh
     Mesh* mesh_ui = new Mesh(geom_2d);
     ui_meshes.push_back(mesh_ui);
 
-    // === Mesh render data ===
     // Create mesh data
     MeshRenderData world_mesh_data { meshes };
     MeshRenderData ui_mesh_data { ui_meshes };
@@ -168,6 +218,7 @@ void TestApplication::run() {
     // Set mesh data
     _ow_render_view->set_render_data_ref(&world_mesh_data);
     _ui_render_view->set_render_data_ref(&ui_mesh_data);
+    _sb_render_view->set_skybox_ref(&default_skybox);
 
     // === Main loop ===
     while (!_app_surface->should_close() && _app_should_close == false) {
@@ -188,6 +239,7 @@ void TestApplication::run() {
         // Construct render packet
         RenderPacket packet {};
         // Add views
+        packet.view_data.push_back(_sb_render_view->on_build_pocket());
         packet.view_data.push_back(_ow_render_view->on_build_pocket());
         packet.view_data.push_back(_ui_render_view->on_build_pocket());
 

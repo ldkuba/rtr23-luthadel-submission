@@ -160,30 +160,6 @@ class RendererBackend {
     virtual void destroy_shader(Shader* const shader) = 0;
 
     /**
-     * @brief Create a render target object.
-     * @param pass Associated render pass
-     * @param width Render target width in pixels
-     * @param height Render target height in pixels
-     * @param attachments Array of target attachments (Textures)
-     * @returns RenderTarget* Created render target
-     */
-    virtual RenderTarget* create_render_target(
-        RenderPass* const       pass,
-        const uint32            width,
-        const uint32            height,
-        const Vector<Texture*>& attachments
-    ) = 0;
-    /**
-     * @brief Destroy provided render target
-     * @param render_target Target to be destroyed
-     * @param free_internal_data If true also frees internal render target GPU
-     * memory
-     */
-    virtual void destroy_render_target(
-        RenderTarget* const render_target, const bool free_internal_data = true
-    ) = 0;
-
-    /**
      * @brief Create a render pass object
      * @param config Render pass configurations
      * @returns RenderPass* Created render pass

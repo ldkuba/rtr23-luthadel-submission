@@ -21,8 +21,7 @@ Shader::Shader(
     const Config&        config
 )
     : _renderer(renderer), _texture_system(texture_system), _name(config.name),
-      _use_instances(config.use_instances), _use_locals(config.use_locals),
-      _bound_instance_id(0) {
+      _cull_mode(config.cull_mode), _bound_instance_id(0) {
     // Process attributes
     for (const auto attribute : config.attributes) {
         _attribute_stride += attribute.size;
@@ -42,20 +41,6 @@ Shader::Shader(
                 " already exists for shader ",
                 _name,
                 "."
-            );
-        if (uniform.scope == Scope::Instance && !_use_instances)
-            Logger::fatal(
-                SHADER_LOG,
-                "Adding instance uniform \"",
-                uniform.name,
-                "\" for a shader that doesn't use instances isn't possible."
-            );
-        if (uniform.scope == Scope::Local && !_use_locals)
-            Logger::fatal(
-                SHADER_LOG,
-                "Adding local uniform \"",
-                uniform.name,
-                "\" for a shader that doesn't use locals isn't possible."
             );
 
         // Add uniform correctly
@@ -94,7 +79,8 @@ uint32 Shader::acquire_instance_resources(const Vector<Texture::Map*>& maps) {
 }
 void Shader::release_instance_resources(uint32 instance_id) {}
 
-Result<uint16, InvalidArgument> Shader::get_uniform_index(const String name) {
+Result<uint16, InvalidArgument> Shader::get_uniform_index(const String& name
+) const {
     auto it = _uniforms_hash.find(name);
     if (it == _uniforms_hash.end())
         return Failure(InvalidArgument(
@@ -189,6 +175,9 @@ void Shader::add_uniform(
 
         // Increase the push constant's size by the total value.
         _push_constant_size += range.size;
+
+        // Increase count
+        _uniform_count_local++;
     } else {
         entry.set_index = (uint32) config.scope;
         // If this is sampler size & offset are implicitly 0
@@ -197,10 +186,16 @@ void Shader::add_uniform(
             if (entry.scope == Scope::Global) {
                 entry.offset = _global_ubo_size;
                 _global_ubo_size += entry.size;
+                _uniform_count_global++;
             } else {
                 entry.offset = _ubo_size;
                 _ubo_size += entry.size;
+                _uniform_count_instance++;
             }
+        } else {
+            // Sampler
+            if (entry.scope == Scope::Global) _uniform_sampler_count_global++;
+            else _uniform_sampler_count_instance++;
         }
     }
 

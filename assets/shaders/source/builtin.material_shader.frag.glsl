@@ -25,7 +25,7 @@ struct PhongProperties{
 // TODO: Temp
 DirectionalLight directional_light={
     vec3(-.57735,-.57735,-.57735),
-    vec4(.8,.8,.8,1.)
+    vec4(.4,.4,.4,.8)
 };
 
 PointLight pl0={
@@ -81,7 +81,7 @@ vec4 calculate_point_lights(PointLight light,vec3 normal,vec3 frag_position,vec3
 void main(){
     vec3 normal=InDTO.surface_normal;
     vec3 tangent=InDTO.surface_tangent;
-    vec3 bitangent=cross(normal,tangent);
+    vec3 bitangent=cross(tangent,normal);
     
     // Make sure tanget is really orthogonal to normal vector
     // For this we use Gram-Schmidt process
@@ -91,8 +91,8 @@ void main(){
     TBN=mat3(tangent,bitangent,normal);
     
     // Texture normal sample (normalized to range 0 - 1)
-    vec3 local_normal=2.*sqrt(texture(samplers[normal_i],InDTO.texture_coordinate).rgb)-1.;
-    // vec3 local_normal=2.*texture(samplers[normal_i],InDTO.texture_coordinate).rgb-1.;
+    // vec3 local_normal=2.*sqrt(texture(samplers[normal_i],InDTO.texture_coordinate).rgb)-1.;
+    vec3 local_normal=2.*texture(samplers[normal_i],InDTO.texture_coordinate).rgb-1.;
     normal=normalize(TBN*local_normal);
     
     if(in_mode==0||in_mode==1){

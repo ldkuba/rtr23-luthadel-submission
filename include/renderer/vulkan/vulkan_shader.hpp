@@ -21,8 +21,9 @@ class VulkanShader : public Shader {
     struct VulkanDescriptorSetConfig {
         vk::DescriptorSetLayout                layout;
         Vector<vk::DescriptorSetLayoutBinding> bindings;
-        std::optional<uint8>                   uniform_index;
-        std::optional<uint8>                   sampler_index;
+        std::optional<uint8>                   uniform_index {};
+        std::optional<uint8>                   sampler_index {};
+        uint8                                  binding_count = 0;
     };
 
     /**
@@ -89,16 +90,12 @@ class VulkanShader : public Shader {
     Vector<VulkanDescriptorSetConfig*> _descriptor_set_configs;
     Vector<vk::DescriptorSet>          _global_descriptor_sets;
 
+    std::optional<uint8> global_set_index {};
+    std::optional<uint8> instance_set_index {};
+
     // Buffers
     VulkanManagedBuffer* _uniform_buffer;
     uint64               _uniform_buffer_offset;
-
-    // Constants
-    const uint32 _desc_set_index_global   = 0;
-    const uint32 _desc_set_index_instance = 1;
-
-    const uint8 _bind_index_ubo     = 0;
-    const uint8 _bind_index_sampler = 1;
 
     vk::ShaderModule create_shader_module(
         const vk::ShaderStageFlagBits shader_stage

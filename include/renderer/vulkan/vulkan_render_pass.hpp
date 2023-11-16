@@ -30,22 +30,22 @@ class VulkanRenderPass : public RenderPass {
     /**
      * @brief Construct a new Vulkan Render Pass object
      *
-     * @param device Vulkan device reference
-     * @param allocator Allocation callback used
-     * @param swapchain Swapchain reference
-     * @param command_buffer Buffer on which commands will be issued
      * @param id Unique vulkan render pass identifier
      * @param config Render pass configurations
+     * @param device Vulkan device reference
+     * @param allocator Allocation callback used
+     * @param command_buffer Buffer on which commands will be issued
+     * @param swapchain Swapchain reference
      */
     VulkanRenderPass(
+        const uint16                         id,
+        const Config&                        config,
         const vk::Device* const              device,
         const vk::AllocationCallbacks* const allocator,
-        const VulkanSwapchain* const         swapchain,
         const VulkanCommandBuffer* const     command_buffer,
-        const uint16                         id,
-        const Config&                        config
+        VulkanSwapchain* const               swapchain
     );
-    ~VulkanRenderPass();
+    ~VulkanRenderPass() override;
 
     /// @brief Begin render pass
     /// @param render_target Targeted to be used
@@ -53,11 +53,20 @@ class VulkanRenderPass : public RenderPass {
     /// @brief End render pass
     void end() override;
 
+    void add_window_as_render_target() override;
+    void add_render_target(
+        const uint32            width,
+        const uint32            height,
+        const Vector<Texture*>& attachments
+    ) override;
+
+    void clear_render_targets() override;
+
   private:
     const vk::Device*                    _device;
     const vk::AllocationCallbacks* const _allocator;
-    const VulkanSwapchain* const         _swapchain;
     const VulkanCommandBuffer* const     _command_buffer;
+    VulkanSwapchain* const               _swapchain;
 
     // Internal data
     vk::RenderPass _handle;

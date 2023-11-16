@@ -48,11 +48,7 @@ class RenderView {
         for (uint32 i = 0; i < _passes.size(); i++)
             _passes[i] = config.passes[i];
     }
-    ~RenderView() {}
-
-    virtual void set_render_data_ref(MeshRenderData* const data) {
-        _render_data = data;
-    };
+    virtual ~RenderView() {}
 
     virtual RenderViewPacket on_build_pocket()                      = 0;
     virtual void on_resize(const uint32 width, const uint32 height) = 0;
@@ -71,7 +67,6 @@ class RenderView {
     String _shader_name;
 
     Vector<RenderPass*> _passes {};
-    MeshRenderData*     _render_data = nullptr;
 };
 
 } // namespace ENGINE_NAMESPACE

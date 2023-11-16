@@ -1,6 +1,7 @@
 #include "systems/render_view_system.hpp"
 
 // TODO: TEMP INCLUSION, do by factory
+#include "renderer/views/render_view_skybox.hpp"
 #include "renderer/views/render_view_world.hpp"
 #include "renderer/views/render_view_ui.hpp"
 
@@ -17,7 +18,10 @@ RenderViewSystem::RenderViewSystem(
     : _shader_system(shader_system), _camera_system(camera_system) {
     surface->resize_event.subscribe(this, &RenderViewSystem::on_window_resize);
 }
-RenderViewSystem::~RenderViewSystem() {}
+RenderViewSystem::~RenderViewSystem() {
+    for (const auto& view : _registered_views)
+        del(view.second);
+}
 
 // ///////////////////////////////// //
 // RENDER VIEW SYSTEM PUBLIC METHODS //
@@ -66,6 +70,12 @@ Result<RenderView*, RuntimeError> RenderViewSystem::create(
     case RenderView::Type::World:
         // TODO: temp just default camera
         view = new (MemoryTag::RenderView) RenderViewWorld(
+            config, _shader_system, _camera_system->default_camera
+        );
+        break;
+    case RenderView::Type::Skybox:
+        // TODO: temp just default camera
+        view = new (MemoryTag::RenderView) RenderViewSkybox(
             config, _shader_system, _camera_system->default_camera
         );
         break;

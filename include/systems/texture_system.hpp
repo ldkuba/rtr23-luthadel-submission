@@ -79,6 +79,18 @@ class TextureSystem {
         const bool   has_transparency
     );
 
+    /**
+     * @brief Acquire texture cube resource from texture system. Texture system
+     * will load the texture from the appropriate location if it's unavailable.
+     * If texture loading fails default is returned instead.
+     * @param name Name of the requested texture
+     * @param auto_release If enabled texture system will automaticaly release
+     * the texture resource from memory if no references to the texture are
+     * detected. Can only be set if the texture resource isn't loaded yet.
+     * @return Texture*
+     */
+    Texture* acquire_cube(const String name, const bool auto_release);
+
     /// @brief Releases texture resource. Texture system will automatically
     /// release this texture from memory if no other references to it are
     /// detected and auto release flag is set to true.

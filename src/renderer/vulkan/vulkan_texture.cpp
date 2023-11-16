@@ -32,14 +32,14 @@ Outcome VulkanTexture::write(
     auto staging_buffer =
         new (MemoryTag::Temp) VulkanBuffer(_device, _allocator);
     staging_buffer->create(
-        _total_size,
+        size,
         vk::BufferUsageFlagBits::eTransferSrc,
         vk::MemoryPropertyFlagBits::eHostVisible |
             vk::MemoryPropertyFlagBits::eHostCoherent
     );
 
     // Fill created memory with data
-    staging_buffer->load_data(data, 0, _total_size);
+    staging_buffer->load_data(data, 0, size);
 
     auto command_buffer = _command_pool->begin_single_time_commands();
 
@@ -81,7 +81,7 @@ Outcome VulkanTexture::resize(const uint32 width, const uint32 height) {
     // Create new image
     auto texture_image =
         new (MemoryTag::GPUTexture) VulkanImage(_device, _allocator);
-    texture_image->create(
+    texture_image->create_2d(
         width,
         height,
         mip_level_count,

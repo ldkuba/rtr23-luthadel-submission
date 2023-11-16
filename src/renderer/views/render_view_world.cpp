@@ -27,7 +27,11 @@ RenderViewWorld::RenderViewWorld(
     }
 
     // Setup values
-    _shader    = res.value();
+    _shader = res.value();
+
+    // Setup shader indices
+    _u_index = { _shader };
+
     _near_clip = 0.1f;   // TODO: TEMP
     _far_clip  = 1000.f; // TODO: TEMP
     _fov       = glm::radians(45.f);
@@ -40,7 +44,7 @@ RenderViewWorld::RenderViewWorld(
     _world_camera = world_camera;
 
     // TODO: Obtain ambient color from the scene
-    _ambient_color = glm::vec4(0.25f, 0.25f, 0.25f, 1.f);
+    _ambient_color = glm::vec4(0.05f, 0.05f, 0.05f, .5f);
 }
 RenderViewWorld::~RenderViewWorld() {}
 
@@ -159,26 +163,30 @@ void RenderViewWorld::on_render(
 // RENDER VIEW UI PROTECTED METHODS //
 // //////////////////////////////// //
 
-#define set_uniform(uniform_name, uniform_value)                               \
-    {                                                                          \
-        auto uniform_id_res = _shader->get_uniform_index(uniform_name);        \
-        if (uniform_id_res.has_error()) {                                      \
+#define uniform_index(uniform)                                                 \
+    auto _u_##uniform##_id = shader->get_uniform_index(#uniform);              \
+    if (_u_##uniform##_id.has_error()) {                                       \
+        Logger::error(                                                         \
+            RENDER_VIEW_WORLD_LOG, _u_##uniform##_id.error().what()            \
+        );                                                                     \
+    } else uniform = _u_##uniform##_id.value()
+
+RenderViewWorld::UIndex::UIndex(const Shader* const shader) {
+    uniform_index(projection);
+    uniform_index(view);
+    uniform_index(ambient_color);
+    uniform_index(view_position);
+    uniform_index(mode);
+    uniform_index(model);
+}
+
+#define uniform_set(uniform, value)                                            \
+    if (_u_index.uniform != (uint16) -1) {                                     \
+        const auto res_##uniform =                                             \
+            _shader->set_uniform(_u_index.uniform, &value);                    \
+        if (res_##uniform.has_error()) {                                       \
             Logger::error(                                                     \
-                RENDER_VIEW_WORLD_LOG,                                         \
-                "Shader set_uniform method failed. No uniform is named \"",    \
-                uniform_name,                                                  \
-                "\". Nothing was done."                                        \
-            );                                                                 \
-            return;                                                            \
-        }                                                                      \
-        auto uniform_id = uniform_id_res.value();                              \
-        auto set_result = _shader->set_uniform(uniform_id, &uniform_value);    \
-        if (set_result.has_error()) {                                          \
-            Logger::error(                                                     \
-                RENDER_VIEW_WORLD_LOG,                                         \
-                "Shader set_uniform method failed for \"",                     \
-                uniform_name,                                                  \
-                "\". Nothing was done"                                         \
+                RENDER_VIEW_WORLD_LOG, res_##uniform.error().what()            \
             );                                                                 \
             return;                                                            \
         }                                                                      \
@@ -189,18 +197,18 @@ void RenderViewWorld::apply_globals(const uint64 frame_number) const {
     if (frame_number == _shader->rendered_frame_number) return;
 
     // Apply globals update
-    set_uniform("projection", _proj_matrix);
-    set_uniform("view", _world_camera->view());
-    set_uniform("ambient_color", _ambient_color);
-    set_uniform("view_position", _world_camera->transform.position());
-    set_uniform("mode", _render_mode);
+    uniform_set(projection, _proj_matrix);
+    uniform_set(view, _world_camera->view());
+    uniform_set(ambient_color, _ambient_color);
+    uniform_set(view_position, _world_camera->transform.position());
+    uniform_set(mode, _render_mode);
     _shader->apply_global();
 
     // Update render frame number
     _shader->rendered_frame_number = frame_number;
 }
 void RenderViewWorld::apply_locals(const glm::mat4 model) const {
-    set_uniform("model", model);
+    uniform_set(model, model);
 }
 
 } // namespace ENGINE_NAMESPACE

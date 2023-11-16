@@ -91,6 +91,106 @@ Texture* TextureSystem::acquire(
     return texture;
 }
 
+Texture* TextureSystem::acquire_cube(
+    const String name, const bool auto_release
+) {
+    Logger::trace(TEXTURE_SYS_LOG, "Texture \"", name, "\" (cube) requested.");
+
+    // Check if name is valid
+    const auto name_check_res = name_is_valid(name);
+    if (name_check_res.has_error()) return name_check_res.error();
+
+    // If texture already exists, find it
+    const auto key = name.lower_c();
+    const auto ref = _registered_textures.find(key);
+
+    if (ref != _registered_textures.end()) {
+        ref->second.reference_count++;
+
+        Logger::trace(TEXTURE_SYS_LOG, "Texture \"", name, "\" acquired.");
+        return ref->second.handle;
+    }
+
+    // Texture cube wasn't found, load from asset folder
+    static const std::array<const String, 6> cube_sides { "_f", "_b", "_l",
+                                                          "_r", "_u", "_d" };
+
+    uint32 texture_width         = -1;
+    uint32 texture_height        = -1;
+    uint32 texture_channel_count = -1;
+    uint32 image_size            = -1;
+
+    Vector<byte> pixels {};
+
+    for (const auto& side : cube_sides) {
+        const auto side_name = name + side;
+
+        // Load image
+        auto load_res = _resource_system->load(side_name, ResourceType::Image);
+        if (load_res.has_error()) {
+            Logger::error(
+                TEXTURE_SYS_LOG,
+                "Texture \"",
+                side_name,
+                "\" could be loaded. Returning default texture."
+            );
+            return _default_texture;
+        }
+        auto image = (Image*) load_res.value();
+        if (side == "_f" || side == "_b" || side == "_u") image->transpose();
+        if (side == "_r" || side == "_b") image->flip_y();
+        if (side == "_l" || side == "_b") image->flip_x();
+
+        // Save / Check image data
+        if (texture_width == -1) {
+            // Save
+            texture_width         = image->width;
+            texture_height        = image->height;
+            texture_channel_count = image->channel_count;
+            image_size = texture_width * texture_height * texture_channel_count;
+            pixels.reserve(6 * image_size);
+        } else {
+            // Check
+            if (texture_width != image->width ||
+                texture_height != image->height ||
+                texture_channel_count != image->channel_count)
+                Logger::error(
+                    TEXTURE_SYS_LOG,
+                    "Cube texture acquisition failed. Cube texture images have "
+                    "inconsistent size."
+                );
+        }
+
+        // Save pixels
+        for (size_t i = 0; i < image_size; i++)
+            pixels.push_back(image->pixels[i]);
+
+        // Release resources
+        _resource_system->unload(image);
+    }
+
+    // Create new texture cube
+    const auto texture = _renderer->create_texture(
+        { name,
+          texture_width,
+          texture_height,
+          texture_channel_count,
+          false, // No mipmaping
+          false, // No transparency
+          false, // Not writable
+          false, // Not wrapped
+          Texture::Type::TCube },
+        pixels.data()
+    );
+    texture->id = (uint64) texture;
+
+    // Create its reference
+    _registered_textures[key] = { texture, 1, auto_release };
+
+    Logger::trace(TEXTURE_SYS_LOG, "Texture \"", name, "\" (cube) acquired.");
+    return texture;
+}
+
 Texture* TextureSystem::acquire_writable(
     const String name,
     const uint32 width,

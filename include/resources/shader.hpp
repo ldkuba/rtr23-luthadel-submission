@@ -107,8 +107,6 @@ class Shader {
         const Vector<Attribute>       attributes;
         const Vector<Uniform::Config> uniforms;
         const CullMode                cull_mode;
-        const bool                    use_instances;
-        const bool                    use_locals;
 
         Config(
             const String&                  name,
@@ -116,14 +114,11 @@ class Shader {
             const uint8                    shader_stages,
             const Vector<Attribute>&       attributes,
             const Vector<Uniform::Config>& uniforms,
-            const CullMode                 cull_mode,
-            const bool                     use_instances,
-            const bool                     use_locals
+            const CullMode                 cull_mode
         )
             : Resource(name), render_pass_name(render_pass_name),
               shader_stages(shader_stages), attributes(attributes),
-              uniforms(uniforms), cull_mode(cull_mode),
-              use_instances(use_instances), use_locals(use_locals) {}
+              uniforms(uniforms), cull_mode(cull_mode) {}
         ~Config() {}
     };
 
@@ -224,7 +219,7 @@ class Shader {
      * @returns Uniform index if found
      * @throws InvalidArgument exception if no uniform is found
      */
-    Result<uint16, InvalidArgument> get_uniform_index(const String name);
+    Result<uint16, InvalidArgument> get_uniform_index(const String& name) const;
 
     /**
      * @brief Set the uniform value by uniform name
@@ -298,10 +293,16 @@ class Shader {
     TextureSystem* _texture_system;
     Renderer*      _renderer;
 
-    String _name;
-    bool   _use_instances;
-    bool   _use_locals;
-    uint64 _required_ubo_alignment;
+    String   _name;
+    CullMode _cull_mode;
+    uint64   _required_ubo_alignment;
+
+    // Uniform counts
+    uint32 _uniform_count_global           = 0;
+    uint32 _uniform_count_instance         = 0;
+    uint32 _uniform_count_local            = 0;
+    uint32 _uniform_sampler_count_global   = 0;
+    uint32 _uniform_sampler_count_instance = 0;
 
     // Currently bound
     Scope  _bound_scope;
@@ -332,7 +333,7 @@ class Shader {
     Vector<PushConstantRange> _push_constant_ranges {};
 
     // Instances
-    Vector<InstanceState*> _instance_states;
+    Vector<InstanceState*> _instance_states {};
 
     // Textures
     Vector<Texture::Map*> _global_texture_maps {};

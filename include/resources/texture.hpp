@@ -13,7 +13,7 @@ class Texture {
     enum class Type { T2D, T2DArray, T3D, TCube };
 
     /// @brief Collection of texture uses
-    enum class Use { Unknown, MapDiffuse, MapSpecular, MapNormal };
+    enum class Use { Unknown, MapDiffuse, MapSpecular, MapNormal, MapCube };
     /// @brief Collection of supported texture filtering modes
     enum class Filter { NearestNeighbour, BiLinear };
     /// @brief Collection of possible patterns for sampling textures outside
@@ -67,6 +67,7 @@ class Texture {
         const bool   has_transparency = false;
         const bool   is_writable      = false;
         const bool   is_wrapped       = false;
+        const Type   type             = Type::T2D;
 
         Config(
             const String name,
@@ -76,7 +77,8 @@ class Texture {
             const bool   mip_mapping,
             const bool   has_transparency,
             const bool   is_writable = false,
-            const bool   is_wrapped  = false
+            const bool   is_wrapped  = false,
+            const Type   type        = Type::T2D
         );
     };
 
@@ -171,6 +173,7 @@ class Texture {
     int32  _channel_count;
     uint32 _mip_levels;
     uint64 _total_size;
+    Type   _type;
 };
 
 } // namespace ENGINE_NAMESPACE

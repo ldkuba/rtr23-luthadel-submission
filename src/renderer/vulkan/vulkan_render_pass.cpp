@@ -6,24 +6,25 @@ namespace ENGINE_NAMESPACE {
 
 // Constructor & Destructor
 VulkanRenderPass::VulkanRenderPass(
+    const uint16                         id,
+    const Config&                        config,
     const vk::Device* const              device,
     const vk::AllocationCallbacks* const allocator,
-    const VulkanSwapchain* const         swapchain,
     const VulkanCommandBuffer* const     command_buffer,
-    const uint16                         id,
-    const Config&                        config
+    VulkanSwapchain* const               swapchain
 )
-    : _device(device), _swapchain(swapchain), _command_buffer(command_buffer),
-      _allocator(allocator), RenderPass(id, config),
+    : RenderPass(id, config), _device(device), _command_buffer(command_buffer),
+      _swapchain(swapchain), _allocator(allocator),
       // TODO: Configurable
       _depth(1.0), _stencil(0) {
 
     Logger::trace(RENDERER_VULKAN_LOG, "Creating render pass.");
 
     // Compute state
-    auto sample_count = (_multisampling_enabled) ? _swapchain->msaa_samples
-                                                 : vk::SampleCountFlagBits::e1;
-    auto clear_depth  = _clear_flags & ClearFlags::Depth;
+    const auto sample_count = (_multisampling_enabled)
+                                  ? _swapchain->msaa_samples
+                                  : vk::SampleCountFlagBits::e1;
+    const auto clear_depth  = _clear_flags & ClearFlags::Depth;
 
     // Compute position
     _has_prev = !config.prev_name.empty();
@@ -67,8 +68,9 @@ VulkanRenderPass::VulkanRenderPass(
         depth_attachment.setFormat(_swapchain->get_depth_attachment_format());
         depth_attachment.setSamples(sample_count);
         depth_attachment.setLoadOp(
-            clear_depth ? vk::AttachmentLoadOp::eClear
-                        : vk::AttachmentLoadOp::eLoad
+            (!_has_prev)    ? vk::AttachmentLoadOp::eDontCare
+            : (clear_depth) ? vk::AttachmentLoadOp::eClear
+                            : vk::AttachmentLoadOp::eLoad
         );
         depth_attachment.setStoreOp(vk::AttachmentStoreOp::eDontCare);
         depth_attachment.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
@@ -88,8 +90,8 @@ VulkanRenderPass::VulkanRenderPass(
     vk::AttachmentReference* color_attachment_resolve_ref = nullptr;
     if (_multisampling_enabled) {
         auto resolve_final_layout =
-            (_has_prev) ? vk::ImageLayout::ePresentSrcKHR
-                        : vk::ImageLayout::eColorAttachmentOptimal;
+            (_has_next) ? vk::ImageLayout::eColorAttachmentOptimal
+                        : vk::ImageLayout::ePresentSrcKHR;
         vk::AttachmentDescription resolve_attachment {};
         resolve_attachment.setFormat(_swapchain->get_color_attachment_format());
         resolve_attachment.setSamples(vk::SampleCountFlagBits::e1);
@@ -179,6 +181,7 @@ VulkanRenderPass::VulkanRenderPass(
     Logger::trace(RENDERER_VULKAN_LOG, "Render pass created.");
 }
 VulkanRenderPass::~VulkanRenderPass() {
+    clear_render_targets();
     _device->destroyRenderPass(handle, _allocator);
     Logger::trace(RENDERER_VULKAN_LOG, "Render pass destroyed.");
 }
@@ -209,5 +212,61 @@ void VulkanRenderPass::begin(RenderTarget* const render_target) {
 }
 
 void VulkanRenderPass::end() { _command_buffer->handle->endRenderPass(); }
+
+void VulkanRenderPass::add_window_as_render_target() {
+    const auto count = _swapchain->get_render_texture_count();
+    for (uint8 i = 0; i < count; i++) {
+        // Gather render target attachments
+        Vector<Texture*> attachments {};
+
+        if (_multisampling_enabled)
+            attachments.push_back(_swapchain->get_color_texture());
+        else attachments.push_back(_swapchain->get_render_texture(i));
+        if (_depth_testing_enabled)
+            attachments.push_back(_swapchain->get_depth_texture());
+        if (_multisampling_enabled)
+            attachments.push_back(_swapchain->get_render_texture(i));
+
+        // Add render target
+        add_render_target(
+            _swapchain->extent().width, _swapchain->extent().height, attachments
+        );
+    }
+}
+void VulkanRenderPass::add_render_target(
+    const uint32 width, const uint32 height, const Vector<Texture*>& attachments
+) {
+    // Scan for image views needed for framebuffer
+    Vector<vk::ImageView> view_attachments { attachments.size() };
+    for (uint32 i = 0; i < attachments.size(); i++) {
+        const auto v_texture = (VulkanTexture*) attachments[i];
+        view_attachments[i]  = v_texture->image()->view;
+    }
+
+    // Create render target appropriate framebuffer
+    const auto framebuffer = new (MemoryTag::GPUBuffer) VulkanFramebuffer(
+        _device, _allocator, this, width, height, view_attachments
+    );
+
+    // Store to render target
+    const auto target = new (MemoryTag::GPUBuffer)
+        RenderTarget(attachments, framebuffer, width, height);
+
+    // Sync to window resize
+    // TODO: Use `_sync_to_window_resize` bool
+    _swapchain->recreate_event.subscribe(target, &RenderTarget::resize);
+
+    // Add this target
+    _render_targets.push_back(target);
+}
+
+void VulkanRenderPass::clear_render_targets() {
+    for (const auto& target : _render_targets) {
+        const auto vk_framebuffer =
+            dynamic_cast<VulkanFramebuffer*>(target->framebuffer());
+        delete vk_framebuffer;
+        delete target;
+    }
+}
 
 } // namespace ENGINE_NAMESPACE

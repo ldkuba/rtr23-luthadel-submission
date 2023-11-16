@@ -12,11 +12,12 @@ Texture::Config::Config(
     const bool   mip_mapping,
     const bool   has_transparency,
     const bool   is_writable,
-    const bool   is_wrapped
+    const bool   is_wrapped,
+    const Type   type
 )
     : name(name), width(width), height(height), channel_count(channel_count),
       has_transparency(has_transparency), is_writable(is_writable),
-      is_wrapped(is_wrapped),
+      is_wrapped(is_wrapped), type(type),
       mip_level_count(
           (mip_mapping)
               ? (uint8) std::floor(std::log2(std::max(width, height))) + 1
@@ -26,8 +27,9 @@ Texture::Config::Config(
 Texture::Texture(const Config& config)
     : _name(config.name), _width(config.width), _height(config.height),
       _channel_count(config.channel_count), _mip_levels(config.mip_level_count),
-      _flags(0) {
+      _type(config.type), _flags(0) {
     _total_size = width * height * channel_count;
+    if (_type == Type::TCube) _total_size *= 6;
     if (config.has_transparency) _flags |= HasTransparency;
     if (config.is_writable) _flags |= IsWritable;
     if (config.is_wrapped) _flags |= IsWrapped;

@@ -60,17 +60,6 @@ class VulkanBackend : public RendererBackend {
     ) override;
     void destroy_shader(Shader* shader) override;
 
-    // Render targets
-    RenderTarget* create_render_target(
-        RenderPass* const       pass,
-        const uint32            width,
-        const uint32            height,
-        const Vector<Texture*>& attachments
-    ) override;
-    void destroy_render_target(
-        RenderTarget* const render_target, const bool free_internal_data = true
-    ) override;
-
     // Render pass
     RenderPass* create_render_pass(const RenderPass::Config& config) override;
     void        destroy_render_pass(RenderPass* const pass) override;
