@@ -1,6 +1,7 @@
 #include "renderer/views/render_view_world.hpp"
 
 #include "resources/mesh.hpp"
+#include "multithreading/parallel.hpp"
 
 namespace ENGINE_NAMESPACE {
 
@@ -87,7 +88,7 @@ RenderViewPacket RenderViewWorld::on_build_pocket() {
         }
 
         // Sort transparent geometry list
-        std::sort(
+        Parallel::sort(
             transparent_geometries.begin(),
             transparent_geometries.end(),
             [](const TGeomData& x, const TGeomData& y) -> bool {

@@ -45,6 +45,7 @@ endif()
 
 # Find packages
 find_package(Vulkan REQUIRED)
+find_package(TBB REQUIRED)
 
 # include subdirectories
 add_subdirectory(external/vulkan)
@@ -82,6 +83,7 @@ target_link_libraries(${PROJECT_NAME}
     # stb
     tinyobjloader
     Vulkan::Vulkan
+    TBB::tbb
 )
 
 # file(GLOB_RECURSE sources ${PROJECT_SOURCE_DIR}/**/*.c)
