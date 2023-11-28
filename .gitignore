@@ -64,3 +64,4 @@ build/
 assets/materials/*
 assets/models/*
 assets/textures/*
+!assets/textures/skybox
