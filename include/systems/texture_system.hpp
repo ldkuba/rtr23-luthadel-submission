@@ -79,50 +79,23 @@ class TextureSystem {
         const bool   has_transparency
     );
 
+    /**
+     * @brief Acquire texture cube resource from texture system. Texture system
+     * will load the texture from the appropriate location if it's unavailable.
+     * If texture loading fails default is returned instead.
+     * @param name Name of the requested texture
+     * @param auto_release If enabled texture system will automaticaly release
+     * the texture resource from memory if no references to the texture are
+     * detected. Can only be set if the texture resource isn't loaded yet.
+     * @return Texture*
+     */
+    Texture* acquire_cube(const String name, const bool auto_release);
+
     /// @brief Releases texture resource. Texture system will automatically
     /// release this texture from memory if no other references to it are
     /// detected and auto release flag is set to true.
     /// @param name Name of the released texture
     void release(const String name);
-
-    /**
-     * @brief Wraps provided internal data within a Texture. Won't be
-     * auto-releases resource.
-     *
-     * @param Name Name of the requested texture
-     * @param width Texture width in pixels
-     * @param height Texture height in pixels
-     * @param channel_count Number of channels per pixel
-     * @param has_transparency Indicates whether the texture will have
-     * transparency
-     * @param is_writable Indicates whether the texture can be written to
-     * @param internal_data Internal data that will be set for this texture
-     * @return Texture* Requested texture resource
-     */
-    Texture* wrap_internal(
-        const String               name,
-        const uint32               width,
-        const uint32               height,
-        const uint8                channel_count,
-        const bool                 has_transparency,
-        const bool                 is_writable,
-        InternalTextureData* const internal_data
-    );
-
-    /**
-     * @brief Resizes a given texture. May only be called for writable textures.
-     * @param texture Texture to be resized
-     * @param width New width in pixels
-     * @param height New height in pixels
-     * @param regenerate_internal_data If true internal data of this texture
-     * will be regenerated
-     */
-    void resize(
-        Texture* const texture,
-        const uint32   width,
-        const uint32   height,
-        const bool     regenerate_internal_data = true
-    );
 
   private:
     struct TextureRef {
@@ -134,7 +107,6 @@ class TextureSystem {
     Renderer*       _renderer;
     ResourceSystem* _resource_system;
 
-    const uint64 _max_texture_count             = 1024;
     const String _default_texture_name          = "default";
     const String _default_diffuse_texture_name  = "default_diff";
     const String _default_specular_texture_name = "default_spec";

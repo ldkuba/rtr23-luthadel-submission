@@ -3,25 +3,50 @@
 
 namespace ENGINE_NAMESPACE {
 
-// Statics values
-const uint32 Texture::max_name_length;
-
-Texture::Texture(
+// Constructor & Destructor
+Texture::Config::Config(
     const String name,
-    const int32  width,
-    const int32  height,
-    const int32  channel_count,
+    const uint32 width,
+    const uint32 height,
+    const uint32 channel_count,
+    const bool   mip_mapping,
     const bool   has_transparency,
     const bool   is_writable,
-    const bool   is_wrapped
+    const bool   is_wrapped,
+    const Type   type
 )
-    : _name(name), _width(width), _height(height),
-      _channel_count(channel_count), _flags(0) {
+    : name(name), width(width), height(height), channel_count(channel_count),
+      has_transparency(has_transparency), is_writable(is_writable),
+      is_wrapped(is_wrapped), type(type),
+      mip_level_count(
+          (mip_mapping)
+              ? (uint8) std::floor(std::log2(std::max(width, height))) + 1
+              : 1
+      ) {}
+
+Texture::Texture(const Config& config)
+    : _name(config.name), _width(config.width), _height(config.height),
+      _channel_count(config.channel_count), _mip_levels(config.mip_level_count),
+      _type(config.type), _flags(0) {
     _total_size = width * height * channel_count;
-    _mip_levels = (uint32) std::floor(std::log2(std::max(_width, _height))) + 1;
-    if (has_transparency) _flags |= HasTransparency;
-    if (is_writable) _flags |= IsWritable;
-    if (is_wrapped) _flags |= IsWrapped;
+    if (_type == Type::TCube) _total_size *= 6;
+    if (config.has_transparency) _flags |= HasTransparency;
+    if (config.is_writable) _flags |= IsWritable;
+    if (config.is_wrapped) _flags |= IsWrapped;
+}
+
+// ////////////////////// //
+// TEXTURE PUBLIC METHODS //
+// ////////////////////// //
+
+Outcome Texture::write(const Vector<byte>& data, const uint32 offset) {
+    return write(data.data(), data.size(), offset);
+}
+
+Outcome Texture::write(
+    const byte* const data, const uint32 size, const uint32 offset
+) {
+    return Outcome::Successful;
 }
 
 Outcome Texture::resize(const uint32 width, const uint32 height) {

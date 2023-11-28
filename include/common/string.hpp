@@ -80,9 +80,9 @@ class String : public std::string {
      *  @param other  String to compare against.
      *  @return  Integer < 0, 0, or > 0.
      *
-     * Returns an integer < 0 if this string is ordered before @a other, 0 if
+     * Returns an integer < 0 if this string is ordered before @p other, 0 if
      * their values are equivalent, or > 0 if this string is ordered after
-     * @a other. Determines the effective length rlen of the strings to compare
+     * @p other. Determines the effective length rlen of the strings to compare
      * as the smallest of size() and str.size(). The function then compares the
      * two strings by calling traits::compare(data(), str.data(),rlen). If the
      * result of the comparison is nonzero returns it, otherwise the shorter one

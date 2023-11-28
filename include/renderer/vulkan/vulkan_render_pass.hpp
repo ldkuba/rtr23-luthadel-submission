@@ -30,35 +30,42 @@ class VulkanRenderPass : public RenderPass {
     /**
      * @brief Construct a new Vulkan Render Pass object
      *
-     * @param device Vulkan device reference
-     * @param allocator Allocation callback used
-     * @param swapchain Swapchain reference
      * @param id Unique vulkan render pass identifier
      * @param config Render pass configurations
+     * @param device Vulkan device reference
+     * @param allocator Allocation callback used
+     * @param command_buffer Buffer on which commands will be issued
+     * @param swapchain Swapchain reference
      */
     VulkanRenderPass(
+        const uint16                         id,
+        const Config&                        config,
         const vk::Device* const              device,
         const vk::AllocationCallbacks* const allocator,
-        VulkanSwapchain* const               swapchain,
-        const uint16                         id,
-        const Config&                        config
+        const VulkanCommandBuffer* const     command_buffer,
+        VulkanSwapchain* const               swapchain
     );
-    ~VulkanRenderPass();
+    ~VulkanRenderPass() override;
 
     /// @brief Begin render pass
     /// @param render_target Targeted to be used
-    /// @param command_buffer Buffer to store begin command
-    void begin(
-        RenderTarget* const      render_target,
-        const vk::CommandBuffer& command_buffer
-    );
+    void begin(RenderTarget* const render_target) override;
     /// @brief End render pass
-    /// @param command_buffer  Buffer to store end command
-    void end(const vk::CommandBuffer& command_buffer);
+    void end() override;
+
+    void add_window_as_render_target() override;
+    void add_render_target(
+        const uint32            width,
+        const uint32            height,
+        const Vector<Texture*>& attachments
+    ) override;
+
+    void clear_render_targets() override;
 
   private:
     const vk::Device*                    _device;
     const vk::AllocationCallbacks* const _allocator;
+    const VulkanCommandBuffer* const     _command_buffer;
     VulkanSwapchain* const               _swapchain;
 
     // Internal data

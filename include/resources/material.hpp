@@ -6,41 +6,43 @@
 namespace ENGINE_NAMESPACE {
 
 /**
- * @brief Material configuration resource.
- *
- */
-class MaterialConfig : public Resource {
-  public:
-    const String    shader;
-    const String    diffuse_map_name;
-    const String    specular_map_name;
-    const String    normal_map_name;
-    const glm::vec4 diffuse_color;
-    const float32   shininess;
-    const bool      auto_release;
-
-    MaterialConfig(
-        const String    name,
-        const String    shader,
-        const String    diffuse_map_name,
-        const String    specular_map_name,
-        const String    normal_map_name,
-        const glm::vec4 diffuse_color,
-        const float32   shininess,
-        const bool      auto_release
-    )
-        : Resource(name), shader(shader), diffuse_map_name(diffuse_map_name),
-          specular_map_name(specular_map_name),
-          normal_map_name(normal_map_name), diffuse_color(diffuse_color),
-          shininess(shininess), auto_release(auto_release) {}
-    ~MaterialConfig() {}
-};
-
-/**
  * @brief A material. Represents various properties of a in world surface
  * (texture, colour, bumpiness, shininess, etc...).
  */
 class Material {
+  public:
+    /**
+     * @brief Material configuration resource.
+     *
+     */
+    class Config : public Resource {
+      public:
+        const String    shader;
+        const String    diffuse_map_name;
+        const String    specular_map_name;
+        const String    normal_map_name;
+        const glm::vec4 diffuse_color;
+        const float32   shininess;
+        const bool      auto_release;
+
+        Config(
+            const String    name,
+            const String    shader,
+            const String    diffuse_map_name,
+            const String    specular_map_name,
+            const String    normal_map_name,
+            const glm::vec4 diffuse_color,
+            const float32   shininess,
+            const bool      auto_release
+        )
+            : Resource(name), shader(shader),
+              diffuse_map_name(diffuse_map_name),
+              specular_map_name(specular_map_name),
+              normal_map_name(normal_map_name), diffuse_color(diffuse_color),
+              shininess(shininess), auto_release(auto_release) {}
+        ~Config() {}
+    };
+
   public:
     /// @brief Unique identifier
     std::optional<uint64> id;
@@ -63,7 +65,7 @@ class Material {
         GET { return _shininess; }
     };
     /// @brief Material's diffuse map
-    Property<TextureMap> diffuse_map {
+    Property<Texture::Map*> diffuse_map {
         GET { return _diffuse_map; }
         SET {
             _diffuse_map     = value;
@@ -71,7 +73,7 @@ class Material {
         }
     };
     /// @brief Material's specular map
-    Property<TextureMap> specular_map {
+    Property<Texture::Map*> specular_map {
         GET { return _specular_map; }
         SET {
             _specular_map    = value;
@@ -79,7 +81,7 @@ class Material {
         }
     };
     /// @brief Material's normal map
-    Property<TextureMap> normal_map {
+    Property<Texture::Map*> normal_map {
         GET { return _normal_map; }
         SET {
             _normal_map      = value;
@@ -93,6 +95,7 @@ class Material {
      * @param name Material name
      * @param shader Shader used by the material
      * @param diffuse_color Material diffuse color
+     * @param shininess Default shininess
      */
     Material(
         const String    name,
@@ -124,9 +127,9 @@ class Material {
   private:
     String        _name = "";
     Shader* const _shader;
-    TextureMap    _diffuse_map;
-    TextureMap    _specular_map;
-    TextureMap    _normal_map;
+    Texture::Map* _diffuse_map  = nullptr;
+    Texture::Map* _specular_map = nullptr;
+    Texture::Map* _normal_map   = nullptr;
     glm::vec4     _diffuse_color;
     float32       _shininess;
     bool          _update_required = true;

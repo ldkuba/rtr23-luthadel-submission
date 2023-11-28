@@ -1,0 +1,19 @@
+# Shader config file
+version=1.0
+cull_mode=front
+name=builtin.skybox_shader
+renderpass=Renderpass.Builtin.Skybox
+stages=vertex,fragment
+
+# Attributes: type,name
+attribute=vec3,in_position
+attribute=vec3,in_normal
+attribute=vec3,in_tangent
+attribute=vec4,in_color
+attribute=vec2,in_texcoord
+
+# Uniforms: type,scope,name
+# NOTE: For scope: 0=global, 1=instance, 2=local
+uniform=mat4,0,projection
+uniform=mat4,0,view
+uniform=sampler,1,cube_texture

@@ -16,10 +16,6 @@ TextureSystem::TextureSystem(
     : _renderer(renderer), _resource_system(resource_system) {
     Logger::trace(TEXTURE_SYS_LOG, "Creating texture system.");
 
-    if (_max_texture_count == 0)
-        Logger::fatal(
-            TEXTURE_SYS_LOG, "Const _max_texture_count must be greater than 0."
-        );
     create_default_textures();
 
     Logger::trace(TEXTURE_SYS_LOG, "Texture system created.");
@@ -27,7 +23,7 @@ TextureSystem::TextureSystem(
 TextureSystem::~TextureSystem() {
     for (auto& texture : _registered_textures) {
         _renderer->destroy_texture(texture.second.handle);
-        del(texture.second.handle);
+        delete texture.second.handle;
     }
     _registered_textures.clear();
     destroy_default_textures();
@@ -50,7 +46,7 @@ Texture* TextureSystem::acquire(
 
     // If texture already exists, find it
     const auto key = name.lower_c();
-    auto       ref = _registered_textures.find(key);
+    const auto ref = _registered_textures.find(key);
 
     if (ref != _registered_textures.end()) {
         ref->second.reference_count++;
@@ -74,26 +70,124 @@ Texture* TextureSystem::acquire(
     auto image = (Image*) load_res.value();
 
     // Create new texture
-    auto texture = new (MemoryTag::Texture) Texture(
-        name,
-        image->width,
-        image->height,
-        image->channel_count,
-        image->has_transparency(),
-        false
+    const auto texture = _renderer->create_texture(
+        { name,
+          image->width,
+          image->height,
+          image->channel_count,
+          true, // Mipmaping TODO: conf.
+          image->has_transparency() },
+        image->pixels
     );
     texture->id = (uint64) texture;
-    // Upload it to GPU
-    _renderer->create_texture(texture, image->pixels);
 
     // Release resources
     _resource_system->unload(image);
 
     // Create its reference
-    TextureRef texture_ref { texture, 1, auto_release };
-    _registered_textures[key] = texture_ref;
+    _registered_textures[key] = { texture, 1, auto_release };
 
     Logger::trace(TEXTURE_SYS_LOG, "Texture \"", name, "\" acquired.");
+    return texture;
+}
+
+Texture* TextureSystem::acquire_cube(
+    const String name, const bool auto_release
+) {
+    Logger::trace(TEXTURE_SYS_LOG, "Texture \"", name, "\" (cube) requested.");
+
+    // Check if name is valid
+    const auto name_check_res = name_is_valid(name);
+    if (name_check_res.has_error()) return name_check_res.error();
+
+    // If texture already exists, find it
+    const auto key = name.lower_c();
+    const auto ref = _registered_textures.find(key);
+
+    if (ref != _registered_textures.end()) {
+        ref->second.reference_count++;
+
+        Logger::trace(TEXTURE_SYS_LOG, "Texture \"", name, "\" acquired.");
+        return ref->second.handle;
+    }
+
+    // Texture cube wasn't found, load from asset folder
+    static const std::array<const String, 6> cube_sides { "_f", "_b", "_l",
+                                                          "_r", "_u", "_d" };
+
+    uint32 texture_width         = -1;
+    uint32 texture_height        = -1;
+    uint32 texture_channel_count = -1;
+    uint32 image_size            = -1;
+
+    Vector<byte> pixels {};
+
+    for (const auto& side : cube_sides) {
+        const auto side_name = name + side;
+
+        // Load image
+        auto load_res = _resource_system->load(side_name, ResourceType::Image);
+        if (load_res.has_error()) {
+            Logger::error(
+                TEXTURE_SYS_LOG,
+                "Texture \"",
+                side_name,
+                "\" could be loaded. Returning default texture."
+            );
+            return _default_texture;
+        }
+        auto image = (Image*) load_res.value();
+        if (side == "_f" || side == "_b" || side == "_u") image->transpose();
+        if (side == "_r" || side == "_b") image->flip_y();
+        if (side == "_l" || side == "_b") image->flip_x();
+
+        // Save / Check image data
+        if (texture_width == -1) {
+            // Save
+            texture_width         = image->width;
+            texture_height        = image->height;
+            texture_channel_count = image->channel_count;
+            image_size = texture_width * texture_height * texture_channel_count;
+            pixels.reserve(6 * image_size);
+        } else {
+            // Check
+            if (texture_width != image->width ||
+                texture_height != image->height ||
+                texture_channel_count != image->channel_count)
+                Logger::error(
+                    TEXTURE_SYS_LOG,
+                    "Cube texture acquisition failed. Cube texture images have "
+                    "inconsistent size."
+                );
+        }
+
+        // Save pixels
+        for (size_t i = 0; i < image_size; i++)
+            pixels.push_back(image->pixels[i]);
+
+        // Release resources
+        _resource_system->unload(image);
+    }
+
+    // Create new texture cube
+    const auto texture = _renderer->create_texture(
+        { name,
+          texture_width,
+          texture_height,
+          texture_channel_count,
+          false, // No mipmaping
+          false, // No transparency
+          false, // Not writable
+          false, // Not wrapped
+          Texture::Type::TCube },
+        pixels.data()
+    );
+    texture->id = (uint64) texture;
+
+    // Create its reference
+    _registered_textures[key] = { texture, 1, auto_release };
+
+    Logger::trace(TEXTURE_SYS_LOG, "Texture \"", name, "\" (cube) acquired.");
     return texture;
 }
 
@@ -124,15 +218,13 @@ Texture* TextureSystem::acquire_writable(
     }
 
     // Texture wasn't found, create new one
-    auto texture = new (MemoryTag::Texture)
-        Texture(name, width, height, channel_count, has_transparency, true);
+    const auto texture = _renderer->create_writable_texture(
+        { name, width, height, channel_count, has_transparency, true }
+    );
     texture->id = (uint64) texture;
-    // Upload it to GPU
-    _renderer->create_writable_texture(texture);
 
     // Create its reference
-    TextureRef texture_ref { texture, 1, false };
-    _registered_textures[key] = texture_ref;
+    _registered_textures[key] = { texture, 1, false };
 
     Logger::trace(TEXTURE_SYS_LOG, "Texture \"", name, "\" acquired.");
     return texture;
@@ -148,7 +240,7 @@ void TextureSystem::release(const String name) {
 
     // Find requested texture
     const auto key = name.lower_c();
-    auto       ref = _registered_textures.find(key);
+    const auto ref = _registered_textures.find(key);
 
     // If not found warn about improper use of this function
     if (ref == _registered_textures.end()) {
@@ -167,89 +259,10 @@ void TextureSystem::release(const String name) {
     // Release resource if needed
     if (ref->second.reference_count == 0 && ref->second.auto_release == true) {
         _renderer->destroy_texture(ref->second.handle);
-        del(ref->second.handle);
         _registered_textures.erase(key);
     }
 
     Logger::trace(TEXTURE_SYS_LOG, "Texture \"", name, "\" released.");
-}
-
-Texture* TextureSystem::wrap_internal(
-    const String               name,
-    const uint32               width,
-    const uint32               height,
-    const uint8                channel_count,
-    const bool                 has_transparency,
-    const bool                 is_writable,
-    InternalTextureData* const internal_data
-) {
-    // TODO: CLEAR THIS UP
-    Logger::fatal("Unimplemented.");
-    return nullptr;
-
-    Logger::trace(
-        TEXTURE_SYS_LOG, "Texture wrap internal for \"", name, "\" called."
-    );
-
-    // Check if name is valid
-    const auto name_check_res = name_is_valid(name);
-    if (name_check_res.has_error()) return name_check_res.error();
-
-    // Create new texture
-    Texture* texture = new (MemoryTag::Texture) Texture(
-        name, width, height, channel_count, has_transparency, is_writable, true
-    );
-    texture->internal_data = internal_data;
-
-    // If texture already exists, find it and replace it
-    const auto key = name.lower_c();
-    auto       ref = _registered_textures.find(key);
-
-    if (ref != _registered_textures.end()) {
-        ref->second.reference_count++;
-
-        Logger::trace(
-            TEXTURE_SYS_LOG, "Texture \"", name, "\" internals wrapped."
-        );
-        return ref->second.handle;
-    }
-
-    // Texture wasn't found, add newly created one
-    texture->id = (uint64) texture;
-
-    // Create its reference
-    TextureRef texture_ref { texture, 1, false };
-    _registered_textures[key] = texture_ref;
-
-    Logger::trace(TEXTURE_SYS_LOG, "Texture \"", name, "\" internals wrapped.");
-    return texture;
-}
-
-void TextureSystem::resize(
-    Texture* const texture,
-    const uint32   width,
-    const uint32   height,
-    const bool     regenerate_internal_data
-) {
-    if (texture == nullptr) {
-        Logger::warning(
-            TEXTURE_SYS_LOG, "Resize attempted on an empty texture reference."
-        );
-        return;
-    }
-    if (texture->is_writable() == false) {
-        Logger::warning(
-            TEXTURE_SYS_LOG,
-            "Resize called for non-writable texture. Nothing was done."
-        );
-        return;
-    }
-
-    // Resize texture
-    texture->resize(width, height);
-    // Resize GPU resources
-    if (!texture->is_wrapped() && regenerate_internal_data)
-        _renderer->resize_texture(texture, width, height);
 }
 
 // ////////////////////////////// //
@@ -275,73 +288,73 @@ void TextureSystem::create_default_textures() {
             }
         }
     }
-    _default_texture = new (MemoryTag::Texture) Texture(
-        _default_texture_name,
-        texture_dimension,
-        texture_dimension,
-        channels,
-        false,
-        false
+    _default_texture = _renderer->create_texture(
+        { _default_texture_name,
+          texture_dimension,
+          texture_dimension,
+          channels,
+          true,
+          false },
+        pixels
     );
     _default_texture->id = 0;
-    _renderer->create_texture(_default_texture, pixels);
 
     // Diffuse (All white)
-    _default_diffuse_texture = new (MemoryTag::Texture) Texture(
-        _default_diffuse_texture_name,
-        texture_dimension,
-        texture_dimension,
-        channels,
-        false,
-        false
+    _default_diffuse_texture = _renderer->create_texture(
+        { _default_diffuse_texture_name,
+          texture_dimension,
+          texture_dimension,
+          channels,
+          true,
+          false },
+        pixels
     );
     _default_diffuse_texture->id = 1;
-    _renderer->create_texture(_default_diffuse_texture, pixels);
 
     // Specular (full black)
     for (auto& pixel : pixels)
         pixel = 0x0;
-    _default_specular_texture = new (MemoryTag::Texture) Texture(
-        _default_specular_texture_name,
-        texture_dimension,
-        texture_dimension,
-        channels,
-        false,
-        false
+    _default_specular_texture = _renderer->create_texture(
+        { _default_specular_texture_name,
+          texture_dimension,
+          texture_dimension,
+          channels,
+          true,
+          false },
+        pixels
     );
     _default_specular_texture->id = 2;
-    _renderer->create_texture(_default_specular_texture, pixels);
 
     // Normal (All up pointing)
     for (uint32 i = 0; i < pixel_count * channels; i++)
         pixels[i] = (((i / 2) % 2) ? 0xff : 0x80);
-    _default_normal_texture = new (MemoryTag::Texture) Texture(
-        _default_normal_texture_name,
-        texture_dimension,
-        texture_dimension,
-        channels,
-        false,
-        false
+    _default_normal_texture = _renderer->create_texture(
+        { _default_normal_texture_name,
+          texture_dimension,
+          texture_dimension,
+          channels,
+          true,
+          false },
+        pixels
     );
     _default_normal_texture->id = 3;
-    _renderer->create_texture(_default_normal_texture, pixels);
 }
 void TextureSystem::destroy_default_textures() {
     if (_default_texture) {
         _renderer->destroy_texture(_default_texture);
-        del(_default_texture);
+        delete _default_texture;
     }
     if (_default_diffuse_texture) {
         _renderer->destroy_texture(_default_diffuse_texture);
-        del(_default_diffuse_texture);
+        delete _default_diffuse_texture;
     }
     if (_default_specular_texture) {
         _renderer->destroy_texture(_default_specular_texture);
-        del(_default_specular_texture);
+        delete _default_specular_texture;
     }
     if (_default_normal_texture) {
         _renderer->destroy_texture(_default_normal_texture);
-        del(_default_normal_texture);
+        delete _default_normal_texture;
     }
 }
 
@@ -349,6 +362,16 @@ Result<void, Texture*> TextureSystem::name_is_valid(
     const String& texture_name, Texture* const default_fallback
 ) {
     // Check name validity
+    if (texture_name.empty()) {
+        Logger::error(
+            TEXTURE_SYS_LOG,
+            "Texture couldn't be acquired. Empty name not allowed. Default "
+            "texture acquired instead."
+        );
+        return Failure(
+            (default_fallback == nullptr) ? _default_texture : default_fallback
+        );
+    }
     if (texture_name.length() > Texture::max_name_length) {
         Logger::error(
             TEXTURE_SYS_LOG,

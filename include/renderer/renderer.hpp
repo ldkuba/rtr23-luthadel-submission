@@ -1,13 +1,10 @@
 #pragma once
 
 #include "renderer/vulkan/vulkan_backend.hpp"
+#include "camera.hpp"
+#include "resources/geometry.hpp"
 
 namespace ENGINE_NAMESPACE {
-
-/**
- * @brief List of supported backend APIs
- */
-enum RendererBackendType { Vulkan };
 
 /**
  * @brief The renderer frontend. Interacts with the device using the backend, in
@@ -15,19 +12,10 @@ enum RendererBackendType { Vulkan };
  */
 class Renderer {
   public:
-    /// @brief Debug render view mode used
-    Property<DebugViewMode> view_mode {
-        GET { return _view_mode; }
-        SET { _view_mode = value; }
-    };
-
     // TODO: TEMP TEST CODE BEGIN
     Shader* material_shader = nullptr;
     Shader* ui_shader       = nullptr;
-
-    glm::vec3 camera_position { 2.0f, 2.0f, 2.0f };
-    // glm::vec3 camera_position { -428.2226105, 685.6713255, 231.030861 };
-    glm::vec3 camera_look_dir { -1.0f, -1.0f, -1.0f };
+    Shader* skybox_shader   = nullptr;
     // TODO: TEMP TEST CODE END
 
     /**
@@ -37,7 +25,8 @@ class Renderer {
      * @param surface A pointer to the render surface
      */
     Renderer(
-        const RendererBackendType backend_type, Platform::Surface* const surface
+        const RendererBackend::Type backend_type,
+        Platform::Surface* const    surface
     );
     ~Renderer();
 
@@ -45,13 +34,6 @@ class Renderer {
     Renderer(Renderer const&)            = delete;
     Renderer& operator=(Renderer const&) = delete;
 
-    /**
-     * @brief Inform renderer of a surface resize event
-     *
-     * @param width New width in pixels
-     * @param height New height in pixels
-     */
-    void on_resize(const uint32 width, const uint32 height);
     /**
      * @brief Draw to the surface
      *
@@ -63,59 +45,55 @@ class Renderer {
         const RenderPacket* const render_data, const float32 delta_time
     );
 
+    void draw_geometry(Geometry* const geometry);
+
+    /**
+     * @brief Inform renderer of a surface resize event
+     *
+     * @param width New width in pixels
+     * @param height New height in pixels
+     */
+    void on_resize(const uint32 width, const uint32 height);
+
     /**
      * @brief Create a texture and upload its relevant data to the GPU
      * @param texture Texture to be upload
      * @param data Raw texture image data
      */
-    void create_texture(Texture* texture, const byte* const data);
+
+    /**
+     * @brief Create a texture and upload its relevant data to the GPU
+     *
+     * @param config Texture configuration under which texture will be created
+     * @param data Raw texture image byte data
+     * @return Texture* Created texture
+     */
+    Texture* create_texture(
+        const Texture::Config& config, const byte* const data
+    );
+    /**
+     * @brief Create a writable texture object with no initial data.
+     * @param config Texture configuration under which texture will be created
+     * @return Texture* Created texture
+     */
+    Texture* create_writable_texture(const Texture::Config& texture);
     /**
      * @brief Destroy a texture and free its corresponding GPU resources
      * @param texture Texture to be destroy
      */
-    void destroy_texture(Texture* texture);
+    void     destroy_texture(Texture* texture);
 
     /**
-     * @brief Create a writable texture object with no initial data.
-     * @param texture Texture to be uploaded
+     * @brief Create a texture map according to provided configuration
+     * @param config Configuration under which texture map will be created
+     * @return Texture::Map* Created texture map
      */
-    void create_writable_texture(Texture* texture);
-
+    Texture::Map* create_texture_map(const Texture::Map::Config& config);
     /**
-     * @brief Resizes a texture. Internally texture is destroyed and recreated.
-     * @param texture Texture to be resized
-     * @param width New width in pixels
-     * @param height New Height in pixels
+     * @brief Destroy given texture map
+     * @param map Map to be destroyed
      */
-    void resize_texture(
-        Texture* const texture, const uint32 width, const uint32 height
-    );
-
-    /**
-     * @brief Write data to provided texture. NOTE: This code wont block write
-     * requests for non-writable textures.
-     * @param texture Texture to be written to
-     * @param data Raw data to be written
-     * @param offset Offset in bytes from which write starts
-     */
-    void texture_write_data(
-        Texture* const texture, const Vector<byte>& data, const uint32 offset
-    );
-
-    /**
-     * @brief Write data to provided texture. NOTE: This code wont block write
-     * requests for non-writable textures.
-     * @param texture Texture to be written to
-     * @param data Raw data bytes to be written
-     * @param size Data size in bytes
-     * @param offset Offset in bytes from which write starts
-     */
-    void texture_write_data(
-        Texture* const    texture,
-        const byte* const data,
-        const uint32      size,
-        const uint32      offset
-    );
+    void          destroy_texture_map(Texture::Map* map);
 
     /**
      * @brief Create a geometry and upload its relevant data to the GPU
@@ -124,11 +102,11 @@ class Renderer {
      * @param vertices Array of vertex data used by the geometry
      * @param indices Array of index data used by the geometry
      */
-    template<typename VertexType>
+    template<uint8 Dim>
     void create_geometry(
-        Geometry*                 geometry,
-        const Vector<VertexType>& vertices,
-        const Vector<uint32>&     indices
+        Geometry*                  geometry,
+        const Vector<Vertex<Dim>>& vertices,
+        const Vector<uint32>&      indices
     );
     /**
      * @brief Destroy geometry and free its corresponding GPU resources
@@ -139,38 +117,14 @@ class Renderer {
     /**
      * @brief Create a shader object and upload relevant data to the GPU
      * @param config Shader configuration
-     * @return Pointer referencing the shader created object
+     * @return Shader* Created shader object
      */
-    Shader* create_shader(const ShaderConfig config);
+    Shader* create_shader(const Shader::Config& config);
     /**
      * @brief Destroy shader and free its corresponding GPU resources
      * @param shader Shader to be destroyed.
      */
     void    destroy_shader(Shader* shader);
-
-    /**
-     * @brief Create a render target object.
-     * @param pass Associated render pass
-     * @param width Render target width in pixels
-     * @param height Render target height in pixels
-     * @param attachments Array of target attachments (Textures)
-     * @returns RenderTarget* Created render target
-     */
-    RenderTarget* create_render_target(
-        RenderPass* const       pass,
-        const uint32            width,
-        const uint32            height,
-        const Vector<Texture*>& attachments
-    );
-    /**
-     * @brief Destroy provided render target
-     * @param render_target Target to be destroyed
-     * @param free_internal_data If true also frees internal render target GPU
-     * memory
-     */
-    void destroy_render_target(
-        RenderTarget* const render_target, const bool free_internal_data = true
-    );
 
     /**
      * @brief Create a render pass object
@@ -183,7 +137,6 @@ class Renderer {
      * @param pass Render pass to be destroyed
      */
     void        destroy_render_pass(RenderPass* const pass);
-
     /**
      * @brief Get renderpass with a given name
      *
@@ -193,52 +146,36 @@ class Renderer {
      */
     Result<RenderPass*, RuntimeError> get_renderpass(const String& name);
 
+    /**
+     * @brief Link renderer with already initialized systems which use it
+     * @param texture_system Reference to texture system
+     */
+    void link_with_systems(TextureSystem* const texture_system) {
+        _texture_system = texture_system;
+    }
+
   private:
     RendererBackend* _backend = nullptr;
 
-    DebugViewMode _view_mode = Default;
+    // System references
+    TextureSystem* _texture_system = nullptr;
 
     // TODO: View configurable
     RenderPass* _world_renderpass;
     RenderPass* _ui_renderpass;
-
-    // TODO: Temp camera info
-    float32   _near_plane = 0.01f;
-    float32   _far_plane  = 1000.0f;
-    glm::mat4 _projection = glm::perspective(
-        glm::radians(45.0f), 800.0f / 600.0f, _near_plane, _far_plane
-    );
-
-    // TODO: Default should be from scene
-    glm::vec4 _ambient_color = glm::vec4(0.25f, 0.25f, 0.25f, 1.0f);
-
-    // TODO: Should be in UI
-    glm::mat4 _projection_ui =
-        glm::ortho(0.0f, 800.f, 600.0f, 0.0f, -100.0f, 100.0f);
-    glm::mat4 _view_ui = glm::mat4(
-        glm::vec4(1.0f, 0.0f, 0.0f, 0.0f),
-        glm::vec4(0.0f, 1.0f, 0.0f, 0.0f),
-        glm::vec4(0.0f, 0.0f, 1.0f, 0.0f),
-        glm::vec4(0.0f, 0.0f, 0.0f, 1.0f)
-    );
-
-    // TODO: Possibly temporary, but not 100% sure
-    void update_material_shader_globals(const RenderPacket* const render_data) const;
-    void update_material_shader_locals(const glm::mat4 model) const;
-    void update_ui_shader_globals() const;
-    void update_ui_shader_locals(const glm::mat4 model) const;
+    RenderPass* _skybox_renderpass;
 };
 
-template<typename VertexType>
+template<uint8 Dim>
 void Renderer::create_geometry(
-    Geometry*                 geometry,
-    const Vector<VertexType>& vertices,
-    const Vector<uint32>&     indices
+    Geometry*                  geometry,
+    const Vector<Vertex<Dim>>& vertices,
+    const Vector<uint32>&      indices
 ) {
     static const char* const RENDERER_LOG = "Renderer :: ";
     Logger::trace(RENDERER_LOG, "Creating geometry.");
     _backend->create_geometry(geometry, vertices, indices);
-    Logger::trace(RENDERER_LOG, "Geometry created.");
+    Logger::trace(RENDERER_LOG, "Geometry created [", geometry->name(), "].");
 }
 
 } // namespace ENGINE_NAMESPACE

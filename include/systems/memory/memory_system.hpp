@@ -7,10 +7,13 @@
 #include "memory_allocators/free_list_allocator.hpp"
 
 #include <iostream>
+#include <map>
 #include <type_traits>
 #include <memory>
 
-typedef ENGINE_NAMESPACE::uint16 MemoryTagType;
+namespace ENGINE_NAMESPACE {
+
+typedef uint16 MemoryTagType;
 #define MEMORY_PADDING 8
 
 // Size reference points
@@ -18,6 +21,10 @@ typedef ENGINE_NAMESPACE::uint16 MemoryTagType;
 #define MB KB * 1024
 #define GB MB * 1024
 
+/**
+ * @brief Memory tag used for allocation. Indicates what custom allocator, if
+ * any, should be used for given allocation. Usually used with @p new.
+ */
 enum class MemoryTag : MemoryTagType {
     // For temporary use. Should be assigned one of the below or have a new
     // tag
@@ -42,11 +49,14 @@ enum class MemoryTag : MemoryTagType {
     // Resources
     Resource,
     Texture,
+    TextureMap,
     MaterialInstance,
     Geometry,
     Shader,
+    RenderView,
     // === Game allocations ===
     Game,
+    Control,
     Job,
     Transform,
     Entity,
@@ -56,35 +66,82 @@ enum class MemoryTag : MemoryTagType {
     MAX_TAGS
 };
 
-namespace ENGINE_NAMESPACE {
-
+/**
+ * @brief Memory system. Responsible for memory management and tracking, custom
+ * allocators, allocations and deallocations for the engine. Collection of
+ * static methods, cant be instantiated.
+ */
 class MemorySystem {
   public:
+    MemorySystem()  = delete;
+    ~MemorySystem() = delete;
+
+    /**
+     * @brief Allocates memory chunk with a custom allocator
+     * @param size Chunk size in bytes
+     * @param tag Memory tag of allocator to be used
+     * @return void* Reference to allocated memory
+     */
     static void* allocate(uint64 size, const MemoryTag tag);
+    /**
+     * @brief Deallocate memory chunk with a custom allocator
+     * @param ptr Reference to the first byte of the chunk
+     * @param tag Memory tag of allocator to be used
+     */
     static void  deallocate(void* ptr, const MemoryTag tag);
+    /**
+     * @brief Clears all memory for allocator with a given tag
+     * @param tag Memory tag of targeted allocator
+     */
     static void  reset_memory(const MemoryTag tag);
+    /**
+     * @brief Output usage for allocator with a given tag
+     * @param tag Memory tag of targeted allocator
+     */
     static void  print_usage(const MemoryTag tag);
 
-  private:
-    MemorySystem();
-    ~MemorySystem();
+    /**
+     * @brief Get owner of a given address
+     * @param ptr Address of an allocated object
+     * @return MemoryTag Tag of the owning allocator
+     */
+    static MemoryTag get_owner(void* ptr);
 
-    static Allocator** _allocator_map;
-    static Allocator** initialize_allocator_map();
+  private:
+    class MemoryMap : public std::map<uint64, MemoryTag> {
+      public:
+        using std::map<uint64, MemoryTag>::map;
+
+        ~MemoryMap() { _dying = true; }
+
+        MemoryTag get_first_before(const uint64 address);
+
+      private:
+        bool _dying = false;
+    };
+
+    static MemoryMap   _memory_map;
+    static Allocator** _allocator_array;
+
+    static Allocator** initialize_allocator_array(MemoryMap& memory_map);
 };
 
 } // namespace ENGINE_NAMESPACE
 
 // New
-void* operator new(std::size_t size, const MemoryTag tag);
-void* operator new[](std::size_t size, const MemoryTag tag);
+void* operator new(std::size_t size, const ENGINE_NAMESPACE::MemoryTag tag);
+void* operator new[](std::size_t size, const ENGINE_NAMESPACE::MemoryTag tag);
 
 // Delete
-void operator delete(void* p, bool) noexcept;
-void operator delete[](void* p, bool) noexcept;
+void operator delete(void* p) noexcept;
+void operator delete[](void* p) noexcept;
 
 // New delete operator
-#define del(x) ::operator delete(x, true)
+template<typename T>
+inline void del(T* p) {
+    p->~T();
+    ::operator delete(p);
+}
 
 // -----------------------------------------------------------------------------
 // Typed allocator
@@ -123,7 +180,7 @@ T* TAllocator<T>::allocate(const std::size_t n) const {
 }
 template<class T>
 void TAllocator<T>::deallocate(T* const p, std::size_t n) const noexcept {
-    del(p);
+    ::operator delete(p);
 }
 
 } // namespace ENGINE_NAMESPACE
@@ -132,13 +189,17 @@ void TAllocator<T>::deallocate(T* const p, std::size_t n) const noexcept {
 namespace std {
 /// std::make_unique for single objects
 template<typename _Tp, typename... _Args>
-inline unique_ptr<_Tp> make_unique(MemoryTag tag, _Args&&... __args) {
+inline unique_ptr<_Tp> make_unique(
+    ENGINE_NAMESPACE::MemoryTag tag, _Args&&... __args
+) {
     return unique_ptr<_Tp>(new (tag) _Tp(std::forward<_Args>(__args)...));
 }
 
 /// std::make_unique for arrays of unknown bound
 template<typename _Tp>
-inline unique_ptr<_Tp[]> make_unique(MemoryTag tag, size_t __num) {
+inline unique_ptr<_Tp[]> make_unique(
+    ENGINE_NAMESPACE::MemoryTag tag, size_t __num
+) {
     return unique_ptr<_Tp>(new (tag) remove_extent_t<_Tp>[__num]());
 }
 
@@ -151,7 +212,9 @@ inline unique_ptr<_Tp[]> make_unique(MemoryTag tag, size_t __num) {
  *          constructor of @a _Tp.
  */
 template<typename _Tp, typename... _Args>
-inline shared_ptr<_Tp> make_shared(MemoryTag tag, _Args&&... __args) {
+inline shared_ptr<_Tp> make_shared(
+    ENGINE_NAMESPACE::MemoryTag tag, _Args&&... __args
+) {
     typedef typename std::remove_cv<_Tp>::type _Tp_nc;
     return std::allocate_shared<_Tp>(
         ENGINE_NAMESPACE::TAllocator<_Tp_nc>(tag),

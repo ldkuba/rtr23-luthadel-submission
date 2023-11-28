@@ -1,6 +1,7 @@
 #include "renderer/vulkan/vulkan_framebuffer.hpp"
 
 #include "renderer/vulkan/vulkan_render_pass.hpp"
+#include "renderer/vulkan/vulkan_texture.hpp"
 
 namespace ENGINE_NAMESPACE {
 
@@ -68,8 +69,8 @@ void VulkanFramebuffer::create(
 Vector<vk::ImageView> get_view_attachments(const Vector<Texture*> attachments) {
     Vector<vk::ImageView> view_attachments { attachments.size() };
     for (uint32 i = 0; i < attachments.size(); i++) {
-        const auto data = (VulkanTextureData*) attachments[i]->internal_data();
-        view_attachments[i] = data->image->view;
+        const auto vk_texture = static_cast<VulkanTexture*>(attachments[i]);
+        view_attachments[i]   = vk_texture->image()->view;
     }
     return view_attachments;
 }

@@ -50,7 +50,7 @@ class MaterialSystem {
     /// material with config.name isn't already loaded.
     /// @param config Material configuration
     /// @returns Requested material resource
-    Material* acquire(const MaterialConfig& config);
+    Material* acquire(const Material::Config& config);
     /// @brief Releases material resource. Material system will automatically
     /// release this material from memory if no other references to it are
     /// detected and auto release flag is set to true.
@@ -78,7 +78,7 @@ class MaterialSystem {
     void create_default_material();
 
     Result<MaterialRef, RuntimeError> create_material(
-        const MaterialConfig config
+        const Material::Config& config
     );
     void destroy_material(Material* material);
 };

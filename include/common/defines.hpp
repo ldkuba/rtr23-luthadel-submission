@@ -61,7 +61,8 @@ static_assert(sizeof(float64) == 8, "Expected a 8 byte long float64.");
 static_assert(sizeof(float128) == 16, "Expected a 16 byte long float128.");
 
 // String constant expresion attribute
-#define STRING_CONST(x) constexpr static const char* const x = #x
+#define StringEnum constexpr static const char* const
+#define STRING_ENUM(x) StringEnum x = #x
 
 // -----------------------------------------------------------------------------
 // Numeric limits

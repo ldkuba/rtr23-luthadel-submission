@@ -1,21 +1,21 @@
 #include "renderer/renderer.hpp"
 
-#include "resources/geometry.hpp"
-#include "renderer/lighting/lights.hpp"
+#include "renderer/views/render_view.hpp"
 
 namespace ENGINE_NAMESPACE {
 
 #define RENDERER_LOG "Renderer :: "
 
+// Constructor & Destructor
 Renderer::Renderer(
-    const RendererBackendType backend_type, Platform::Surface* const surface
+    const RendererBackend::Type backend_type, Platform::Surface* const surface
 ) {
     // Setup on resize
     surface->resize_event.subscribe<Renderer>(this, &Renderer::on_resize);
 
     // Setup backend
     switch (backend_type) {
-    case Vulkan:
+    case RendererBackend::Type::Vulkan:
         _backend = new (MemoryTag::Renderer) VulkanBackend(surface);
         break;
     default:
@@ -25,26 +25,34 @@ Renderer::Renderer(
     }
 
     // Setup render passes TODO: CONFIGURABLE
-    const String WORLD  = "Renderpass.Builtin.World";
-    const String UI     = "Renderpass.Builtin.UI";
-    const auto   width  = surface->get_width_in_pixels();
-    const auto   height = surface->get_height_in_pixels();
+    const auto width  = surface->get_width_in_pixels();
+    const auto height = surface->get_height_in_pixels();
 
     // Create render passes
-    _world_renderpass = _backend->create_render_pass({
-        WORLD,                                // Name
+    _skybox_renderpass = _backend->create_render_pass({
+        RenderPass::BuiltIn::SkyboxPass,      // Name
         "",                                   // Prev
-        UI,                                   // Next
+        RenderPass::BuiltIn::WorldPass,       // Next
         glm::vec2 { 0, 0 },                   // Draw offset
         glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f }, // Clear color
-        RenderPass::ClearFlags::Color | RenderPass::ClearFlags::Depth |
+        RenderPass::ClearFlags::Color,        // Clear flags
+        false,                                // Depth testing
+        true                                  // Multisampling
+    });
+    _world_renderpass  = _backend->create_render_pass({
+        RenderPass::BuiltIn::WorldPass,       // Name
+        RenderPass::BuiltIn::SkyboxPass,      // Prev
+        RenderPass::BuiltIn::UIPass,          // Next
+        glm::vec2 { 0, 0 },                   // Draw offset
+        glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f }, // Clear color
+        RenderPass::ClearFlags::Depth |
             RenderPass::ClearFlags::Stencil, // Clear flags
         true,                                // Depth testing
         true                                 // Multisampling
     });
-    _ui_renderpass    = _backend->create_render_pass({
-        UI,                                   // Name
-        WORLD,                                // Prev
+    _ui_renderpass     = _backend->create_render_pass({
+        RenderPass::BuiltIn::UIPass,          // Name
+        RenderPass::BuiltIn::WorldPass,       // Prev
         "",                                   // Next
         glm::vec2 { 0, 0 },                   // Draw offset
         glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f }, // Clear color
@@ -54,39 +62,16 @@ Renderer::Renderer(
     });
 
     // Create render targets
-    const auto count = _backend->get_window_attachment_count();
-    for (uint8 i = 0; i < count; i++) {
-        // Gather render target attachments
-        Vector<Texture*> attachments {};
-        attachments.push_back(_backend->get_color_attachment());
-        attachments.push_back(_backend->get_depth_attachment());
-        attachments.push_back(_backend->get_window_attachment(i));
-        // Add new render target
-        _world_renderpass->add_render_target(
-            create_render_target(_world_renderpass, width, height, attachments)
-        );
-        _ui_renderpass->add_render_target(create_render_target(
-            _ui_renderpass,
-            width,
-            height,
-            { _backend->get_window_attachment(i) }
-        ));
-    }
+    _world_renderpass->add_window_as_render_target();
+    _ui_renderpass->add_window_as_render_target();
+    _skybox_renderpass->add_window_as_render_target();
 }
-Renderer::~Renderer() { del(_backend); }
+Renderer::~Renderer() { delete _backend; }
 
-void Renderer::on_resize(const uint32 width, const uint32 height) {
-    // Update projection
-    _projection = glm::perspective(
-        glm::radians(45.0f), (float32) width / height, _near_plane, _far_plane
-    );
-    _projection_ui = glm::ortho(
-        0.0f, (float32) width, (float32) height, 0.0f, -100.0f, 100.0f
-    );
+// /////////////////////// //
+// RENDERER PUBLIC METHODS //
+// /////////////////////// //
 
-    // Update backend
-    _backend->resized(width, height);
-}
 Result<void, RuntimeError> Renderer::draw_frame(
     const RenderPacket* const render_data, const float32 delta_time
 ) {
@@ -99,55 +84,13 @@ Result<void, RuntimeError> Renderer::draw_frame(
     // Get current window att index
     const auto att_index = _backend->get_current_window_attachment_index();
 
-    // === World shader ===
-    // Bind render pass
-    const auto current_target = _world_renderpass->render_targets()[att_index];
-    _backend->begin_render_pass(_world_renderpass, current_target);
-    // Use shader
-    material_shader->use();
-    // Setup shader globals
-    update_material_shader_globals(render_data);
+    // Render each view
+    for (auto& data : render_data->view_data)
+        data.view->on_render(
+            this, data, _backend->get_current_frame(), att_index
+        );
 
-    // Draw geometries
-    for (const auto& geo_data : render_data->geometry_data) {
-        // Update material instance
-        Material* const geo_material = geo_data.geometry->material;
-        geo_material->apply_instance();
-
-        // Apply local
-        update_material_shader_locals(geo_data.model);
-
-        // Draw geometry
-        _backend->draw_geometry(geo_data.geometry);
-    }
-
-    // End renderpass
-    _backend->end_render_pass(_world_renderpass);
-
-    // === UI changes ===
-    _backend->begin_render_pass(
-        _ui_renderpass, _ui_renderpass->render_targets()[att_index]
-    );
-    ui_shader->use();
-    update_ui_shader_globals();
-
-    // Get UI geometry
-    const auto ui_geo = render_data->ui_geometry_data;
-
-    // Update instance
-    Material* ui_material = ui_geo.geometry->material;
-    ui_material->apply_instance();
-
-    // Update local
-    update_ui_shader_locals(ui_geo.model);
-
-    // Draw UI
-    _backend->draw_geometry(ui_geo.geometry);
-
-    // End renderpass
-    _backend->end_render_pass(_ui_renderpass);
-
-    // === END FRAME ===
+    // End frame
     result = _backend->end_frame(delta_time);
 
     if (result.has_error()) {
@@ -158,171 +101,115 @@ Result<void, RuntimeError> Renderer::draw_frame(
     return {};
 }
 
-void Renderer::create_texture(Texture* texture, const byte* const data) {
+void Renderer::draw_geometry(Geometry* const geometry) {
+    _backend->draw_geometry(geometry);
+}
+
+void Renderer::on_resize(const uint32 width, const uint32 height) {
+    _backend->resized(width, height);
+}
+
+// -----------------------------------------------------------------------------
+// Texture
+// -----------------------------------------------------------------------------
+
+Texture* Renderer::create_texture(
+    const Texture::Config& config, const byte* const data
+) {
     Logger::trace(RENDERER_LOG, "Creating texture.");
-    _backend->create_texture(texture, data);
-    Logger::trace(RENDERER_LOG, "Texture created.");
+    const auto texture = _backend->create_texture(config, data);
+    Logger::trace(RENDERER_LOG, "Texture created [", texture->name(), "].");
+    return texture;
+}
+Texture* Renderer::create_writable_texture(const Texture::Config& config) {
+    Logger::trace(RENDERER_LOG, "Creating writable texture.");
+    const auto texture = _backend->create_writable_texture(config);
+    Logger::trace(
+        RENDERER_LOG, "Writable texture created [`", texture->name(), "`]."
+    );
+    return texture;
 }
 void Renderer::destroy_texture(Texture* texture) {
     _backend->destroy_texture(texture);
-    Logger::trace(RENDERER_LOG, "Texture destroyed.");
+    Logger::trace(RENDERER_LOG, "Texture destroyed [`", texture->name(), "`].");
 }
 
-void Renderer::create_writable_texture(Texture* texture) {
-    Logger::trace(RENDERER_LOG, "Creating writable texture.");
-    _backend->create_writable_texture(texture);
-    Logger::trace(RENDERER_LOG, "Writable texture created.");
+// -----------------------------------------------------------------------------
+// Texture map
+// -----------------------------------------------------------------------------
+
+Texture::Map* Renderer::create_texture_map(const Texture::Map::Config& config) {
+    Logger::trace(RENDERER_LOG, "Creating texture map.");
+    const auto map = _backend->create_texture_map(config);
+    Logger::trace(
+        RENDERER_LOG,
+        "Texture map created [",
+        map->texture->name(),
+        " - ",
+        (uint32) map->use,
+        "]."
+    );
+    return map;
 }
-void Renderer::resize_texture(
-    Texture* const texture, const uint32 width, const uint32 height
-) {
-    Logger::trace(RENDERER_LOG, "Resizing texture.");
-    _backend->resize_texture(texture, width, height);
-    Logger::trace(RENDERER_LOG, "Texture resized.");
-}
-void Renderer::texture_write_data(
-    Texture* const texture, const Vector<byte>& data, const uint32 offset
-) {
-    Logger::trace(RENDERER_LOG, "Writing data to texture.");
-    _backend->texture_write_data(texture, data.data(), data.size(), offset);
-    Logger::trace(RENDERER_LOG, "Texture writing complete.");
+void Renderer::destroy_texture_map(Texture::Map* map) {
+    _backend->destroy_texture_map(map);
+    Logger::trace(
+        RENDERER_LOG,
+        "Texture map destroyed [`",
+        map->texture->name(),
+        " - ",
+        (uint32) map->use,
+        "`]."
+    );
 }
 
-void Renderer::texture_write_data(
-    Texture* const    texture,
-    const byte* const data,
-    const uint32      size,
-    const uint32      offset
-) {
-    Logger::trace(RENDERER_LOG, "Writing data to texture.");
-    _backend->texture_write_data(texture, data, size, offset);
-    Logger::trace(RENDERER_LOG, "Texture writing complete.");
-}
+// -----------------------------------------------------------------------------
+// Geometry
+// -----------------------------------------------------------------------------
 
 void Renderer::destroy_geometry(Geometry* geometry) {
     _backend->destroy_geometry(geometry);
-    Logger::trace(RENDERER_LOG, "Geometry destroyed.");
+    Logger::trace(RENDERER_LOG, "Geometry destroyed [", geometry->name(), "].");
 }
 
-Shader* Renderer::create_shader(const ShaderConfig config) {
+// -----------------------------------------------------------------------------
+// Shader
+// -----------------------------------------------------------------------------
+
+Shader* Renderer::create_shader(const Shader::Config& config) {
     Logger::trace(RENDERER_LOG, "Creating shader.");
-    auto ret = _backend->create_shader(config);
-    Logger::trace(RENDERER_LOG, "Shader created.");
+    auto ret = _backend->create_shader(this, _texture_system, config);
+    Logger::trace(RENDERER_LOG, "Shader created [", config.name(), "].");
     return ret;
 }
 void Renderer::destroy_shader(Shader* shader) {
     _backend->destroy_shader(shader);
-    Logger::trace(RENDERER_LOG, "Shader destroyed.");
+    Logger::trace(RENDERER_LOG, "Shader destroyed [", shader->get_name(), "].");
 }
 
-RenderTarget* Renderer::create_render_target(
-    RenderPass* const       pass,
-    const uint32            width,
-    const uint32            height,
-    const Vector<Texture*>& attachments
-) {
-    Logger::trace(RENDERER_LOG, "Creating render target.");
-    const auto res =
-        _backend->create_render_target(pass, width, height, attachments);
-    Logger::trace(RENDERER_LOG, "Render target created.");
-    return res;
-}
-void Renderer::destroy_render_target(
-    RenderTarget* const render_target, const bool free_internal_data
-) {
-    _backend->destroy_render_target(render_target, free_internal_data);
-    Logger::trace(RENDERER_LOG, "Render target destroyed.");
-}
+// -----------------------------------------------------------------------------
+// Render pass
+// -----------------------------------------------------------------------------
 
 RenderPass* Renderer::create_render_pass(const RenderPass::Config& config) {
     Logger::trace(RENDERER_LOG, "Creating render pass.");
     const auto res = _backend->create_render_pass(config);
-    Logger::trace(RENDERER_LOG, "Render target created.");
+    Logger::trace(
+        RENDERER_LOG,
+        "Render target created [",
+        res->id(),
+        " (",
+        config.name,
+        ")]."
+    );
     return res;
 }
 void Renderer::destroy_render_pass(RenderPass* const pass) {
     _backend->destroy_render_pass(pass);
-    Logger::trace(RENDERER_LOG, "Render pass destroyed.");
+    Logger::trace(RENDERER_LOG, "Render pass destroyed [", pass->id(), "].");
 }
-
 Result<RenderPass*, RuntimeError> Renderer::get_renderpass(const String& name) {
     return _backend->get_render_pass(name);
-}
-
-// //////////////////////// //
-// RENDERER PRIVATE METHODS //
-// //////////////////////// //
-
-#define set_uniform(uniform_name, uniform_value)                               \
-    {                                                                          \
-        auto uniform_id_res = shader->get_uniform_index(uniform_name);         \
-        if (uniform_id_res.has_error()) {                                      \
-            Logger::error(                                                     \
-                RENDERER_LOG,                                                  \
-                "Shader set_uniform method failed. No uniform is named \"",    \
-                uniform_name,                                                  \
-                "\". Nothing was done."                                        \
-            );                                                                 \
-            return;                                                            \
-        }                                                                      \
-        auto uniform_id = uniform_id_res.value();                              \
-        auto set_result = shader->set_uniform(uniform_id, &uniform_value);     \
-        if (set_result.has_error()) {                                          \
-            Logger::error(                                                     \
-                RENDERER_LOG,                                                  \
-                "Shader set_uniform method failed for \"",                     \
-                uniform_name,                                                  \
-                "\". Nothing was done"                                         \
-            );                                                                 \
-            return;                                                            \
-        }                                                                      \
-    }
-
-void Renderer::update_material_shader_globals(const RenderPacket* const render_data) const {
-    const auto shader = material_shader;
-
-    // Compute view matrix
-    glm::mat4 view = glm::lookAt(
-        camera_position,
-        camera_position + camera_look_dir,
-        glm::vec3(0.0f, 0.0f, 1.0f)
-    );
-
-    // Apply globals
-    set_uniform("projection", _projection);
-    set_uniform("view", view); 
-    set_uniform("ambient_color", _ambient_color);
-    set_uniform("view_position", camera_position);
-    set_uniform("mode", _view_mode);
-
-    // Apply lights
-    const auto& lights = render_data->light_data;
-    Vector<PointLightData> point_light_data {};
-    for(auto& point_light : lights.point_lights) {
-        point_light_data.push_back(*point_light);
-    }
-
-    set_uniform("directional_light", *(lights.directional_light));
-    set_uniform("num_point_lights", lights.num_point_lights);
-    set_uniform("point_lights", *(point_light_data.data()));
-
-    shader->apply_global();
-}
-void Renderer::update_ui_shader_globals() const {
-    const auto shader = ui_shader;
-
-    // Apply globals
-    set_uniform("projection", _projection_ui);
-    set_uniform("view", _view_ui);
-    shader->apply_global();
-}
-void Renderer::update_material_shader_locals(const glm::mat4 model) const {
-    const auto shader = material_shader;
-    set_uniform("model", model);
-}
-void Renderer::update_ui_shader_locals(const glm::mat4 model) const {
-    const auto shader = ui_shader;
-    set_uniform("model", model);
 }
 
 } // namespace ENGINE_NAMESPACE

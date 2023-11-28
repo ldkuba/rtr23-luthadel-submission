@@ -145,7 +145,7 @@ void VulkanBuffer::copy_data_to_image(
     region.imageSubresource.setAspectMask(image_aspect);
     region.imageSubresource.setMipLevel(0);
     region.imageSubresource.setBaseArrayLayer(0);
-    region.imageSubresource.setLayerCount(1);
+    region.imageSubresource.setLayerCount(image->array_layers());
     region.setImageOffset({ 0, 0, 0 });
     region.setImageExtent({ image->width, image->height, 1 });
 

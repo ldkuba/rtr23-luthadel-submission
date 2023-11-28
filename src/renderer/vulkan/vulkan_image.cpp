@@ -7,7 +7,7 @@ namespace ENGINE_NAMESPACE {
 VulkanImage::~VulkanImage() {
     if (_handle) _device->handle().destroyImage(_handle, _allocator);
     if (_memory) _device->handle().freeMemory(_memory, _allocator);
-    if (_has_view) _device->handle().destroyImageView(view, _allocator);
+    destroy_view();
 #ifdef TRACE_FILE_VULKAN_IMAGE
     Logger::trace(RENDERER_VULKAN_LOG, "Image destroyed.");
 #endif
@@ -25,93 +25,29 @@ void VulkanImage::create(
     _height = height;
 }
 
-void VulkanImage::create(
-    const uint32                  width,
-    const uint32                  height,
-    const uint32                  mip_levels,
-    const vk::SampleCountFlagBits number_of_samples,
-    const vk::Format              format,
-    const vk::ImageTiling         tiling,
-    const vk::ImageUsageFlags     usage,
-    const vk::MemoryPropertyFlags properties
-) {
-    // Remember properties
-    _width      = width;
-    _height     = height;
-    _mip_levels = mip_levels;
-    _format     = format;
-
-    // Create image
-    vk::ImageCreateInfo image_info {};
-    image_info.setImageType(vk::ImageType::e2D
-    );                                   // This class only covers 2D images
-    image_info.extent.setWidth(width);   // Image width
-    image_info.extent.setHeight(height); // Image height
-    image_info.extent.setDepth(1);       // Image depth (always 1 for 2D)
-    image_info.setMipLevels(mip_levels); // Maximum number of mipmaping levels
-    // TODO: Should be configurable
-    image_info.setArrayLayers(1); // Number of image layers
-    image_info.setFormat(format); // Image format used
-    image_info.setTiling(tiling); // Image tiling used (Liner or Optimal)
-    // Either Undefined or Predefined. Determins whether the firs transition
-    // will preserve the texels
-    image_info.setInitialLayout(vk::ImageLayout::eUndefined);
-    image_info.setUsage(usage); // Specifies purpose of the image data
-    // Determins ownership between Queue families (Exclusive or Concurrent)
-    image_info.setSharingMode(vk::SharingMode::eExclusive);
-    image_info.setSamples(number_of_samples); // Number of samples used for MSAA
-
-    try {
-        _handle = _device->handle().createImage(image_info, _allocator);
-    } catch (vk::SystemError e) {
-        Logger::fatal(RENDERER_VULKAN_LOG, e.what());
-    }
-
-    // Allocate image memory
-    auto memory_requirements =
-        _device->handle().getImageMemoryRequirements(handle);
-
-    vk::MemoryAllocateInfo allocation_info {};
-    // Number of bytes to be allocated
-    allocation_info.setAllocationSize(memory_requirements.size);
-    // Type of memory we wish to allocate from
-    auto memory_type = _device->find_memory_type(
-        memory_requirements.memoryTypeBits, properties
-    );
-    if (memory_type.has_error())
-        Logger::fatal(RENDERER_VULKAN_LOG, memory_type.error().what());
-    allocation_info.setMemoryTypeIndex(memory_type.value());
-
-    try {
-        _memory = _device->handle().allocateMemory(allocation_info, _allocator);
-    } catch (const vk::SystemError& e) {
-        Logger::fatal(RENDERER_VULKAN_LOG, e.what());
-    }
-
-    // Bind memory to the created image
-    _device->handle().bindImageMemory(handle, memory, 0);
-}
-
-void VulkanImage::create(
-    const uint32                  width,
-    const uint32                  height,
-    const uint32                  mip_levels,
-    const vk::SampleCountFlagBits number_of_samples,
-    const vk::Format              format,
-    const vk::ImageTiling         tiling,
-    const vk::ImageUsageFlags     usage,
-    const vk::MemoryPropertyFlags properties,
-    const vk::ImageAspectFlags    aspect_flags
+void VulkanImage::create_2d(
+    const uint32                              width,
+    const uint32                              height,
+    const uint8                               mip_levels,
+    const vk::SampleCountFlagBits             number_of_samples,
+    const vk::Format                          format,
+    const vk::ImageTiling                     tiling,
+    const vk::ImageUsageFlags                 usage,
+    const vk::MemoryPropertyFlags             properties,
+    const std::optional<vk::ImageAspectFlags> aspect_flags
 ) {
 #ifdef TRACE_FILE_VULKAN_IMAGE
     Logger::trace(RENDERER_VULKAN_LOG, "Creating image.");
 #endif
 
     // Construct image
-    create(
+    create_internal(
+        vk::ImageType::e2D,
         width,
         height,
+        1,
         mip_levels,
+        1,
         number_of_samples,
         format,
         tiling,
@@ -120,16 +56,49 @@ void VulkanImage::create(
     );
 
     // Construct image view
-    create_view(mip_levels, format, aspect_flags);
+    _view_type = vk::ImageViewType::e2D;
+    if (aspect_flags.has_value()) create_view(aspect_flags.value());
 
 #ifdef TRACE_FILE_VULKAN_IMAGE
     Logger::trace(RENDERER_VULKAN_LOG, "Image created.");
 #endif
 }
 
+void VulkanImage::create_cube(
+    const uint32                              width,
+    const uint32                              height,
+    const uint8                               mip_levels,
+    const vk::SampleCountFlagBits             number_of_samples,
+    const vk::Format                          format,
+    const vk::ImageTiling                     tiling,
+    const vk::ImageUsageFlags                 usage,
+    const vk::MemoryPropertyFlags             properties,
+    const std::optional<vk::ImageAspectFlags> aspect_flags
+) {
+    // Create images
+    create_internal(
+        vk::ImageType::e2D,
+        width,
+        height,
+        1,
+        mip_levels,
+        6,
+        number_of_samples,
+        format,
+        tiling,
+        usage,
+        properties,
+        vk::ImageCreateFlagBits::eCubeCompatible
+    );
+
+    // Construct image view
+    _view_type = vk::ImageViewType::eCube;
+    if (aspect_flags.has_value()) create_view(aspect_flags.value());
+}
+
 void VulkanImage::create(
     const vk::Image            image,
-    const uint32               mip_levels,
+    const uint8                mip_levels,
     const vk::Format           format,
     const vk::ImageAspectFlags aspect_flags
 ) {
@@ -138,41 +107,44 @@ void VulkanImage::create(
 #endif
 
     handle = image;
-    create_view(mip_levels, format, aspect_flags);
+    create_view(aspect_flags);
 
 #ifdef TRACE_FILE_VULKAN_IMAGE
     Logger::trace(RENDERER_VULKAN_LOG, "Image created.");
 #endif
 }
 
-void VulkanImage::create_view(
-    const uint32               mip_levels,
-    const vk::Format           format,
-    const vk::ImageAspectFlags aspect_flags
-) {
+void VulkanImage::create_view(const vk::ImageAspectFlags aspect_flags) {
     _has_view     = true;
     _aspect_flags = aspect_flags;
+
     // Construct image view
     vk::ImageViewCreateInfo create_info {};
     create_info.setImage(_handle); // Image for which we are creating a view
-    create_info.setViewType(vk::ImageViewType::e2D); // 2D image
-    create_info.setFormat(format);                   // Image format
+    create_info.setViewType(_view_type); // 2D / 3D / Cube... image
+    create_info.setFormat(_format);      // Image format
     create_info.subresourceRange.setAspectMask(aspect_flags
     ); // Image aspect (eg. color, depth...)
     // Mipmaping
     create_info.subresourceRange.setBaseMipLevel(0
     ); // Level to start mipmaping from
-    create_info.subresourceRange.setLevelCount(mip_levels
+    create_info.subresourceRange.setLevelCount(_mip_levels
     ); // Maximum number of mipmaping levels
     // Image array
     create_info.subresourceRange.setBaseArrayLayer(0);
-    create_info.subresourceRange.setLayerCount(1);
+    create_info.subresourceRange.setLayerCount(_array_layers);
 
     try {
         _view = _device->handle().createImageView(create_info, _allocator);
     } catch (const vk::SystemError& e) {
         Logger::fatal(RENDERER_VULKAN_LOG, e.what());
     }
+}
+
+void VulkanImage::destroy_view() {
+    if (!_has_view) return;
+    _device->handle().destroyImageView(_view, _allocator);
+    _has_view = false;
 }
 
 Result<void, InvalidArgument> VulkanImage::transition_image_layout(
@@ -196,7 +168,7 @@ Result<void, InvalidArgument> VulkanImage::transition_image_layout(
     barrier.subresourceRange.setLevelCount(_mip_levels);
     // Layers effected
     barrier.subresourceRange.setBaseArrayLayer(0);
-    barrier.subresourceRange.setLayerCount(1);
+    barrier.subresourceRange.setLayerCount(_array_layers);
 
     vk::PipelineStageFlags source_stage, destination_stage;
     if (old_layout == vk::ImageLayout::eUndefined &&
@@ -251,7 +223,7 @@ void VulkanImage::generate_mipmaps(const vk::CommandBuffer& command_buffer
     barrier.setDstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED);
     barrier.subresourceRange.setAspectMask(_aspect_flags);
     barrier.subresourceRange.setBaseArrayLayer(0);
-    barrier.subresourceRange.setLayerCount(1);
+    barrier.subresourceRange.setLayerCount(_array_layers);
     barrier.subresourceRange.setLevelCount(1);
 
     uint32 mip_width  = _width;
@@ -283,7 +255,7 @@ void VulkanImage::generate_mipmaps(const vk::CommandBuffer& command_buffer
         blit.srcSubresource.setAspectMask(_aspect_flags);
         blit.srcSubresource.setMipLevel(i - 1);
         blit.srcSubresource.setBaseArrayLayer(0);
-        blit.srcSubresource.setLayerCount(1);
+        blit.srcSubresource.setLayerCount(_array_layers);
         blit.dstOffsets[0] = vk::Offset3D(0, 0, 0);
         blit.dstOffsets[1] = vk::Offset3D(
             mip_width > 1 ? mip_width / 2 : 1,
@@ -293,7 +265,7 @@ void VulkanImage::generate_mipmaps(const vk::CommandBuffer& command_buffer
         blit.dstSubresource.setAspectMask(_aspect_flags);
         blit.dstSubresource.setMipLevel(i);
         blit.dstSubresource.setBaseArrayLayer(0);
-        blit.dstSubresource.setLayerCount(1);
+        blit.dstSubresource.setLayerCount(_array_layers);
 
         command_buffer.blitImage(
             _handle,
@@ -346,6 +318,87 @@ void VulkanImage::generate_mipmaps(const vk::CommandBuffer& command_buffer
         1,
         &barrier
     );
+}
+
+// //////////////////////////// //
+// VULKAN IMAGE PRIVATE METHODS //
+// //////////////////////////// //
+
+void VulkanImage::create_internal(
+    const vk::ImageType           type,
+    const uint32                  width,
+    const uint32                  height,
+    const uint32                  depth,
+    const uint8                   mip_levels,
+    const uint8                   array_layers,
+    const vk::SampleCountFlagBits number_of_samples,
+    const vk::Format              format,
+    const vk::ImageTiling         tiling,
+    const vk::ImageUsageFlags     usage,
+    const vk::MemoryPropertyFlags properties,
+    const vk::ImageCreateFlags    flags
+) {
+    // Remember properties
+    _type              = type;
+    _width             = width;
+    _height            = height;
+    _depth             = depth;
+    _mip_levels        = mip_levels;
+    _array_layers      = array_layers;
+    _number_of_samples = number_of_samples;
+    _format            = format;
+    _tiling            = tiling;
+    _usage             = usage;
+    _properties        = properties;
+
+    // Create image
+    vk::ImageCreateInfo image_info {};
+    image_info.setImageType(type);       // Dim count
+    image_info.extent.setWidth(width);   // Image width
+    image_info.extent.setHeight(height); // Image height
+    image_info.extent.setDepth(depth);   // Image depth (always 1 for 2D)
+    image_info.setMipLevels(mip_levels); // Maximum number of mipmaping levels
+    image_info.setArrayLayers(array_layers); // Number of image layers
+    image_info.setFormat(format);            // Image format used
+    image_info.setTiling(tiling); // Image tiling used (Liner or Optimal)
+    // Either Undefined or Preinitialized. Determins whether the firs transition
+    // will preserve the texels
+    image_info.setInitialLayout(vk::ImageLayout::eUndefined);
+    image_info.setUsage(usage); // Specifies purpose of the image data
+    // Determins ownership between Queue families (Exclusive or Concurrent)
+    image_info.setSharingMode(vk::SharingMode::eExclusive);
+    image_info.setSamples(number_of_samples); // Number of samples used for MSAA
+    image_info.setFlags(flags);               // Image creation flags
+
+    try {
+        _handle = _device->handle().createImage(image_info, _allocator);
+    } catch (vk::SystemError e) {
+        Logger::fatal(RENDERER_VULKAN_LOG, e.what());
+    }
+
+    // Allocate image memory
+    auto memory_requirements =
+        _device->handle().getImageMemoryRequirements(handle);
+
+    vk::MemoryAllocateInfo allocation_info {};
+    // Number of bytes to be allocated
+    allocation_info.setAllocationSize(memory_requirements.size);
+    // Type of memory we wish to allocate from
+    auto memory_type = _device->find_memory_type(
+        memory_requirements.memoryTypeBits, properties
+    );
+    if (memory_type.has_error())
+        Logger::fatal(RENDERER_VULKAN_LOG, memory_type.error().what());
+    allocation_info.setMemoryTypeIndex(memory_type.value());
+
+    try {
+        _memory = _device->handle().allocateMemory(allocation_info, _allocator);
+    } catch (const vk::SystemError& e) {
+        Logger::fatal(RENDERER_VULKAN_LOG, e.what());
+    }
+
+    // Bind memory to the created image
+    _device->handle().bindImageMemory(handle, memory, 0);
 }
 
 } // namespace ENGINE_NAMESPACE

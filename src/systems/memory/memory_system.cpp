@@ -1,6 +1,11 @@
 #include "systems/memory/memory_system.hpp"
 
+#include "component/transform.hpp"
 #include "resources/material.hpp"
+#include "systems/input/control.hpp"
+
+// TODO: Temp solution
+#include "renderer/vulkan/vulkan_texture.hpp"
 
 namespace ENGINE_NAMESPACE {
 
@@ -17,19 +22,20 @@ static_assert(
     "representation are used to recognize custom allocation)"
 );
 
-Allocator** MemorySystem::_allocator_map =
-    MemorySystem::initialize_allocator_map();
+MemorySystem::MemoryMap MemorySystem::_memory_map = {};
+Allocator**             MemorySystem::_allocator_array =
+    MemorySystem::initialize_allocator_array(MemorySystem::_memory_map);
 
 // //////////////////////////// //
 // MEMORY SYSTEM PUBLIC METHODS //
 // //////////////////////////// //
 
 void* MemorySystem::allocate(uint64 size, const MemoryTag tag) {
-    auto allocator = _allocator_map[(MemoryTagType) tag];
+    auto allocator = _allocator_array[(MemoryTagType) tag];
     return allocator->allocate(size, MEMORY_PADDING);
 }
 void MemorySystem::deallocate(void* ptr, const MemoryTag tag) {
-    auto allocator = _allocator_map[(MemoryTagType) tag];
+    auto allocator = _allocator_array[(MemoryTagType) tag];
     if (!allocator->owns(ptr)) {
         std::cout << MEMORY_SYS_LOG << "Wrong memory tag." << std::endl;
         exit(EXIT_FAILURE);
@@ -38,7 +44,7 @@ void MemorySystem::deallocate(void* ptr, const MemoryTag tag) {
 }
 
 void MemorySystem::reset_memory(const MemoryTag tag) {
-    auto allocator = _allocator_map[(MemoryTagType) tag];
+    auto allocator = _allocator_array[(MemoryTagType) tag];
     allocator->reset();
 }
 
@@ -51,7 +57,7 @@ void MemorySystem::reset_memory(const MemoryTag tag) {
     }
 
 void MemorySystem::print_usage(const MemoryTag tag) {
-    auto allocator = _allocator_map[(MemoryTagType) tag];
+    auto allocator = _allocator_array[(MemoryTagType) tag];
 
     // Calculate total use
     float64 used  = allocator->used();
@@ -74,6 +80,20 @@ void MemorySystem::print_usage(const MemoryTag tag) {
     std::cout << "========================" << std::endl;
 }
 
+MemoryTag MemorySystem::get_owner(void* p) {
+    const auto address = (uint64) p;
+
+    // Get tag
+    const auto tag = _memory_map.get_first_before(address);
+    if (tag == MemoryTag::MAX_TAGS) return tag;
+
+    // Check if tag owns this memory
+    if (!_allocator_array[(MemoryTagType) tag]->owns(p))
+        return MemoryTag::MAX_TAGS;
+
+    return tag;
+}
+
 // ///////////////////////////// //
 // MEMORY SYSTEM PRIVATE METHODS //
 // ///////////////////////////// //
@@ -93,12 +113,18 @@ void MemorySystem::print_usage(const MemoryTag tag) {
 #define lal(name, size)                                                        \
     auto name = new LinearAllocator(size);                                     \
     name->init();
-#define pal(name, size, chunk_size)                                            \
-    auto name = new PoolAllocator(size, chunk_size);                           \
+
+#define pal(name, type, count)                                                 \
+    uint64 name##_size = get_aligned(sizeof(type), MEMORY_PADDING);            \
+    auto   name        = new PoolAllocator(count * name##_size, name##_size);  \
     name->init();
 
-Allocator** MemorySystem::initialize_allocator_map() {
-    Allocator** allocator_map =
+#define assign_allocator(tag, allocator)                                       \
+    allocator_array[(MemoryTagType) MemoryTag::tag] = allocator;               \
+    memory_map[allocator->start()]                  = MemoryTag::tag
+
+Allocator** MemorySystem::initialize_allocator_array(MemoryMap& memory_map) {
+    const auto allocator_array =
         new Allocator*[(MemoryTagType) MemoryTag::MAX_TAGS]();
 
     // Define used allocators
@@ -109,50 +135,75 @@ Allocator** MemorySystem::initialize_allocator_map() {
     fal(resource_allocator, MB);
     fal(geom_allocator, 128 * MB);
     lal(init_allocator, MB);
+    lal(permanent_allocator, MB);
 
     // Pools
-    uint64 max_texture_count  = 1024;
-    uint64 max_material_count = 1024;
-
-    uint64 texture_size  = sizeof(Texture) + MEMORY_PADDING;
-    uint64 material_size = sizeof(Material) + MEMORY_PADDING;
-
-    pal(texture_pool, max_texture_count * texture_size, texture_size);
-    pal(material_pool, max_material_count * material_size, material_size);
+    pal(texture_pool, VulkanTexture, 1024);
+    pal(texture_map_pool, VulkanTexture::Map, 1024);
+    pal(material_pool, Material, 1024);
+    pal(control_pool, Control, 256);
+    pal(transform_pool, Transform, 256);
 
     // Assign allocators
-    allocator_map[(MemoryTagType) MemoryTag::Unknown] = unknown_allocator;
-    allocator_map[(MemoryTagType) MemoryTag::Temp]    = temp_allocator;
+    assign_allocator(Unknown, unknown_allocator);
+    assign_allocator(Temp, temp_allocator);
 
-    allocator_map[(MemoryTagType) MemoryTag::Array]       = general_allocator;
-    allocator_map[(MemoryTagType) MemoryTag::List]        = general_allocator;
-    allocator_map[(MemoryTagType) MemoryTag::Map]         = general_allocator;
-    allocator_map[(MemoryTagType) MemoryTag::Set]         = general_allocator;
-    allocator_map[(MemoryTagType) MemoryTag::String]      = general_allocator;
-    allocator_map[(MemoryTagType) MemoryTag::Callback]    = general_allocator;
+    assign_allocator(Array, general_allocator);
+    assign_allocator(List, general_allocator);
+    assign_allocator(Map, general_allocator);
+    assign_allocator(Set, general_allocator);
+    assign_allocator(String, general_allocator);
+    assign_allocator(Callback, general_allocator);
     // Engine
-    allocator_map[(MemoryTagType) MemoryTag::Application] = init_allocator;
-    allocator_map[(MemoryTagType) MemoryTag::Surface]     = init_allocator;
-    allocator_map[(MemoryTagType) MemoryTag::System]      = init_allocator;
-    allocator_map[(MemoryTagType) MemoryTag::Renderer]    = init_allocator;
+    assign_allocator(Application, init_allocator);
+    assign_allocator(Surface, init_allocator);
+    assign_allocator(System, init_allocator);
+    assign_allocator(Renderer, init_allocator);
     // GPU local
-    allocator_map[(MemoryTagType) MemoryTag::GPUTexture]  = gpu_data_allocator;
-    allocator_map[(MemoryTagType) MemoryTag::GPUBuffer]   = gpu_data_allocator;
+    assign_allocator(GPUTexture, gpu_data_allocator);
+    assign_allocator(GPUBuffer, gpu_data_allocator);
     // Resources
-    allocator_map[(MemoryTagType) MemoryTag::Resource]    = resource_allocator;
-    allocator_map[(MemoryTagType) MemoryTag::Texture]     = texture_pool;
-    allocator_map[(MemoryTagType) MemoryTag::MaterialInstance] = material_pool;
-    allocator_map[(MemoryTagType) MemoryTag::Geometry]         = geom_allocator;
-    allocator_map[(MemoryTagType) MemoryTag::Shader]     = resource_allocator;
+    assign_allocator(Resource, resource_allocator);
+    assign_allocator(Texture, texture_pool);
+    assign_allocator(TextureMap, texture_map_pool);
+    assign_allocator(MaterialInstance, material_pool);
+    assign_allocator(Geometry, geom_allocator);
+    assign_allocator(Shader, permanent_allocator);
+    assign_allocator(RenderView, permanent_allocator);
     // Game
-    allocator_map[(MemoryTagType) MemoryTag::Game]       = init_allocator;
-    allocator_map[(MemoryTagType) MemoryTag::Job]        = unknown_allocator;
-    allocator_map[(MemoryTagType) MemoryTag::Transform]  = unknown_allocator;
-    allocator_map[(MemoryTagType) MemoryTag::Entity]     = unknown_allocator;
-    allocator_map[(MemoryTagType) MemoryTag::EntityNode] = unknown_allocator;
-    allocator_map[(MemoryTagType) MemoryTag::Scene]      = unknown_allocator;
+    assign_allocator(Game, init_allocator);
+    assign_allocator(Control, control_pool);
+    assign_allocator(Job, unknown_allocator);
+    assign_allocator(Transform, transform_pool);
+    assign_allocator(Entity, unknown_allocator);
+    assign_allocator(EntityNode, unknown_allocator);
+    assign_allocator(Scene, unknown_allocator);
 
-    return allocator_map;
+    return allocator_array;
+}
+
+// -----------------------------------------------------------------------------
+// Memory map
+// -----------------------------------------------------------------------------
+
+MemoryTag MemorySystem::MemoryMap::get_first_before(const uint64 address) {
+    // Check for nullptr
+    if (address == 0) return MemoryTag::MAX_TAGS;
+
+    // Check if alive
+    if (_dying) return MemoryTag::MAX_TAGS;
+
+    // Find adequate memory tag
+    auto it = lower_bound(address);
+    if (it == end()) it--;
+    else if (it->first != address) {
+        // This is before begin?
+        if (it == begin()) return MemoryTag::MAX_TAGS;
+        it--;
+    }
+    const auto tag = it->second;
+
+    return tag;
 }
 
 } // namespace ENGINE_NAMESPACE
@@ -161,32 +212,16 @@ using namespace ENGINE_NAMESPACE;
 
 // New
 void* operator new(std::size_t size, MemoryTag tag) {
-    void* full_ptr =
-        ENGINE_NAMESPACE::MemorySystem::allocate(size + MEMORY_PADDING, tag);
-    void* data_ptr = (void*) ((uint64) full_ptr + MEMORY_PADDING);
-
-    MemoryTag* header_ptr = (MemoryTag*) full_ptr;
-    *header_ptr           = (MemoryTag) tag;
-
-    return data_ptr;
+    return MemorySystem::allocate(size, tag);
 }
 void* operator new[](std::size_t size, const MemoryTag tag) {
     return operator new(size, tag);
 }
 
 // Delete
-void operator delete(void* p, bool) noexcept {
-    if (p == nullptr) return;
-    void*          full_ptr = (void*) ((uint64) p - MEMORY_PADDING);
-    MemoryTagType* tag_ptr  = (MemoryTagType*) full_ptr;
-    MemoryTag      tag      = (MemoryTag) *tag_ptr;
-
-    if (tag >= MemoryTag::MAX_TAGS) {
-        std::cerr << "Non existant tag passed (" << (MemoryTagType) tag << ")"
-                  << std::endl;
-        exit(EXIT_FAILURE);
-    }
-
-    MemorySystem::deallocate(full_ptr, tag);
+void operator delete(void* p) noexcept {
+    const auto tag = MemorySystem::get_owner(p);
+    if (tag != MemoryTag::MAX_TAGS) MemorySystem::deallocate(p, tag);
+    else free(p);
 }
-void operator delete[](void* p, bool) noexcept { del(p); }
+void operator delete[](void* p) noexcept { ::operator delete(p); }

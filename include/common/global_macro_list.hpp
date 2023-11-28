@@ -26,13 +26,17 @@
     -   Err(error)
     -   Ok()
     -   check(result)
+//  Multithreading
+    -   for_loop
+    -   for_loop_1 & for_loop_2
+    -   GET_FOR_LOOP_MACRO
 //  General for use
     -   APP_NAME
     -   ENGINE_NAME
     -   ENGINE_NAMESPACE
-    -   MEMORY_PADDING  Note: Memory padding used by allocators
-    -   STRING_CONST(str)   Note: Used for custom "String" enum classes
-    -   del
+    -   MEMORY_PADDING      Note: Memory padding used by allocators
+    -   StringEnum          Note: `constexpr static const char* const` type
+    -   STRING_ENUM(str)    Note: Used for custom "String" enum classes
 // Serialization extensions
     - serializable_attributes
 //  General, NOT FOR USE

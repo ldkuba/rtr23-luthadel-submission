@@ -9,6 +9,16 @@ namespace ENGINE_NAMESPACE {
  */
 class RenderPass {
   public:
+    /**
+     * @brief List of standard builtin render passes
+     */
+    struct BuiltIn {
+        StringEnum WorldPass  = "Renderpass.Builtin.World";
+        StringEnum UIPass     = "Renderpass.Builtin.UI";
+        StringEnum SkyboxPass = "Renderpass.Builtin.Skybox";
+    };
+
+    /// @brief Type used by clear flags
     typedef uint8 ClearFlagType;
 
     /**
@@ -20,23 +30,6 @@ class RenderPass {
         Color   = 0x1,
         Depth   = 0x2,
         Stencil = 0x4
-    };
-
-    /// @brief Unique render pass identifier
-    Property<uint16> id {
-        GET { return _id; }
-    };
-
-    /// @brief List of associated render targets
-    Property<Vector<RenderTarget*>> render_targets {
-        GET { return _render_targets; }
-    };
-
-    /// @brief Offset from top right of the screen from which we will render in
-    /// this pass. Width and height is taken from specified render target
-    Property<glm::vec2> render_offset {
-        GET { return _render_offset; }
-        SET { _render_offset = value; }
     };
 
     /**
@@ -54,6 +47,39 @@ class RenderPass {
         bool          multisampling;
     };
 
+  public:
+    /// @brief Unique render pass identifier
+    Property<uint16> id {
+        GET { return _id; }
+    };
+
+    /// @brief List of associated render targets
+    Property<Vector<RenderTarget*>> render_targets {
+        GET { return _render_targets; }
+    };
+
+    /// @brief Offset from top right of the screen from which we will render in
+    /// this pass. Width and height is taken from specified render target
+    Property<glm::vec2> render_offset {
+        GET { return _render_offset; }
+        SET { _render_offset = value; }
+    };
+
+    /// @brief True if multisampling is used
+    Property<bool> uses_multisampling {
+        GET { return _multisampling_enabled; }
+    };
+    /// @brief True if depth testing is used
+    Property<bool> uses_depth_testing {
+        GET { return _depth_testing_enabled; }
+    };
+
+    /**
+     * @brief Construct a new generic Render Pass object
+     *
+     * @param id Unique render pass identifier
+     * @param config Render pass configurations
+     */
     RenderPass(const uint16 id, const Config& config)
         : _id(id), _render_offset(config.render_offset),
           _clear_color(config.clear_color), _clear_flags(config.clear_flags),
@@ -62,16 +88,54 @@ class RenderPass {
     virtual ~RenderPass() {}
 
     /**
-     * @brief Add render target to its associated render pass
-     * @param target Target to be added
+     * @brief Start recording of render pass commands
+     * @param index Render target to be used (index of)
      */
-    void add_render_target(RenderTarget* const target) {
-        _render_targets.push_back(target);
+    void begin(const uint32 index) {
+        if (index >= _render_targets.size())
+            Logger::fatal(
+                "RenderPass :: Render target index out of range. Target count "
+                "is `",
+                _render_targets.size(),
+                "`, but index `",
+                index,
+                "` was passed."
+            );
+        begin(_render_targets[index]);
     }
     /**
-     * @brief Clear render pass of all associated targets
+     * @brief Start recording of render pass commands
+     * @param target Render target to be used
      */
-    void clear_render_targets() { _render_targets.clear(); }
+    virtual void begin(RenderTarget* const render_target) = 0;
+    /**
+     * @brief End recording of render pass commands
+     */
+    virtual void end()                                    = 0;
+
+    /**
+     * @brief Creates and adds new render targets to this pass. Uses default
+     * window attachments for this task. If more than one render target is used,
+     * more than one render target will be added.
+     */
+    virtual void add_window_as_render_target() = 0;
+    /**
+     * @brief Creates and adds new render target to this pass
+     * @param width Render target width in pixels
+     * @param height TRender target height in pixels
+     * @param attachments Array of target attachments (Textures)
+     */
+    virtual void add_render_target(
+        const uint32            width,
+        const uint32            height,
+        const Vector<Texture*>& attachments
+    ) = 0;
+
+    /**
+     * @brief Clear render pass of all associated targets. Targets will be
+     * destroyed.
+     */
+    virtual void clear_render_targets() = 0;
 
   protected:
     uint16                _id;

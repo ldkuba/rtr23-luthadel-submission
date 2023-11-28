@@ -90,23 +90,6 @@ struct VulkanCommandBuffer {
     const Vector<vk::CommandBuffer> _buffers;
 };
 
-// Texture data
-class VulkanImage;
-
-/**
- * @brief Texture data specific to Vulkan
- */
-struct VulkanTextureData : public InternalTextureData {
-    VulkanImage* image;
-};
-
-/**
- * @brief Texture map data specific to Vulkan
- */
-struct VulkanTextureMapData : public InternalTextureMapData {
-    vk::Sampler sampler;
-};
-
 /**
  * @brief Vulkan geometry data packet
  */

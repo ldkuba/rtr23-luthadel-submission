@@ -6,6 +6,7 @@
         "vertex",
         "fragment"
     ],
+    "cull_mode": "back",
     "attributes": [
         {
             "name": "in_position",
@@ -28,99 +29,106 @@
             "type": "vec2"
         }
     ],
-    "bindings": [
+    "descriptor_sets": [
         {
             "scope": "global",
-            "type": "uniform",
             "set_index": 0,
-            "stages": [
-                "vertex"
-            ],
-            "uniforms": [
+            "bindings": [
                 {
-                    "name": "projection",
-                    "type": "mat4"
+                    "type": "uniform",
+                    "binding_index": 0,
+                    "stages": [
+                        "vertex"
+                    ],
+                    "uniforms": [
+                        {
+                            "name": "projection",
+                            "type": "mat4"
+                        },
+                        {
+                            "name": "view",
+                            "type": "mat4"
+                        },
+                        {
+                            "name": "ambient_color",
+                            "type": "vec4"
+                        },
+                        {
+                            "name": "view_position",
+                            "type": "vec3"
+                        },
+                        {
+                            "name": "mode",
+                            "type": "uint32"
+                        }
+                    ]
                 },
                 {
-                    "name": "view",
-                    "type": "mat4"
-                },
-                {
-                    "name": "ambient_color",
-                    "type": "vec4"
-                },
-                {
-                    "name": "view_position",
-                    "type": "vec3"
-                },
-                {
-                    "name": "mode",
-                    "type": "uint32"
-                }
-            ]
-        },
-        {
-            "scope": "global",
-            "type": "uniform",
-            "set_index": 1,
-            "stages": [
-                "fragment"
-            ],
-            "uniforms": [
-                {
-                    "name": "directional_light",
-                    "type": "custom",
-                    "size": 32
-                },
-                {
-                    "name": "num_point_lights",
-                    "type": "uint32"
-                },
-                {
-                    "name": "point_lights",
-                    "type": "custom",
-                    "size": 480
-                }
-            ]
-        },
-        {
-            "scope": "instance",
-            "type": "uniform",
-            "set_index": 1,
-            "stages": [
-                "fragment"
-            ],
-            "uniforms": [
-                {
-                    "name": "diffuse_color",
-                    "type": "vec4"
-                },
-                {
-                    "name": "shininess",
-                    "type": "float32"
+                    "type": "uniform",
+                    "binding_index": 1,
+                    "stages": [
+                        "fragment"
+                    ],
+                    "uniforms": [
+                        {
+                            "name": "directional_light",
+                            "type": "custom",
+                            "size": 32
+                        },
+                        {
+                            "name": "num_point_lights",
+                            "type": "uint32"
+                        },
+                        {
+                            "name": "point_lights",
+                            "type": "custom",
+                            "size": 480
+                        }
+                    ]
                 }
             ]
         },
         {
             "scope": "instance",
-            "type": "sampler",
-            "set_index": 2,
-            "count": 3,
-            "stages": [
-                "fragment"
-            ],
-            "uniforms": [
+            "set_index": 1,
+            "bindings": [
                 {
-                    "name": "diffuse_texture",
-                    "type": "sampler2D"
+                    "type": "uniform",
+                    "binding_index": 1,
+                    "stages": [
+                        "fragment"
+                    ],
+                    "uniforms": [
+                        {
+                            "name": "diffuse_color",
+                            "type": "vec4"
+                        },
+                        {
+                            "name": "shininess",
+                            "type": "float32"
+                        }
+                    ]
                 },
                 {
-                    "name": "specular_texture",
-                    "type": "sampler2D"
-                },
-                {
-                    "name": "normal_texture",
-                    "type": "sampler2D"
+                    "type": "sampler",
+                    "binding_index": 2,
+                    "stages": [
+                        "fragment"
+                    ],
+                    "uniforms": [
+                        {
+                            "name": "diffuse_texture",
+                            "type": "sampler2D"
+                        },
+                        {
+                            "name": "specular_texture",
+                            "type": "sampler2D"
+                        },
+                        {
+                            "name": "normal_texture",
+                            "type": "sampler2D"
+                        }
+                    ]
                 }
             ]
         }

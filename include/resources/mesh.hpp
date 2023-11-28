@@ -9,14 +9,17 @@ class Mesh {
   public:
     Transform transform;
 
+    /// @brief Geometries data of this mesh
+    Property<Vector<Geometry*>> geometries {
+        GET { return _geometries; }
+    };
+
     Mesh(
         const Vector<Geometry*>& geometries,
         const Transform&         inital_transform = {}
     );
     Mesh(Geometry* const geometry, const Transform& inital_transform = {});
     ~Mesh();
-
-    void add_geometry_to_render_packet(RenderPacket& render_packet);
 
   private:
     Vector<Geometry*> _geometries;

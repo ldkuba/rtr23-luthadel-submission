@@ -26,7 +26,7 @@ class Serializer {
      */
     template<typename... T>
     String serialize(const T&... data) const {
-        bool   add_sep = true;
+        bool   add_sep = false;
         String s {};
         object_add_beg(s);
         (serialize_attribute(s, data, add_sep), ...);
@@ -247,7 +247,8 @@ class Serializer {
                           uint32&>::value)
             return deserialize_type(data, out_data, position);
         else if constexpr (std::is_base_of_v<Serializable, T>) {
-            auto serializable_data = dynamic_cast<Serializable*>((T*) &data);
+            auto serializable_data =
+                dynamic_cast<Serializable*>((T*) &out_data);
             const auto res =
                 serializable_data->deserialize(this, data, position);
             position += res.value_or(0);
@@ -300,10 +301,9 @@ class Serializer {
     void serialize_attribute(
         String& out_str, const T& data, bool& add_separator
     ) const {
-        if (add_separator) {
-            attribute_add_sep(out_str);
-            add_separator = false;
-        }
+        if (add_separator) attribute_add_sep(out_str);
+        else add_separator = true;
+
         attribute_add_beg(out_str);
         serialize_one(out_str, data);
         attribute_add_end(out_str);

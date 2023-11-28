@@ -36,7 +36,7 @@ class Image : public Resource {
     )
         : Resource(name), _width(width), _height(height),
           _channel_count(channel_count), _pixels(pixels) {}
-    ~Image() { del(_pixels); }
+    ~Image() { delete _pixels; }
 
     /**
      * @brief Check for image transparency
@@ -52,6 +52,52 @@ class Image : public Resource {
             if (_pixels[i] < (byte) 255) return true;
 
         return false;
+    }
+
+    void flip_x() {
+        const uint32 row_size = _width * _channel_count;
+
+        byte* top    = _pixels;
+        byte* bottom = _pixels + (_height - 1) * row_size;
+
+        while (top < bottom) {
+            std::swap_ranges(top, top + row_size, bottom);
+            top += row_size;
+            bottom -= row_size;
+        }
+    }
+    void flip_y() {
+        const uint32 row_size = _width * _channel_count;
+
+        for (uint32 y = 0; y < _height; ++y) {
+            byte* row   = _pixels + y * row_size;
+            byte* left  = row;
+            byte* right = row + row_size - _channel_count;
+
+            while (left < right) {
+                for (uint8 i = 0; i < _channel_count; ++i)
+                    std::swap(left[i], right[i]);
+                left += _channel_count;
+                right -= _channel_count;
+            }
+        }
+    }
+    void transpose() {
+        const uint32 total_size = _width * _height * _channel_count;
+        const uint32 pixel_size = _channel_count * sizeof(byte);
+        byte*        transposed = new byte[total_size];
+
+        for (uint32 y = 0; y < _height; ++y) {
+            for (uint32 x = 0; x < _width; ++x) {
+                byte* src  = _pixels + (y * _width + x) * _channel_count;
+                byte* dest = transposed + (x * _height + y) * _channel_count;
+
+                std::memcpy(dest, src, pixel_size);
+            }
+        }
+
+        std::memcpy(_pixels, transposed, total_size);
+        delete[] transposed;
     }
 
   private:

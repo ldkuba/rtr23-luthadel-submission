@@ -2,7 +2,7 @@
 
 namespace ENGINE_NAMESPACE {
 
-VulkanManagedBuffer::~VulkanManagedBuffer() { del(_memory_allocator); }
+VulkanManagedBuffer::~VulkanManagedBuffer() { delete _memory_allocator; }
 
 // //////////////////////////////////// //
 // VULKAN MANAGED BUFFER PUBLIC METHODS //
@@ -15,7 +15,7 @@ void VulkanManagedBuffer::create(
     const bool                    bind_on_create
 ) {
     VulkanBuffer::create(size, usage, properties, bind_on_create);
-    _memory_allocator = new GPUFreeListAllocator(
+    _memory_allocator = new (MemoryTag::GPUBuffer) GPUFreeListAllocator(
         size, 0, GPUFreeListAllocator::PlacementPolicy::FindFirst
     );
     _memory_allocator->init();

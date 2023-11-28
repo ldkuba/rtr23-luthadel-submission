@@ -9,19 +9,39 @@ namespace ENGINE_NAMESPACE {
 // -----------------------------------------------------------------------------
 // Vertex
 // -----------------------------------------------------------------------------
+
 /**
- * @brief Vertex in 3D space
- *
+ * @brief Generic representation of n-dimensional vertex
+ * @tparam Dim Vertex dimension count
  */
-struct Vertex3D {
+template<uint8 Dim>
+struct Vertex {
+  public:
+    typedef glm::vec<Dim, float32> Vector;
+
+    Vector    position;
+    glm::vec2 texture_coord {};
+
+    bool operator==(const Vertex<Dim>& other) const {
+        const auto same_position =
+            glm::all(glm::epsilonEqual(other.position, position, Epsilon32));
+        const auto same_texture_coord = glm::all(
+            glm::epsilonEqual(other.texture_coord, texture_coord, Epsilon32)
+        );
+        return same_position && same_texture_coord;
+    }
+};
+
+template<>
+struct Vertex<3> {
     glm::vec3 position;
     glm::vec3 normal;
     glm::vec3 tangent;
     glm::vec4 color;
     glm::vec2 texture_coord;
 
-    Vertex3D() {}
-    Vertex3D(
+    Vertex() {}
+    Vertex(
         const glm::vec3 position,
         const glm::vec3 normal,
         const glm::vec3 tangent,
@@ -30,9 +50,9 @@ struct Vertex3D {
     )
         : position(position), normal(normal), tangent(tangent), color(color),
           texture_coord(texture_coord) {}
-    ~Vertex3D() {}
+    ~Vertex() {}
 
-    bool operator==(const Vertex3D& other) const {
+    bool operator==(const Vertex& other) const {
         const auto same_position =
             glm::all(glm::epsilonEqual(other.position, position, Epsilon32));
         const auto same_normal =
@@ -48,6 +68,35 @@ struct Vertex3D {
                same_texture_coord;
     }
 };
+
+/**
+ * @brief Vertex in 2D plane
+ *
+ */
+typedef Vertex<2> Vertex2D;
+/**
+ * @brief Vertex in 3D space
+ *
+ */
+typedef Vertex<3> Vertex3D;
+
+template<>
+inline String serialize_object<Vertex2D>(
+    const Vertex2D& obj, const Serializer* const serializer
+) {
+    return serializer->serialize(obj.position, obj.texture_coord);
+}
+template<>
+inline Result<uint32, RuntimeError> deserialize_object<Vertex2D>(
+    Vertex2D&               obj,
+    const Serializer* const serializer,
+    const String&           data,
+    const uint32            from_pos
+) {
+    return serializer->deserialize(
+        data, from_pos, obj.position, obj.texture_coord
+    );
+}
 
 template<>
 inline String serialize_object<Vertex3D>(
@@ -75,55 +124,12 @@ inline Result<uint32, RuntimeError> deserialize_object<Vertex3D>(
     );
 }
 
-/**
- * @brief Vertex in 2D plane
- *
- */
-struct Vertex2D {
-    glm::vec2 position;
-    glm::vec2 texture_coord;
-
-    Vertex2D() {}
-    Vertex2D(const glm::vec2 position, const glm::vec2 texture_coord)
-        : position(position), texture_coord(texture_coord) {}
-    ~Vertex2D() {}
-
-    bool operator==(const Vertex2D& other) const {
-        const auto same_position =
-            glm::all(glm::epsilonEqual(other.position, position, Epsilon32));
-        const auto same_texture_coord = glm::all(
-            glm::epsilonEqual(other.texture_coord, texture_coord, Epsilon32)
-        );
-        return same_position && same_texture_coord;
-    }
-};
-
-template<>
-inline String serialize_object<Vertex2D>(
-    const Vertex2D& obj, const Serializer* const serializer
-) {
-    return serializer->serialize(obj.position, obj.texture_coord);
-}
-template<>
-inline Result<uint32, RuntimeError> deserialize_object<Vertex2D>(
-    Vertex2D&               obj,
-    const Serializer* const serializer,
-    const String&           data,
-    const uint32            from_pos
-) {
-    return serializer->deserialize(
-        data, from_pos, obj.position, obj.texture_coord
-    );
-}
-
-typedef Vertex3D Vertex;
-
 } // namespace ENGINE_NAMESPACE
 
 namespace std {
 template<>
-struct hash<ENGINE_NAMESPACE::Vertex> {
-    size_t operator()(ENGINE_NAMESPACE::Vertex const& vertex) const {
+struct hash<ENGINE_NAMESPACE::Vertex3D> {
+    size_t operator()(ENGINE_NAMESPACE::Vertex3D const& vertex) const {
         return hash<glm::vec3>()(vertex.position) ^
                hash<glm::vec2>()(vertex.texture_coord);
     }
@@ -164,7 +170,10 @@ class FrameBuffer {
  */
 enum DebugViewMode : uint8 { Default, Lighting, Normals };
 
+class Shader;
 class Geometry;
+class Mesh;
+class RenderView;
 
 /**
  * @brief Geometry render packet
@@ -172,6 +181,21 @@ class Geometry;
 struct GeometryRenderData {
     Geometry* geometry;
     glm::mat4 model;
+};
+
+struct MeshRenderData {
+    Vector<Mesh*> meshes;
+};
+
+struct RenderViewPacket {
+    RenderView* const view;
+
+    glm::vec3 view_position;
+    glm::mat4 view_matrix;
+    glm::mat4 proj_matrix;
+    Shader*   shader;
+
+    Vector<GeometryRenderData> geometry_data;
 };
 
 class DirectionalLight;
@@ -184,14 +208,15 @@ class PointLightData;
  */
 struct LightRenderData {
     DirectionalLightData*   directional_light;
-    int                     num_point_lights;
     Vector<PointLightData*> point_lights;
 };
 
+/**
+ * @brief A Structure generated by application and given to renderer for
+ * rendering of one frame.
+ */
 struct RenderPacket {
-    Vector<GeometryRenderData> geometry_data;
-    GeometryRenderData         ui_geometry_data;
-
+    Vector<RenderViewPacket> view_data;
     LightRenderData light_data;
 };
 

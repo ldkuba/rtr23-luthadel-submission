@@ -26,7 +26,7 @@ ShaderSystem::~ShaderSystem() {
 // SHADER SYSTEM PUBLIC METHODS //
 // //////////////////////////// //
 
-Result<Shader*, RuntimeError> ShaderSystem::create(ShaderConfig config) {
+Result<Shader*, RuntimeError> ShaderSystem::create(Shader::Config config) {
     Logger::trace(SHADER_SYS_LOG, "Creating shader \"", config.name, "\".");
 
     if (config.name().length() > Shader::max_name_length) {
@@ -40,7 +40,6 @@ Result<Shader*, RuntimeError> ShaderSystem::create(ShaderConfig config) {
         Logger::error(SHADER_SYS_LOG, error_message);
         return Failure(error_message);
     }
-    config.texture_system = _texture_system;
 
     if (_registered_shaders.contains(config.name)) {
         Logger::warning(
@@ -82,7 +81,7 @@ Result<Shader*, RuntimeError> ShaderSystem::acquire(const String name) {
             Logger::error(SHADER_SYS_LOG, result.error().what());
             return Failure(result.error().what());
         }
-        auto config = (ShaderConfig*) result.value();
+        auto config = (Shader::Config*) result.value();
         auto shader = create(*config).expect(
             "Shader creation failed. Something went wrong."
         );

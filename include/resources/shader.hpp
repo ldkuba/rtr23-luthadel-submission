@@ -8,150 +8,12 @@
 namespace ENGINE_NAMESPACE {
 
 class TextureSystem;
-
-/// @brief Supported shader attribute types
-enum class ShaderAttributeType : uint8 {
-    float32,
-    vec2,
-    vec3,
-    vec4,
-    int8,
-    int16,
-    int32,
-    uint8,
-    uint16,
-    uint32,
-    COUNT
-};
-/// @brief Supported uniform types
-enum class ShaderUniformType : uint8 {
-    float32,
-    vec2,
-    vec3,
-    vec4,
-    int8,
-    int16,
-    int32,
-    uint8,
-    uint16,
-    uint32,
-    matrix4,
-    sampler,
-    custom
-};
-
-/// @brief Shader stages available
-enum class ShaderStage : uint8 {
-    Vertex   = 0x1,
-    Geometry = 0x2,
-    Fragment = 0x4,
-    Compute  = 0x8
-};
-
-enum class ShaderBindingType : uint8 { Uniform, Sampler, Storage };
-
-enum class ShaderScope : uint8 { Global, Instance, Local };
+class Renderer;
 
 /// @brief Byte range description
 struct ByteRange {
     uint64 offset;
     uint64 size;
-};
-
-/// @brief Structure containing all attribute relevant data
-struct ShaderAttribute {
-    String              name;
-    uint32              size;
-    ShaderAttributeType type;
-};
-/// @brief Shader uniform configuration
-struct ShaderUniformConfig {
-    String            name;
-    ShaderUniformType type;
-    uint32            size;
-    uint32            location;
-};
-/// @brief Shader binding configuration
-struct ShaderBindingConfig {
-    uint32                      set_index;
-    ShaderScope                 scope;
-    ShaderBindingType           type;
-    size_t                      count;
-    uint8                       shader_stages;
-    Vector<ShaderUniformConfig> uniforms;
-};
-
-/// @brief Structure containing all uniform relevant data
-struct ShaderUniform {
-    ByteRange         byte_range;
-    ShaderScope       scope;
-    uint32            binding; // Binding -1 means it's a push constant
-    uint16            location;
-    uint16            index;
-    ShaderUniformType type;
-};
-
-/// @brief Structure containing all binding relevant data
-struct ShaderBinding {
-    uint32            set_index;
-    ByteRange         byte_range;
-    uint32            stride;
-    ShaderScope       scope;
-    ShaderBindingType type;
-    size_t            count;
-    uint8             shader_stages;
-    Vector<size_t>    uniforms;
-    bool              was_modified;
-};
-
-struct ShaderDescriptorSet {
-    Vector<ShaderBinding> bindings;
-    ByteRange             byte_range;
-    uint64                stride;
-
-    bool is_empty() { return bindings.size() == 0; }
-};
-
-/**
- * @brief Shader configuration resource. Usually this resource is loaded from a
- * .shadercfg file.
- */
-class ShaderConfig : public Resource {
-  public:
-    TextureSystem*                    texture_system = nullptr;
-    const String                      render_pass_name;
-    const uint8                       shader_stages;
-    const Vector<ShaderAttribute>     attributes;
-    const Vector<ShaderBindingConfig> bindings;
-    const Vector<ShaderUniformConfig> push_constants;
-    const bool                        use_instances;
-    const bool                        use_locals;
-
-    ShaderConfig(
-        const String&                      name,
-        const String&                      render_pass_name,
-        const uint8                        shader_stages,
-        const Vector<ShaderAttribute>&     attributes,
-        const Vector<ShaderBindingConfig>& bindings,
-        const Vector<ShaderUniformConfig>& push_constants,
-        const bool                         use_instances,
-        const bool                         use_locals
-    )
-        : Resource(name), render_pass_name(render_pass_name),
-          shader_stages(shader_stages), attributes(attributes),
-          bindings(bindings), push_constants(push_constants),
-          use_instances(use_instances), use_locals(use_locals) {}
-    ~ShaderConfig() {}
-};
-
-/**
- * @brief An instance-level shader state.
- */
-struct InstanceState {
-    uint64 offset;
-    bool   should_update = true;
-
-    Vector<TextureMap*> instance_texture_maps;
 };
 
 /**
@@ -160,11 +22,199 @@ struct InstanceState {
 class Shader {
   public:
     /**
+     * @brief List of builtin shaders.
+     */
+    struct BuiltIn {
+        StringEnum MaterialShader = "builtin.material_shader";
+        StringEnum UIShader       = "builtin.ui_shader";
+        StringEnum SkyboxShader   = "builtin.skybox_shader";
+    };
+
+    /// @brief Supported shader attribute types
+    enum class AttributeType : uint8 {
+        float32,
+        vec2,
+        vec3,
+        vec4,
+        int8,
+        int16,
+        int32,
+        uint8,
+        uint16,
+        uint32,
+        COUNT
+    };
+    /// @brief Supported uniform types
+    enum class UniformType : uint8 {
+        float32,
+        vec2,
+        vec3,
+        vec4,
+        int8,
+        int16,
+        int32,
+        uint8,
+        uint16,
+        uint32,
+        matrix4,
+        sampler,
+        custom
+    };
+
+    /// @brief Shader stages available
+    enum class Stage : uint8 {
+        Vertex   = 0x1,
+        Geometry = 0x2,
+        Fragment = 0x4,
+        Compute  = 0x8
+    };
+
+    /// @brief Shader scope
+    enum class Scope : uint8 { Global, Instance, Local };
+
+    /// @brief Determines what face culling mode will be used during rendering
+    enum class CullMode { None, Front, Back, Both };
+
+    /// @brief Structure containing all attribute relevant data
+    struct Attribute {
+        String        name;
+        uint32        size;
+        AttributeType type;
+    };
+
+    /// @brief Structure containing all uniform relevant data
+    struct Uniform {
+        /// @brief Shader uniform configuration
+        struct Config {
+            String      name;
+            uint8       size;
+            uint32      array_index;
+            UniformType type;
+        };
+
+        ByteRange byte_range;  // Byte range of this uniform in the buffer
+        uint16    array_index; // Index array in a binding (TODO: this is not
+                            // necessary, only kept beacuse samplers which are
+                            // part of the same uniform are named differently
+                            // and this is a hack to keep them separated)
+        uint16 binding_index; // Index of binding which holds this uniform (-1
+                              // for push constants)
+        uint8  set_index; // Index of the set this uniform belongs to (-1 for
+                          // push constants)
+        Scope  scope;
+        UniformType type;
+    };
+
+    /// @brief Structure containing all binding relevant data
+    struct Binding {
+        /// @brief Shader binding type
+        enum class Type : uint8 { Uniform, Sampler, Storage };
+
+        /// @brief Shader binding configuration
+        struct Config {
+            uint8                   binding_index;
+            Type                    type;
+            size_t                  count;
+            uint8                   shader_stages;
+            Vector<Uniform::Config> uniforms;
+        };
+
+        uint8     set_index;     // Index of the set this binding belongs to
+        uint32    binding_index; // Index of this binding in the set
+        ByteRange byte_range;    // Byte range of this binding in the buffer
+        uint32    total_size; // Total size of this binding without allignment
+        Type      type;
+        size_t    count; // Number of elements in this binding
+        uint8     shader_stages;
+        Vector<size_t> uniforms; // Vector of indices to uniforms in this
+                                 // binding into the main uniform array
+        bool           was_modified;
+    };
+
+    /// @brief Structure containing all descriptor set relevant data
+    struct DescriptorSet {
+        /**
+         * @brief Descriptor set state
+         */
+        struct State {
+            uint64 offset;
+            bool   should_update = true;
+
+            // For each sampler binding we need to store a vector of textures
+            // TODO: once "named" sampler bindings are implemented properly
+            // we could change it to something that relies on the name of the
+            // binding instead of the index
+            UnorderedMap<uint32, Vector<Texture::Map*>> texture_maps;
+        };
+
+        struct BackendData {};
+
+        struct Config {
+            uint32                  set_index;
+            Scope                   scope;
+            Vector<Binding::Config> bindings;
+        };
+
+        Vector<Binding> bindings;
+        uint64          stride;     // Stride of this descriptor set
+        uint64          total_size; // Total size of this descriptor set without
+                                    // allignment
+        Scope           scope;
+        Vector<State*>  states {};
+        BackendData*    backend_data = nullptr;
+        uint32          texture_map_count;
+        uint32          set_index; // Index of this set
+    };
+
+    /**
+     * @brief Shader configuration resource. Usually this resource is loaded
+     * from a .shadercfg file.
+     */
+    class Config : public Resource {
+      public:
+        const String                        render_pass_name;
+        const uint8                         shader_stages;
+        const Vector<Attribute>             attributes;
+        const Vector<DescriptorSet::Config> sets;
+        const Vector<Uniform::Config>       push_constants;
+        const CullMode                      cull_mode;
+
+        Config(
+            const String&                        name,
+            const String&                        render_pass_name,
+            const uint8                          shader_stages,
+            const Vector<Attribute>&             attributes,
+            const Vector<DescriptorSet::Config>& sets,
+            const Vector<Uniform::Config>&       push_constants,
+            const CullMode                       cull_mode
+        )
+            : Resource(name), render_pass_name(render_pass_name),
+              shader_stages(shader_stages), attributes(attributes), sets(sets),
+              push_constants(push_constants), cull_mode(cull_mode) {}
+        ~Config() {}
+    };
+
+  public:
+    uint64 rendered_frame_number = -1;
+
+  public:
+    /**
      * @brief Construct a new Shader object
      *
      * @param config Shader configurations
      */
-    Shader(const ShaderConfig config);
+
+    /**
+     * @brief Construct a new Shader object
+     * @param renderer Renderer which owns this shader
+     * @param texture_system Texture system reference
+     * @param config Shader configuration used
+     */
+    Shader(
+        Renderer* const      renderer,
+        TextureSystem* const texture_system,
+        const Config&        config
+    );
     virtual ~Shader();
 
     // TODO: TEMP
@@ -199,24 +249,27 @@ class Shader {
      */
     virtual void apply_global();
     /**
-     * @brief Apply set instance uniforms
+     * @brief Apply set instance uniforms. _bound_instance_id will be used
      */
     virtual void apply_instance();
+
+    virtual void acquire_global_resources();
+    virtual void release_global_resources();
 
     /**
      * @brief Acquires resources required for initialization of a shader
      * instance
+     * @param maps Maps used by this shader. Need to be pre-initialized.
      * @return uint32 instance id
      */
-    virtual uint32 acquire_instance_resources(const Vector<TextureMap*>& maps);
+    virtual uint32 acquire_instance_resources( //
+        const Vector<Texture::Map*>& maps
+    );
     /**
      * @brief Release previously acquired instance resources
      * @param instance_id Id of instance to be released
      */
     virtual void   release_instance_resources(uint32 instance_id);
-
-    virtual void acquire_texture_map_resources(TextureMap* texture_map);
-    virtual void release_texture_map_resources(TextureMap* texture_map);
 
     /**
      * @brief Get the the index of a requested uniform
@@ -225,7 +278,7 @@ class Shader {
      * @returns Uniform index if found
      * @throws InvalidArgument exception if no uniform is found
      */
-    Result<uint16, InvalidArgument> get_uniform_index(const String name);
+    Result<uint16, InvalidArgument> get_uniform_index(const String& name) const;
 
     /**
      * @brief Set the uniform value by uniform name
@@ -279,7 +332,7 @@ class Shader {
      * @throws InvalidArgument exception if no sampler is found
      */
     Result<void, InvalidArgument> set_sampler(
-        const String name, const TextureMap* const texture_map
+        const String name, const Texture::Map* const texture_map
     );
     /**
      * @brief Set the sampler texture by sampler id
@@ -289,7 +342,7 @@ class Shader {
      * @throws InvalidArgument exception if no sampler is found
      */
     Result<void, InvalidArgument> set_sampler(
-        const uint16 id, const TextureMap* const texture_map
+        const uint16 id, const Texture::Map* const texture_map
     );
 
     const static uint32 max_name_length    = 256;
@@ -297,40 +350,40 @@ class Shader {
 
   protected:
     TextureSystem* _texture_system;
+    Renderer*      _renderer;
 
-    String _name;
-    bool   _use_instances;
-    bool   _use_locals;
-    uint64 _required_ubo_alignment;
+    String   _name;
+    CullMode _cull_mode;
+    uint64   _required_ubo_alignment;
+
+    // Uniform counts
+    uint32 _uniform_count_global           = 0;
+    uint32 _uniform_count_instance         = 0;
+    uint32 _uniform_count_local            = 0;
+    uint32 _uniform_sampler_count_global   = 0;
+    uint32 _uniform_sampler_count_instance = 0;
 
     // Currently bound
-    ShaderScope _bound_scope;
-    uint32      _bound_instance_id;
-    uint32      _bound_ubo_offset;
+    Scope  _bound_scope;
+    uint32 _bound_instance_id;
 
     // Attributes
-    Vector<ShaderAttribute> _attributes {};
-    uint16                  _attribute_stride = 0;
+    Vector<Attribute> _attributes {};
+    uint16            _attribute_stride = 0;
 
     // Named uniforms
     // This vector holds the actual uniform structs
     // All other uniform vectors: global, instance and push constants,
     // store indices to this vector
-    Vector<ShaderUniform>        _uniforms {};
+    Vector<Uniform>              _uniforms {};
     UnorderedMap<String, uint16> _uniforms_hash {};
 
     // Descriptor Sets
-    ShaderDescriptorSet _global_descriptor_set {};
-    ShaderDescriptorSet _instance_descriptor_set {};
-
-    // Global uniforms
-    Vector<TextureMap*> _global_texture_maps {};
+    Vector<DescriptorSet> _descriptor_sets {};
 
     // Instance uniforms
-    uint64                 _instance_ubo_size   = 0;
-    uint64                 _instance_ubo_stride = 0;
-    Vector<InstanceState*> _instance_states;
-    uint8                  _instance_texture_count;
+    uint64 _instance_ubo_size   = 0;
+    uint64 _instance_ubo_stride = 0;
 
     // Push constants
     uint64         _push_constant_size   = 0;
@@ -338,19 +391,19 @@ class Shader {
     Vector<size_t> _push_constants {};
 
     /**
-     * @brief Set the uniform object
+     * @brief Set the uniform object. If uniform is in instance set,
+     * _bound_instance_id will be used
      *
      * @param id id of the uniform
      * @param value value to set
-     * @param size only used if uniform type is custom, otherwise ignored
      * @return Outcome
      */
     virtual Outcome set_uniform(const uint16 id, void* value);
 
-    ShaderBinding* get_binding(ShaderScope scope, uint32 index);
+    Binding* get_binding(uint32 set_index, uint32 binding_index);
 
   private:
-    void add_binding(const ShaderBindingConfig& config);
+    void add_binding(const Binding::Config& config, const uint32 set_index);
 };
 
 } // namespace ENGINE_NAMESPACE

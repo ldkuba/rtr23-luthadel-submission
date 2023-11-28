@@ -13,6 +13,8 @@ namespace ENGINE_NAMESPACE {
  */
 class Allocator {
   public:
+    /// @brief Returns starting address of owned memory if available (def = 0)
+    uint64 start() { return (uint64) _start_ptr; }
     /// @brief Total size allocatable by this allocator
     uint64 total_size() { return _total_size; };
     /// @brief Memory currently used

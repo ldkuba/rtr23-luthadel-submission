@@ -7,14 +7,14 @@
 namespace ENGINE_NAMESPACE {
 
 struct MSVars {
-    STRING_CONST(version);
-    STRING_CONST(name);
-    STRING_CONST(shader);
-    STRING_CONST(diffuse_color);
-    STRING_CONST(shininess);
-    STRING_CONST(diffuse_map_name);
-    STRING_CONST(specular_map_name);
-    STRING_CONST(normal_map_name);
+    STRING_ENUM(version);
+    STRING_ENUM(name);
+    STRING_ENUM(shader);
+    STRING_ENUM(diffuse_color);
+    STRING_ENUM(shininess);
+    STRING_ENUM(diffuse_map_name);
+    STRING_ENUM(specular_map_name);
+    STRING_ENUM(normal_map_name);
 };
 
 Result<glm::vec4, uint8> load_vector(const String vector_str);
@@ -184,7 +184,7 @@ Result<Resource*, RuntimeError> MaterialLoader::load(const String name) {
     }
 
     // Create material config
-    auto material_config = new (MemoryTag::Resource) MaterialConfig(
+    auto material_config = new (MemoryTag::Resource) Material::Config(
         mat_name,
         mat_shader,
         mat_diffuse_map_name,
@@ -202,8 +202,8 @@ Result<Resource*, RuntimeError> MaterialLoader::load(const String name) {
 void MaterialLoader::unload(Resource* resource) {
     can_unload(ResourceType::Material, resource);
 
-    MaterialConfig* res = (MaterialConfig*) resource;
-    del(res);
+    Material::Config* res = (Material::Config*) resource;
+    delete res;
 }
 
 // //////////////////////////////// //

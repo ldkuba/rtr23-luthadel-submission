@@ -6,82 +6,68 @@
 
 namespace ENGINE_NAMESPACE {
 
-vk::SamplerAddressMode convert_repeat_type(const TextureRepeat repeat);
-vk::Filter             convert_filter_type(const TextureFilter filter);
-
-vk::DescriptorType   get_descriptor_type(ShaderBindingType type);
+vk::DescriptorType   get_descriptor_type(Shader::Binding::Type type);
 vk::ShaderStageFlags get_shader_stages(uint8 stages);
 
 // Constructor & Destructor
 VulkanShader::VulkanShader(
-    const ShaderConfig                   config,
+    Renderer* const                      renderer,
+    TextureSystem* const                 texture_system,
+    const Config&                        config,
     const VulkanDevice* const            device,
     const vk::AllocationCallbacks* const allocator,
     const VulkanRenderPass* const        render_pass,
     const VulkanCommandBuffer* const     command_buffer
 )
-    : Shader(config), _device(device), _allocator(allocator),
-      _render_pass(render_pass), _command_buffer(command_buffer) {
+    : Shader(renderer, texture_system, config), _device(device),
+      _allocator(allocator), _render_pass(render_pass),
+      _command_buffer(command_buffer) {
 
     // === Process shader config ===
     // Translate stage info to vulkan flags
     Vector<vk::ShaderStageFlagBits> shader_stages {};
-    if (config.shader_stages & (uint8) ShaderStage::Vertex)
+    if (config.shader_stages & (uint8) Stage::Vertex)
         shader_stages.push_back(vk::ShaderStageFlagBits::eVertex);
-    if (config.shader_stages & (uint8) ShaderStage::Geometry)
+    if (config.shader_stages & (uint8) Stage::Geometry)
         shader_stages.push_back(vk::ShaderStageFlagBits::eGeometry);
-    if (config.shader_stages & (uint8) ShaderStage::Fragment)
+    if (config.shader_stages & (uint8) Stage::Fragment)
         shader_stages.push_back(vk::ShaderStageFlagBits::eFragment);
-    if (config.shader_stages & (uint8) ShaderStage::Compute)
+    if (config.shader_stages & (uint8) Stage::Compute)
         shader_stages.push_back(vk::ShaderStageFlagBits::eCompute);
 
     // Grab the UBO alignment requirement from the device.
     _required_ubo_alignment = _device->info().min_ubo_alignment;
 
-    // Calculate alligned binding strides + offsets and global/instance ubo
-    // sizes + offsets
-    for (auto& binding : _global_descriptor_set.bindings) {
-        if (binding.type == ShaderBindingType::Sampler) continue;
+    // Compute the buffer offsets of bindings and uniforms with required
+    // allignment.
+    for (auto& set : _descriptor_sets) {
+        for (auto& binding : set.bindings) {
+            if (binding.type == Binding::Type::Sampler) continue;
 
-        binding.stride =
-            get_aligned(binding.byte_range.size, _required_ubo_alignment);
-        binding.byte_range.offset = _global_descriptor_set.byte_range.size;
+            binding.byte_range.size =
+                get_aligned(binding.total_size, _required_ubo_alignment);
+            binding.byte_range.offset = set.total_size;
 
-        // Fill in missing uniform offsets
-        size_t uniform_offset = 0;
-        for(size_t uniform_id : binding.uniforms) {
-            auto& uniform = _uniforms[uniform_id];
-            uniform.byte_range.offset = _global_descriptor_set.byte_range.size + uniform_offset;
-            uniform_offset += uniform.byte_range.size;
+            // Fill in missing uniform offsets
+            size_t uniform_offset = 0;
+            for (size_t uniform_id : binding.uniforms) {
+                auto& uniform             = _uniforms[uniform_id];
+                uniform.byte_range.offset = set.total_size + uniform_offset;
+                uniform_offset += uniform.byte_range.size;
+            }
+
+            set.total_size += binding.byte_range.size;
         }
 
-        _global_descriptor_set.byte_range.size += binding.stride;
-    }
-
-    for (auto& binding : _instance_descriptor_set.bindings) {
-        if (binding.type == ShaderBindingType::Sampler) continue;
-
-        binding.stride =
-            get_aligned(binding.byte_range.size, _required_ubo_alignment);
-        binding.byte_range.offset = _instance_descriptor_set.byte_range.size;
-
-        // Fill in missing uniform offsets
-        size_t uniform_offset = 0;
-        for(size_t uniform_id : binding.uniforms) {
-            auto& uniform = _uniforms[uniform_id];
-            uniform.byte_range.offset = _instance_descriptor_set.byte_range.size + uniform_offset;
-            uniform_offset += uniform.byte_range.size;
-        }
-
-        _instance_descriptor_set.byte_range.size += binding.stride;
+        set.stride = get_aligned(set.total_size, _required_ubo_alignment);
     }
 
     // Compute shader stage infos
     auto shader_stage_infos = compute_stage_infos(shader_stages);
     // Compute attributes
     auto attributes         = compute_attributes();
-    // Get descriptor set configs from uniforms
-    _descriptor_set_configs = compute_uniforms(shader_stages);
+    // Set descriptor set configs from uniforms
+    compute_uniforms(shader_stages);
 
     // === Create Descriptor pool. ===
     // Compute pool sizes
@@ -93,12 +79,12 @@ VulkanShader::VulkanShader(
     auto uniform_count = 0;
     auto storage_count = 0;
     for (const auto& uniform : _uniforms) {
-        if (uniform.scope == ShaderScope::Local) continue;
-        auto* binding = get_binding(uniform.scope, uniform.binding);
+        if (uniform.scope == Scope::Local) continue;
+        auto* binding = get_binding(uniform.set_index, uniform.binding_index);
 
-        if (binding->type == ShaderBindingType::Uniform) uniform_count++;
-        else if (binding->type == ShaderBindingType::Sampler) sampler_count++;
-        else if (binding->type == ShaderBindingType::Storage) storage_count++;
+        if (binding->type == Binding::Type::Uniform) uniform_count++;
+        else if (binding->type == Binding::Type::Sampler) sampler_count++;
+        else if (binding->type == Binding::Type::Storage) storage_count++;
     }
 
     // TODO: Hack, pool sized cannot be 0
@@ -131,14 +117,22 @@ VulkanShader::VulkanShader(
     }
 
     // === Create descriptor set layouts ===
-    for (uint32 i = 0; i < _descriptor_set_configs.size(); ++i) {
+    for (auto& set : _descriptor_sets) {
+        const auto backend_data =
+            static_cast<VulkanDescriptorSetBackendData*>(set.backend_data);
+        if (backend_data == nullptr)
+            Logger::fatal(
+                RENDERER_VULKAN_LOG,
+                "No backend data found for descriptor set. This should never "
+                "happen."
+            );
+
         vk::DescriptorSetLayoutCreateInfo layout_info {};
-        layout_info.setBindings(_descriptor_set_configs[i]->vulkan_bindings);
+        layout_info.setBindings(backend_data->vulkan_bindings);
         try {
-            _descriptor_set_configs[i]->layout =
-                _device->handle().createDescriptorSetLayout(
-                    layout_info, _allocator
-                );
+            backend_data->layout = _device->handle().createDescriptorSetLayout(
+                layout_info, _allocator
+            );
         } catch (vk::SystemError e) {
             Logger::fatal(RENDERER_VULKAN_LOG, e.what());
         }
@@ -162,25 +156,27 @@ VulkanShader::VulkanShader(
     for (auto shader_stage_info : shader_stage_infos)
         _device->handle().destroyShaderModule(shader_stage_info.module);
 
-    // === Compute required buffer alignment ===
-    // Make sure the UBO is aligned according to device requirements.
-    _global_descriptor_set.stride = get_aligned(
-        _global_descriptor_set.byte_range.size, _required_ubo_alignment
-    );
-    _instance_descriptor_set.stride = get_aligned(
-        _instance_descriptor_set.byte_range.size, _required_ubo_alignment
-    );
-
     // === Uniform  buffer ===
     vk::MemoryPropertyFlagBits device_local_bits {};
     if (_device->info().supports_device_local_host_visible_memory)
         device_local_bits = vk::MemoryPropertyFlagBits::eDeviceLocal;
     // TODO: max count should be configurable, or perhaps long term support of
     // buffer resizing.
-    uint64 total_buffer_size = /* global + (locals) */
-        _global_descriptor_set.stride +
-        (_instance_descriptor_set.stride * Shader::max_instance_count);
-    _uniform_buffer = new VulkanManagedBuffer(_device, _allocator);
+    uint64 total_global_buffers_size   = 0;
+    uint64 total_instance_buffers_size = 0;
+    for (auto& set : _descriptor_sets) {
+        if (set.scope == Scope::Global) {
+            total_global_buffers_size += set.stride;
+        } else if (set.scope == Scope::Instance) {
+            total_instance_buffers_size += set.stride;
+        }
+    }
+    uint64 total_buffer_size =
+        total_global_buffers_size +
+        total_instance_buffers_size * Shader::max_instance_count;
+
+    _uniform_buffer =
+        new (MemoryTag::GPUBuffer) VulkanManagedBuffer(_device, _allocator);
     _uniform_buffer->create(
         total_buffer_size,
         vk::BufferUsageFlagBits::eTransferDst |
@@ -191,66 +187,92 @@ VulkanShader::VulkanShader(
 
     // Allocate space for the global UBO, which should occupy the _stride_
     // space, _not_ the actual size used.
-    _global_descriptor_set.byte_range.offset = _uniform_buffer->allocate(
-        _global_descriptor_set.byte_range.size, _required_ubo_alignment
-    );
+    for (auto& set : _descriptor_sets) {
+        if (set.scope == Scope::Global) {
+            VulkanDescriptorSetState* global_state =
+                new (MemoryTag::Shader) VulkanDescriptorSetState();
+            global_state->offset =
+                _uniform_buffer->allocate(set.stride, _required_ubo_alignment);
+            set.states.push_back(global_state);
+        }
+    }
 
     // Map the entire buffer's memory.
     _uniform_buffer_offset =
         (uint64) _uniform_buffer->lock_memory(0, VK_WHOLE_SIZE);
 
-    // === Allocate global descriptor sets ===
-    // Vertex
-    // One per frame. Global is always the first set.
-    std::array<vk::DescriptorSetLayout, VulkanSettings::max_frames_in_flight>
-        global_layouts;
-    for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++)
-        global_layouts[i] =
-            _descriptor_set_configs[_desc_set_index_global]->layout;
+    // === Acquire global resources ===
+    acquire_global_resources();
 
-    vk::DescriptorSetAllocateInfo alloc_info {};
-    alloc_info.setDescriptorPool(_descriptor_pool);
-    alloc_info.setSetLayouts(global_layouts);
-    try {
-        _global_descriptor_sets =
-            _device->handle().allocateDescriptorSets(alloc_info);
-    } catch (vk::SystemError e) {
-        Logger::fatal(RENDERER_VULKAN_LOG, e.what());
+    // === Allocate global descriptor sets ===
+    for (auto& set : _descriptor_sets) {
+        if (set.scope != Scope::Global) continue;
+        // One per frame. Global is always the first set.
+        std::
+            array<vk::DescriptorSetLayout, VulkanSettings::max_frames_in_flight>
+                   global_layouts;
+        const auto backend_data =
+            static_cast<VulkanDescriptorSetBackendData*>(set.backend_data);
+        for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++) {
+            global_layouts[i] = backend_data->layout;
+        }
+
+        vk::DescriptorSetAllocateInfo alloc_info {};
+        alloc_info.setDescriptorPool(_descriptor_pool);
+        alloc_info.setSetLayouts(global_layouts);
+
+        try {
+            auto result = _device->handle().allocateDescriptorSets(alloc_info);
+            auto state  = static_cast<VulkanDescriptorSetState*>(set.states[0]);
+            for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++)
+                state->descriptor_set[i] = result[i];
+        } catch (const vk::SystemError& e) {
+            Logger::fatal(RENDERER_VULKAN_LOG, e.what());
+        }
     }
 }
+
 VulkanShader::~VulkanShader() {
     // Ubo
     _uniform_buffer_offset = 0;
     _uniform_buffer->unlock_memory();
-    del(_uniform_buffer);
+    delete _uniform_buffer;
 
     // Pipeline
     if (_pipeline) _device->handle().destroyPipeline(_pipeline, _allocator);
     if (_pipeline_layout)
         _device->handle().destroyPipelineLayout(_pipeline_layout, _allocator);
 
-    // Instances
-    for (auto instance_state : _instance_states) {
-        if (instance_state) {
-            auto instance_state_v = (VulkanInstanceState*) instance_state;
-            _device->handle().freeDescriptorSets(
-                _descriptor_pool, instance_state_v->descriptor_set
-            );
-            del(instance_state_v);
-        }
-    }
-    _instance_states.clear();
+    // Global texture maps
+    release_global_resources();
 
-    // Descriptors
+    // Descriptor states
+    for (auto& set : _descriptor_sets) {
+        for (auto& state : set.states) {
+            if (state) {
+                auto state_v = static_cast<VulkanDescriptorSetState*>(state);
+                _device->handle().freeDescriptorSets(
+                    _descriptor_pool, state_v->descriptor_set
+                );
+                delete state_v;
+            }
+        }
+        set.states.clear();
+    }
+
+    // Descriptor pools
     if (_descriptor_pool)
         _device->handle().destroyDescriptorPool(_descriptor_pool, _allocator);
-    for (auto config : _descriptor_set_configs) {
+
+    // Descriptor backend data
+    for (auto& set : _descriptor_sets) {
+        auto backend_data =
+            static_cast<VulkanDescriptorSetBackendData*>(set.backend_data);
         _device->handle().destroyDescriptorSetLayout(
-            config->layout, _allocator
+            backend_data->layout, _allocator
         );
-        del(config);
+        delete backend_data;
     }
-    _descriptor_set_configs.clear();
 }
 
 // //////////////////////////// //
@@ -297,60 +319,59 @@ void VulkanShader::use() {
     _command_buffer->handle->bindPipeline(
         vk::PipelineBindPoint::eGraphics, _pipeline
     );
-    bind_globals();
 }
 
-void VulkanShader::bind_globals() {
-    _bound_ubo_offset = _global_descriptor_set.byte_range.offset;
-}
-
-void VulkanShader::bind_instance(const uint32 id) {
-    if (id >= _instance_states.size() || _instance_states[id] == nullptr) {
-        Logger::error(
-            RENDERER_VULKAN_LOG,
-            "Invalid instance id given for binding. Task impossible."
-        );
-        return;
-    }
-    _bound_instance_id = id;
-    _bound_ubo_offset  = _instance_states[id]->offset;
-}
-
-void VulkanShader::apply_global() {
-    vk::DescriptorSet& global_descriptor_set =
-        _global_descriptor_sets[_command_buffer->current_frame];
-
+void VulkanShader::apply_descriptor_set(DescriptorSet& set, uint32 state_id) {
+    // All descriptor writes for this set
     static Vector<vk::WriteDescriptorSet> descriptor_writes {};
     descriptor_writes.clear();
 
-    Vector<vk::DescriptorBufferInfo>        buffer_infos {};
-    Vector<Vector<vk::DescriptorImageInfo>> image_infos {};
+    const auto state =
+        static_cast<VulkanDescriptorSetState*>(set.states[state_id]);
+    auto& descriptor_set_id =
+        state->descriptor_set_ids[_command_buffer->current_frame];
+    auto vk_descriptor_set =
+        state->descriptor_set[_command_buffer->current_frame];
 
-    for (auto& binding : _global_descriptor_set.bindings) {
-        if (!binding.was_modified) continue;
+    // Update only if necessary or if the descriptor set is not set yet
+    bool should_update = state->should_update || !descriptor_set_id.has_value();
 
-        vk::WriteDescriptorSet global_binding_write {};
-        global_binding_write.setDstSet(global_descriptor_set);
-        global_binding_write.setDstBinding(binding.set_index);
-        global_binding_write.setDescriptorType(get_descriptor_type(binding.type)
-        );
-        global_binding_write.setDstArrayElement(0);
-        global_binding_write.setDescriptorCount(binding.count);
+    if (should_update) {
+        Vector<vk::DescriptorBufferInfo>        buffer_infos {};
+        Vector<Vector<vk::DescriptorImageInfo>> image_infos {};
 
-        if (binding.type == ShaderBindingType::Sampler) {
-            image_infos.push_back(get_image_infos(_global_texture_maps));
-            global_binding_write.setImageInfo(image_infos.back());
-        } else /* Uniform or storage buffer */ {
-            buffer_infos.push_back({});
-            auto& last_info = buffer_infos.back();
-            last_info.setBuffer(_uniform_buffer->handle);
-            last_info.setOffset(binding.byte_range.offset);
-            last_info.setRange(binding.stride);
-            global_binding_write.setBufferInfo(last_info);
+        for (auto& binding : set.bindings) {
+            if (!binding.was_modified) continue;
+
+            vk::WriteDescriptorSet global_binding_write {};
+            global_binding_write.setDstSet(vk_descriptor_set);
+            global_binding_write.setDstBinding(binding.set_index);
+            global_binding_write.setDescriptorType(
+                get_descriptor_type(binding.type)
+            );
+            global_binding_write.setDstArrayElement(0);
+            global_binding_write.setDescriptorCount(binding.count);
+
+            if (binding.type == Binding::Type::Sampler) {
+                image_infos.push_back(
+                    get_image_infos(state->texture_maps[binding.binding_index])
+                );
+                global_binding_write.setImageInfo(image_infos.back());
+            } else /* Uniform or storage buffer */ {
+                buffer_infos.push_back({});
+                auto& last_info = buffer_infos.back();
+                last_info.setBuffer(_uniform_buffer->handle);
+                last_info.setOffset(binding.byte_range.offset);
+                last_info.setRange(binding.byte_range.size);
+                global_binding_write.setBufferInfo(last_info);
+            }
+
+            descriptor_writes.push_back(global_binding_write);
+            binding.was_modified = false;
         }
 
-        descriptor_writes.push_back(global_binding_write);
-        binding.was_modified = false;
+        state->should_update = false;
+        descriptor_set_id    = 884;
     }
 
     // Throws no exceptions
@@ -361,228 +382,142 @@ void VulkanShader::apply_global() {
     _command_buffer->handle->bindDescriptorSets(
         vk::PipelineBindPoint::eGraphics,
         _pipeline_layout,
-        0,
+        set.set_index,
         1,
-        &global_descriptor_set,
+        &vk_descriptor_set,
         0,
         0
     );
+}
+
+void VulkanShader::apply_global() {
+    for (auto& set : _descriptor_sets) {
+        if (set.scope != Scope::Global) continue;
+
+        apply_descriptor_set(set, 0);
+    }
 }
 
 void VulkanShader::apply_instance() {
-    if (!_use_instances) {
-        Logger::error(
-            RENDERER_VULKAN_LOG, "This shader does not use instances."
-        );
-        return;
+    for (auto& set : _descriptor_sets) {
+        if (set.scope != Scope::Instance) continue;
+
+        apply_descriptor_set(set, _bound_instance_id);
     }
-    if (_instance_states[_bound_instance_id] == nullptr)
-        Logger::fatal(RENDERER_VULKAN_LOG, "No instance is bound.");
-
-    // Obtain instance data.
-    const auto current_frame = _command_buffer->current_frame;
-    auto       object_state =
-        (VulkanInstanceState*) _instance_states[_bound_instance_id];
-    auto& object_descriptor_set = object_state->descriptor_set[current_frame];
-    auto& descriptor_set_id = object_state->descriptor_set_ids[current_frame];
-    bool  should_update =
-        object_state->should_update || !descriptor_set_id.has_value();
-
-    if (should_update) {
-        static Vector<vk::WriteDescriptorSet> descriptor_writes {};
-        descriptor_writes.clear();
-
-        Vector<vk::DescriptorBufferInfo>        buffer_infos {};
-        Vector<Vector<vk::DescriptorImageInfo>> image_infos {};
-
-        for (auto& binding : _instance_descriptor_set.bindings) {
-
-            vk::WriteDescriptorSet instance_binding_write {};
-            instance_binding_write.setDstSet(object_descriptor_set);
-            instance_binding_write.setDstBinding(binding.set_index);
-            instance_binding_write.setDescriptorType(
-                get_descriptor_type(binding.type)
-            );
-            instance_binding_write.setDstArrayElement(0);
-            instance_binding_write.setDescriptorCount(binding.count);
-
-            if (binding.type == ShaderBindingType::Sampler) {
-                image_infos.push_back(
-                    get_image_infos(object_state->instance_texture_maps)
-                );
-                instance_binding_write.setImageInfo(image_infos.back());
-            } else /* Uniform or storage buffer */ {
-                buffer_infos.push_back({});
-                auto& last_info = buffer_infos.back();
-                last_info.setBuffer(_uniform_buffer->handle);
-                last_info.setOffset(object_state->offset);
-                last_info.setRange(binding.byte_range.size);
-                instance_binding_write.setBufferInfo(last_info);
-            }
-
-            descriptor_writes.push_back(instance_binding_write);
-            binding.was_modified = false;
-        }
-
-        descriptor_set_id = 884; // TODO: better flag for initial update
-
-        // No throws
-        if (descriptor_writes.size() > 0)
-            _device->handle().updateDescriptorSets(descriptor_writes, nullptr);
-        object_state->should_update = false;
-    }
-
-    // Bind the descriptor set to be updated, or in case the shader changed.
-    _command_buffer->handle->bindDescriptorSets(
-        vk::PipelineBindPoint::eGraphics,
-        _pipeline_layout,
-        1,
-        1,
-        &object_descriptor_set,
-        0,
-        0
-    );
 }
 
 uint32 VulkanShader::acquire_instance_resources( //
-    const Vector<TextureMap*>& maps
+    const Vector<Texture::Map*>& maps
 ) {
-    uint32 instance_id    = _instance_states.size();
-    auto   instance_state = new (MemoryTag::Renderer) VulkanInstanceState();
+    uint32 instance_id = -1;
+    for (auto& set : _descriptor_sets) {
+        if (set.scope != Scope::Instance) continue;
 
-    // Check if map count fits
-    size_t instance_texture_count = 0;
-    for (auto& binding : _instance_descriptor_set.bindings) {
-        if (binding.type != ShaderBindingType::Sampler) continue;
+        // All state vector should be same size
+        if (instance_id == -1) instance_id = set.states.size();
 
-        instance_texture_count += binding.count;
+        // Create instance state for this descriptor set
+        auto instance_state =
+            new (MemoryTag::Shader) VulkanDescriptorSetState();
+
+        // === Samplers ===
+        auto& texture_maps = instance_state->texture_maps;
+
+        // Count texture maps in bindings
+        uint32 instance_texture_count = 0;
+        for (auto& binding : set.bindings) {
+            if (binding.type != Binding::Type::Sampler) continue;
+
+            // Validate if too little maps passed
+            if (maps.size() < instance_texture_count + binding.count) {
+                Logger::fatal(
+                    RENDERER_VULKAN_LOG,
+                    "Not enough texture maps provided for shader instance."
+                );
+            }
+
+            // Initialize texture maps
+            texture_maps[binding.binding_index] =
+                Vector<Texture::Map*>(binding.count);
+            auto& binding_maps = texture_maps[binding.binding_index];
+            for (uint32 i = 0; i < binding.count; i++) {
+                binding_maps[i] = maps[instance_texture_count + i];
+                if (!maps[instance_texture_count + i]->texture)
+                    binding_maps[i]->texture = _texture_system->default_texture;
+            }
+
+            // Update total instance count
+            instance_texture_count += binding.count;
+        }
+
+        // Validate if too many maps passed
+        if (maps.size() > instance_texture_count) {
+            Logger::error(
+                RENDERER_VULKAN_LOG,
+                "Too many texture maps provided for shader instance."
+            );
+        }
+
+        // === Uniforms ===
+        // Allocate space in the UBO
+        if (set.stride > 0) {
+            instance_state->offset =
+                _uniform_buffer->allocate(set.stride, _required_ubo_alignment);
+        }
+
+        // Allocate one descriptor set per frame in flight.
+        std::
+            array<vk::DescriptorSetLayout, VulkanSettings::max_frames_in_flight>
+                layouts;
+        auto*   backend_data =
+            static_cast<VulkanDescriptorSetBackendData*>(set.backend_data);
+        for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++)
+            layouts[i] = backend_data->layout;
+
+        vk::DescriptorSetAllocateInfo alloc_info {};
+        alloc_info.setDescriptorPool(_descriptor_pool);
+        alloc_info.setSetLayouts(layouts);
+
+        try {
+            auto result = _device->handle().allocateDescriptorSets(alloc_info);
+            for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++)
+                instance_state->descriptor_set[i] = result[i];
+        } catch (const vk::SystemError& e) {
+            Logger::fatal(RENDERER_VULKAN_LOG, e.what());
+        }
+
+        set.states.push_back(instance_state);
     }
 
-    if (maps.size() < instance_texture_count)
+    if (instance_id == -1) {
         Logger::fatal(
             RENDERER_VULKAN_LOG,
-            "Attempting to acquire internal shader resources, while not "
-            "providing all required texture maps [",
-            maps.size(),
-            "/",
-            instance_texture_count,
-            "]."
-        );
-    if (maps.size() > instance_texture_count) {
-        Logger::warning(
-            RENDERER_VULKAN_LOG,
-            "Too many texture maps provided for internal shader resource "
-            "acquisition [",
-            maps.size(),
-            "/",
-            instance_texture_count,
-            "]. All additional texture maps will be ignored."
+            "Attempting to acquire instance shader resources, for shader with "
+            "no instance descriptor sets."
         );
     }
 
-    // Initialize texture maps
-    auto& texture_maps = instance_state->instance_texture_maps;
-    texture_maps.resize(_instance_texture_count);
-    for (uint32 i = 0; i < _instance_texture_count; i++) {
-        texture_maps[i] = maps[i];
-        if (!maps[i]->texture)
-            texture_maps[i]->texture = _texture_system->default_texture;
-    }
-
-    // Allocate some space in the UBO - by the stride, not the size.
-    instance_state->offset = _uniform_buffer->allocate(
-        _instance_descriptor_set.stride, _required_ubo_alignment
-    );
-
-    // Allocate one descriptor set per frame in flight.
-    std::array<vk::DescriptorSetLayout, VulkanSettings::max_frames_in_flight>
-        layouts;
-    for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++)
-        layouts[i] = _descriptor_set_configs[_desc_set_index_instance]->layout;
-
-    vk::DescriptorSetAllocateInfo alloc_info {};
-    alloc_info.setDescriptorPool(_descriptor_pool);
-    alloc_info.setSetLayouts(layouts);
-
-    try {
-        auto result = _device->handle().allocateDescriptorSets(alloc_info);
-        for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++)
-            instance_state->descriptor_set[i] = result[i];
-    } catch (const vk::SystemError& e) {
-        Logger::fatal(RENDERER_VULKAN_LOG, e.what());
-    }
-
-    _instance_states.push_back(instance_state);
     return instance_id;
 }
 void VulkanShader::release_instance_resources(uint32 instance_id) {
-    if (instance_id >= _instance_states.size() ||
-        _instance_states[instance_id] == nullptr) {
-        Logger::warning(
-            RENDERER_VULKAN_LOG,
-            "Invalid instance id given for resource release. Nothing was done."
-        );
-        return;
-    }
-
-    auto instance_state = (VulkanInstanceState*) _instance_states[instance_id];
-
     // Wait for any pending operations using the descriptor set to finish.
     _device->handle().waitIdle();
 
-    // Free 3 descriptor sets (one per frame)
-    _device->handle().freeDescriptorSets(
-        _descriptor_pool, instance_state->descriptor_set
-    );
+    for (auto& set : _descriptor_sets) {
+        if (set.scope != Scope::Instance) continue;
 
-    _uniform_buffer->deallocate(instance_state->offset);
+        auto instance_state =
+            static_cast<VulkanDescriptorSetState*>(set.states[instance_id]);
 
-    del(instance_state);
-    _instance_states[instance_id] = nullptr;
-}
+        _device->handle().freeDescriptorSets(
+            _descriptor_pool, instance_state->descriptor_set
+        );
 
-void VulkanShader::acquire_texture_map_resources(TextureMap* texture_map) {
-    // TODO: Additional configurable settings
-    // Create sampler
-    vk::SamplerCreateInfo sampler_info {};
-    sampler_info.setAddressModeU(convert_repeat_type(texture_map->repeat_u));
-    sampler_info.setAddressModeV(convert_repeat_type(texture_map->repeat_v));
-    sampler_info.setAddressModeW(convert_repeat_type(texture_map->repeat_w));
-    sampler_info.setMagFilter(convert_filter_type(texture_map->filter_magnify));
-    sampler_info.setMinFilter(convert_filter_type(texture_map->filter_minify));
-    sampler_info.setAnisotropyEnable(true);
-    sampler_info.setMaxAnisotropy(_device->info().max_sampler_anisotropy);
-    sampler_info.setBorderColor(vk::BorderColor::eIntOpaqueBlack);
-    sampler_info.setUnnormalizedCoordinates(false);
-    sampler_info.setCompareEnable(false);
-    sampler_info.setCompareOp(vk::CompareOp::eAlways);
-    // Mipmap settings
-    sampler_info.setMipmapMode(vk::SamplerMipmapMode::eLinear);
-    sampler_info.setMipLodBias(0.0f);
-    sampler_info.setMinLod(0.0f);
-    sampler_info.setMaxLod(
-        static_cast<float32>(texture_map->texture->mip_level_count)
-    );
+        _uniform_buffer->deallocate(instance_state->offset);
 
-    vk::Sampler texture_sampler;
-    try {
-        texture_sampler =
-            _device->handle().createSampler(sampler_info, _allocator);
-    } catch (vk::SystemError e) {
-        Logger::fatal(RENDERER_VULKAN_LOG, e.what());
+        delete instance_state;
+        set.states[instance_id] = nullptr;
     }
-
-    const auto vulkan_texture_map_data =
-        new (MemoryTag::GPUTexture) VulkanTextureMapData();
-    vulkan_texture_map_data->sampler = texture_sampler;
-    texture_map->internal_data       = vulkan_texture_map_data;
-}
-void VulkanShader::release_texture_map_resources(TextureMap* texture_map) {
-    if (!texture_map) return;
-    if (!texture_map->internal_data) return;
-    auto data =
-        reinterpret_cast<VulkanTextureMapData*>(texture_map->internal_data);
-    if (data->sampler) _device->handle().destroySampler(data->sampler);
 }
 
 // /////////////////////////////// //
@@ -592,7 +527,7 @@ void VulkanShader::release_texture_map_resources(TextureMap* texture_map) {
 Outcome VulkanShader::set_uniform(const uint16 id, void* value) {
     auto uniform = _uniforms[id];
 
-    if (uniform.scope == ShaderScope::Local) {
+    if (uniform.scope == Shader::Scope::Local) {
         _command_buffer->handle->pushConstants(
             _pipeline_layout,
             vk::ShaderStageFlagBits::eVertex |
@@ -604,32 +539,31 @@ Outcome VulkanShader::set_uniform(const uint16 id, void* value) {
         return Outcome::Successful;
     }
 
-    auto* binding = get_binding(uniform.scope, uniform.binding);
+    // Get binding, set and state
+    auto* binding = get_binding(uniform.set_index, uniform.binding_index);
+    auto& set     = _descriptor_sets[uniform.set_index];
 
-    // Bind scope
-    if (_bound_scope != uniform.scope) {
-        if (uniform.scope == ShaderScope::Global)
-            _bound_ubo_offset = _global_descriptor_set.byte_range.offset;
-        else if (uniform.scope == ShaderScope::Instance)
-            _bound_ubo_offset = _instance_states[_bound_instance_id]->offset;
-        _bound_scope = uniform.scope;
+    uint32 state_id = 0;
+    if (set.scope == Scope::Global) {
+        state_id = 0;
+    } else if (set.scope == Scope::Instance) {
+        state_id = _bound_instance_id;
     }
+    auto state = static_cast<VulkanDescriptorSetState*>(set.states[state_id]);
+
+    if (state == nullptr)
+        Logger::fatal(
+            RENDERER_VULKAN_LOG, "No descriptor set state found for uniform."
+        );
 
     // Inform the need for uniform reapplication
-    if (_bound_scope == ShaderScope::Instance)
-        _instance_states[_bound_instance_id]->should_update = true;
-    else { binding->was_modified = true; }
+    binding->was_modified = true;
 
     // If sampler
-    if (uniform.type == ShaderUniformType::sampler) {
-        if (uniform.scope == ShaderScope::Global)
-            _global_texture_maps[uniform.location] = (TextureMap*) value;
-        else
-            _instance_states[_bound_instance_id]
-                ->instance_texture_maps[uniform.location] = (TextureMap*) value;
-        return Outcome::Successful;
+    if (uniform.type == UniformType::sampler) {
+        state->texture_maps[binding->binding_index][uniform.array_index] = (Texture::Map*) value;
     } else {
-        auto address = _uniform_buffer_offset + _bound_ubo_offset +
+        auto address = _uniform_buffer_offset + state->offset +
                        uniform.byte_range.offset;
         memcpy((void*) address, value, uniform.byte_range.size);
     }
@@ -698,18 +632,18 @@ Vector<vk::VertexInputAttributeDescription> VulkanShader::compute_attributes(
 ) const {
     // Static lookup table for our types->Vulkan ones.
     static vk::Format* types = 0;
-    static vk::Format  t[(uint8) ShaderAttributeType::COUNT];
+    static vk::Format  t[(uint8) AttributeType::COUNT];
     if (!types) {
-        t[(uint8) ShaderAttributeType::int8]    = vk::Format::eR8Sint;
-        t[(uint8) ShaderAttributeType::int16]   = vk::Format::eR16Sint;
-        t[(uint8) ShaderAttributeType::int32]   = vk::Format::eR32Sint;
-        t[(uint8) ShaderAttributeType::uint8]   = vk::Format::eR8Uint;
-        t[(uint8) ShaderAttributeType::uint16]  = vk::Format::eR16Uint;
-        t[(uint8) ShaderAttributeType::uint32]  = vk::Format::eR32Uint;
-        t[(uint8) ShaderAttributeType::float32] = vk::Format::eR32Sfloat;
-        t[(uint8) ShaderAttributeType::vec2]    = vk::Format::eR32G32Sfloat;
-        t[(uint8) ShaderAttributeType::vec3]    = vk::Format::eR32G32B32Sfloat;
-        t[(uint8) ShaderAttributeType::vec4] = vk::Format::eR32G32B32A32Sfloat;
+        t[(uint8) AttributeType::int8]    = vk::Format::eR8Sint;
+        t[(uint8) AttributeType::int16]   = vk::Format::eR16Sint;
+        t[(uint8) AttributeType::int32]   = vk::Format::eR32Sint;
+        t[(uint8) AttributeType::uint8]   = vk::Format::eR8Uint;
+        t[(uint8) AttributeType::uint16]  = vk::Format::eR16Uint;
+        t[(uint8) AttributeType::uint32]  = vk::Format::eR32Uint;
+        t[(uint8) AttributeType::float32] = vk::Format::eR32Sfloat;
+        t[(uint8) AttributeType::vec2]    = vk::Format::eR32G32Sfloat;
+        t[(uint8) AttributeType::vec3]    = vk::Format::eR32G32B32Sfloat;
+        t[(uint8) AttributeType::vec4]    = vk::Format::eR32G32B32A32Sfloat;
 
         types = t;
     }
@@ -731,48 +665,27 @@ Vector<vk::VertexInputAttributeDescription> VulkanShader::compute_attributes(
     return attributes;
 }
 
-Vector<VulkanDescriptorSetConfig*> VulkanShader::compute_uniforms(
+void VulkanShader::compute_uniforms(
     const Vector<vk::ShaderStageFlagBits>& shader_stages
-) const {
-    Vector<VulkanDescriptorSetConfig*> desc_set_configs {};
-    // === Process uniforms ===
-    // Global descriptor set
-    auto                               global_desc_set_config =
-        new (MemoryTag::Renderer) VulkanDescriptorSetConfig();
+) {
+    for (auto& set : _descriptor_sets) {
+        auto desc_set_backend_data =
+            new (MemoryTag::Shader) VulkanDescriptorSetBackendData();
 
-    for (const auto& binding : _global_descriptor_set.bindings) {
-        vk::DescriptorType   type = get_descriptor_type(binding.type);
-        vk::ShaderStageFlags binding_stages =
-            get_shader_stages(binding.shader_stages);
+        for (const auto& binding : set.bindings) {
+            vk::DescriptorType   type = get_descriptor_type(binding.type);
+            vk::ShaderStageFlags binding_stages =
+                get_shader_stages(binding.shader_stages);
 
-        vk::DescriptorSetLayoutBinding vulkan_binding {};
-        vulkan_binding.setBinding(binding.set_index);
-        vulkan_binding.setDescriptorCount(binding.count);
-        vulkan_binding.setDescriptorType(type);
-        vulkan_binding.setStageFlags(binding_stages);
-        global_desc_set_config->vulkan_bindings.push_back(vulkan_binding);
+            vk::DescriptorSetLayoutBinding vulkan_binding {};
+            vulkan_binding.setBinding(binding.binding_index);
+            vulkan_binding.setDescriptorCount(binding.count);
+            vulkan_binding.setDescriptorType(type);
+            vulkan_binding.setStageFlags(binding_stages);
+            desc_set_backend_data->vulkan_bindings.push_back(vulkan_binding);
+        }
+        set.backend_data = desc_set_backend_data;
     }
-    desc_set_configs.push_back(global_desc_set_config);
-
-    // Instance descriptor set
-    auto instance_desc_set_config =
-        new (MemoryTag::Renderer) VulkanDescriptorSetConfig();
-
-    for (const auto& binding : _instance_descriptor_set.bindings) {
-        vk::DescriptorType   type = get_descriptor_type(binding.type);
-        vk::ShaderStageFlags binding_stages =
-            get_shader_stages(binding.shader_stages);
-
-        vk::DescriptorSetLayoutBinding vulkan_binding {};
-        vulkan_binding.setBinding(binding.set_index);
-        vulkan_binding.setDescriptorCount(binding.count);
-        vulkan_binding.setDescriptorType(type);
-        vulkan_binding.setStageFlags(binding_stages);
-        instance_desc_set_config->vulkan_bindings.push_back(vulkan_binding);
-    }
-    desc_set_configs.push_back(instance_desc_set_config);
-
-    return desc_set_configs;
 }
 
 void VulkanShader::create_pipeline(
@@ -816,7 +729,20 @@ void VulkanShader::create_pipeline(
     // Line thickness (feature required for values above 1)
     rasterization_info.setLineWidth(1.0f);
     // Triangle face we dont want to render
-    rasterization_info.setCullMode(vk::CullModeFlagBits::eBack);
+    switch (_cull_mode) {
+    case Shader::CullMode::None:
+        rasterization_info.setCullMode(vk::CullModeFlagBits::eNone);
+        break;
+    case Shader::CullMode::Front:
+        rasterization_info.setCullMode(vk::CullModeFlagBits::eFront);
+        break;
+    case Shader::CullMode::Back:
+        rasterization_info.setCullMode(vk::CullModeFlagBits::eBack);
+        break;
+    case Shader::CullMode::Both:
+        rasterization_info.setCullMode(vk::CullModeFlagBits::eFrontAndBack);
+        break;
+    }
     // Set vertex order of front-facing triangles
     rasterization_info.setFrontFace(vk::FrontFace::eCounterClockwise);
     // Change depth information in some manner (used for shadow mapping)
@@ -944,10 +870,14 @@ void VulkanShader::create_pipeline(
 
     // === Create pipeline layout ===
     Vector<vk::DescriptorSetLayout> descriptor_set_layouts {
-        _descriptor_set_configs.size()
+        _descriptor_sets.size()
     };
-    for (uint32 i = 0; i < _descriptor_set_configs.size(); i++)
-        descriptor_set_layouts[i] = _descriptor_set_configs[i]->layout;
+    for (uint32 i = 0; i < _descriptor_sets.size(); i++) {
+        const auto backend_data = static_cast<VulkanDescriptorSetBackendData*>(
+            _descriptor_sets[i].backend_data
+        );
+        descriptor_set_layouts[i] = backend_data->layout;
+    }
 
     vk::PipelineLayoutCreateInfo layout_info {};
     // Layout of used descriptor sets
@@ -1004,25 +934,22 @@ void VulkanShader::create_pipeline(
     Logger::trace(RENDERER_VULKAN_LOG, "Graphics pipeline created.");
 }
 
-Vector<vk::DescriptorImageInfo> VulkanShader::get_image_infos(
-    const Vector<TextureMap*>& texture_maps
+Vector<vk::DescriptorImageInfo>& VulkanShader::get_image_infos(
+    const Vector<Texture::Map*>& texture_maps
 ) const {
     static Vector<vk::DescriptorImageInfo> image_infos {};
     image_infos.clear();
 
     for (uint32 i = 0; i < texture_maps.size(); ++i) {
         // TODO: only update in the list if actually needing an update.
-        const auto tm = texture_maps[i];
-
-        VulkanTextureData* t_data =
-            (VulkanTextureData*) tm->texture->internal_data();
-        VulkanTextureMapData* tm_data =
-            (VulkanTextureMapData*) tm->internal_data;
+        const auto tm = static_cast<const VulkanTexture::Map*>(texture_maps[i]);
+        const auto t =
+            static_cast<const VulkanTexture*>(texture_maps[i]->texture);
 
         vk::DescriptorImageInfo image_info {};
         image_info.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
-        image_info.setImageView(t_data->image->view);
-        image_info.setSampler(tm_data->sampler);
+        image_info.setImageView(t->image()->view);
+        image_info.setSampler(tm->sampler);
         image_infos.push_back(image_info);
 
         // TODO: change up descriptor state to handle this properly.
@@ -1040,52 +967,12 @@ Vector<vk::DescriptorImageInfo> VulkanShader::get_image_infos(
 // VULKAN SHADER HELPER FUNCTIONS //
 // ////////////////////////////// //
 
-vk::SamplerAddressMode convert_repeat_type(const TextureRepeat repeat) {
-    switch (repeat) {
-    case TextureRepeat::Repeat: //
-        return vk::SamplerAddressMode::eRepeat;
-    case TextureRepeat::MirroredRepeat:
-        return vk::SamplerAddressMode::eMirroredRepeat;
-    case TextureRepeat::ClampToEdge:
-        return vk::SamplerAddressMode::eClampToEdge;
-    case TextureRepeat::ClampToBorder:
-        return vk::SamplerAddressMode::eClampToBorder;
-    default:
-        Logger::warning(
-            RENDERER_VULKAN_LOG,
-            "Conversion of repeat type ",
-            (int32) repeat,
-            " not supported. Function `convert_repeat_type` will default "
-            "to "
-            "repeat."
-        );
-        return vk::SamplerAddressMode::eRepeat;
-    }
-}
-
-vk::Filter convert_filter_type(const TextureFilter filter) {
-    switch (filter) {
-    case TextureFilter::NearestNeighbour: return vk::Filter::eNearest;
-    case TextureFilter::BiLinear: return vk::Filter::eLinear;
-    default:
-        Logger::warning(
-            RENDERER_VULKAN_LOG,
-            "Conversion of filter mode ",
-            (int32) filter,
-            " not supported. Function `convert_filter_type` will default "
-            "to "
-            "linear."
-        );
-        return vk::Filter::eLinear;
-    }
-}
-
-vk::DescriptorType get_descriptor_type(ShaderBindingType type) {
+vk::DescriptorType get_descriptor_type(Shader::Binding::Type type) {
     switch (type) {
-    case ShaderBindingType::Uniform: return vk::DescriptorType::eUniformBuffer;
-    case ShaderBindingType::Sampler:
+    case Shader::Binding::Type::Uniform: return vk::DescriptorType::eUniformBuffer;
+    case Shader::Binding::Type::Sampler:
         return vk::DescriptorType::eCombinedImageSampler;
-    case ShaderBindingType::Storage: return vk::DescriptorType::eStorageBuffer;
+    case Shader::Binding::Type::Storage: return vk::DescriptorType::eStorageBuffer;
     default:
         Logger::fatal(
             RENDERER_VULKAN_LOG,
@@ -1099,16 +986,16 @@ vk::DescriptorType get_descriptor_type(ShaderBindingType type) {
 
 vk::ShaderStageFlags get_shader_stages(uint8 stages) {
     vk::ShaderStageFlags stage_flags {};
-    if ((stages & (uint8) ShaderStage::Vertex) != 0) {
+    if ((stages & (uint8) Shader::Stage::Vertex) != 0) {
         stage_flags |= vk::ShaderStageFlagBits::eVertex;
     }
-    if ((stages & (uint8) ShaderStage::Fragment) != 0) {
+    if ((stages & (uint8) Shader::Stage::Fragment) != 0) {
         stage_flags |= vk::ShaderStageFlagBits::eFragment;
     }
-    if ((stages & (uint8) ShaderStage::Compute) != 0) {
+    if ((stages & (uint8) Shader::Stage::Compute) != 0) {
         stage_flags |= vk::ShaderStageFlagBits::eCompute;
     }
-    if ((stages & (uint8) ShaderStage::Geometry) != 0) {
+    if ((stages & (uint8) Shader::Stage::Geometry) != 0) {
         stage_flags |= vk::ShaderStageFlagBits::eGeometry;
     }
     return stage_flags;

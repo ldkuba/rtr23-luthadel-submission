@@ -24,6 +24,8 @@ enum class ControlType { Press, Release, Hold };
  */
 class Control {
   public:
+    ~Control();
+
     /**
      * @brief Immutable name given to a control
      */
@@ -58,7 +60,6 @@ class Control {
         const ControlType  type,
         InputSystem* const input_system
     );
-    ~Control();
 
     friend class InputSystem;
 
