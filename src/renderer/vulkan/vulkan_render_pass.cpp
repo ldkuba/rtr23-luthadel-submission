@@ -159,9 +159,9 @@ VulkanRenderPass::VulkanRenderPass(
     }
 
     // === Cleanup ===
-    if (color_attachment_ref) delete color_attachment_ref;
-    if (depth_attachment_ref) delete depth_attachment_ref;
-    if (color_attachment_resolve_ref) delete color_attachment_resolve_ref;
+    if (color_attachment_ref) del(color_attachment_ref);
+    if (depth_attachment_ref) del(depth_attachment_ref);
+    if (color_attachment_resolve_ref) del(color_attachment_resolve_ref);
 
     // === Compute default clear values ===
     // Default background values of color and depth stencil for rendered area of
@@ -264,8 +264,8 @@ void VulkanRenderPass::clear_render_targets() {
     for (const auto& target : _render_targets) {
         const auto vk_framebuffer =
             dynamic_cast<VulkanFramebuffer*>(target->framebuffer());
-        delete vk_framebuffer;
-        delete target;
+        del(vk_framebuffer);
+        del(target);
     }
 }
 

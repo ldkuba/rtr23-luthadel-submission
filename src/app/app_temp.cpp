@@ -14,7 +14,7 @@ TestApplication::~TestApplication() {
     _texture_system.release(default_skybox.cube_map()->texture->name());
     _app_renderer.destroy_texture_map(default_skybox.cube_map);
 
-    delete _app_surface;
+    del(_app_surface);
 }
 
 // /////////////////////// //

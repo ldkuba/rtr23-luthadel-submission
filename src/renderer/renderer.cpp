@@ -66,7 +66,7 @@ Renderer::Renderer(
     _ui_renderpass->add_window_as_render_target();
     _skybox_renderpass->add_window_as_render_target();
 }
-Renderer::~Renderer() { delete _backend; }
+Renderer::~Renderer() { del(_backend); }
 
 // /////////////////////// //
 // RENDERER PUBLIC METHODS //

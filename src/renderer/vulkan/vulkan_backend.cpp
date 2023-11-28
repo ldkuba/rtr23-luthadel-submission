@@ -71,11 +71,11 @@ VulkanBackend::~VulkanBackend() {
     _device->handle().waitIdle();
 
     // Swapchain
-    delete _swapchain;
+    del(_swapchain);
 
     // TODO: TEMP VERTEX & INDEX BUFFER CODE
-    delete _index_buffer;
-    delete _vertex_buffer;
+    del(_index_buffer);
+    del(_vertex_buffer);
 
     // Render pass
     for (auto& pass : _registered_passes)
@@ -84,7 +84,7 @@ VulkanBackend::~VulkanBackend() {
     _render_pass_table.clear();
 
     // Command pool
-    delete _command_pool;
+    del(_command_pool);
 
     // Synchronization code
     for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++) {
@@ -99,7 +99,7 @@ VulkanBackend::~VulkanBackend() {
     Logger::trace(RENDERER_VULKAN_LOG, "Synchronization objects destroyed.");
 
     // Device
-    delete _device;
+    del(_device);
     // Surface
     _vulkan_instance.destroySurfaceKHR(_vulkan_surface);
     // Validation layer
@@ -784,7 +784,7 @@ void VulkanBackend::upload_data_to_buffer(
     _command_pool->end_single_time_commands(command_buffer);
 
     // Cleanup
-    delete staging_buffer;
+    del(staging_buffer);
 }
 // TODO: TEMP CODE END
 

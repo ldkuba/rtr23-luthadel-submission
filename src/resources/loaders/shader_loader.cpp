@@ -251,7 +251,7 @@ void ShaderLoader::unload(Resource* resource) {
     can_unload(ResourceType::Shader, resource);
 
     Shader::Config* res = (Shader::Config*) resource;
-    delete res;
+    del(res);
 }
 
 Result<Shader::Attribute, RuntimeErrorCode> parse_attribute_config(
