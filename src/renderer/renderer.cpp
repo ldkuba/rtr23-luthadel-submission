@@ -1,6 +1,7 @@
 #include "renderer/renderer.hpp"
 
 #include "resources/geometry.hpp"
+#include "renderer/lighting/lights.hpp"
 
 namespace ENGINE_NAMESPACE {
 
@@ -105,7 +106,7 @@ Result<void, RuntimeError> Renderer::draw_frame(
     // Use shader
     material_shader->use();
     // Setup shader globals
-    update_material_shader_globals();
+    update_material_shader_globals(render_data);
 
     // Draw geometries
     for (const auto& geo_data : render_data->geometry_data) {
@@ -277,7 +278,7 @@ Result<RenderPass*, RuntimeError> Renderer::get_renderpass(const String& name) {
         }                                                                      \
     }
 
-void Renderer::update_material_shader_globals() const {
+void Renderer::update_material_shader_globals(const RenderPacket* const render_data) const {
     const auto shader = material_shader;
 
     // Compute view matrix
@@ -289,10 +290,22 @@ void Renderer::update_material_shader_globals() const {
 
     // Apply globals
     set_uniform("projection", _projection);
-    set_uniform("view", view);
+    set_uniform("view", view); 
     set_uniform("ambient_color", _ambient_color);
     set_uniform("view_position", camera_position);
     set_uniform("mode", _view_mode);
+
+    // Apply lights
+    const auto& lights = render_data->light_data;
+    Vector<PointLightData> point_light_data {};
+    for(auto& point_light : lights.point_lights) {
+        point_light_data.push_back(*point_light);
+    }
+
+    set_uniform("directional_light", *(lights.directional_light));
+    set_uniform("num_point_lights", lights.num_point_lights);
+    set_uniform("point_lights", *(point_light_data.data()));
+
     shader->apply_global();
 }
 void Renderer::update_ui_shader_globals() const {

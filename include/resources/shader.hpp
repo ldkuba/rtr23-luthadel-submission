@@ -48,8 +48,15 @@ enum class ShaderStage : uint8 {
     Compute  = 0x8
 };
 
-/// @brief Shader scope
-enum class ShaderScope : uint8 { GlobalVert, GlobalFrag, InstanceVert, InstanceFrag, Local };
+enum class ShaderBindingType : uint8 { Uniform, Sampler, Storage };
+
+enum class ShaderScope : uint8 { Global, Instance, Local };
+
+/// @brief Byte range description
+struct ByteRange {
+    uint64 offset;
+    uint64 size;
+};
 
 /// @brief Structure containing all attribute relevant data
 struct ShaderAttribute {
@@ -60,20 +67,49 @@ struct ShaderAttribute {
 /// @brief Shader uniform configuration
 struct ShaderUniformConfig {
     String            name;
-    uint8             size;
-    uint32            location;
     ShaderUniformType type;
-    ShaderScope       scope;
+    uint32            size;
+    uint32            location;
 };
+/// @brief Shader binding configuration
+struct ShaderBindingConfig {
+    uint32                      set_index;
+    ShaderScope                 scope;
+    ShaderBindingType           type;
+    size_t                      count;
+    uint8                       shader_stages;
+    Vector<ShaderUniformConfig> uniforms;
+};
+
 /// @brief Structure containing all uniform relevant data
 struct ShaderUniform {
-    uint64            offset;
-    uint16            size;
+    ByteRange         byte_range;
+    ShaderScope       scope;
+    uint32            binding; // Binding -1 means it's a push constant
     uint16            location;
     uint16            index;
-    uint8             set_index;
-    ShaderScope       scope;
     ShaderUniformType type;
+};
+
+/// @brief Structure containing all binding relevant data
+struct ShaderBinding {
+    uint32            set_index;
+    ByteRange         byte_range;
+    uint32            stride;
+    ShaderScope       scope;
+    ShaderBindingType type;
+    size_t            count;
+    uint8             shader_stages;
+    Vector<size_t>    uniforms;
+    bool              was_modified;
+};
+
+struct ShaderDescriptorSet {
+    Vector<ShaderBinding> bindings;
+    ByteRange             byte_range;
+    uint64                stride;
+
+    bool is_empty() { return bindings.size() == 0; }
 };
 
 /**
@@ -86,7 +122,8 @@ class ShaderConfig : public Resource {
     const String                      render_pass_name;
     const uint8                       shader_stages;
     const Vector<ShaderAttribute>     attributes;
-    const Vector<ShaderUniformConfig> uniforms;
+    const Vector<ShaderBindingConfig> bindings;
+    const Vector<ShaderUniformConfig> push_constants;
     const bool                        use_instances;
     const bool                        use_locals;
 
@@ -95,21 +132,16 @@ class ShaderConfig : public Resource {
         const String&                      render_pass_name,
         const uint8                        shader_stages,
         const Vector<ShaderAttribute>&     attributes,
-        const Vector<ShaderUniformConfig>& uniforms,
+        const Vector<ShaderBindingConfig>& bindings,
+        const Vector<ShaderUniformConfig>& push_constants,
         const bool                         use_instances,
         const bool                         use_locals
     )
         : Resource(name), render_pass_name(render_pass_name),
           shader_stages(shader_stages), attributes(attributes),
-          uniforms(uniforms), use_instances(use_instances),
-          use_locals(use_locals) {}
+          bindings(bindings), push_constants(push_constants),
+          use_instances(use_instances), use_locals(use_locals) {}
     ~ShaderConfig() {}
-};
-
-/// @brief Push constant range description
-struct PushConstantRange {
-    uint64 offset;
-    uint64 size;
 };
 
 /**
@@ -280,30 +312,30 @@ class Shader {
     Vector<ShaderAttribute> _attributes {};
     uint16                  _attribute_stride = 0;
 
-    // Uniforms
-    UnorderedMap<String, uint32> _uniforms_hash {};
+    // Named uniforms
+    // This vector holds the actual uniform structs
+    // All other uniform vectors: global, instance and push constants,
+    // store indices to this vector
     Vector<ShaderUniform>        _uniforms {};
+    UnorderedMap<String, uint16> _uniforms_hash {};
+
+    // Descriptor Sets
+    ShaderDescriptorSet _global_descriptor_set {};
+    ShaderDescriptorSet _instance_descriptor_set {};
 
     // Global uniforms
-    uint64 _global_ubo_size   = 0;
-    uint64 _global_ubo_stride = 0;
-    uint64 _global_ubo_offset = 0;
+    Vector<TextureMap*> _global_texture_maps {};
 
     // Instance uniforms
-    uint64 _ubo_size   = 0;
-    uint64 _ubo_stride = 0;
-
-    // Local uniforms
-    uint64                    _push_constant_size   = 0;
-    uint64                    _push_constant_stride = 128;
-    Vector<PushConstantRange> _push_constant_ranges {};
-
-    // Instances
+    uint64                 _instance_ubo_size   = 0;
+    uint64                 _instance_ubo_stride = 0;
     Vector<InstanceState*> _instance_states;
+    uint8                  _instance_texture_count;
 
-    // Textures
-    Vector<TextureMap*> _global_texture_maps {};
-    uint8               _instance_texture_count;
+    // Push constants
+    uint64         _push_constant_size   = 0;
+    uint64         _push_constant_stride = 128;
+    Vector<size_t> _push_constants {};
 
     /**
      * @brief Set the uniform object
@@ -315,21 +347,10 @@ class Shader {
      */
     virtual Outcome set_uniform(const uint16 id, void* value);
 
-  private:
-    void add_sampler(const ShaderUniformConfig& config);
+    ShaderBinding* get_binding(ShaderScope scope, uint32 index);
 
-    /**
-     * @brief Add a uniform to the shader
-     * 
-     * @param config uniform config
-     * @param location location in buffer
-     * @param size only used for custom uniforms, otherwise ignored
-     */
-    void add_uniform(
-        const ShaderUniformConfig&  config,
-        const std::optional<uint32> location = std::optional<uint32>(),
-        size_t                      size     = 0
-    );
+  private:
+    void add_binding(const ShaderBindingConfig& config);
 };
 
 } // namespace ENGINE_NAMESPACE

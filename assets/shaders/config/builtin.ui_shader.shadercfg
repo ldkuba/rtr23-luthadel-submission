@@ -1,22 +1,73 @@
-# Shader config file
-version=1.0
-name=builtin.ui_shader
-renderpass=Renderpass.Builtin.UI
-stages=vertex,fragment
-
-# Attributes: type,name
-attribute=vec2,in_position
-attribute=vec2,in_texcoord
-
-# Uniforms: type,scope,name,(optional)size
-# NOTE: For scope: 0=global_vert, 1=global_frag, 2=instance_vert, 3=instance_frag, 4=local
-# === Global Vert ===
-uniform=mat4,0,projection
-uniform=mat4,0,view
-# === Global Frag ===
-# === Instance Vert ===
-# === Instance Frag ===
-uniform=vec4,3,diffuse_color
-uniform=sampler,3,diffuse_texture
-# === Local ===
-uniform=mat4,4,model
+{
+    "version": 1.0,
+    "name": "builtin.ui_shader",
+    "renderpass": "Renderpass.Builtin.UI",
+    "stages": [
+        "vertex",
+        "fragment"
+    ],
+    "attributes": [
+        {
+            "name": "in_position",
+            "type": "vec2"
+        },
+        {
+            "name": "in_texcoord",
+            "type": "vec2"
+        }
+    ],
+    "bindings": [
+        {
+            "scope": "global",
+            "type": "uniform",
+            "set_index": 0,
+            "stages": [
+                "vertex"
+            ],
+            "uniforms": [
+                {
+                    "name": "projection",
+                    "type": "mat4"
+                },
+                {
+                    "name": "view",
+                    "type": "mat4"
+                }
+            ]
+        },
+        {
+            "scope": "instance",
+            "type": "uniform",
+            "set_index": 1,
+            "stages": [
+                "fragment"
+            ],
+            "uniforms": [
+                {
+                    "name": "diffuse_color",
+                    "type": "vec4"
+                }
+            ]
+        },
+        {
+            "scope": "instance",
+            "type": "sampler",
+            "set_index": 2,
+            "stages": [
+                "fragment"
+            ],
+            "uniforms": [
+                {
+                    "name": "diffuse_texture",
+                    "type": "sampler2D"
+                }
+            ]
+        }
+    ],
+    "push_constants": [
+        {
+            "name": "model",
+            "type": "mat4"
+        }
+    ]
+}

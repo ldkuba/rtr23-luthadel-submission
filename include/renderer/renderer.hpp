@@ -223,7 +223,7 @@ class Renderer {
     );
 
     // TODO: Possibly temporary, but not 100% sure
-    void update_material_shader_globals() const;
+    void update_material_shader_globals(const RenderPacket* const render_data) const;
     void update_material_shader_locals(const glm::mat4 model) const;
     void update_ui_shader_globals() const;
     void update_ui_shader_locals(const glm::mat4 model) const;

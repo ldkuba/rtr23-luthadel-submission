@@ -5,11 +5,20 @@
 namespace ENGINE_NAMESPACE {
 
 class Light {
-  public:
-    Light(const String& name, const glm::vec4& color);
+  protected:
+    Light(const String& name);
 
-    String    name;
+  public:
+    String name;
+};
+
+struct PointLightData {
+    glm::vec4 position;
     glm::vec4 color;
+    float     constant;
+    float     linear;
+    float     quadratic;
+    float     padding;
 };
 
 /**
@@ -18,23 +27,14 @@ class Light {
  */
 class PointLight : public Light {
   public:
-    PointLight(
-        const String&    name,
-        const glm::vec4& color,
-        const glm::vec4& position,
-        float            constant  = 1.0,
-        float            linear    = 1.0,
-        float            quadratic = 1.0,
-        float            padding   = 1.0
-    );
+    PointLight(const String& name, const PointLightData& data);
 
-    glm::vec4 position;
+    PointLightData data;
+};
 
-    // Fallof factors:
-    float constant;
-    float linear;
-    float quadratic;
-    float padding;
+struct DirectionalLightData {
+    glm::vec4 direction;
+    glm::vec4 color;
 };
 
 /**
@@ -43,10 +43,8 @@ class PointLight : public Light {
  */
 class DirectionalLight : public Light {
   public:
-    DirectionalLight(
-        const String& name, const glm::vec4& color, const glm::vec4& direction
-    );
+    DirectionalLight(const String& name, const DirectionalLightData& data);
 
-    glm::vec4 direction;
+    DirectionalLightData data;
 };
 } // namespace ENGINE_NAMESPACE

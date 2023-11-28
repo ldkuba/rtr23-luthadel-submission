@@ -2,24 +2,18 @@
 
 namespace ENGINE_NAMESPACE {
 
-Light::Light(const String& name, const glm::vec4& color)
-    : name(name), color(color) {}
+Light::Light(const String& name)
+    : name(name) {}
 
 PointLight::PointLight(
     const String&    name,
-    const glm::vec4& color,
-    const glm::vec4& position,
-    float            constant,
-    float            linear,
-    float            quadratic,
-    float            padding
+    const PointLightData& data
 )
-    : Light(name, color), position(position), constant(constant),
-      linear(linear), quadratic(quadratic), padding(padding) {}
+    : Light(name), data(data) {}
 
 DirectionalLight::DirectionalLight(
-    const String& name, const glm::vec4& color, const glm::vec4& direction
+    const String& name, const DirectionalLightData& data
 )
-    : Light(name, color), direction(direction) {}
+    : Light(name), data(data) {}
 
 } // namespace ENGINE_NAMESPACE

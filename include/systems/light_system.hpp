@@ -16,7 +16,9 @@ public:
     void remove_directional(const DirectionalLight* const);
     void remove_point(const PointLight* const);
     const DirectionalLight* const get_directional();
+    DirectionalLightData* get_directional_data();
     const Vector<PointLight*> get_point();
+    Vector<PointLightData*> get_point_data();
 
 private:
     DirectionalLight* _directional_light;

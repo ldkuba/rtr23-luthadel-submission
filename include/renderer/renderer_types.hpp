@@ -174,9 +174,25 @@ struct GeometryRenderData {
     glm::mat4 model;
 };
 
+class DirectionalLight;
+class DirectionalLightData;
+class PointLight;
+class PointLightData;
+
+/**
+ * @brief Light render packet
+ */
+struct LightRenderData {
+    DirectionalLightData*   directional_light;
+    int                     num_point_lights;
+    Vector<PointLightData*> point_lights;
+};
+
 struct RenderPacket {
     Vector<GeometryRenderData> geometry_data;
     GeometryRenderData         ui_geometry_data;
+
+    LightRenderData light_data;
 };
 
 } // namespace ENGINE_NAMESPACE

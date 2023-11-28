@@ -41,6 +41,8 @@ elseif(NOT EXISTS "${PROJECT_SOURCE_DIR}/external/stb/CMakeLists.txt")
     message(FATAL_ERROR "STB not downloaded.")
 elseif(NOT EXISTS "${PROJECT_SOURCE_DIR}/external/vulkan/CMakeLists.txt")
     message(FATAL_ERROR "VULKAN not downloaded.")
+elseif(NOT EXISTS "${PROJECT_SOURCE_DIR}/external/json/CMakeLists.txt")
+    message(FATAL_ERROR "JSON not downloaded.")
 endif()
 
 # Find packages
@@ -52,6 +54,7 @@ add_subdirectory(external/vulkan/glfw)
 add_subdirectory(external/vulkan/glm)
 add_subdirectory(external/stb)
 add_subdirectory(external/tinyobjloader)
+add_subdirectory(external/json)
 
 # include directories
 target_include_directories(${PROJECT_NAME}
@@ -64,6 +67,7 @@ target_include_directories(${PROJECT_NAME}
     external/vulkan/vulkan
     external/stb
     external/tinyobjloader
+    external/json/include
 )
 
 # link
@@ -82,6 +86,7 @@ target_link_libraries(${PROJECT_NAME}
     # stb
     tinyobjloader
     Vulkan::Vulkan
+    nlohmann_json::nlohmann_json
 )
 
 # file(GLOB_RECURSE sources ${PROJECT_SOURCE_DIR}/**/*.c)

@@ -12,8 +12,8 @@ namespace ENGINE_NAMESPACE {
  * description.
  */
 struct VulkanDescriptorSetConfig {
-    vk::DescriptorSetLayout                layout;
-    Vector<vk::DescriptorSetLayoutBinding> bindings;
+    vk::DescriptorSetLayout     layout;
+    Vector<vk::DescriptorSetLayoutBinding> vulkan_bindings;
 };
 
 /**
@@ -92,13 +92,6 @@ class VulkanShader : public Shader {
     const uint32 _desc_set_index_global   = 0;
     const uint32 _desc_set_index_instance = 1;
 
-    const uint8 _bind_index_vert_ubo = 0;
-    const uint8 _bind_index_frag_ubo = 1;
-    const uint8 _bind_index_sampler  = 2;
-
-    const uint8 _pool_size_index_uniform = 0;
-    const uint8 _pool_size_index_sampler = 1;
-
     vk::ShaderModule create_shader_module(
         const vk::ShaderStageFlagBits shader_stage
     ) const;
@@ -119,7 +112,7 @@ class VulkanShader : public Shader {
         const bool                                       is_wire_frame = false
     );
 
-    Vector<vk::DescriptorImageInfo>& get_image_infos(
+    Vector<vk::DescriptorImageInfo> get_image_infos(
         const Vector<TextureMap*>& texture_maps
     ) const;
 };

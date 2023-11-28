@@ -5,6 +5,7 @@
 #include "math_libs.hpp"
 #include "systems/geometry_system.hpp"
 #include "systems/input/input_system.hpp"
+#include "systems/light_system.hpp"
 #include "resources/mesh.hpp"
 
 // TODO: TEMP
@@ -36,6 +37,7 @@ class TestApplication {
         &_app_renderer, &_resource_system, &_texture_system, &_shader_system
     };
     GeometrySystem _geometry_system { &_app_renderer, &_material_system };
+    LightSystem    _light_system { 10 };
 
     float64 calculate_delta_time();
 
@@ -148,12 +150,42 @@ inline void TestApplication::run() {
                                 "test_ui_material" };
     const auto       geom_2d = _geometry_system.acquire(config2d);
 
+    // === Add lights ===
+    DirectionalLight directional_light = {
+        "dir_light",
+        { glm::vec4(-2.0, -2.0, 0.0, 1.0),
+          glm::vec4(0.2, 0.2, 0.2, 1.0) }
+    };
+    _light_system.add_directional(&directional_light);
+
+    PointLight pl0 = { "pl0",
+                       { glm::vec4(0.0, 2.0, 0.0, 1.0),
+                         glm::vec4(0.0, 5.0, 0.5, 1.0),
+                         1.0,
+                         0.35,
+                         0.44,
+                         0.0 } };
+    PointLight pl1 = { "pl1",
+                       { glm::vec4(1.0, 2.0, 0.0, 1.0),
+                         glm::vec4(5.0, 0.0, 0.5, 1.0),
+                         1.0,
+                         0.35,
+                         0.44,
+                         0.0 } };
+    _light_system.add_point(&pl0);
+    _light_system.add_point(&pl1);
+
     // === Construct render packet ===
     RenderPacket packet {};
 
     // Add 3D meshes
     for (const auto mesh : meshes)
         mesh->add_geometry_to_render_packet(packet);
+
+    // Add lights
+    packet.light_data.directional_light = _light_system.get_directional_data();
+    packet.light_data.num_point_lights  = _light_system.get_point().size();
+    packet.light_data.point_lights      = _light_system.get_point_data();
 
     // Add UI
     packet.ui_geometry_data.geometry = geom_2d;
@@ -183,6 +215,13 @@ inline void TestApplication::run() {
             packet.geometry_data.clear();
             for (const auto mesh : meshes)
                 mesh->add_geometry_to_render_packet(packet);
+
+            // Add lights
+            packet.light_data.directional_light =
+                _light_system.get_directional_data();
+            packet.light_data.num_point_lights =
+                _light_system.get_point().size();
+            packet.light_data.point_lights = _light_system.get_point_data();
         }
 
         auto result = _app_renderer.draw_frame(&packet, delta_time);

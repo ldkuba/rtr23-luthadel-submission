@@ -19,21 +19,21 @@ struct PointLight{
 };
 
 // TODO: Temp
-DirectionalLight directional_light={
-    vec4(-.57735,-.57735,-.57735,0),
-    vec4(.8,.8,.8,1.)
-};
+// DirectionalLight directional_light={
+//     vec4(-.57735,-.57735,-.57735,0),
+//     vec4(.8,.8,.8,1.)
+// };
 
-PointLight pl0={
-    vec4(0,-5,-.5,0),
-    vec4(0,1,0,1),
-    1,.35,.44,0
-};
-PointLight pl1={
-    vec4(-5,0,-.5,0),
-    vec4(1,0,0,1),
-    1,.35,.44,0
-};
+// PointLight pl0={
+//     vec4(0,-5,-.5,0),
+//     vec4(0,1,0,1),
+//     1,.35,.44,0
+// };
+// PointLight pl1={
+//     vec4(-5,0,-.5,0),
+//     vec4(1,0,0,1),
+//     1,.35,.44,0
+// };
 
 struct PhongProperties{
     vec4 diffuse_colour;
@@ -106,14 +106,14 @@ void main(){
     
     if(in_mode==0||in_mode==1){
         vec3 view_direction=normalize(InDTO.view_position-InDTO.frag_position);
-        //out_color=calculate_directional_lights(GlobalUBO.directional_light,normal,view_direction);
-        out_color=calculate_directional_lights(directional_light,normal,view_direction);
+        out_color=calculate_directional_lights(GlobalUBO.directional_light,normal,view_direction);
+        //out_color=calculate_directional_lights(directional_light,normal,view_direction);
 
-        // for(int i = 0; i < min(GlobalUBO.num_point_lights, MAX_POINT_LIGHTS); i++){
-        //     out_color+=calculate_point_lights(GlobalUBO.point_lights[i],normal,InDTO.frag_position,view_direction);
-        // }
-        out_color+=calculate_point_lights(pl0,normal,InDTO.frag_position,view_direction);
-        out_color+=calculate_point_lights(pl1,normal,InDTO.frag_position,view_direction);
+        for(int i = 0; i < min(GlobalUBO.num_point_lights, MAX_POINT_LIGHTS); i++){
+            //out_color+=calculate_point_lights(GlobalUBO.point_lights[i],normal,InDTO.frag_position,view_direction);
+        }
+        // out_color+=calculate_point_lights(pl0,normal,InDTO.frag_position,view_direction);
+        // out_color+=calculate_point_lights(pl1,normal,InDTO.frag_position,view_direction);
 
     }else if(in_mode==2){
         out_color=vec4(max(normal,0),1.);
