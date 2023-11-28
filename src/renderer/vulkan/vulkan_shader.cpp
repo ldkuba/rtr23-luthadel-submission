@@ -596,7 +596,7 @@ vk::ShaderModule VulkanShader::create_shader_module(
     const auto shader_file_ext =
         (shader_stage == vk::ShaderStageFlagBits::eVertex) ? "vert" : "frag";
     const auto shader_file_path = String::build(
-        "../assets/shaders/bin/", _name, ".", shader_file_ext, ".spv"
+        "./assets/shaders/bin/", _name, ".", shader_file_ext, ".spv"
     );
 
     // Load data
