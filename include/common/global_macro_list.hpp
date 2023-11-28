@@ -26,6 +26,10 @@
     -   Err(error)
     -   Ok()
     -   check(result)
+//  Multithreading
+    -   for_loop
+    -   for_loop_1 & for_loop_2
+    -   GET_FOR_LOOP_MACRO
 //  General for use
     -   APP_NAME
     -   ENGINE_NAME
