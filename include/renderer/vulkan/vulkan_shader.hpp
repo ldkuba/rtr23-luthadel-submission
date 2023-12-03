@@ -59,7 +59,6 @@ class VulkanShader : public Shader {
 
     void use() override;
 
-    void bind_instance(const uint32 id) override;
     void apply_global() override;
     void apply_instance() override;
 
