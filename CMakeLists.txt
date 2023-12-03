@@ -50,7 +50,6 @@ endif()
 
 # Find packages
 find_package(Vulkan REQUIRED)
-find_package(TBB REQUIRED)
 
 # include subdirectories
 add_subdirectory(external/vulkan)
@@ -59,6 +58,12 @@ add_subdirectory(external/vulkan/glm)
 add_subdirectory(external/stb)
 add_subdirectory(external/tinyobjloader)
 add_subdirectory(external/json)
+
+set(TBB_TEST OFF CACHE BOOL "tbb testing")
+set(BUILD_SHARED_LIBS_TEMP ${BUILD_SHARED_LIBS})
+set(BUILD_SHARED_LIBS ON)
+add_subdirectory(external/oneTBB)
+set(BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS_TEMP})
 
 # include directories
 target_include_directories(${PROJECT_NAME}
@@ -72,6 +77,7 @@ target_include_directories(${PROJECT_NAME}
     external/stb
     external/tinyobjloader
     external/json/include
+    external/oneTBB/include
 )
 
 # link
