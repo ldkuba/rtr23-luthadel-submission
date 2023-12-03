@@ -198,9 +198,7 @@ struct RenderViewPacket {
     Vector<GeometryRenderData> geometry_data;
 };
 
-class DirectionalLight;
 class DirectionalLightData;
-class PointLight;
 class PointLightData;
 
 /**
@@ -217,7 +215,6 @@ struct LightRenderData {
  */
 struct RenderPacket {
     Vector<RenderViewPacket> view_data;
-    LightRenderData light_data;
 };
 
 } // namespace ENGINE_NAMESPACE

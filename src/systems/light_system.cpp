@@ -46,15 +46,15 @@ const Vector<PointLight*> LightSystem::get_point() {
     return _point_lights;
 }
 
-DirectionalLightData* LightSystem::get_directional_data() {
-    return &(_directional_light->data);
+DirectionalLightData LightSystem::get_directional_data() {
+    return _directional_light->data;
 }
 
-Vector<PointLightData*> LightSystem::get_point_data() {
-    Vector<PointLightData*> _point_light_data;
+Vector<PointLightData> LightSystem::get_point_data() {
+    Vector<PointLightData> _point_light_data;
     _point_light_data.reserve(_point_lights.size());
     for(auto* light : _point_lights) {
-        _point_light_data.push_back(&(light->data));
+        _point_light_data.push_back(light->data);
     }
     return _point_light_data;
 }

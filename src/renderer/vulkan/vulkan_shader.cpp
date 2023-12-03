@@ -236,7 +236,7 @@ VulkanShader::~VulkanShader() {
     // Ubo
     _uniform_buffer_offset = 0;
     _uniform_buffer->unlock_memory();
-    delete _uniform_buffer;
+    del(_uniform_buffer);
 
     // Pipeline
     if (_pipeline) _device->handle().destroyPipeline(_pipeline, _allocator);
@@ -271,7 +271,7 @@ VulkanShader::~VulkanShader() {
         _device->handle().destroyDescriptorSetLayout(
             backend_data->layout, _allocator
         );
-        delete backend_data;
+        del(backend_data);
     }
 }
 
@@ -515,7 +515,7 @@ void VulkanShader::release_instance_resources(uint32 instance_id) {
 
         _uniform_buffer->deallocate(instance_state->offset);
 
-        delete instance_state;
+        del(instance_state);
         set.states[instance_id] = nullptr;
     }
 }
@@ -582,7 +582,7 @@ vk::ShaderModule VulkanShader::create_shader_module(
     const auto shader_file_ext =
         (shader_stage == vk::ShaderStageFlagBits::eVertex) ? "vert" : "frag";
     const auto shader_file_path = String::build(
-        "../assets/shaders/bin/", _name, ".", shader_file_ext, ".spv"
+        "./assets/shaders/bin/", _name, ".", shader_file_ext, ".spv"
     );
 
     // Load data

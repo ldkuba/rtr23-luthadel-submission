@@ -63,7 +63,7 @@ class Texture {
         const uint32 width            = 0;
         const uint32 height           = 0;
         const uint32 channel_count    = 0;
-        const uint8   mip_level_count  = 0;
+        const uint32 mip_level_count  = 0;
         const bool   has_transparency = false;
         const bool   is_writable      = false;
         const bool   is_wrapped       = false;

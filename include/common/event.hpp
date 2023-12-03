@@ -213,7 +213,7 @@ Outcome remove_delegate(
     if (iter == callbacks.end()) return Outcome::Failed;
 
     callbacks.erase(iter);
-    delete *iter;
+    del(*iter);
 
     return Outcome::Successful;
 }

@@ -42,7 +42,7 @@ void TextLoader::unload(Resource* resource) {
     can_unload(ResourceType::Text, resource);
 
     TextData* data = (TextData*) (resource);
-    delete data;
+    del(data);
 }
 
 } // namespace ENGINE_NAMESPACE

@@ -64,7 +64,7 @@ void MeshLoader::unload(Resource* resource) {
     can_unload(ResourceType::Mesh, resource);
 
     auto res = (GeometryConfigArray*) resource;
-    delete res;
+    del(res);
 }
 
 // //////////////////////////// //
@@ -139,7 +139,7 @@ Result<GeometryConfigArray*, RuntimeError> load_mesh(
         uint8 dim_count;
         read = serializer.deserialize(buffer, buffer_pos, dim_count);
         if (read.has_error()) {
-            delete config_array;
+            del(config_array);
             return Failure(read.error());
         };
 
@@ -161,7 +161,7 @@ Result<GeometryConfigArray*, RuntimeError> load_mesh(
 
         // Advance buffer
         if (read.has_error()) {
-            delete config_array;
+            del(config_array);
             return Failure(read.error());
         }
         buffer_pos += read.value();

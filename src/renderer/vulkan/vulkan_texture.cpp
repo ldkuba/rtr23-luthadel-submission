@@ -63,7 +63,7 @@ Outcome VulkanTexture::write(
     _command_pool->end_single_time_commands(command_buffer);
 
     // Cleanup
-    delete staging_buffer;
+    del(staging_buffer);
 
     return Outcome::Successful;
 }

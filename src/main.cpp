@@ -23,7 +23,7 @@ int main(int, char**) {
 
     app->run();
 
-    delete app;
+    del(app);
     MemorySystem::reset_memory(MemoryTag::Application);
 
     return EXIT_SUCCESS;

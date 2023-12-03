@@ -14,7 +14,7 @@ TestApplication::~TestApplication() {
     _texture_system.release(default_skybox.cube_map()->texture->name());
     _app_renderer.destroy_texture_map(default_skybox.cube_map);
 
-    delete _app_surface;
+    del(_app_surface);
 }
 
 // /////////////////////// //
@@ -221,6 +221,8 @@ void TestApplication::run() {
     _sb_render_view->set_skybox_ref(&default_skybox);
 
     // === Add lights ===
+    _ow_render_view->set_light_system(&_light_system);
+
     DirectionalLight directional_light = {
         "dir_light",
         { glm::vec4(-2.0, -2.0, 0.0, 1.0),
@@ -267,11 +269,6 @@ void TestApplication::run() {
         packet.view_data.push_back(_sb_render_view->on_build_pocket());
         packet.view_data.push_back(_ow_render_view->on_build_pocket());
         packet.view_data.push_back(_ui_render_view->on_build_pocket());
-
-        // Add lights
-        packet.light_data.directional_light = _light_system.get_directional_data();
-        packet.light_data.num_point_lights  = _light_system.get_point().size();
-        packet.light_data.point_lights      = _light_system.get_point_data();
 
         auto result = _app_renderer.draw_frame(&packet, delta_time);
         if (result.has_error()) {

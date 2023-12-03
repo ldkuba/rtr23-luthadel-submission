@@ -15,4 +15,4 @@
 	url = https://github.com/tinyobjloader/tinyobjloader.git
 [submodule "external/json"]
 	path = external/json
-	url = git@github.com:nlohmann/json.git
+	url = https://github.com/nlohmann/json.git

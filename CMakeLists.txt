@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.23.2)
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_GLIBCXX_DEBUG")
 
@@ -15,6 +16,8 @@ file(GLOB_RECURSE SOURCES
     ${PROJECT_SOURCE_DIR}/include/**/*.hpp)
 add_executable(${PROJECT_NAME}
     ${SOURCES})
+
+install(TARGETS ${PROJECT_NAME})
 
 # DOWNLOAD ALL SUBMODULES
 find_package(Git QUIET)
