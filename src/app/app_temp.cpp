@@ -136,7 +136,7 @@ void TestApplication::run() {
     /// Load MESH TEST
     MeshLoader loader {};
 #    if CURRENT_SCENE == 1
-    auto       load_result = loader.load("falcon");
+    auto load_result = loader.load("falcon");
 #    elif CURRENT_SCENE == 2
     auto load_result = loader.load("sponza");
 #    elif CURRENT_SCENE == 3
@@ -223,23 +223,21 @@ void TestApplication::run() {
     // === Add lights ===
     _ow_render_view->set_light_system(&_light_system);
 
-    DirectionalLight directional_light = {
-        "dir_light",
-        { glm::vec4(-2.0, -2.0, 0.0, 1.0),
-          glm::vec4(0.2, 0.2, 0.2, 1.0) }
-    };
+    DirectionalLight directional_light = { "dir_light",
+                                           { glm::vec4(-0.7, 0.0, -0.7, 1.0),
+                                             glm::vec4(0.5, 0.5, 0.5, 1.0) } };
     _light_system.add_directional(&directional_light);
 
     PointLight pl0 = { "pl0",
-                       { glm::vec4(0.0, 2.0, 0.0, 1.0),
-                         glm::vec4(0.0, 5.0, 0.5, 1.0),
+                       { glm::vec4(1.0, 1.0, 2.0, 1.0),
+                         glm::vec4(0.0, 5.0, 0.0, 1.0),
                          1.0,
                          0.35,
                          0.44,
                          0.0 } };
     PointLight pl1 = { "pl1",
-                       { glm::vec4(1.0, 2.0, 0.0, 1.0),
-                         glm::vec4(5.0, 0.0, 0.5, 1.0),
+                       { glm::vec4(5.0, 1.0, 2.0, 1.0),
+                         glm::vec4(5.0, 0.0, 0.0, 1.0),
                          1.0,
                          0.35,
                          0.44,

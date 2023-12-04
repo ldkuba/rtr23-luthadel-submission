@@ -31,7 +31,7 @@ ResourceSystem::~ResourceSystem() {
 }
 
 // Static string
-String ResourceSystem::base_path = "./assets";
+String ResourceSystem::base_path = "../assets";
 
 // ////////////////////////////// //
 // RESOURCE SYSTEM PUBLIC METHODS //

@@ -77,7 +77,8 @@
                         },
                         {
                             "name": "num_point_lights",
-                            "type": "uint32"
+                            "type": "custom",
+                            "size": 16
                         },
                         {
                             "name": "point_lights",
@@ -112,6 +113,7 @@
                 {
                     "type": "sampler",
                     "binding_index": 2,
+                    "count": 3,
                     "stages": [
                         "fragment"
                     ],

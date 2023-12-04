@@ -17,8 +17,6 @@ file(GLOB_RECURSE SOURCES
 add_executable(${PROJECT_NAME}
     ${SOURCES})
 
-install(TARGETS ${PROJECT_NAME})
-
 # DOWNLOAD ALL SUBMODULES
 find_package(Git QUIET)
 if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
@@ -93,5 +91,7 @@ target_link_libraries(${PROJECT_NAME}
     nlohmann_json::nlohmann_json
     TBB::tbb
 )
+
+install(TARGETS ${PROJECT_NAME})
 
 # file(GLOB_RECURSE sources ${PROJECT_SOURCE_DIR}/**/*.c)

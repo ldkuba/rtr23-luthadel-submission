@@ -191,6 +191,7 @@ void Shader::add_binding(
 
     binding.type          = config.type;
     binding.set_index     = set_index;
+    binding.binding_index = config.binding_index;
     binding.count         = config.count;
     binding.shader_stages = config.shader_stages;
 
@@ -217,9 +218,8 @@ void Shader::add_binding(
 
             uniform.array_index = descriptor_set.texture_map_count++;
         } else { // Not a sampler
-            // We only set the size first because offset uses allignment
+            // Only set smallest uniform size. This might be alligned later
             uniform.byte_range.size = uniform_config.size;
-            binding_size += uniform_config.size;
         }
 
         // Add uniform to vector and hash
@@ -232,7 +232,6 @@ void Shader::add_binding(
 
     } // End uniforms
 
-    binding.total_size = binding_size;
     descriptor_set.bindings.push_back(binding);
 }
 

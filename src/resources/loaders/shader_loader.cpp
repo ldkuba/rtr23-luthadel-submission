@@ -175,7 +175,7 @@ Result<Resource*, RuntimeError> ShaderLoader::load(const String name) {
 
         // === Bindings ===
         Vector<json> shader_settings_bindings =
-            shader_settings_json.at(ShaderVars::bindings);
+            descriptor_set_settings.at(ShaderVars::bindings);
         for (auto binding_settings : shader_settings_bindings) {
             Shader::Binding::Config binding_config {};
 
@@ -225,7 +225,7 @@ Result<Resource*, RuntimeError> ShaderLoader::load(const String name) {
 
             // Uniforms
             Vector<json> binding_settings_uniforms =
-                binding_settings.at("uniforms");
+                binding_settings.at(ShaderVars::uniforms);
             for (auto& uniform_settings : binding_settings_uniforms) {
                 auto uniform_config_result =
                     parse_uniform_config(uniform_settings);
@@ -416,6 +416,9 @@ Result<Shader::Uniform::Config, RuntimeErrorCode> parse_uniform_config(
         uniform_config.type = Shader::UniformType::matrix4;
         uniform_config.size = 16 * sizeof(float32);
     } else if (uniform_type.compare_ci("sampler2D") == 0) {
+        uniform_config.type = Shader::UniformType::sampler;
+        uniform_config.size = 0; // Samplers dont have a size
+    } else if (uniform_type.compare_ci("samplerCube") == 0) {
         uniform_config.type = Shader::UniformType::sampler;
         uniform_config.size = 0; // Samplers dont have a size
     } else if (uniform_type.compare_ci("custom") == 0) {

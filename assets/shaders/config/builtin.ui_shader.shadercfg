@@ -61,6 +61,7 @@
                 {
                     "type": "sampler",
                     "binding_index": 2,
+                    "count": 1,
                     "stages": [
                         "fragment"
                     ],

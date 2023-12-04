@@ -87,7 +87,7 @@ class Shader {
         /// @brief Shader uniform configuration
         struct Config {
             String      name;
-            uint8       size;
+            uint32       size;
             uint32      array_index;
             UniformType type;
         };
@@ -97,9 +97,9 @@ class Shader {
                             // necessary, only kept beacuse samplers which are
                             // part of the same uniform are named differently
                             // and this is a hack to keep them separated)
-        uint16 binding_index; // Index of binding which holds this uniform (-1
+        uint32 binding_index; // Index of binding which holds this uniform (-1
                               // for push constants)
-        uint8  set_index; // Index of the set this uniform belongs to (-1 for
+        uint32 set_index; // Index of the set this uniform belongs to (-1 for
                           // push constants)
         Scope  scope;
         UniformType type;
@@ -112,14 +112,14 @@ class Shader {
 
         /// @brief Shader binding configuration
         struct Config {
-            uint8                   binding_index;
+            uint32                  binding_index;
             Type                    type;
             size_t                  count;
             uint8                   shader_stages;
             Vector<Uniform::Config> uniforms;
         };
 
-        uint8     set_index;     // Index of the set this binding belongs to
+        uint32    set_index;     // Index of the set this binding belongs to
         uint32    binding_index; // Index of this binding in the set
         ByteRange byte_range;    // Byte range of this binding in the buffer
         uint32    total_size; // Total size of this binding without allignment
@@ -128,7 +128,7 @@ class Shader {
         uint8     shader_stages;
         Vector<size_t> uniforms; // Vector of indices to uniforms in this
                                  // binding into the main uniform array
-        bool           was_modified;
+        bool           was_modified { true };
     };
 
     /// @brief Structure containing all descriptor set relevant data

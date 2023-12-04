@@ -44,17 +44,17 @@ VulkanShader::VulkanShader(
         for (auto& binding : set.bindings) {
             if (binding.type == Binding::Type::Sampler) continue;
 
-            binding.byte_range.size =
-                get_aligned(binding.total_size, _required_ubo_alignment);
-            binding.byte_range.offset = set.total_size;
-
             // Fill in missing uniform offsets
-            size_t uniform_offset = 0;
+            binding.total_size = 0;
             for (size_t uniform_id : binding.uniforms) {
                 auto& uniform             = _uniforms[uniform_id];
-                uniform.byte_range.offset = set.total_size + uniform_offset;
-                uniform_offset += uniform.byte_range.size;
+                uniform.byte_range.offset = set.total_size + binding.total_size;
+                binding.total_size += uniform.byte_range.size;
             }
+
+            binding.byte_range.offset = set.total_size;
+            binding.byte_range.size =
+                get_aligned(binding.total_size, _required_ubo_alignment);
 
             set.total_size += binding.byte_range.size;
         }
@@ -254,7 +254,7 @@ VulkanShader::~VulkanShader() {
                 _device->handle().freeDescriptorSets(
                     _descriptor_pool, state_v->descriptor_set
                 );
-                delete state_v;
+                del(state_v);
             }
         }
         set.states.clear();
@@ -341,32 +341,33 @@ void VulkanShader::apply_descriptor_set(DescriptorSet& set, uint32 state_id) {
         Vector<Vector<vk::DescriptorImageInfo>> image_infos {};
 
         for (auto& binding : set.bindings) {
-            if (!binding.was_modified) continue;
+            // descriptor_set_id is a hack for initializing all 3 frames
+            if (!binding.was_modified && descriptor_set_id.has_value()) continue;
 
-            vk::WriteDescriptorSet global_binding_write {};
-            global_binding_write.setDstSet(vk_descriptor_set);
-            global_binding_write.setDstBinding(binding.set_index);
-            global_binding_write.setDescriptorType(
+            vk::WriteDescriptorSet binding_write {};
+            binding_write.setDstSet(vk_descriptor_set);
+            binding_write.setDstBinding(binding.binding_index);
+            binding_write.setDescriptorType(
                 get_descriptor_type(binding.type)
             );
-            global_binding_write.setDstArrayElement(0);
-            global_binding_write.setDescriptorCount(binding.count);
+            binding_write.setDstArrayElement(0);
+            binding_write.setDescriptorCount(binding.count);
 
             if (binding.type == Binding::Type::Sampler) {
                 image_infos.push_back(
                     get_image_infos(state->texture_maps[binding.binding_index])
                 );
-                global_binding_write.setImageInfo(image_infos.back());
+                binding_write.setImageInfo(image_infos.back());
             } else /* Uniform or storage buffer */ {
                 buffer_infos.push_back({});
                 auto& last_info = buffer_infos.back();
                 last_info.setBuffer(_uniform_buffer->handle);
-                last_info.setOffset(binding.byte_range.offset);
+                last_info.setOffset(state->offset + binding.byte_range.offset);
                 last_info.setRange(binding.byte_range.size);
-                global_binding_write.setBufferInfo(last_info);
+                binding_write.setBufferInfo(last_info);
             }
 
-            descriptor_writes.push_back(global_binding_write);
+            descriptor_writes.push_back(binding_write);
             binding.was_modified = false;
         }
 
@@ -582,7 +583,7 @@ vk::ShaderModule VulkanShader::create_shader_module(
     const auto shader_file_ext =
         (shader_stage == vk::ShaderStageFlagBits::eVertex) ? "vert" : "frag";
     const auto shader_file_path = String::build(
-        "./assets/shaders/bin/", _name, ".", shader_file_ext, ".spv"
+        "../assets/shaders/bin/", _name, ".", shader_file_ext, ".spv"
     );
 
     // Load data
