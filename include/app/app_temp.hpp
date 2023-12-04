@@ -6,6 +6,7 @@
 #include "systems/geometry_system.hpp"
 #include "systems/render_view_system.hpp"
 #include "systems/input/input_system.hpp"
+#include "systems/light_system.hpp"
 #include "resources/mesh.hpp"
 #include "renderer/views/render_view_world.hpp"
 #include "renderer/views/render_view_ui.hpp"
@@ -46,6 +47,7 @@ class TestApplication {
         &_app_renderer, &_resource_system, &_texture_system, &_shader_system
     };
     GeometrySystem _geometry_system { &_app_renderer, &_material_system };
+    LightSystem    _light_system { 10 };
 
     float64 calculate_delta_time();
 

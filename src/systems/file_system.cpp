@@ -118,4 +118,13 @@ Result<Vector<String>, RuntimeError> FileSystem::read_lines(
     return lines;
 }
 
+Result<nlohmann::json, RuntimeError> FileSystem::read_json(
+    const String& file_path
+) {
+    std::ifstream file { file_path, std::ios::in };
+    if (!file.is_open()) return Failure("Failed to open file: " + file_path);
+
+    return nlohmann::json::parse(file);
+}
+
 } // namespace ENGINE_NAMESPACE

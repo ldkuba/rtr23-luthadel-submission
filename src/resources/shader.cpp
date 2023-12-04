@@ -6,10 +6,7 @@ namespace ENGINE_NAMESPACE {
 
 #define SHADER_LOG "Shader :: "
 
-// Helper functions
-Shader::PushConstantRange get_aligned_range(
-    uint64 offset, uint64 size, uint64 granularity
-);
+ByteRange get_aligned_range(uint64 offset, uint64 size, uint64 granularity);
 
 // Statics values
 const uint32 Shader::max_name_length;
@@ -28,38 +25,44 @@ Shader::Shader(
     }
     _attributes = config.attributes;
 
-    // Process uniforms
-    for (const auto& uniform : config.uniforms) {
-        // Sanity checks
-        if (uniform.name.compare("") == 0)
-            Logger::fatal(SHADER_LOG, "Uniform name not given.");
-        if (_uniforms_hash.contains(uniform.name))
-            Logger::fatal(
-                SHADER_LOG,
-                "Uniform by the name ",
-                uniform.name,
-                " already exists for shader ",
-                _name,
-                "."
-            );
+    // Process sets
+    for (const auto& set : config.sets) {
+        DescriptorSet descriptor_set {};
+        descriptor_set.scope     = set.scope;
+        descriptor_set.set_index = set.set_index;
+        _descriptor_sets.push_back(descriptor_set);
 
-        // Add uniform correctly
-        switch (uniform.type) {
-        case UniformType::sampler: add_sampler(uniform); break;
-        case UniformType::custom: // TODO: Implement
-            Logger::fatal(SHADER_LOG, "Custom uniform usage unimplemented.");
-            break;
-        default: add_uniform(uniform); break;
+        for (const auto& binding : set.bindings) {
+            add_binding(binding, set.set_index);
         }
     }
-}
-Shader::~Shader() {
-    for (uint64 i = 0; i < _global_texture_maps.size(); i++) {
-        _texture_system->release(_global_texture_maps[i]->texture->name());
-        del(_global_texture_maps[i]);
+
+    // Process push constants
+    for (const auto& push_constant_config : config.push_constants) {
+        Uniform push_constant {};
+        push_constant.type        = push_constant_config.type;
+        push_constant.array_index = 0;
+
+        push_constant.binding_index = -1;
+        push_constant.set_index     = -1;
+        push_constant.scope         = Scope::Local;
+
+        // Push a new aligned range (align to 4, as required by Vulkan spec)
+        push_constant.byte_range = get_aligned_range(
+            _push_constant_size, push_constant_config.size, 4
+        );
+
+        // Increase the push constant's size by the total value.
+        _push_constant_size += push_constant.byte_range.size;
+
+        size_t uniform_index = _uniforms.size();
+        _uniforms.push_back(push_constant);
+        _uniforms_hash[push_constant_config.name] = uniform_index;
+
+        _push_constants.push_back(uniform_index);
     }
-    _global_texture_maps.clear();
 }
+Shader::~Shader() {}
 
 // ///////////////////// //
 // SHADER PUBLIC METHODS //
@@ -68,8 +71,11 @@ Shader::~Shader() {
 void Shader::reload() {}
 
 void Shader::use() {}
-void Shader::bind_globals() {}
-void Shader::bind_instance(const uint32 id) { _bound_instance_id = id; }
+void Shader::bind_globals() { _bound_scope = Shader::Scope::Global; }
+void Shader::bind_instance(const uint32 id) {
+    _bound_scope       = Shader::Scope::Instance;
+    _bound_instance_id = id;
+}
 
 void Shader::apply_global() {}
 void Shader::apply_instance() {}
@@ -78,6 +84,55 @@ uint32 Shader::acquire_instance_resources(const Vector<Texture::Map*>& maps) {
     return -1;
 }
 void Shader::release_instance_resources(uint32 instance_id) {}
+
+void Shader::acquire_global_resources() {
+    for (auto& set : _descriptor_sets) {
+        if (set.scope != Scope::Global) continue;
+
+        for (auto& binding : set.bindings) {
+            if (binding.type != Binding::Type::Sampler) continue;
+
+            Vector<Texture::Map*> binding_maps {};
+            binding_maps.clear();
+
+            for (auto uniform_index : binding.uniforms) {
+                auto& uniform       = _uniforms[uniform_index];
+                uniform.array_index = set.states[0]->texture_maps.size();
+
+                // Create default texture map
+                // NOTE: Can always be updated later
+                // NOTE: Allocation within shader only done here (for globals)
+                const auto default_map =
+                    _renderer->create_texture_map({ nullptr,
+                                                    Texture::Use::Unknown,
+                                                    Texture::Filter::BiLinear,
+                                                    Texture::Filter::BiLinear,
+                                                    Texture::Repeat::Repeat,
+                                                    Texture::Repeat::Repeat,
+                                                    Texture::Repeat::Repeat });
+
+                // Allocate and push new global texture map
+                binding_maps.push_back(default_map);
+            }
+
+            set.states[0]->texture_maps[binding.binding_index] = binding_maps;
+        }
+    }
+}
+
+void Shader::release_global_resources() {
+    for (auto& set : _descriptor_sets) {
+        if (set.scope != Scope::Global) continue;
+
+        for (auto& binding_entry : set.states[0]->texture_maps) {
+            auto& binding_maps = binding_entry.second;
+            for (uint64 i = 0; i < binding_maps.size(); i++) {
+                _texture_system->release(binding_maps[i]->texture->name());
+                del(binding_maps[i]);
+            }
+        }
+    }
+}
 
 Result<uint16, InvalidArgument> Shader::get_uniform_index(const String& name
 ) const {
@@ -108,108 +163,83 @@ Outcome Shader::set_uniform(const uint16 id, void* value) {
     return Outcome::Successful;
 }
 
+Shader::Binding* Shader::get_binding(uint32 set_index, uint32 binding_index) {
+    if (set_index >= _descriptor_sets.size())
+        Logger::fatal(String::build("No set with index ", set_index, " exists.")
+        );
+    auto& set = _descriptor_sets[set_index];
+    if (binding_index >= set.bindings.size())
+        Logger::fatal(String::build(
+            "No binding with index ",
+            binding_index,
+            " exists in set ",
+            set_index,
+            "."
+        ));
+    return &set.bindings[binding_index];
+}
+
 // ////////////////////// //
 // SHADER PRIVATE METHODS //
 // ////////////////////// //
 
-void Shader::add_sampler(const Uniform::Config& config) {
-    if (config.scope == Scope::Local)
-        Logger::fatal(
-            SHADER_LOG,
-            "Error while adding sampler \"",
-            config.name,
-            "\".Local samplers not possible."
-        );
-
-    // If global, push into the global list.
-    uint32 location = 0;
-    if (config.scope == Scope::Global) {
-        location = _global_texture_maps.size();
-
-        // Create default texture map
-        // NOTE: Can always be updated later
-        // NOTE: Allocation within shader only done here (for globals)
-        const auto default_map =
-            _renderer->create_texture_map({ nullptr,
-                                            Texture::Use::Unknown,
-                                            Texture::Filter::BiLinear,
-                                            Texture::Filter::BiLinear,
-                                            Texture::Repeat::Repeat,
-                                            Texture::Repeat::Repeat,
-                                            Texture::Repeat::Repeat });
-
-        // Allocate and push new global texture map
-        _global_texture_maps.push_back(default_map);
-    } else {
-        // Otherwise, it's instance-level, so keep count of how many need to be
-        // added during the resource acquisition.
-        location = _instance_texture_count++;
-    }
-
-    // Treat it like a uniform.
-    add_uniform(config, location);
-}
-void Shader::add_uniform(
-    const Uniform::Config& config, const std::optional<uint32> location
+void Shader::add_binding(
+    const Binding::Config& config, const uint32 set_index
 ) {
-    Uniform entry {};
-    entry.index = _uniforms.size();
-    entry.scope = config.scope;
-    entry.type  = config.type;
+    Binding binding {};
+    auto&   descriptor_set = _descriptor_sets[set_index];
 
-    // Use passed location if given
-    if (location.has_value()) entry.location = location.value();
-    else entry.location = entry.index;
+    binding.type          = config.type;
+    binding.set_index     = set_index;
+    binding.binding_index = config.binding_index;
+    binding.count         = config.count;
+    binding.shader_stages = config.shader_stages;
 
-    if (config.scope == Scope::Local) {
-        // Push a new aligned range (align to 4, as required by Vulkan spec)
-        entry.set_index = -1;
-        PushConstantRange range =
-            get_aligned_range(_push_constant_size, config.size, 4);
-        // utilize the aligned offset/range
-        entry.offset = range.offset;
-        entry.size   = range.size;
+    // Uniforms
+    uint32 binding_size = 0;
+    for (const auto& uniform_config : config.uniforms) {
+        Uniform uniform {};
 
-        // Track in configuration for use in initialization.
-        _push_constant_ranges.push_back(range);
+        uniform.type = uniform_config.type;
 
-        // Increase the push constant's size by the total value.
-        _push_constant_size += range.size;
+        // This will allow identifying the binding that owns this uniform
+        uniform.binding_index = descriptor_set.bindings.size();
 
-        // Increase count
-        _uniform_count_local++;
-    } else {
-        entry.set_index = (uint32) config.scope;
-        // If this is sampler size & offset are implicitly 0
-        if (!location.has_value() /* NOT a sampler */) {
-            entry.size = config.size;
-            if (entry.scope == Scope::Global) {
-                entry.offset = _global_ubo_size;
-                _global_ubo_size += entry.size;
-                _uniform_count_global++;
-            } else {
-                entry.offset = _ubo_size;
-                _ubo_size += entry.size;
-                _uniform_count_instance++;
+        uniform.set_index = set_index;
+        uniform.scope     = descriptor_set.scope;
+
+        // Sampler
+        if (binding.type == Binding::Type::Sampler) {
+            if (uniform_config.type != UniformType::sampler) {
+                Logger::fatal(SHADER_LOG
+                              "Sampler binding uniform must be of type sampler."
+                );
             }
-        } else {
-            // Sampler
-            if (entry.scope == Scope::Global) _uniform_sampler_count_global++;
-            else _uniform_sampler_count_instance++;
-        }
-    }
 
-    _uniforms.push_back(entry);
-    _uniforms_hash[config.name] = entry.index;
+            uniform.array_index = descriptor_set.texture_map_count++;
+        } else { // Not a sampler
+            // Only set smallest uniform size. This might be alligned later
+            uniform.byte_range.size = uniform_config.size;
+        }
+
+        // Add uniform to vector and hash
+        size_t uniform_index                = _uniforms.size();
+        _uniforms_hash[uniform_config.name] = uniform_index;
+        _uniforms.push_back(uniform);
+
+        // Add uniform to binding
+        binding.uniforms.push_back(uniform_index);
+
+    } // End uniforms
+
+    descriptor_set.bindings.push_back(binding);
 }
 
 // /////////////////////// //
 // SHADER HELPER FUNCTIONS //
 // /////////////////////// //
 
-Shader::PushConstantRange get_aligned_range(
-    uint64 offset, uint64 size, uint64 granularity
-) {
+ByteRange get_aligned_range(uint64 offset, uint64 size, uint64 granularity) {
     return { get_aligned(offset, granularity),
              (uint16) get_aligned(size, granularity) };
 }

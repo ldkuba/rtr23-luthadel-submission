@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.23.2)
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_GLIBCXX_DEBUG")
 
@@ -41,6 +42,8 @@ elseif(NOT EXISTS "${PROJECT_SOURCE_DIR}/external/stb/CMakeLists.txt")
     message(FATAL_ERROR "STB not downloaded.")
 elseif(NOT EXISTS "${PROJECT_SOURCE_DIR}/external/vulkan/CMakeLists.txt")
     message(FATAL_ERROR "VULKAN not downloaded.")
+elseif(NOT EXISTS "${PROJECT_SOURCE_DIR}/external/json/CMakeLists.txt")
+    message(FATAL_ERROR "JSON not downloaded.")
 endif()
 
 # Find packages
@@ -53,6 +56,7 @@ add_subdirectory(external/vulkan/glfw)
 add_subdirectory(external/vulkan/glm)
 add_subdirectory(external/stb)
 add_subdirectory(external/tinyobjloader)
+add_subdirectory(external/json)
 
 # include directories
 target_include_directories(${PROJECT_NAME}
@@ -65,6 +69,7 @@ target_include_directories(${PROJECT_NAME}
     external/vulkan/vulkan
     external/stb
     external/tinyobjloader
+    external/json/include
 )
 
 # link
@@ -83,7 +88,10 @@ target_link_libraries(${PROJECT_NAME}
     # stb
     tinyobjloader
     Vulkan::Vulkan
+    nlohmann_json::nlohmann_json
     TBB::tbb
 )
+
+install(TARGETS ${PROJECT_NAME})
 
 # file(GLOB_RECURSE sources ${PROJECT_SOURCE_DIR}/**/*.c)

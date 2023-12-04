@@ -1,12 +1,15 @@
 #version 450
+#extension GL_EXT_scalar_block_layout: require
+
+#define MAX_POINT_LIGHTS 10
 
 // Light
 struct DirectionalLight{
-    vec3 direction;
+    vec4 direction;
     vec4 color;
 };
 struct PointLight{
-    vec3 position;
+    vec4 position;
     vec4 color;
     
     // Fallof factors:
@@ -15,6 +18,9 @@ struct PointLight{
     float quadratic;
     float padding;
 };
+struct NumPointLights{
+  uint num; // For some reason always padded to 16
+};
 
 struct PhongProperties{
     vec4 diffuse_colour;
@@ -22,31 +28,19 @@ struct PhongProperties{
     float shininess;
 };
 
-// TODO: Temp
-DirectionalLight directional_light={
-    vec3(-.57735,-.57735,-.57735),
-    vec4(.4,.4,.4,.8)
-};
-
-PointLight pl0={
-    vec3(0,-5,-.5),
-    vec4(0,1,0,1),
-    1,.35,.44,0
-};
-PointLight pl1={
-    vec3(-5,0,-.5),
-    vec4(1,0,0,1),
-    1,.35,.44,0
-};
-
-// TODO: Temp end
-
 // Tangent bi-tangent normal
 mat3 TBN;
 
 // === I/O ===
-// Uniforms
-layout(set=1,binding=0)uniform local_uniform_buffer{
+// Global uniforms
+layout(std430,set=0,binding=1)uniform global_frag_uniform_buffer{
+    DirectionalLight directional_light;
+    NumPointLights num_point_lights;
+    PointLight point_lights[MAX_POINT_LIGHTS];
+}GlobalUBO;
+
+// Instance uniforms
+layout(std430, set=1,binding=1)uniform local_uniform_buffer{
     vec4 diffuse_color;
     float shininess;
 }UBO;
@@ -55,7 +49,7 @@ layout(set=1,binding=0)uniform local_uniform_buffer{
 const int diffuse_i=0;
 const int specular_i=1;
 const int normal_i=2;
-layout(set=1,binding=1)uniform sampler2D samplers[3];
+layout(set=1,binding=2)uniform sampler2D samplers[3];
 
 // From vertex shader
 layout(location=0)flat in uint in_mode;
@@ -97,10 +91,12 @@ void main(){
     
     if(in_mode==0||in_mode==1){
         vec3 view_direction=normalize(InDTO.view_position-InDTO.frag_position);
-        out_color=calculate_directional_lights(directional_light,normal,view_direction);
-        
-        out_color+=calculate_point_lights(pl0,normal,InDTO.frag_position,view_direction);
-        out_color+=calculate_point_lights(pl1,normal,InDTO.frag_position,view_direction);
+        out_color=calculate_directional_lights(GlobalUBO.directional_light,normal,view_direction);
+
+        for(int i = 0; i < min(GlobalUBO.num_point_lights.num, MAX_POINT_LIGHTS); i++){
+            out_color+=calculate_point_lights(GlobalUBO.point_lights[i],normal,InDTO.frag_position,view_direction);
+        }
+
     }else if(in_mode==2){
         out_color=vec4(max(normal,0),1.);
     }

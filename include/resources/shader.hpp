@@ -10,6 +10,12 @@ namespace ENGINE_NAMESPACE {
 class TextureSystem;
 class Renderer;
 
+/// @brief Byte range description
+struct ByteRange {
+    uint64 offset;
+    uint64 size;
+};
+
 /**
  * @brief Frontend (API agnostic) representation of a shader.
  */
@@ -81,19 +87,83 @@ class Shader {
         /// @brief Shader uniform configuration
         struct Config {
             String      name;
-            uint8       size;
-            uint32      location;
+            uint32       size;
+            uint32      array_index;
             UniformType type;
-            Scope       scope;
         };
 
-        uint64      offset;
-        uint16      size;
-        uint16      location;
-        uint16      index;
-        uint8       set_index;
-        Scope       scope;
+        ByteRange byte_range;  // Byte range of this uniform in the buffer
+        uint16    array_index; // Index array in a binding (TODO: this is not
+                            // necessary, only kept beacuse samplers which are
+                            // part of the same uniform are named differently
+                            // and this is a hack to keep them separated)
+        uint32 binding_index; // Index of binding which holds this uniform (-1
+                              // for push constants)
+        uint32 set_index; // Index of the set this uniform belongs to (-1 for
+                          // push constants)
+        Scope  scope;
         UniformType type;
+    };
+
+    /// @brief Structure containing all binding relevant data
+    struct Binding {
+        /// @brief Shader binding type
+        enum class Type : uint8 { Uniform, Sampler, Storage };
+
+        /// @brief Shader binding configuration
+        struct Config {
+            uint32                  binding_index;
+            Type                    type;
+            size_t                  count;
+            uint8                   shader_stages;
+            Vector<Uniform::Config> uniforms;
+        };
+
+        uint32    set_index;     // Index of the set this binding belongs to
+        uint32    binding_index; // Index of this binding in the set
+        ByteRange byte_range;    // Byte range of this binding in the buffer
+        uint32    total_size; // Total size of this binding without allignment
+        Type      type;
+        size_t    count; // Number of elements in this binding
+        uint8     shader_stages;
+        Vector<size_t> uniforms; // Vector of indices to uniforms in this
+                                 // binding into the main uniform array
+        bool           was_modified { true };
+    };
+
+    /// @brief Structure containing all descriptor set relevant data
+    struct DescriptorSet {
+        /**
+         * @brief Descriptor set state
+         */
+        struct State {
+            uint64 offset;
+            bool   should_update = true;
+
+            // For each sampler binding we need to store a vector of textures
+            // TODO: once "named" sampler bindings are implemented properly
+            // we could change it to something that relies on the name of the
+            // binding instead of the index
+            UnorderedMap<uint32, Vector<Texture::Map*>> texture_maps;
+        };
+
+        struct BackendData {};
+
+        struct Config {
+            uint32                  set_index;
+            Scope                   scope;
+            Vector<Binding::Config> bindings;
+        };
+
+        Vector<Binding> bindings;
+        uint64          stride;     // Stride of this descriptor set
+        uint64          total_size; // Total size of this descriptor set without
+                                    // allignment
+        Scope           scope;
+        Vector<State*>  states {};
+        BackendData*    backend_data = nullptr;
+        uint32          texture_map_count;
+        uint32          set_index; // Index of this set
     };
 
     /**
@@ -102,40 +172,26 @@ class Shader {
      */
     class Config : public Resource {
       public:
-        const String                  render_pass_name;
-        const uint8                   shader_stages;
-        const Vector<Attribute>       attributes;
-        const Vector<Uniform::Config> uniforms;
-        const CullMode                cull_mode;
+        const String                        render_pass_name;
+        const uint8                         shader_stages;
+        const Vector<Attribute>             attributes;
+        const Vector<DescriptorSet::Config> sets;
+        const Vector<Uniform::Config>       push_constants;
+        const CullMode                      cull_mode;
 
         Config(
-            const String&                  name,
-            const String&                  render_pass_name,
-            const uint8                    shader_stages,
-            const Vector<Attribute>&       attributes,
-            const Vector<Uniform::Config>& uniforms,
-            const CullMode                 cull_mode
+            const String&                        name,
+            const String&                        render_pass_name,
+            const uint8                          shader_stages,
+            const Vector<Attribute>&             attributes,
+            const Vector<DescriptorSet::Config>& sets,
+            const Vector<Uniform::Config>&       push_constants,
+            const CullMode                       cull_mode
         )
             : Resource(name), render_pass_name(render_pass_name),
-              shader_stages(shader_stages), attributes(attributes),
-              uniforms(uniforms), cull_mode(cull_mode) {}
+              shader_stages(shader_stages), attributes(attributes), sets(sets),
+              push_constants(push_constants), cull_mode(cull_mode) {}
         ~Config() {}
-    };
-
-    /// @brief Push constant range description
-    struct PushConstantRange {
-        uint64 offset;
-        uint64 size;
-    };
-
-    /**
-     * @brief An instance-level shader state.
-     */
-    struct InstanceState {
-        uint64 offset;
-        bool   should_update = true;
-
-        Vector<Texture::Map*> instance_texture_maps;
     };
 
   public:
@@ -193,9 +249,12 @@ class Shader {
      */
     virtual void apply_global();
     /**
-     * @brief Apply set instance uniforms
+     * @brief Apply set instance uniforms. _bound_instance_id will be used
      */
     virtual void apply_instance();
+
+    virtual void acquire_global_resources();
+    virtual void release_global_resources();
 
     /**
      * @brief Acquires resources required for initialization of a shader
@@ -307,46 +366,44 @@ class Shader {
     // Currently bound
     Scope  _bound_scope;
     uint32 _bound_instance_id;
-    uint32 _bound_ubo_offset;
 
     // Attributes
     Vector<Attribute> _attributes {};
     uint16            _attribute_stride = 0;
 
-    // Uniforms
-    UnorderedMap<String, uint32> _uniforms_hash {};
+    // Named uniforms
+    // This vector holds the actual uniform structs
+    // All other uniform vectors: global, instance and push constants,
+    // store indices to this vector
     Vector<Uniform>              _uniforms {};
+    UnorderedMap<String, uint16> _uniforms_hash {};
 
-    // Global uniforms
-    bool   _globals_should_update = true;
-    uint64 _global_ubo_size       = 0;
-    uint64 _global_ubo_stride     = 0;
-    uint64 _global_ubo_offset     = 0;
+    // Descriptor Sets
+    Vector<DescriptorSet> _descriptor_sets {};
 
     // Instance uniforms
-    uint64 _ubo_size   = 0;
-    uint64 _ubo_stride = 0;
+    uint64 _instance_ubo_size   = 0;
+    uint64 _instance_ubo_stride = 0;
 
-    // Local uniforms
-    uint64                    _push_constant_size   = 0;
-    uint64                    _push_constant_stride = 128;
-    Vector<PushConstantRange> _push_constant_ranges {};
+    // Push constants
+    uint64         _push_constant_size   = 0;
+    uint64         _push_constant_stride = 128;
+    Vector<size_t> _push_constants {};
 
-    // Instances
-    Vector<InstanceState*> _instance_states {};
-
-    // Textures
-    Vector<Texture::Map*> _global_texture_maps {};
-    uint8                 _instance_texture_count = 0;
-
+    /**
+     * @brief Set the uniform object. If uniform is in instance set,
+     * _bound_instance_id will be used
+     *
+     * @param id id of the uniform
+     * @param value value to set
+     * @return Outcome
+     */
     virtual Outcome set_uniform(const uint16 id, void* value);
 
+    Binding* get_binding(uint32 set_index, uint32 binding_index);
+
   private:
-    void add_sampler(const Uniform::Config& config);
-    void add_uniform(
-        const Uniform::Config&      config,
-        const std::optional<uint32> location = std::optional<uint32>()
-    );
+    void add_binding(const Binding::Config& config, const uint32 set_index);
 };
 
 } // namespace ENGINE_NAMESPACE

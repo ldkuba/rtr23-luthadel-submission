@@ -2,6 +2,7 @@
 
 #include "resources/mesh.hpp"
 #include "multithreading/parallel.hpp"
+#include "systems/light_system.hpp"
 
 namespace ENGINE_NAMESPACE {
 
@@ -179,6 +180,9 @@ RenderViewWorld::UIndex::UIndex(const Shader* const shader) {
     uniform_index(view_position);
     uniform_index(mode);
     uniform_index(model);
+    uniform_index(directional_light);
+    uniform_index(num_point_lights);
+    uniform_index(point_lights);
 }
 
 #define uniform_set(uniform, value)                                            \
@@ -203,6 +207,15 @@ void RenderViewWorld::apply_globals(const uint64 frame_number) const {
     uniform_set(ambient_color, _ambient_color);
     uniform_set(view_position, _world_camera->transform.position());
     uniform_set(mode, _render_mode);
+
+    // Apply lights
+    auto point_light_data = _light_system->get_point_data();
+    auto directional_light = _light_system->get_directional_data();
+    auto num_point_lights = point_light_data.size();
+    uniform_set(directional_light, directional_light);
+    uniform_set(num_point_lights, num_point_lights);
+    uniform_set(point_lights, *(point_light_data.data()));
+
     _shader->apply_global();
 
     // Update render frame number

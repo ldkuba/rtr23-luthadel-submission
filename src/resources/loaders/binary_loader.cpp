@@ -41,7 +41,7 @@ void BinaryLoader::unload(Resource* resource) {
     can_unload(ResourceType::Binary, resource);
 
     ByteArrayData* data = (ByteArrayData*) (resource);
-    delete data;
+    del(data);
 }
 
 } // namespace ENGINE_NAMESPACE

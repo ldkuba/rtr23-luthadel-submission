@@ -7,6 +7,8 @@
 #include "error_types.hpp"
 #include "platform/platform.hpp"
 
+#include <nlohmann/json.hpp>
+
 namespace ENGINE_NAMESPACE {
 
 /**
@@ -153,6 +155,17 @@ class FileSystem {
      * @throw RuntimeError otherwise
      */
     static Result<Vector<String>, RuntimeError> read_lines(
+        const String& file_path
+    );
+
+    /**
+     * @brief Opens and fully reads a json file.
+     *
+     * @param file_path File path, separated by dashes ('/')
+     * @return json object
+     * @throw RuntimeError otherwise
+     */
+    static Result<nlohmann::json, RuntimeError> read_json(
         const String& file_path
     );
 

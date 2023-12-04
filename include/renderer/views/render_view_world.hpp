@@ -5,6 +5,8 @@
 
 namespace ENGINE_NAMESPACE {
 
+class LightSystem;
+
 class RenderViewWorld : public RenderView {
   public:
     Property<DebugViewMode> render_mode {
@@ -32,6 +34,10 @@ class RenderViewWorld : public RenderView {
         _render_data = data;
     };
 
+    void set_light_system(LightSystem* light_system) {
+        _light_system = light_system;
+    }
+
   protected:
     Shader*   _shader;
     float32   _fov;
@@ -40,6 +46,8 @@ class RenderViewWorld : public RenderView {
     glm::mat4 _proj_matrix;
     Camera*   _world_camera;
     glm::vec4 _ambient_color;
+
+    LightSystem* _light_system; // Reference to the light system
 
     DebugViewMode _render_mode = DebugViewMode::Default;
 
@@ -51,6 +59,9 @@ class RenderViewWorld : public RenderView {
         uint16 view_position = -1;
         uint16 mode          = -1;
         uint16 model         = -1;
+        uint16 directional_light = -1;
+        uint16 num_point_lights = -1;
+        uint16 point_lights     = -1;
 
         UIndex() {}
         UIndex(const Shader* const shader);

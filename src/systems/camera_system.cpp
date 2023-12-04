@@ -13,9 +13,9 @@ CameraSystem::CameraSystem() {
 }
 CameraSystem::~CameraSystem() {
     for (const auto& camera : _registered_cameras)
-        delete camera.second.handle;
+        del(camera.second.handle);
     _registered_cameras.clear();
-    delete _default_camera;
+    del(_default_camera);
     Logger::trace(CAMERA_SYS_LOG, "Camera system destroyed.");
 }
 
@@ -84,7 +84,7 @@ void CameraSystem::release(const String name) {
 
     // Release resource if needed
     if (ref->second.reference_count == 0) {
-        delete ref->second.handle;
+        del(ref->second.handle);
         _registered_cameras.erase(ref->first);
     }
 

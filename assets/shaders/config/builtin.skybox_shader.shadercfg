@@ -1,19 +1,78 @@
-# Shader config file
-version=1.0
-cull_mode=front
-name=builtin.skybox_shader
-renderpass=Renderpass.Builtin.Skybox
-stages=vertex,fragment
-
-# Attributes: type,name
-attribute=vec3,in_position
-attribute=vec3,in_normal
-attribute=vec3,in_tangent
-attribute=vec4,in_color
-attribute=vec2,in_texcoord
-
-# Uniforms: type,scope,name
-# NOTE: For scope: 0=global, 1=instance, 2=local
-uniform=mat4,0,projection
-uniform=mat4,0,view
-uniform=sampler,1,cube_texture
+{
+    "version": 1.0,
+    "name": "builtin.skybox_shader",
+    "renderpass": "Renderpass.Builtin.Skybox",
+    "stages": [
+        "vertex",
+        "fragment"
+    ],
+    "cull_mode": "front",
+    "attributes": [
+        {
+            "type": "vec3",
+            "name": "in_position"
+        },
+        {
+            "type": "vec3",
+            "name": "in_normal"
+        },
+        {
+            "type": "vec3",
+            "name": "in_tangent"
+        },
+        {
+            "type": "vec4",
+            "name": "in_color"
+        },
+        {
+            "type": "vec2",
+            "name": "in_texcoord"
+        }
+    ],
+    "descriptor_sets": [
+        {
+            "scope": "global",
+            "set_index": 0,
+            "bindings": [
+                {
+                    "type": "uniform",
+                    "binding_index": 0,
+                    "stages": [
+                        "vertex"
+                    ],
+                    "uniforms": [
+                        {
+                            "type": "mat4",
+                            "name": "projection"
+                        },
+                        {
+                            "type": "mat4",
+                            "name": "view"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "scope": "instance",
+            "set_index": 1,
+            "bindings": [
+                {
+                    "type": "sampler",
+                    "binding_index": 0,
+                    "count": 1,
+                    "stages": [
+                        "fragment"
+                    ],
+                    "uniforms": [
+                        {
+                            "type": "samplerCube",
+                            "name": "cube_texture"
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "push_constants": []
+}

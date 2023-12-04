@@ -4,7 +4,20 @@
 #include "resources/shader.hpp"
 #include "systems/file_system.hpp"
 
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
+
 namespace ENGINE_NAMESPACE {
+
+Result<Shader::Attribute, RuntimeErrorCode> parse_attribute_config(
+    json attribute_settings
+);
+Result<Shader::Uniform::Config, RuntimeErrorCode> parse_uniform_config(
+    json uniform_settings
+);
+Result<uint8, RuntimeErrorCode> parse_shader_stage_flags(
+    Vector<String> shader_stages
+);
 
 struct ShaderVars {
     STRING_ENUM(version);
@@ -12,16 +25,17 @@ struct ShaderVars {
     STRING_ENUM(renderpass);
     STRING_ENUM(stages);
     STRING_ENUM(cull_mode);
-    STRING_ENUM(attribute);
-    STRING_ENUM(uniform);
+    STRING_ENUM(attributes);
+    STRING_ENUM(descriptor_sets);
+    STRING_ENUM(set_index);
+    STRING_ENUM(bindings);
+    STRING_ENUM(scope);
+    STRING_ENUM(type);
+    STRING_ENUM(binding_index);
+    STRING_ENUM(uniforms);
+    STRING_ENUM(count);
+    STRING_ENUM(push_constants);
 };
-
-Result<Shader::Attribute, RuntimeErrorCode> parse_attribute_config(
-    String attribute_str
-);
-Result<Shader::Uniform::Config, RuntimeErrorCode> parse_uniform_config(
-    String uniform_str
-);
 
 // Constructor & Destructor
 ShaderLoader::ShaderLoader() {
@@ -40,7 +54,8 @@ Result<Resource*, RuntimeError> ShaderLoader::load(const String name) {
     String                          shader_render_pass_name = "";
     uint8                           shader_stages           = 0;
     Vector<Shader::Attribute>       shader_attributes       = {};
-    Vector<Shader::Uniform::Config> shader_uniforms         = {};
+    Vector<Shader::DescriptorSet::Config> shader_sets             = {};
+    Vector<Shader::Uniform::Config> shader_push_constants   = {};
     Shader::CullMode                shader_cull_mode = Shader::CullMode::Back;
 
     // Load material configuration from file
@@ -49,188 +64,238 @@ Result<Resource*, RuntimeError> ShaderLoader::load(const String name) {
     String file_path =
         ResourceSystem::base_path + "/" + _type_path + "/" + file_name;
 
-    auto shader_settings = FileSystem::read_lines(file_path);
+    auto shader_settings = FileSystem::read_json(file_path);
     if (shader_settings.has_error()) {
         Logger::error(RESOURCE_LOG, shader_settings.error().what());
         return Failure(shader_settings.error().what());
     }
 
-    // Parse loaded config
-    uint32 line_number = 1;
-    for (auto setting_line : shader_settings.value()) {
-        setting_line.trim();
+    auto shader_settings_json = shader_settings.value();
 
-        // Skip blank and comment lines
-        if (setting_line.length() < 1 || setting_line[0] == '#') {
-            line_number++;
-            continue;
+    // === Version ===
+    // TODO: versions
+
+    // === Name ===
+    String shader_settings_name = shader_settings_json.at(ShaderVars::name);
+    if (shader_settings_name.length() <= Shader::max_name_length)
+        shader_name = shader_settings_name;
+    else {
+        Logger::warning(
+            RESOURCE_LOG,
+            "Couldn't load shader name in file",
+            file_path,
+            ". Name is too long (",
+            shader_settings_name.length(),
+            " characters, while maximum name length is ",
+            Shader::max_name_length,
+            " characters)."
+        );
+    }
+
+    // === Render Pass ===
+    shader_render_pass_name = shader_settings_json.at(ShaderVars::renderpass);
+
+    // === Shader Stages ===
+    Vector<String> shader_settings_stages =
+        shader_settings_json.at(ShaderVars::stages);
+    auto stage_flags = parse_shader_stage_flags(shader_settings_stages);
+
+    if (shader_settings.has_error()) {
+        Logger::warning(
+            RESOURCE_LOG,
+            "Couldn't parse shader stages in file ",
+            file_name,
+            ". Invalid shader stage \"",
+            shader_settings.error().what(),
+            "\" passed."
+        );
+    } else {
+        shader_stages = stage_flags.value();
+    }
+
+    // === Cull Mode ===
+    String culling_mode = shader_settings_json.at(ShaderVars::cull_mode);
+    if (culling_mode.compare("none")) shader_cull_mode = Shader::CullMode::None;
+    else if (culling_mode.compare("front"))
+        shader_cull_mode = Shader::CullMode::Back;
+    else if (culling_mode.compare("back"))
+        shader_cull_mode = Shader::CullMode::Front;
+    else if (culling_mode.compare("both"))
+        shader_cull_mode = Shader::CullMode::Both;
+
+    // === Attributes ===
+    Vector<json> shader_settings_attributes =
+        shader_settings_json.at(ShaderVars::attributes);
+    for (auto attribute_settings : shader_settings_attributes) {
+        auto attribute = parse_attribute_config(attribute_settings);
+
+        match_error_code(attribute) {
+            Err(0) Logger::warning(
+                RESOURCE_LOG,
+                "Couldn't parse attribute in file ",
+                file_name,
+                ". Wrong attribute argument format passed."
+            );
+            Err(1) Logger::warning(
+                RESOURCE_LOG,
+                "Invalid attribute type \"",
+                attribute.error().what(),
+                "\" passed."
+            );
         }
+        else { shader_attributes.push_back(attribute.value()); }
+    }
 
-        // Split line by = into a var/value pair
-        auto setting = setting_line.split('=');
-        if (setting.size() != 2) {
+    // === Descriptor Sets ===
+    Vector<json> shader_settings_descriptor_sets =
+        shader_settings_json.at(ShaderVars::descriptor_sets);
+    for (auto descriptor_set_settings : shader_settings_descriptor_sets) {
+        Shader::DescriptorSet::Config descriptor_set_config {};
+
+        // Scope
+        String descriptor_set_scope =
+            descriptor_set_settings.at(ShaderVars::scope);
+        if (descriptor_set_scope.compare_ci("global") == 0) {
+            descriptor_set_config.scope = Shader::Scope::Global;
+        } else if (descriptor_set_scope.compare_ci("instance") == 0) {
+            descriptor_set_config.scope = Shader::Scope::Instance;
+        } else {
             Logger::warning(
                 RESOURCE_LOG,
-                "Potential formatting issue with the number of = tokens found. "
-                "Skipping line ",
-                line_number,
-                " of file ",
-                file_path,
-                "."
+                "Invalid descriptor set scope \"",
+                descriptor_set_scope,
+                "\" passed."
             );
-            line_number++;
-            continue;
         }
 
-        auto setting_var = setting[0];
-        auto setting_val = setting[1];
+        // Index
+        uint32 descriptor_set_index =
+            descriptor_set_settings.value(ShaderVars::set_index, 0);
+        descriptor_set_config.set_index = descriptor_set_index;
 
-        setting_var.trim();
-        setting_var.to_lower();
-        setting_val.trim();
+        // === Bindings ===
+        Vector<json> shader_settings_bindings =
+            descriptor_set_settings.at(ShaderVars::bindings);
+        for (auto binding_settings : shader_settings_bindings) {
+            Shader::Binding::Config binding_config {};
 
-        // === Process variable and its argument ===
-        // VERSION
-        if (setting_var.compare(ShaderVars::version) == 0) {
-            // TODO: Versions
-        }
-        // NAME
-        else if (setting_var.compare(ShaderVars::name) == 0) {
-            if (setting_val.length() <= Shader::max_name_length)
-                shader_name = setting_val;
-            else {
+            // Type
+            String binding_type = binding_settings.at(ShaderVars::type);
+            if (binding_type.compare_ci("uniform") == 0) {
+                binding_config.type = Shader::Binding::Type::Uniform;
+            } else if (binding_type.compare_ci("sampler") == 0) {
+                binding_config.type = Shader::Binding::Type::Sampler;
+            } else if (binding_type.compare_ci("storage") == 0) {
+                binding_config.type = Shader::Binding::Type::Storage;
+            } else {
                 Logger::warning(
                     RESOURCE_LOG,
-                    "Couldn't load shader name at line ",
-                    line_number,
-                    " of file ",
-                    file_path,
-                    ". Name is too long (",
-                    setting_val.length(),
-                    " characters, while maximum name length is ",
-                    Shader::max_name_length,
-                    " characters)."
-                );
-            }
-        }
-        // RENDER PASS
-        else if (setting_var.compare(ShaderVars::renderpass) == 0) {
-            shader_render_pass_name = setting_val;
-        }
-        // SHADER STAGES
-        else if (setting_var.compare(ShaderVars::stages) == 0) {
-            for (auto stage : setting_val.split(',')) {
-                stage.trim();
-                if (stage.compare_ci("vertex") == 0)
-                    shader_stages |= (uint8) Shader::Stage::Vertex;
-                else if (stage.compare_ci("geometry") == 0)
-                    shader_stages |= (uint8) Shader::Stage::Geometry;
-                else if (stage.compare_ci("fragment") == 0)
-                    shader_stages |= (uint8) Shader::Stage::Fragment;
-                else if (stage.compare_ci("compute") == 0)
-                    shader_stages |= (uint8) Shader::Stage::Compute;
-                else
-                    Logger::warning(
-                        RESOURCE_LOG,
-                        "Couldn't parse line ",
-                        line_number,
-                        " of file ",
-                        file_name,
-                        ". Invalid shader stage \"",
-                        stage,
-                        "\" passed."
-                    );
-            }
-        }
-        // CULL MODE
-        else if (setting_var.compare(ShaderVars::cull_mode) == 0) {
-            if (setting_val.compare("none"))
-                shader_cull_mode = Shader::CullMode::None;
-            else if (setting_val.compare("front"))
-                shader_cull_mode = Shader::CullMode::Back;
-            else if (setting_val.compare("back"))
-                shader_cull_mode = Shader::CullMode::Front;
-            else if (setting_val.compare("both"))
-                shader_cull_mode = Shader::CullMode::Both;
-        }
-        // ATTRIBUTES
-        else if (setting_var.compare(ShaderVars::attribute) == 0) {
-            auto attribute = parse_attribute_config(setting_val);
-
-            match_error_code(attribute) {
-                Err(0) Logger::warning(
-                    RESOURCE_LOG,
-                    "Couldn't parse line ",
-                    line_number,
-                    " of file ",
-                    file_name,
-                    ". Wrong attribute argument format passed."
-                );
-                Err(1) Logger::warning(
-                    RESOURCE_LOG,
-                    "Couldn't parse line ",
-                    line_number,
-                    " of file ",
-                    file_name,
-                    ". Invalid attribute type \"",
-                    attribute.error().what(),
+                    "Invalid binding type \"",
+                    binding_type,
                     "\" passed."
                 );
             }
-            else { shader_attributes.push_back(attribute.value()); }
 
-        }
-        // UNIFORMS
-        else if (setting_var.compare(ShaderVars::uniform) == 0) {
-            auto uniform_res = parse_uniform_config(setting_val);
+            // Index
+            size_t binding_index =
+                binding_settings.value(ShaderVars::binding_index, 0);
+            binding_config.binding_index = binding_index;
 
-            match_error_code(uniform_res) {
+            // Count
+            size_t binding_count = binding_settings.value(ShaderVars::count, 1);
+            binding_config.count = binding_count;
+
+            // Stages
+            Vector<String> binding_stages =
+                binding_settings.at(ShaderVars::stages);
+            auto binding_stage_flags_result =
+                parse_shader_stage_flags(binding_stages);
+            match_error_code(binding_stage_flags_result) {
                 Err(0) Logger::warning(
                     RESOURCE_LOG,
-                    "Couldn't parse line ",
-                    line_number,
-                    " of file ",
-                    file_name,
-                    ". Invalid argument count for uniform passed."
-                );
-                Err(1) Logger::warning(
-                    RESOURCE_LOG,
-                    "Couldn't parse line ",
-                    line_number,
-                    " of file ",
-                    file_name,
-                    ". Invalid uniform type \"",
-                    uniform_res.error().what(),
+                    "Invalid shader stage \"",
+                    binding_stage_flags_result.error().what(),
                     "\" passed."
-                );
-                Err(2) Logger::warning(
-                    RESOURCE_LOG,
-                    "Invalid scope passed in line ",
-                    line_number,
-                    " of file ",
-                    file_name,
-                    ". Only uniform scopes 0, 1 and 2 are allowed."
                 );
                 Ok() {
-                    auto uniform = uniform_res.value();
-                    shader_uniforms.push_back(uniform);
+                    binding_config.shader_stages =
+                        binding_stage_flags_result.value();
                 }
             }
+
+            // Uniforms
+            Vector<json> binding_settings_uniforms =
+                binding_settings.at(ShaderVars::uniforms);
+            for (auto& uniform_settings : binding_settings_uniforms) {
+                auto uniform_config_result =
+                    parse_uniform_config(uniform_settings);
+                match_error_code(uniform_config_result) {
+                    Err(0) Logger::warning(
+                        RESOURCE_LOG,
+                        "Couldn't parse uniform in file ",
+                        file_name,
+                        ". Invalid format."
+                    );
+                    Err(1) Logger::warning(
+                        RESOURCE_LOG,
+                        "Couldn't parse uniform in file ",
+                        file_name,
+                        ". Invalid uniform type \"",
+                        uniform_config_result.error().what(),
+                        "\" passed."
+                    );
+                    Err(2) Logger::warning(
+                        RESOURCE_LOG,
+                        "Couldn't parse uniform in file ",
+                        file_name,
+                        ". Custom uniforms must have a size."
+                    );
+                    Ok() {
+                        auto uniform = uniform_config_result.value();
+                        binding_config.uniforms.push_back(uniform);
+                    }
+                }
+            }
+
+            descriptor_set_config.bindings.push_back(binding_config);
         }
-        // WRONG VAR
-        else {
-            Logger::warning(
+
+        shader_sets.push_back(descriptor_set_config);
+    }
+
+    // === Push Constants ===
+    Vector<json> shader_settings_push_constants =
+        shader_settings_json.at("push_constants");
+    for (auto push_constant_settings : shader_settings_push_constants) {
+        auto push_constant_result =
+            parse_uniform_config(push_constant_settings);
+
+        match_error_code(push_constant_result) {
+            Err(0) Logger::warning(
                 RESOURCE_LOG,
-                " Invalid variable : \"",
-                setting_var,
-                "\" at line ",
-                line_number,
-                " of file ",
-                file_path,
-                "."
+                "Couldn't parse push constant in file ",
+                file_name,
+                ". Invalid format."
             );
+            Err(1) Logger::warning(
+                RESOURCE_LOG,
+                "Couldn't parse push constant in file ",
+                file_name,
+                ". Invalid push constant type \"",
+                push_constant_result.error().what(),
+                "\" passed."
+            );
+            Err(2) Logger::warning(
+                RESOURCE_LOG,
+                "Couldn't parse push constant in file ",
+                file_name,
+                ". Custom push constants must have a size."
+            );
+            Ok() {
+                auto push_constant = push_constant_result.value();
+                shader_push_constants.push_back(push_constant);
+            }
         }
-        line_number++;
     }
 
     // Create shader config
@@ -239,7 +304,8 @@ Result<Resource*, RuntimeError> ShaderLoader::load(const String name) {
         shader_render_pass_name,
         shader_stages,
         shader_attributes,
-        shader_uniforms,
+        shader_sets,
+        shader_push_constants,
         shader_cull_mode
     );
     shader_config->full_path   = file_path;
@@ -251,24 +317,22 @@ void ShaderLoader::unload(Resource* resource) {
     can_unload(ResourceType::Shader, resource);
 
     Shader::Config* res = (Shader::Config*) resource;
-    delete res;
+    del(res);
 }
 
 Result<Shader::Attribute, RuntimeErrorCode> parse_attribute_config(
-    String attribute_str
+    json attribute_settings
 ) {
-    auto attribute = attribute_str.split(',');
-
-    if (attribute.size() != 2) return Failure(RuntimeErrorCode(0));
-
     // Parse name
     Shader::Attribute attribute_config {};
-    attribute_config.name = attribute[1];
-    attribute_config.name.trim();
+    try {
+        attribute_config.name = attribute_settings.at("name");
+    } catch (nlohmann::json::out_of_range& e) {
+        return Failure(RuntimeErrorCode(0));
+    }
 
     // Parse type
-    auto attribute_type = attribute[0];
-    attribute_type.trim();
+    String attribute_type = attribute_settings.at("type");
     if (attribute_type.compare_ci("float32") == 0) {
         attribute_config.type = Shader::AttributeType::float32;
         attribute_config.size = sizeof(float32);
@@ -305,22 +369,17 @@ Result<Shader::Attribute, RuntimeErrorCode> parse_attribute_config(
 }
 
 Result<Shader::Uniform::Config, RuntimeErrorCode> parse_uniform_config(
-    String uniform_line
+    json uniform_settings
 ) {
-    auto uniform = uniform_line.split(',');
-
-    if (uniform.size() != 3) return Failure(RuntimeErrorCode(0));
-
-    auto uniform_type  = uniform[0];
-    auto uniform_scope = uniform[1];
-    auto uniform_name  = uniform[2];
-    uniform_type.trim();
-    uniform_scope.trim();
-    uniform_name.trim();
-
-    // Parse name
     Shader::Uniform::Config uniform_config {};
-    uniform_config.name = uniform_name;
+    String                  uniform_type = "";
+
+    try {
+        uniform_config.name = uniform_settings.at("name");
+        uniform_type        = uniform_settings.at("type");
+    } catch (nlohmann::json::out_of_range& e) {
+        return Failure(RuntimeErrorCode(0));
+    }
 
     // Parse type
     if (uniform_type.compare_ci("float32") == 0) {
@@ -356,25 +415,41 @@ Result<Shader::Uniform::Config, RuntimeErrorCode> parse_uniform_config(
     } else if (uniform_type.compare_ci("mat4") == 0) {
         uniform_config.type = Shader::UniformType::matrix4;
         uniform_config.size = 16 * sizeof(float32);
-    } else if (uniform_type.compare_ci("sampler") == 0) {
+    } else if (uniform_type.compare_ci("sampler2D") == 0) {
+        uniform_config.type = Shader::UniformType::sampler;
+        uniform_config.size = 0; // Samplers dont have a size
+    } else if (uniform_type.compare_ci("samplerCube") == 0) {
         uniform_config.type = Shader::UniformType::sampler;
         uniform_config.size = 0; // Samplers dont have a size
     } else if (uniform_type.compare_ci("custom") == 0) {
         uniform_config.type = Shader::UniformType::custom;
-        uniform_config.size = 0; // Custom types manage their own size
+        try {
+            uniform_config.size = uniform_settings.at("size");
+        } catch (nlohmann::json::out_of_range& e) {
+            return Failure(RuntimeErrorCode(2));
+        }
     } else return Failure(RuntimeErrorCode(1, uniform_type));
 
-    // Parse scope
-    auto scope = uniform_scope.parse_as_uint8().value_or(-1);
-
-    switch (scope) {
-    case 0: uniform_config.scope = Shader::Scope::Global; break;
-    case 1: uniform_config.scope = Shader::Scope::Instance; break;
-    case 2: uniform_config.scope = Shader::Scope::Local; break;
-    default: return Failure(RuntimeErrorCode(2));
-    };
-
     return uniform_config;
+}
+
+Result<uint8, RuntimeErrorCode> parse_shader_stage_flags(
+    Vector<String> shader_stages
+) {
+    uint8 stage_flags = 0;
+    for (auto stage : shader_stages) {
+        if (stage.compare_ci("vertex") == 0)
+            stage_flags |= (uint8) Shader::Stage::Vertex;
+        else if (stage.compare_ci("geometry") == 0)
+            stage_flags |= (uint8) Shader::Stage::Geometry;
+        else if (stage.compare_ci("fragment") == 0)
+            stage_flags |= (uint8) Shader::Stage::Fragment;
+        else if (stage.compare_ci("compute") == 0)
+            stage_flags |= (uint8) Shader::Stage::Compute;
+        else return Failure(RuntimeErrorCode(0));
+    }
+
+    return stage_flags;
 }
 
 } // namespace ENGINE_NAMESPACE

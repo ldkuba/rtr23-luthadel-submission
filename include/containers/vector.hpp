@@ -32,9 +32,6 @@ class Vector : public std::vector<Tp, TAllocator<Tp>> {
     typedef std::vector<Tp, TAllocator<Tp>>                    _base_class;
     typedef std::vector<Tp>                                    default_version;
     typedef TAllocator<Tp>                                     t_allocator_type;
-    typedef std::__cxx1998::_Vector_base<Tp, t_allocator_type> _super_base;
-    typedef typename _super_base::_Tp_alloc_type               _Tp_t_alloc_type;
-    typedef __gnu_cxx::__alloc_traits<_Tp_t_alloc_type>        _TAlloc_traits;
 
   public:
     using std::vector<Tp, TAllocator<Tp>>::vector;
