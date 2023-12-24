@@ -85,13 +85,12 @@ Renderer::Renderer(
     //     RenderPass::finish;
 
     // Initialize render passes
-    // RenderPass::start >> "DS" >> depth_renderpass >> "C" >> skybox_renderpass
-    // >>
-    //     "DS" >> world_renderpass >> ui_renderpass >> RenderPass::finish;
+    RenderPass::start >> "DS" >> depth_renderpass >> "C" >> skybox_renderpass >>
+        "DS" >> world_renderpass >> ui_renderpass >> RenderPass::finish;
 
     // Initialize AO only
-    RenderPass::start >> "DS" >> depth_renderpass >> "C" >> ao_renderpass >>
-        RenderPass::finish;
+    // RenderPass::start >> "DS" >> depth_renderpass >> "C" >> ao_renderpass >>
+    //     RenderPass::finish;
 }
 Renderer::~Renderer() { del(_backend); }
 
