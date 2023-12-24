@@ -30,7 +30,7 @@ vec3 calculate_view_position(vec2 coords);
 
 void main() {
     float x = texture(samplers[0], in_texture_coords).r;
-    out_color = vec4(texture(samplers[1], in_texture_coords).r, 0, 1, 1);
+    out_color = vec4(x, 0, 1, 1);
     return;
     
     vec3 view_pos = calculate_view_position(in_texture_coords);
