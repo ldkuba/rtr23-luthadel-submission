@@ -288,10 +288,10 @@ void TestApplication::run() {
         Renderer::Packet packet {};
         // Add views
         packet.view_data.push_back(_de_render_view->on_build_pocket());
-        // packet.view_data.push_back(_ao_render_view->on_build_pocket());
-        packet.view_data.push_back(_sb_render_view->on_build_pocket());
-        packet.view_data.push_back(_ow_render_view->on_build_pocket());
-        packet.view_data.push_back(_ui_render_view->on_build_pocket());
+        packet.view_data.push_back(_ao_render_view->on_build_pocket());
+        // packet.view_data.push_back(_sb_render_view->on_build_pocket());
+        // packet.view_data.push_back(_ow_render_view->on_build_pocket());
+        // packet.view_data.push_back(_ui_render_view->on_build_pocket());
 
         auto result = _app_renderer.draw_frame(&packet, delta_time);
         if (result.has_error()) {
