@@ -36,6 +36,8 @@ VulkanSwapchain::VulkanSwapchain(
     if (_msaa_samples > VulkanSettings::max_msaa_samples)
         _msaa_samples = VulkanSettings::max_msaa_samples;
 
+    _use_multisampling = _msaa_samples != vk::SampleCountFlagBits::e1;
+
     // Create swapchain proper
     Logger::trace(RENDERER_VULKAN_LOG, "Creating swapchain.");
     create();
@@ -50,10 +52,13 @@ VulkanSwapchain::VulkanSwapchain(
 VulkanSwapchain::~VulkanSwapchain() {
     destroy();
 
-    // Clear color attachment
+    // Clear color & depth attachment
     if (_color_attachment) del(_color_attachment);
-    // Clear depth attachment
     if (_depth_attachment) del(_depth_attachment);
+    // Same for multisampling
+    if (_ms_color_attachment) del(_ms_color_attachment);
+    if (_ms_depth_attachment) del(_ms_depth_attachment);
+
     // Clear render textures
     for (auto& texture : _render_textures) {
         _device->handle().waitIdle();
@@ -84,18 +89,26 @@ uint8 VulkanSwapchain::get_current_index() const {
 uint8 VulkanSwapchain::get_render_texture_count() const {
     return _render_textures.size();
 }
-Texture* VulkanSwapchain::get_render_texture(const uint8 index) const {
+VulkanTexture* VulkanSwapchain::get_render_texture(const uint8 index) const {
     if (index >= _render_textures.size())
         Logger::fatal(RENDERER_VULKAN_LOG, "Invalid swapchain index passed.");
     return _render_textures[index];
 }
 
-Texture* VulkanSwapchain::get_depth_texture() const {
+VulkanTexture* VulkanSwapchain::get_depth_texture() const {
     return _depth_attachment;
 }
 
-Texture* VulkanSwapchain::get_color_texture() const {
+VulkanTexture* VulkanSwapchain::get_color_texture() const {
     return _color_attachment;
+}
+
+VulkanTexture* VulkanSwapchain::get_ms_depth_texture() const {
+    return _ms_depth_attachment;
+}
+
+VulkanTexture* VulkanSwapchain::get_ms_color_texture() const {
+    return _ms_color_attachment;
 }
 
 vk::Format VulkanSwapchain::get_color_attachment_format() const {
@@ -319,6 +332,14 @@ void VulkanSwapchain::destroy() {
         del(_depth_attachment->image());
         _depth_attachment->image = nullptr;
     }
+    if (_ms_color_attachment && _ms_color_attachment->image) {
+        del(_ms_color_attachment->image());
+        _ms_color_attachment->image = nullptr;
+    }
+    if (_ms_depth_attachment && _ms_depth_attachment->image) {
+        del(_ms_depth_attachment->image());
+        _ms_depth_attachment->image = nullptr;
+    }
 
     // Destroy image views
     for (const auto& texture : _render_textures)
@@ -374,6 +395,50 @@ void VulkanSwapchain::create_color_resource() {
         _extent.width,
         _extent.height,
         1,
+        vk::SampleCountFlagBits::e1,
+        _format,
+        vk::ImageTiling::eOptimal,
+        vk::ImageUsageFlagBits::eColorAttachment,
+        vk::MemoryPropertyFlagBits::eDeviceLocal,
+        vk::ImageAspectFlagBits::eColor
+    );
+
+    // === Multis-sampled ===
+    // Do the same for multi-sampled version if necessary
+    if (!_use_multisampling) {
+        // We are done
+        return;
+    }
+
+    if (_ms_color_attachment == nullptr)
+        // Create new wrapped texture (Not managed by the texture system)
+        _ms_color_attachment = new (MemoryTag::Texture) VulkanTexture(
+            {
+                "__default_ms_color_attachment_texture__",
+                _extent.width,
+                _extent.height,
+                4,     // Channel count
+                false, // Mipmaping
+                false, // Transparent
+                true,  // Writable
+                true   // Wrapped
+            },
+            nullptr,
+            nullptr,
+            _device,
+            _allocator
+        );
+    else
+        // Resize
+        _ms_color_attachment->resize(_extent.width, _extent.height);
+
+    // Create new vulkan image
+    _ms_color_attachment->image =
+        new (MemoryTag::GPUTexture) VulkanImage(_device, _allocator);
+    _ms_color_attachment->image()->create_2d(
+        _extent.width,
+        _extent.height,
+        1,
         _msaa_samples,
         _format,
         vk::ImageTiling::eOptimal,
@@ -409,6 +474,49 @@ void VulkanSwapchain::create_depth_resources() {
     _depth_attachment->image =
         new (MemoryTag::GPUTexture) VulkanImage(_device, _allocator);
     _depth_attachment->image()->create_2d(
+        _extent.width,
+        _extent.height,
+        1,
+        vk::SampleCountFlagBits::e1,
+        _depth_format,
+        vk::ImageTiling::eOptimal,
+        vk::ImageUsageFlagBits::eDepthStencilAttachment |
+            vk::ImageUsageFlagBits::eSampled,
+        vk::MemoryPropertyFlagBits::eDeviceLocal,
+        vk::ImageAspectFlagBits::eDepth
+    );
+
+    // === Multis-sampled ===
+    // Do the same thing for multi-sampled image if necessary
+    if (!_use_multisampling)
+        // We are done
+        return;
+    if (_ms_depth_attachment == nullptr)
+        // Create new wrapped texture (Not managed by the texture system)
+        _ms_depth_attachment = new (MemoryTag::Texture) VulkanTexture(
+            {
+                "__default_ms_depth_attachment_texture__",
+                _extent.width,
+                _extent.height,
+                _depth_format_channel_count,
+                false, // Mipmaping
+                false, // Transparent
+                true,  // Writable
+                true   // Wrapped
+            },
+            nullptr,
+            nullptr,
+            _device,
+            _allocator
+        );
+    else
+        // Resize
+        _ms_depth_attachment->resize(_extent.width, _extent.height);
+
+    // Create new vulkan image
+    _ms_depth_attachment->image =
+        new (MemoryTag::GPUTexture) VulkanImage(_device, _allocator);
+    _ms_depth_attachment->image()->create_2d(
         _extent.width,
         _extent.height,
         1,

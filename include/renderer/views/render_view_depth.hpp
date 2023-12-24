@@ -5,10 +5,16 @@
 
 namespace ENGINE_NAMESPACE {
 
-class RenderViewUI : public RenderView {
+class LightSystem;
+
+class RenderViewDepth : public RenderView {
   public:
-    RenderViewUI(ShaderSystem* const shader_system, const Config& config);
-    virtual ~RenderViewUI() override;
+    RenderViewDepth(
+        const Config&       config,
+        ShaderSystem* const shader_system,
+        Camera* const       world_camera
+    );
+    virtual ~RenderViewDepth() override;
 
     virtual Packet* on_build_pocket() override;
     virtual void    on_resize(const uint32 width, const uint32 height) override;
@@ -19,22 +25,32 @@ class RenderViewUI : public RenderView {
            const uint64        render_target_index
        ) override;
 
-    virtual void set_render_data_ref(MeshRenderData* const data) {
+    virtual void set_render_data_ref(const MeshRenderData* const data) {
         _render_data = data;
     };
 
   protected:
     Shader*   _shader;
+    float32   _fov;
     float32   _near_clip;
     float32   _far_clip;
-    glm::mat4 _view_matrix;
     glm::mat4 _proj_matrix;
-    // uint32 _render_mode; // TODO: Maybe
+    Camera*   _world_camera;
 
     Vector<GeometryRenderData> _geom_data {};
 
-    DebugViewMode _render_mode = DebugViewMode::Default;
+    // Uniforms
+    struct UIndex {
+        uint16 projection = -1;
+        uint16 view       = -1;
+        uint16 model      = -1;
 
+        UIndex() {}
+        UIndex(const Shader* const shader);
+    };
+    UIndex _u_index {};
+
+    // Geometry data
     const MeshRenderData* _render_data = nullptr;
 
     virtual void apply_globals(const uint64 frame_number) const;

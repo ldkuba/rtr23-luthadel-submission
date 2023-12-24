@@ -67,13 +67,32 @@ class GeometrySystem {
 
     // Generators
     /**
+     * @brief Generate a @p width by @p height 2D rectangle geometry
+     *
+     * @param name Geometry name
+     * @param width Width [Abstract unit]
+     * @param height Height [Abstract unit]
+     * @param material_name Material name
+     * @param auto_release If enabled geometry system will automaticaly release
+     * the geometry resource from memory if no references to it are detected.
+     * @return Geometry* Created rectangle geometry
+     */
+    Geometry* generate_ui_rectangle(
+        const String name,
+        const uint32 width,
+        const uint32 height,
+        const String material_name = "",
+        const bool   auto_release  = true
+    );
+
+    /**
      * @brief Generates 1 by 1 by 1 cube geometry
      *
      * @param name Geometry name
      * @param material_name Material name
      * @param auto_release If enabled geometry system will automaticaly release
      * the geometry resource from memory if no references to it are detected.
-     * @returns Created cube geometry
+     * @returns Geometry* Created cube geometry
      */
     Geometry* generate_cube(
         const String name,

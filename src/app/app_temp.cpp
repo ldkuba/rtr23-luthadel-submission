@@ -32,6 +32,8 @@ void TestApplication::run() {
     setup_input();
 
     // === Renderer ===
+    _app_renderer.link_with_systems(&_texture_system);
+
     _app_renderer.material_shader =
         _shader_system.acquire(Shader::BuiltIn::MaterialShader)
             .expect("Failed to load builtin material shader.");
@@ -41,10 +43,14 @@ void TestApplication::run() {
     _app_renderer.skybox_shader =
         _shader_system.acquire(Shader::BuiltIn::SkyboxShader)
             .expect("Failed to load builtin skybox shader.");
+    _app_renderer.depth_shader =
+        _shader_system.acquire(Shader::BuiltIn::DepthShader)
+            .expect("Failed to load builtin depth shader.");
+    _app_renderer.ao_shader = //
+        _shader_system.acquire(Shader::BuiltIn::AOShader)
+            .expect("Failed to load builtin ao shader.");
 
     _app_renderer.material_shader->reload();
-
-    _app_renderer.link_with_systems(&_texture_system);
 
     // === Render views ===
     // Get width & height
@@ -85,17 +91,44 @@ void TestApplication::run() {
         { _app_renderer.get_renderpass(RenderPass::BuiltIn::UIPass)
               .expect("Renderpass not found.") }
     };
+    RenderView::Config depth_view_config {
+        "depth",
+        Shader::BuiltIn::DepthShader,
+        width,
+        height,
+        RenderView::Type::Depth,
+        RenderView::ViewMatrixSource::SceneCamera,
+        RenderView::ProjectionMatrixSource::DefaultPerspective,
+        { _app_renderer.get_renderpass(RenderPass::BuiltIn::DepthPass)
+              .expect("Renderpass not found.") }
+    };
+    RenderView::Config ao_view_config {
+        "ao",
+        Shader::BuiltIn::AOShader,
+        width,
+        height,
+        RenderView::Type::AO,
+        RenderView::ViewMatrixSource::SceneCamera,
+        RenderView::ProjectionMatrixSource::DefaultPerspective,
+        { _app_renderer.get_renderpass(RenderPass::BuiltIn::AOPass)
+              .expect("Renderpass not found.") }
+    };
 
     // Create
     const auto res_owv = _render_view_system.create(opaque_world_view_config);
     const auto res_uiv = _render_view_system.create(ui_view_config);
     const auto res_sbv = _render_view_system.create(skybox_view_config);
-    if (res_owv.has_error() || res_uiv.has_error() || res_sbv.has_error())
+    const auto res_dev = _render_view_system.create(depth_view_config);
+    const auto res_aov = _render_view_system.create(ao_view_config);
+    if (res_owv.has_error() || res_uiv.has_error() || res_sbv.has_error() ||
+        res_dev.has_error() || res_aov.has_error())
         Logger::fatal("Render view creation failed.");
 
     _ow_render_view = dynamic_cast<RenderViewWorld*>(res_owv.value());
     _ui_render_view = dynamic_cast<RenderViewUI*>(res_uiv.value());
     _sb_render_view = dynamic_cast<RenderViewSkybox*>(res_sbv.value());
+    _de_render_view = dynamic_cast<RenderViewDepth*>(res_dev.value());
+    _ao_render_view = dynamic_cast<RenderViewAO*>(res_aov.value());
 
     // === Assign meshes ===
     Vector<Mesh*> meshes {};
@@ -112,9 +145,9 @@ void TestApplication::run() {
         _geometry_system.generate_cube("cube", "test_material");
 
     // Create meshes
-    Mesh* mesh_1 = new Mesh(geometry_1);
-    Mesh* mesh_2 = new Mesh(geometry_2);
-    Mesh* mesh_3 = new Mesh(geometry_3);
+    Mesh* mesh_1 = new (MemoryTag::Temp) Mesh(geometry_1);
+    Mesh* mesh_2 = new (MemoryTag::Temp) Mesh(geometry_2);
+    Mesh* mesh_3 = new (MemoryTag::Temp) Mesh(geometry_3);
 
     // Mesh 2 transform
     mesh_2->transform.scale_by(0.4f);
@@ -136,7 +169,7 @@ void TestApplication::run() {
     /// Load MESH TEST
     MeshLoader loader {};
 #    if CURRENT_SCENE == 1
-    auto load_result = loader.load("falcon");
+    auto       load_result = loader.load("falcon");
 #    elif CURRENT_SCENE == 2
     auto load_result = loader.load("sponza");
 #    elif CURRENT_SCENE == 3
@@ -168,20 +201,9 @@ void TestApplication::run() {
 
     /// Load GUI TEST
     // Create geometry
-    float32          side = 128.0f;
-    Vector<Vertex2D> vertices2d {
-        { glm::vec2(0.0f, 0.0f), glm::vec2(0.0f, 0.0f) },
-        { glm::vec2(side, side), glm::vec2(1.0f, 1.0f) },
-        { glm::vec2(0.0f, side), glm::vec2(0.0f, 1.0f) },
-        { glm::vec2(side, 0.0f), glm::vec2(1.0f, 0.0f) }
-    };
-    Vector<uint32>     indices2d { 2, 1, 0, 3, 0, 1 };
-    Geometry::Config2D config2d { "ui",
-                                  vertices2d,
-                                  indices2d,
-                                  { glm::vec3(0), glm::vec3(side) },
-                                  "test_ui_material" };
-    const auto         geom_2d = _geometry_system.acquire(config2d);
+    const auto geom_2d = _geometry_system.generate_ui_rectangle(
+        "ui", 128, 128, "test_ui_material"
+    );
 
     /// Load skybox
     // Create geometry
@@ -208,7 +230,7 @@ void TestApplication::run() {
 
     // === Mesh render data ===
     // Create mesh
-    Mesh* mesh_ui = new Mesh(geom_2d);
+    Mesh* mesh_ui = new (MemoryTag::Temp) Mesh(geom_2d);
     ui_meshes.push_back(mesh_ui);
 
     // Create mesh data
@@ -219,6 +241,7 @@ void TestApplication::run() {
     _ow_render_view->set_render_data_ref(&world_mesh_data);
     _ui_render_view->set_render_data_ref(&ui_mesh_data);
     _sb_render_view->set_skybox_ref(&default_skybox);
+    _de_render_view->set_render_data_ref(&world_mesh_data);
 
     // === Add lights ===
     _ow_render_view->set_light_system(&_light_system);
@@ -262,8 +285,10 @@ void TestApplication::run() {
         }
 
         // Construct render packet
-        RenderPacket packet {};
+        Renderer::Packet packet {};
         // Add views
+        packet.view_data.push_back(_de_render_view->on_build_pocket());
+        // packet.view_data.push_back(_ao_render_view->on_build_pocket());
         packet.view_data.push_back(_sb_render_view->on_build_pocket());
         packet.view_data.push_back(_ow_render_view->on_build_pocket());
         packet.view_data.push_back(_ui_render_view->on_build_pocket());

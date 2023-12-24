@@ -230,6 +230,49 @@ Texture* TextureSystem::acquire_writable(
     return texture;
 }
 
+Texture* TextureSystem::create(
+    const Texture::Config& config,
+    const byte* const      data,
+    const bool             auto_release
+) {
+    Logger::trace(
+        TEXTURE_SYS_LOG, "Texture \"", config.name, "\" creation requested."
+    );
+
+    // Check if name is valid
+    const auto name_check_res = name_is_valid(config.name);
+    if (name_check_res.has_error()) return name_check_res.error();
+
+    // Create texture
+    const auto texture = _renderer->create_texture(config, data);
+    texture->id        = (uint64) texture;
+
+    // If texture already exists, find it
+    const auto key = config.name.lower_c();
+    auto       ref = _registered_textures.find(key);
+
+    if (ref != _registered_textures.end()) {
+        // Reference already exists
+        Logger::trace(
+            TEXTURE_SYS_LOG,
+            "Texture \"",
+            config.name,
+            "\" called for an update updated."
+        );
+
+        // Update it
+        // TODO: Proper inplace update
+        ref->second.handle = texture;
+        ref->second.reference_count++;
+
+    } else
+        // Create its reference
+        _registered_textures[key] = { texture, 1, auto_release };
+
+    Logger::trace(TEXTURE_SYS_LOG, "Texture \"", config.name, "\" acquired.");
+    return texture;
+}
+
 void TextureSystem::release(const String name) {
     if (name.compare_ci(_default_texture_name) == 0 ||
         name.compare_ci(_default_diffuse_texture_name) == 0 ||
@@ -338,6 +381,15 @@ void TextureSystem::create_default_textures() {
         pixels
     );
     _default_normal_texture->id = 3;
+
+    // Default texture map
+    _default_map = _renderer->create_texture_map({ _default_texture,
+                                                   Texture::Use::Unknown,
+                                                   Texture::Filter::BiLinear,
+                                                   Texture::Filter::BiLinear,
+                                                   Texture::Repeat::Repeat,
+                                                   Texture::Repeat::Repeat,
+                                                   Texture::Repeat::Repeat });
 }
 void TextureSystem::destroy_default_textures() {
     if (_default_texture) {
@@ -355,6 +407,10 @@ void TextureSystem::destroy_default_textures() {
     if (_default_normal_texture) {
         _renderer->destroy_texture(_default_normal_texture);
         del(_default_normal_texture);
+    }
+    if (_default_map) {
+        _renderer->destroy_texture_map(_default_map);
+        del(_default_map);
     }
 }
 

@@ -1,0 +1,77 @@
+{
+    "version": 1.0,
+    "name": "builtin.ao_shader",
+    "renderpass": "Renderpass.Builtin.AO",
+    "stages": [
+        "vertex",
+        "fragment"
+    ],
+    "cull_mode": "none",
+    "attributes": [
+        {
+            "name": "in_position",
+            "type": "vec2"
+        },
+        {
+            "name": "in_texcoord",
+            "type": "vec2"
+        }
+    ],
+    "descriptor_sets": [
+        {
+            "scope": "global",
+            "set_index": 0,
+            "bindings": [
+                {
+                    "type": "uniform",
+                    "binding_index": 0,
+                    "stages": [
+                        "fragment"
+                    ],
+                    "uniforms": [
+                        {
+                            "name": "projection",
+                            "type": "mat4"
+                        },
+                        {
+                            "name": "projection_inverse",
+                            "type": "mat4"
+                        },
+                        {
+                            "name": "noise_scale",
+                            "type": "vec2"
+                        },
+                        {
+                            "name": "sample_radius",
+                            "type": "float32"
+                        },
+                        {
+                            "name": "kernel",
+                            "type": "custom",
+                            "size": 240
+                        }
+                    ]
+                },
+                {
+                    "type": "sampler",
+                    "binding_index": 1,
+                    "count": 2,
+                    "stages": [
+                        "fragment"
+                    ],
+                    "uniforms": [
+                        {
+                            "name": "depth_texture",
+                            "type": "sampler2D"
+                        },
+                        {
+                            "name": "noise_texture",
+                            "type": "sampler2D"
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "push_constants": []
+}

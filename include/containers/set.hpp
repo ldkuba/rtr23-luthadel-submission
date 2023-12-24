@@ -125,6 +125,25 @@ class Set : public std::set<_Key, _Compare, TAllocator<_Key>> {
         const _Compare&                   __comp = _Compare(),
         const allocator_type&             __a = allocator_type(MemoryTag::Set))
         : _base_class(__l, __comp, __a) {}
+
+  public:
+    // Additions
+
+    /**
+     * @brief Checks whether %Set contains a given key
+     *
+     * @param __key Key to search for
+     * @returns true if %Set contains the key; false otherwise
+     */
+    bool contains(const _Key& __key) const {
+        const auto& i = this->find(__key);
+        return i != this->end();
+    }
+    // Move version
+    bool contains(_Key&& __key) const {
+        const auto& i = this->find(__key);
+        return i != this->end();
+    }
 };
 
 } // namespace ENGINE_NAMESPACE

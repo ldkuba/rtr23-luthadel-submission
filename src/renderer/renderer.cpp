@@ -29,42 +29,69 @@ Renderer::Renderer(
     const auto height = surface->get_height_in_pixels();
 
     // Create render passes
-    _skybox_renderpass = _backend->create_render_pass({
-        RenderPass::BuiltIn::SkyboxPass,      // Name
-        "",                                   // Prev
-        RenderPass::BuiltIn::WorldPass,       // Next
+    const auto depth_renderpass = _backend->create_render_pass({
+        RenderPass::BuiltIn::DepthPass,       // Name
         glm::vec2 { 0, 0 },                   // Draw offset
         glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f }, // Clear color
-        RenderPass::ClearFlags::Color,        // Clear flags
+        true,                                 // Depth testing
+        false                                 // Multisampling
+    });
+    depth_renderpass->disable_color_output();
+    const auto ao_renderpass     = _backend->create_render_pass({
+        RenderPass::BuiltIn::AOPass,          // Name
+        glm::vec2 { 0, 0 },                   // Draw offset
+        glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f }, // Clear color
+        false,                                // Depth testing
+        false                                 // Multisampling
+    });
+    const auto skybox_renderpass = _backend->create_render_pass({
+        RenderPass::BuiltIn::SkyboxPass,      // Name
+        glm::vec2 { 0, 0 },                   // Draw offset
+        glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f }, // Clear color
         false,                                // Depth testing
         true                                  // Multisampling
     });
-    _world_renderpass  = _backend->create_render_pass({
+    const auto world_renderpass  = _backend->create_render_pass({
         RenderPass::BuiltIn::WorldPass,       // Name
-        RenderPass::BuiltIn::SkyboxPass,      // Prev
-        RenderPass::BuiltIn::UIPass,          // Next
         glm::vec2 { 0, 0 },                   // Draw offset
         glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f }, // Clear color
-        RenderPass::ClearFlags::Depth |
-            RenderPass::ClearFlags::Stencil, // Clear flags
-        true,                                // Depth testing
-        true                                 // Multisampling
+        true,                                 // Depth testing
+        true                                  // Multisampling
     });
-    _ui_renderpass     = _backend->create_render_pass({
+    const auto ui_renderpass     = _backend->create_render_pass({
         RenderPass::BuiltIn::UIPass,          // Name
-        RenderPass::BuiltIn::WorldPass,       // Prev
-        "",                                   // Next
         glm::vec2 { 0, 0 },                   // Draw offset
         glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f }, // Clear color
-        RenderPass::ClearFlags::None,         // Clear flags
         false,                                // Depth testing
         false                                 // Multisampling
     });
 
     // Create render targets
-    _world_renderpass->add_window_as_render_target();
-    _ui_renderpass->add_window_as_render_target();
-    _skybox_renderpass->add_window_as_render_target();
+    world_renderpass->add_window_as_render_target();
+    ui_renderpass->add_window_as_render_target();
+    skybox_renderpass->add_window_as_render_target();
+    depth_renderpass->add_render_target(
+        { width, height, { _backend->get_depth_attachment() } }
+    );
+    ao_renderpass->add_window_as_render_target();
+
+    // Initialize render passes (BASIC)
+    // RenderPass::start >> "C" >> skybox_renderpass >> "DS" >> world_renderpass
+    // >>
+    //     ui_renderpass >> RenderPass::finish;
+
+    // Initialize no skybox basic rp
+    // RenderPass::start >> "CDS" >> world_renderpass >> ui_renderpass >>
+    //     RenderPass::finish;
+
+    // Initialize render passes
+    // RenderPass::start >> "DS" >> depth_renderpass >> "C" >> skybox_renderpass
+    // >>
+    //     "DS" >> world_renderpass >> ui_renderpass >> RenderPass::finish;
+
+    // Initialize AO only
+    RenderPass::start >> "DS" >> depth_renderpass >> "C" >> ao_renderpass >>
+        RenderPass::finish;
 }
 Renderer::~Renderer() { del(_backend); }
 
@@ -73,7 +100,7 @@ Renderer::~Renderer() { del(_backend); }
 // /////////////////////// //
 
 Result<void, RuntimeError> Renderer::draw_frame(
-    const RenderPacket* const render_data, const float32 delta_time
+    const Packet* const render_data, const float32 delta_time
 ) {
     _backend->increment_frame_number();
 
@@ -85,10 +112,13 @@ Result<void, RuntimeError> Renderer::draw_frame(
     const auto att_index = _backend->get_current_window_attachment_index();
 
     // Render each view
-    for (auto& data : render_data->view_data)
-        data.view->on_render(
+    for (auto& data : render_data->view_data) {
+        if (data->read_depth) _backend->make_depth_attachment_readable();
+        data->view->on_render(
             this, data, _backend->get_current_frame(), att_index
         );
+        del(data);
+    }
 
     // End frame
     result = _backend->end_frame(delta_time);
@@ -178,7 +208,7 @@ void Renderer::destroy_geometry(Geometry* geometry) {
 
 Shader* Renderer::create_shader(const Shader::Config& config) {
     Logger::trace(RENDERER_LOG, "Creating shader.");
-    auto ret = _backend->create_shader(this, _texture_system, config);
+    auto ret = _backend->create_shader(_texture_system, config);
     Logger::trace(RENDERER_LOG, "Shader created [", config.name(), "].");
     return ret;
 }
@@ -210,6 +240,17 @@ void Renderer::destroy_render_pass(RenderPass* const pass) {
 }
 Result<RenderPass*, RuntimeError> Renderer::get_renderpass(const String& name) {
     return _backend->get_render_pass(name);
+}
+
+// -----------------------------------------------------------------------------
+// Default textures
+// -----------------------------------------------------------------------------
+
+Texture* Renderer::get_depth_texture() const {
+    return _backend->get_depth_attachment();
+}
+Texture* Renderer::get_color_texture() const {
+    return _backend->get_color_attachment();
 }
 
 } // namespace ENGINE_NAMESPACE

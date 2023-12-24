@@ -12,7 +12,19 @@ class VulkanRenderPass : public RenderPass {
   public:
     /// @brief Handle to the vk::RenderPass object
     Property<vk::RenderPass> handle {
-        GET { return _handle; }
+        GET {
+            if (!_initialized) {
+                Logger::warning(
+                    RENDERER_VULKAN_LOG,
+                    "Vulkan render pass handle used before initialization. "
+                    "Orphan initialization preformed inplace ['",
+                    _name,
+                    "']."
+                );
+                initialize();
+            }
+            return _handle;
+        }
     };
     /// @brief Number of sampled used for Multisample anti-aliasing
     Property<vk::SampleCountFlagBits> sample_count {
@@ -54,13 +66,11 @@ class VulkanRenderPass : public RenderPass {
     void end() override;
 
     void add_window_as_render_target() override;
-    void add_render_target(
-        const uint32            width,
-        const uint32            height,
-        const Vector<Texture*>& attachments
-    ) override;
-
     void clear_render_targets() override;
+
+  protected:
+    void initialize() override;
+    void initialize_render_targets() override;
 
   private:
     const vk::Device*                    _device;
@@ -75,7 +85,14 @@ class VulkanRenderPass : public RenderPass {
     bool           _has_prev;
     bool           _has_next;
 
+    // Internal state
+    bool _initialized = false;
+
     Vector<vk::ClearValue> _clear_values { 1 };
+
+    vk::AttachmentDescription get_color_attachment();
+    vk::AttachmentDescription get_depth_attachment();
+    vk::AttachmentDescription get_resolve_attachment();
 };
 
 } // namespace ENGINE_NAMESPACE

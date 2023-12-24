@@ -143,15 +143,12 @@ class RendererBackend {
     /**
      * @brief Create a shader object and upload relevant data to the GPU
      *
-     * @param renderer Renderer under which this shader is created
      * @param texture_system Reference to the texture system
      * @param config Shader configuration
      * @return Shader* Created shader object
      */
     virtual Shader* create_shader(
-        Renderer* const       renderer,
-        TextureSystem* const  texture_system,
-        const Shader::Config& config
+        TextureSystem* const texture_system, const Shader::Config& config
     )                                                 = 0;
     /**
      * @brief Destroy shader and free its corresponding GPU resources
@@ -180,6 +177,15 @@ class RendererBackend {
      */
     virtual Result<RenderPass*, RuntimeError> get_render_pass(const String& name
     ) const                                                         = 0;
+
+    /**
+     * @brief Make depth attachment into a valid target for samplers
+     */
+    virtual void make_depth_attachment_readable() const = 0;
+    /**
+     * @brief Make color attachment into a valid target for samplers
+     */
+    virtual void make_color_attachment_readable() const = 0;
 
     /**
      * @return uint8 Current window attachment index

@@ -28,6 +28,12 @@ class TextureSystem {
         GET { return _default_normal_texture; }
     };
 
+    /// @brief Default fallback texture map. Used by shaders when no other map
+    /// is specified (Useful during loading)
+    Property<Texture::Map*> default_map {
+        GET { return _default_map; }
+    };
+
     /**
      * @brief Construct a new Texture System object
      *
@@ -91,6 +97,22 @@ class TextureSystem {
      */
     Texture* acquire_cube(const String name, const bool auto_release);
 
+    /**
+     * @brief Create new texture with provided configuration. If the texture
+     * with provided @p config.name already exists it will be overriden.
+     * @param config Texture configuration
+     * @param data Raw texture image data
+     * @param auto_release If enabled texture system will automaticaly release
+     * the texture resource from memory if no references to the texture are
+     * detected. Can only be set if the texture resource isn't loaded yet.
+     * @return Texture*
+     */
+    Texture* create(
+        const Texture::Config& config,
+        const byte* const      data,
+        const bool             auto_release
+    );
+
     /// @brief Releases texture resource. Texture system will automatically
     /// release this texture from memory if no other references to it are
     /// detected and auto release flag is set to true.
@@ -116,6 +138,8 @@ class TextureSystem {
     Texture* _default_diffuse_texture  = nullptr;
     Texture* _default_specular_texture = nullptr;
     Texture* _default_normal_texture   = nullptr;
+
+    Texture::Map* _default_map = nullptr;
 
     UnorderedMap<String, TextureRef> _registered_textures {};
 

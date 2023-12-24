@@ -50,13 +50,13 @@ ShaderLoader::~ShaderLoader() {}
 
 Result<Resource*, RuntimeError> ShaderLoader::load(const String name) {
     // Material configuration defaults
-    String                          shader_name             = name;
-    String                          shader_render_pass_name = "";
-    uint8                           shader_stages           = 0;
-    Vector<Shader::Attribute>       shader_attributes       = {};
+    String                                shader_name             = name;
+    String                                shader_render_pass_name = "";
+    uint8                                 shader_stages           = 0;
+    Vector<Shader::Attribute>             shader_attributes       = {};
     Vector<Shader::DescriptorSet::Config> shader_sets             = {};
-    Vector<Shader::Uniform::Config> shader_push_constants   = {};
-    Shader::CullMode                shader_cull_mode = Shader::CullMode::Back;
+    Vector<Shader::Uniform::Config>       shader_push_constants   = {};
+    Shader::CullMode shader_cull_mode = Shader::CullMode::Back;
 
     // Load material configuration from file
     String file_name = name + ".shadercfg";
@@ -115,12 +115,13 @@ Result<Resource*, RuntimeError> ShaderLoader::load(const String name) {
 
     // === Cull Mode ===
     String culling_mode = shader_settings_json.at(ShaderVars::cull_mode);
-    if (culling_mode.compare("none")) shader_cull_mode = Shader::CullMode::None;
-    else if (culling_mode.compare("front"))
+    if (culling_mode.compare("none") == 0)
+        shader_cull_mode = Shader::CullMode::None;
+    else if (culling_mode.compare("back") == 0)
         shader_cull_mode = Shader::CullMode::Back;
-    else if (culling_mode.compare("back"))
+    else if (culling_mode.compare("front") == 0)
         shader_cull_mode = Shader::CullMode::Front;
-    else if (culling_mode.compare("both"))
+    else if (culling_mode.compare("both") == 0)
         shader_cull_mode = Shader::CullMode::Both;
 
     // === Attributes ===

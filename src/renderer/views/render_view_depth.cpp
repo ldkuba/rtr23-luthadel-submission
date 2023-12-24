@@ -1,38 +1,39 @@
-#include "renderer/views/render_view_skybox.hpp"
+#include "renderer/views/render_view_depth.hpp"
+
+#include "resources/mesh.hpp"
+#include "multithreading/parallel.hpp"
+#include "systems/light_system.hpp"
 
 namespace ENGINE_NAMESPACE {
 
-#define RENDER_VIEW_SKYBOX_LOG "RenderViewSkybox :: "
-
-uint16 get_uniform_location(const Shader* const shader, const String& uniform);
+#define RENDER_VIEW_DEPTH_LOG "RenderViewDepth :: "
 
 // Constructor & Destructor
-RenderViewSkybox::RenderViewSkybox(
+RenderViewDepth::RenderViewDepth(
     const Config&       config,
     ShaderSystem* const shader_system,
     Camera* const       world_camera
 )
     : RenderView(config) {
-
-    // Load shader
     auto res = shader_system->acquire(_shader_name);
     if (res.has_error()) {
         Logger::error(
-            RENDER_VIEW_SKYBOX_LOG,
+            RENDER_VIEW_DEPTH_LOG,
             "Shader `",
             _shader_name,
             "` does not exist. View creation is faulty. For now default "
-            "Skybox shader will be used. This could result in some undefined "
+            "Depth shader will be used. This could result in some undefined "
             "behaviour."
         );
-        res = shader_system->acquire(Shader::BuiltIn::SkyboxShader);
+        res = shader_system->acquire(Shader::BuiltIn::DepthShader);
     }
+
+    // Setup values
     _shader = res.value();
 
-    // Load uniform locations
+    // Setup shader indices
     _u_index = { _shader };
 
-    // Set some defaults
     _near_clip = 0.1f;   // TODO: TEMP
     _far_clip  = 1000.f; // TODO: TEMP
     _fov       = glm::radians(45.f);
@@ -41,18 +42,45 @@ RenderViewSkybox::RenderViewSkybox(
     _proj_matrix = glm::perspective(
         _fov, (float32) _width / _height, _near_clip, _far_clip
     );
+
     _world_camera = world_camera;
 }
-RenderViewSkybox::~RenderViewSkybox() {}
+RenderViewDepth::~RenderViewDepth() {}
 
-// ///////////////////////////////// //
-// RENDER VIEW SKYBOX PUBLIC METHODS //
-// ///////////////////////////////// //
+// ///////////////////////////// //
+// RENDER VIEW UI PUBLIC METHODS //
+// ///////////////////////////// //
 
-RenderView::Packet* RenderViewSkybox::on_build_pocket() {
+RenderView::Packet* RenderViewDepth::on_build_pocket() {
+    // Clear geometry data
+    _geom_data.clear();
+
+    // Check if render data is set
+    if (_render_data == nullptr) {
+        Logger::warning(
+            RENDER_VIEW_DEPTH_LOG,
+            "Render data not set for view `",
+            _name,
+            "`. Not much will be drawn."
+        );
+        return new (MemoryTag::Temp) Packet { this };
+    }
+
+    // Add all geometries
+    for (const auto& mesh : _render_data->meshes) {
+        const auto model_matrix = mesh->transform.world();
+        for (auto* const geom : mesh->geometries()) {
+            const GeometryRenderData render_data { geom,
+                                                   geom->material,
+                                                   model_matrix };
+            _geom_data.push_back(render_data);
+        }
+    }
+
     return new (MemoryTag::Temp) Packet { this };
 }
-void RenderViewSkybox::on_resize(const uint32 width, const uint32 height) {
+
+void RenderViewDepth::on_resize(const uint32 width, const uint32 height) {
     if (width == _width && height == _height) return;
 
     _width       = width;
@@ -61,7 +89,8 @@ void RenderViewSkybox::on_resize(const uint32 width, const uint32 height) {
         _fov, (float32) _width / _height, _near_clip, _far_clip
     );
 }
-void RenderViewSkybox::on_render(
+
+void RenderViewDepth::on_render(
     Renderer* const     renderer,
     const Packet* const packet,
     const uint64        frame_number,
@@ -69,7 +98,7 @@ void RenderViewSkybox::on_render(
 ) {
     for (const auto& pass : _passes) {
         // Bind pass
-        pass->begin(render_target_index);
+        pass->begin((uint64) 0);
 
         // Setup shader
         _shader->use();
@@ -77,33 +106,36 @@ void RenderViewSkybox::on_render(
         // Apply globals
         apply_globals(frame_number);
 
-        // Apply instance
-        apply_instance(frame_number);
+        // Draw geometries
+        for (const auto& geo_data : _geom_data) {
+            // Apply local
+            apply_locals(geo_data.model);
 
-        // Draw geometry
-        renderer->draw_geometry(_skybox->geometry());
+            // Draw geometry
+            renderer->draw_geometry(geo_data.geometry);
+        }
 
         // End pass
         pass->end();
     }
 }
 
-// //////////////////////////////////// //
-// RENDER VIEW SKYBOX PROTECTED METHODS //
-// //////////////////////////////////// //
+// //////////////////////////////// //
+// RENDER VIEW UI PROTECTED METHODS //
+// //////////////////////////////// //
 
 #define uniform_index(uniform)                                                 \
     auto _u_##uniform##_id = shader->get_uniform_index(#uniform);              \
     if (_u_##uniform##_id.has_error()) {                                       \
         Logger::error(                                                         \
-            RENDER_VIEW_SKYBOX_LOG, _u_##uniform##_id.error().what()           \
+            RENDER_VIEW_DEPTH_LOG, _u_##uniform##_id.error().what()            \
         );                                                                     \
     } else uniform = _u_##uniform##_id.value()
 
-RenderViewSkybox::UIndex::UIndex(const Shader* const shader) {
+RenderViewDepth::UIndex::UIndex(const Shader* const shader) {
     uniform_index(projection);
     uniform_index(view);
-    uniform_index(cube_texture);
+    uniform_index(model);
 }
 
 #define uniform_set(uniform, value)                                            \
@@ -112,45 +144,27 @@ RenderViewSkybox::UIndex::UIndex(const Shader* const shader) {
             _shader->set_uniform(_u_index.uniform, &value);                    \
         if (res_##uniform.has_error()) {                                       \
             Logger::error(                                                     \
-                RENDER_VIEW_SKYBOX_LOG, res_##uniform.error().what()           \
+                RENDER_VIEW_DEPTH_LOG, res_##uniform.error().what()            \
             );                                                                 \
             return;                                                            \
         }                                                                      \
     }
 
-void RenderViewSkybox::apply_globals(const uint64 frame_number) const {
+void RenderViewDepth::apply_globals(const uint64 frame_number) const {
     // Globals can be updated only once per frame
     if (frame_number == _shader->rendered_frame_number) return;
 
-    // Zero out view position
-    auto view_matrix  = _world_camera->view();
-    view_matrix[3][0] = 0;
-    view_matrix[3][1] = 0;
-    view_matrix[3][2] = 0;
-
     // Apply globals update
     uniform_set(projection, _proj_matrix);
-    uniform_set(view, view_matrix);
+    uniform_set(view, _world_camera->view());
+
     _shader->apply_global();
 
     // Update render frame number
     _shader->rendered_frame_number = frame_number;
 }
-
-void RenderViewSkybox::apply_instance(const uint64 frame_number) const {
-    // Apply instance level uniforms
-    _shader->bind_instance(_skybox->instance_id);
-    _shader->apply_instance();
-}
-
-// /////////////////////////////////// //
-// RENDER VIEW SKYBOX HELPER FUNCTIONS //
-// /////////////////////////////////// //
-
-uint16 get_uniform_location(const Shader* const shader, const String& uniform) {
-    auto uniform_res = shader->get_uniform_index(uniform);
-    if (uniform_res.has_error()) Logger::fatal();
-    return uniform_res.value();
+void RenderViewDepth::apply_locals(const glm::mat4 model) const {
+    uniform_set(model, model);
 }
 
 } // namespace ENGINE_NAMESPACE

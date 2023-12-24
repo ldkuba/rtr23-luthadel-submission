@@ -4,6 +4,8 @@
 #include "renderer/views/render_view_skybox.hpp"
 #include "renderer/views/render_view_world.hpp"
 #include "renderer/views/render_view_ui.hpp"
+#include "renderer/views/render_view_depth.hpp"
+#include "renderer/views/render_view_ao.hpp"
 
 namespace ENGINE_NAMESPACE {
 
@@ -11,11 +13,16 @@ namespace ENGINE_NAMESPACE {
 
 // Constructor & Destructor
 RenderViewSystem::RenderViewSystem(
+    Renderer* const          renderer,
+    TextureSystem* const     texture_system,
+    GeometrySystem* const    geometry_system,
     ShaderSystem* const      shader_system,
     CameraSystem* const      camera_system,
     Platform::Surface* const surface
 )
-    : _shader_system(shader_system), _camera_system(camera_system) {
+    : _renderer(renderer), _texture_system(texture_system),
+      _geometry_system(geometry_system), _shader_system(shader_system),
+      _camera_system(camera_system) {
     surface->resize_event.subscribe(this, &RenderViewSystem::on_window_resize);
 }
 RenderViewSystem::~RenderViewSystem() {
@@ -77,6 +84,18 @@ Result<RenderView*, RuntimeError> RenderViewSystem::create(
         // TODO: temp just default camera
         view = new (MemoryTag::RenderView) RenderViewSkybox(
             config, _shader_system, _camera_system->default_camera
+        );
+        break;
+    case RenderView::Type::Depth:
+        // TODO: temp just default camera
+        view = new (MemoryTag::RenderView) RenderViewDepth(
+            config, _shader_system, _camera_system->default_camera
+        );
+        break;
+    case RenderView::Type::AO:
+        // TODO: temp just default camera
+        view = new (MemoryTag::RenderView) RenderViewAO(
+            config, _renderer, _texture_system, _geometry_system, _shader_system
         );
         break;
     default:

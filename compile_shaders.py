@@ -6,15 +6,21 @@ def compile_shader(shader_name, shader_type):
     shader_bin_path = "./assets/shaders/bin/" + shader_name + "." + shader_type + ".spv"
     print("compiling " + shader_name + "." + shader_type + ".glsl")
     shader_compile_result = subprocess.run(["glslc", "-g", "-fshader-stage=" + shader_type, shader_path, "-o", shader_bin_path], capture_output=True, text=True)
-    print(shader_compile_result.stdout)
-    print(shader_compile_result.stderr)
+    if shader_compile_result.stdout != "":
+        print(shader_compile_result.stdout)
+    if shader_compile_result.stderr != "":
+        print(shader_compile_result.stderr)
 
-# builtin.material_shader
-compile_shader("builtin.material_shader", "vert")
-compile_shader("builtin.material_shader", "frag")
+shader_list = [
+    ("builtin.material_shader", ["vert", "frag"]),
+    ("builtin.ui_shader", ["vert", "frag"]),
+    ("builtin.skybox_shader", ["vert", "frag"]),
+    ("builtin.depth_shader", ["vert", "frag"]),
+    ("builtin.ao_shader", ["vert", "frag"])
+]
 
-# builtin.ui_shader
-compile_shader("builtin.ui_shader", "vert")
-compile_shader("builtin.ui_shader", "frag")
+for shader, phases in shader_list:
+    for phase in phases:
+        compile_shader(shader, phase)
 
 print("finished")

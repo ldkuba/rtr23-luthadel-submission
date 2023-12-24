@@ -15,14 +15,14 @@ class RenderViewSkybox : public RenderView {
     );
     virtual ~RenderViewSkybox() override;
 
-    virtual RenderViewPacket on_build_pocket() override;
-    virtual void on_resize(const uint32 width, const uint32 height) override;
-    virtual void on_render(
-        Renderer* const         renderer,
-        const RenderViewPacket& packet,
-        const uint64            frame_number,
-        const uint64            render_target_index
-    ) override;
+    virtual Packet* on_build_pocket() override;
+    virtual void    on_resize(const uint32 width, const uint32 height) override;
+    virtual void    on_render(
+           Renderer* const     renderer,
+           const Packet* const packet,
+           const uint64        frame_number,
+           const uint64        render_target_index
+       ) override;
 
     virtual void set_skybox_ref(const Skybox* const data) { _skybox = data; };
 

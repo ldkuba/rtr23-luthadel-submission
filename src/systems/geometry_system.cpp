@@ -96,43 +96,70 @@ void GeometrySystem::release(Geometry* geometry) {
     Logger::trace(GEOMETRY_SYS_LOG, "Geometry with id ", id, " released.");
 }
 
+Geometry* GeometrySystem::generate_ui_rectangle(
+    const String name,
+    const uint32 width,
+    const uint32 height,
+    const String material_name,
+    const bool   auto_release
+) {
+    const float32 dim1 = width;
+    const float32 dim2 = height;
+
+    // Initialize vertices and indices for a rectangle
+    const Vector<Vertex2D> vertices2d {
+        { glm::vec2(0.0f, 0.0f), glm::vec2(0.0f, 0.0f) },
+        { glm::vec2(dim1, dim2), glm::vec2(1.0f, 1.0f) },
+        { glm::vec2(0.0f, dim2), glm::vec2(0.0f, 1.0f) },
+        { glm::vec2(dim1, 0.0f), glm::vec2(1.0f, 0.0f) }
+    };
+    const Vector<uint32> indices2d { 2, 1, 0, 3, 0, 1 };
+
+    // Create AABB
+    const AxisAlignedBBox<2> bbox = { glm::vec3(0), glm::vec3(dim1, dim2, 0) };
+
+    // Crete & return geometry
+    return acquire({ name, vertices2d, indices2d, bbox, material_name });
+}
+
 Geometry* GeometrySystem::generate_cube(
     const String name, const String material_name, const bool auto_release
 ) {
-    float32 l = 0.5f;
+    float32 fr = -0.5f;
+    float32 to = 0.5f;
 
     // Initialize vertices and indices for a cube
     Vector<Vertex3D> vertices {
         // Front
-        { { -l, l, -l }, { 0.0f, 1.0f, 0.0f }, {}, {}, { 1.0f, 1.0f } },
-        { { l, l, l }, { 0.0f, 1.0f, 0.0f }, {}, {}, { 0.0f, 0.0f } },
-        { { -l, l, l }, { 0.0f, 1.0f, 0.0f }, {}, {}, { 1.0f, 0.0f } },
-        { { l, l, -l }, { 0.0f, 1.0f, 0.0f }, {}, {}, { 0.0f, 1.0f } },
+        { { fr, to, fr }, { 0.0f, 1.0f, 0.0f }, {}, {}, { 1.0f, 1.0f } },
+        { { to, to, to }, { 0.0f, 1.0f, 0.0f }, {}, {}, { 0.0f, 0.0f } },
+        { { fr, to, to }, { 0.0f, 1.0f, 0.0f }, {}, {}, { 1.0f, 0.0f } },
+        { { to, to, fr }, { 0.0f, 1.0f, 0.0f }, {}, {}, { 0.0f, 1.0f } },
         // Back
-        { { l, -l, -l }, { 0.0f, -1.0f, 0.0f }, {}, {}, { 1.0f, 1.0f } },
-        { { -l, -l, l }, { 0.0f, -1.0f, 0.0f }, {}, {}, { 0.0f, 0.0f } },
-        { { l, -l, l }, { 0.0f, -1.0f, 0.0f }, {}, {}, { 1.0f, 0.0f } },
-        { { -l, -l, -l }, { 0.0f, -1.0f, 0.0f }, {}, {}, { 0.0f, 1.0f } },
+        { { to, fr, fr }, { 0.0f, -1.0f, 0.0f }, {}, {}, { 1.0f, 1.0f } },
+        { { fr, fr, to }, { 0.0f, -1.0f, 0.0f }, {}, {}, { 0.0f, 0.0f } },
+        { { to, fr, to }, { 0.0f, -1.0f, 0.0f }, {}, {}, { 1.0f, 0.0f } },
+        { { fr, fr, fr }, { 0.0f, -1.0f, 0.0f }, {}, {}, { 0.0f, 1.0f } },
         // Left
-        { { -l, -l, -l }, { -1.0f, 0.0f, 0.0f }, {}, {}, { 1.0f, 1.0f } },
-        { { -l, l, l }, { -1.0f, 0.0f, 0.0f }, {}, {}, { 0.0f, 0.0f } },
-        { { -l, -l, l }, { -1.0f, 0.0f, 0.0f }, {}, {}, { 1.0f, 0.0f } },
-        { { -l, l, -l }, { -1.0f, 0.0f, 0.0f }, {}, {}, { 0.0f, 1.0f } },
+        { { fr, fr, fr }, { -1.0f, 0.0f, 0.0f }, {}, {}, { 1.0f, 1.0f } },
+        { { fr, to, to }, { -1.0f, 0.0f, 0.0f }, {}, {}, { 0.0f, 0.0f } },
+        { { fr, fr, to }, { -1.0f, 0.0f, 0.0f }, {}, {}, { 1.0f, 0.0f } },
+        { { fr, to, fr }, { -1.0f, 0.0f, 0.0f }, {}, {}, { 0.0f, 1.0f } },
         // Right
-        { { l, l, -l }, { 1.0f, 0.0f, 0.0f }, {}, {}, { 1.0f, 1.0f } },
-        { { l, -l, l }, { 1.0f, 0.0f, 0.0f }, {}, {}, { 0.0f, 0.0f } },
-        { { l, l, l }, { 1.0f, 0.0f, 0.0f }, {}, {}, { 1.0f, 0.0f } },
-        { { l, -l, -l }, { 1.0f, 0.0f, 0.0f }, {}, {}, { 0.0f, 1.0f } },
+        { { to, to, fr }, { 1.0f, 0.0f, 0.0f }, {}, {}, { 1.0f, 1.0f } },
+        { { to, fr, to }, { 1.0f, 0.0f, 0.0f }, {}, {}, { 0.0f, 0.0f } },
+        { { to, to, to }, { 1.0f, 0.0f, 0.0f }, {}, {}, { 1.0f, 0.0f } },
+        { { to, fr, fr }, { 1.0f, 0.0f, 0.0f }, {}, {}, { 0.0f, 1.0f } },
         // Bottom
-        { { l, l, -l }, { 0.0f, 0.0f, -1.0f }, {}, {}, { 1.0f, 1.0f } },
-        { { -l, -l, -l }, { 0.0f, 0.0f, -1.0f }, {}, {}, { 0.0f, 0.0f } },
-        { { l, -l, -l }, { 0.0f, 0.0f, -1.0f }, {}, {}, { 1.0f, 0.0f } },
-        { { -l, l, -l }, { 0.0f, 0.0f, -1.0f }, {}, {}, { 0.0f, 1.0f } },
+        { { to, to, fr }, { 0.0f, 0.0f, -1.0f }, {}, {}, { 1.0f, 1.0f } },
+        { { fr, fr, fr }, { 0.0f, 0.0f, -1.0f }, {}, {}, { 0.0f, 0.0f } },
+        { { to, fr, fr }, { 0.0f, 0.0f, -1.0f }, {}, {}, { 1.0f, 0.0f } },
+        { { fr, to, fr }, { 0.0f, 0.0f, -1.0f }, {}, {}, { 0.0f, 1.0f } },
         // Top
-        { { -l, l, l }, { 0.0f, 0.0f, 1.0f }, {}, {}, { 1.0f, 1.0f } },
-        { { l, -l, l }, { 0.0f, 0.0f, 1.0f }, {}, {}, { 0.0f, 0.0f } },
-        { { -l, -l, l }, { 0.0f, 0.0f, 1.0f }, {}, {}, { 1.0f, 0.0f } },
-        { { l, l, l }, { 0.0f, 0.0f, 1.0f }, {}, {}, { 0.0f, 1.0f } }
+        { { fr, to, to }, { 0.0f, 0.0f, 1.0f }, {}, {}, { 1.0f, 1.0f } },
+        { { to, fr, to }, { 0.0f, 0.0f, 1.0f }, {}, {}, { 0.0f, 0.0f } },
+        { { fr, fr, to }, { 0.0f, 0.0f, 1.0f }, {}, {}, { 1.0f, 0.0f } },
+        { { to, to, to }, { 0.0f, 0.0f, 1.0f }, {}, {}, { 0.0f, 1.0f } }
     };
     Vector<uint32> indices(36);
     for (uint32 i = 0; i < 6; ++i) {
@@ -150,11 +177,13 @@ Geometry* GeometrySystem::generate_cube(
     // Generate tangents
     generate_tangents(vertices, indices);
 
+    // Get AABB
+    const AxisAlignedBBox<3> bbox = { { fr, fr, fr }, { to, to, to } };
+
     // Crete & return geometry
-    Geometry::Config3D config { name,          vertices,
-                                indices,       { { l, l, l }, { -l, -l, -l } },
-                                material_name, auto_release };
-    return acquire(config);
+    return acquire(
+        { name, vertices, indices, bbox, material_name, auto_release }
+    );
 }
 
 // Utility methods

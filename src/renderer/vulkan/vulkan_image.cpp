@@ -182,11 +182,25 @@ Result<void, InvalidArgument> VulkanImage::transition_image_layout(
         source_stage      = vk::PipelineStageFlagBits::eTopOfPipe;
         // In which pipeline stage do operations wait on transition
         destination_stage = vk::PipelineStageFlagBits::eTransfer;
-    } else if (old_layout == vk::ImageLayout::eTransferDstOptimal && new_layout == vk::ImageLayout::eShaderReadOnlyOptimal) {
+    } else if ( //
+        old_layout == vk::ImageLayout::eTransferDstOptimal &&
+        new_layout == vk::ImageLayout::eShaderReadOnlyOptimal
+    ) {
         barrier.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
         barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
 
         source_stage      = vk::PipelineStageFlagBits::eTransfer;
+        destination_stage = vk::PipelineStageFlagBits::eFragmentShader;
+    } else if ( //
+        old_layout == vk::ImageLayout::eDepthStencilAttachmentOptimal &&
+        new_layout == vk::ImageLayout::eDepthStencilReadOnlyOptimal
+    ) {
+        barrier.setSrcAccessMask(
+            vk::AccessFlagBits::eDepthStencilAttachmentWrite
+        );
+        barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+
+        source_stage      = vk::PipelineStageFlagBits::eEarlyFragmentTests;
         destination_stage = vk::PipelineStageFlagBits::eFragmentShader;
     } else return Failure("Unsupported layout transition.");
 

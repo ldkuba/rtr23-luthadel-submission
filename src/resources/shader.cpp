@@ -12,12 +12,8 @@ ByteRange get_aligned_range(uint64 offset, uint64 size, uint64 granularity);
 const uint32 Shader::max_name_length;
 
 // Constructor & Destructor
-Shader::Shader(
-    Renderer* const      renderer,
-    TextureSystem* const texture_system,
-    const Config&        config
-)
-    : _renderer(renderer), _texture_system(texture_system), _name(config.name),
+Shader::Shader(TextureSystem* const texture_system, const Config& config)
+    : _texture_system(texture_system), _name(config.name),
       _cull_mode(config.cull_mode), _bound_instance_id(0) {
     // Process attributes
     for (const auto attribute : config.attributes) {
@@ -97,22 +93,11 @@ void Shader::acquire_global_resources() {
 
             for (auto uniform_index : binding.uniforms) {
                 auto& uniform       = _uniforms[uniform_index];
-                uniform.array_index = set.states[0]->texture_maps.size();
+                uniform.array_index = binding_maps.size();
 
-                // Create default texture map
-                // NOTE: Can always be updated later
-                // NOTE: Allocation within shader only done here (for globals)
-                const auto default_map =
-                    _renderer->create_texture_map({ nullptr,
-                                                    Texture::Use::Unknown,
-                                                    Texture::Filter::BiLinear,
-                                                    Texture::Filter::BiLinear,
-                                                    Texture::Repeat::Repeat,
-                                                    Texture::Repeat::Repeat,
-                                                    Texture::Repeat::Repeat });
-
-                // Allocate and push new global texture map
-                binding_maps.push_back(default_map);
+                // Push new global texture map
+                // Before first update will be null
+                binding_maps.push_back(nullptr);
             }
 
             set.states[0]->texture_maps[binding.binding_index] = binding_maps;
@@ -121,17 +106,7 @@ void Shader::acquire_global_resources() {
 }
 
 void Shader::release_global_resources() {
-    for (auto& set : _descriptor_sets) {
-        if (set.scope != Scope::Global) continue;
-
-        for (auto& binding_entry : set.states[0]->texture_maps) {
-            auto& binding_maps = binding_entry.second;
-            for (uint64 i = 0; i < binding_maps.size(); i++) {
-                _texture_system->release(binding_maps[i]->texture->name());
-                del(binding_maps[i]);
-            }
-        }
-    }
+    // For now does nothing
 }
 
 Result<uint16, InvalidArgument> Shader::get_uniform_index(const String& name
@@ -218,7 +193,7 @@ void Shader::add_binding(
 
             uniform.array_index = descriptor_set.texture_map_count++;
         } else { // Not a sampler
-            // Only set smallest uniform size. This might be alligned later
+            // Only set smallest uniform size. This might be aligned later
             uniform.byte_range.size = uniform_config.size;
         }
 

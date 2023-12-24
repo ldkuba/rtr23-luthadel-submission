@@ -110,6 +110,9 @@ class Texture {
         GET { return _total_size; }
     };
 
+    /// @brief True if any render pass utilizes this texture as an attachment
+    bool used_by_render_pass = false;
+
     /// @brief Maximum length a texture name can have
     const static constexpr uint32 max_name_length = 256;
 

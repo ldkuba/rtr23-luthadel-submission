@@ -12,6 +12,19 @@ namespace ENGINE_NAMESPACE {
  */
 class RenderTarget {
   public:
+    /**
+     * @brief Render tag configuration
+     * @a width Render target width in pixels
+     * @a height TRender target height in pixels
+     * @a attachments Array of target attachments (Textures)
+     */
+    struct Config {
+        const uint32           width {};
+        const uint32           height {};
+        const Vector<Texture*> attachments {};
+    };
+
+  public:
     /// @brief Reference to the underlying framebuffer
     Property<FrameBuffer*> framebuffer {
         GET { return _framebuffer; }

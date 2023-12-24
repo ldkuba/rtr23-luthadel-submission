@@ -11,6 +11,8 @@
 #include "renderer/views/render_view_world.hpp"
 #include "renderer/views/render_view_ui.hpp"
 #include "renderer/views/render_view_skybox.hpp"
+#include "renderer/views/render_view_depth.hpp"
+#include "renderer/views/render_view_ao.hpp"
 
 namespace ENGINE_NAMESPACE {
 
@@ -40,9 +42,9 @@ class TestApplication {
     ShaderSystem     _shader_system { &_app_renderer,
                                   &_resource_system,
                                   &_texture_system };
-    RenderViewSystem _render_view_system { &_shader_system,
-                                           &_camera_system,
-                                           _app_surface };
+    RenderViewSystem _render_view_system { &_app_renderer,    &_texture_system,
+                                           &_geometry_system, &_shader_system,
+                                           &_camera_system,   _app_surface };
     MaterialSystem   _material_system {
         &_app_renderer, &_resource_system, &_texture_system, &_shader_system
     };
@@ -58,6 +60,8 @@ class TestApplication {
     RenderViewWorld*  _ow_render_view;
     RenderViewUI*     _ui_render_view;
     RenderViewSkybox* _sb_render_view;
+    RenderViewDepth*  _de_render_view;
+    RenderViewAO*     _ao_render_view;
 
     Skybox default_skybox { 0, 0, 0 };
 

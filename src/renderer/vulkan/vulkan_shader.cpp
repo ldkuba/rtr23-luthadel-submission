@@ -11,7 +11,6 @@ vk::ShaderStageFlags get_shader_stages(uint8 stages);
 
 // Constructor & Destructor
 VulkanShader::VulkanShader(
-    Renderer* const                      renderer,
     TextureSystem* const                 texture_system,
     const Config&                        config,
     const VulkanDevice* const            device,
@@ -19,9 +18,8 @@ VulkanShader::VulkanShader(
     const VulkanRenderPass* const        render_pass,
     const VulkanCommandBuffer* const     command_buffer
 )
-    : Shader(renderer, texture_system, config), _device(device),
-      _allocator(allocator), _render_pass(render_pass),
-      _command_buffer(command_buffer) {
+    : Shader(texture_system, config), _device(device), _allocator(allocator),
+      _render_pass(render_pass), _command_buffer(command_buffer) {
 
     // === Process shader config ===
     // Translate stage info to vulkan flags
@@ -39,7 +37,7 @@ VulkanShader::VulkanShader(
     _required_ubo_alignment = _device->info().min_ubo_alignment;
 
     // Compute the buffer offsets of bindings and uniforms with required
-    // allignment.
+    // alignment.
     for (auto& set : _descriptor_sets) {
         for (auto& binding : set.bindings) {
             if (binding.type == Binding::Type::Sampler) continue;
@@ -342,14 +340,13 @@ void VulkanShader::apply_descriptor_set(DescriptorSet& set, uint32 state_id) {
 
         for (auto& binding : set.bindings) {
             // descriptor_set_id is a hack for initializing all 3 frames
-            if (!binding.was_modified && descriptor_set_id.has_value()) continue;
+            if (!binding.was_modified && descriptor_set_id.has_value())
+                continue;
 
             vk::WriteDescriptorSet binding_write {};
             binding_write.setDstSet(vk_descriptor_set);
             binding_write.setDstBinding(binding.binding_index);
-            binding_write.setDescriptorType(
-                get_descriptor_type(binding.type)
-            );
+            binding_write.setDescriptorType(get_descriptor_type(binding.type));
             binding_write.setDstArrayElement(0);
             binding_write.setDescriptorCount(binding.count);
 
@@ -442,8 +439,12 @@ uint32 VulkanShader::acquire_instance_resources( //
                 Vector<Texture::Map*>(binding.count);
             auto& binding_maps = texture_maps[binding.binding_index];
             for (uint32 i = 0; i < binding.count; i++) {
-                binding_maps[i] = maps[instance_texture_count + i];
-                if (!maps[instance_texture_count + i]->texture)
+                // Get map
+                const auto& map = maps[instance_texture_count + i];
+
+                // Set data
+                binding_maps[i] = map;
+                if (!map->texture)
                     binding_maps[i]->texture = _texture_system->default_texture;
             }
 
@@ -562,10 +563,11 @@ Outcome VulkanShader::set_uniform(const uint16 id, void* value) {
 
     // If sampler
     if (uniform.type == UniformType::sampler) {
-        state->texture_maps[binding->binding_index][uniform.array_index] = (Texture::Map*) value;
+        state->texture_maps[binding->binding_index][uniform.array_index] =
+            (Texture::Map*) value;
     } else {
-        auto address = _uniform_buffer_offset + state->offset +
-                       uniform.byte_range.offset;
+        auto address =
+            _uniform_buffer_offset + state->offset + uniform.byte_range.offset;
         memcpy((void*) address, value, uniform.byte_range.size);
     }
 
@@ -943,12 +945,17 @@ Vector<vk::DescriptorImageInfo>& VulkanShader::get_image_infos(
 
     for (uint32 i = 0; i < texture_maps.size(); ++i) {
         // TODO: only update in the list if actually needing an update.
-        const auto tm = static_cast<const VulkanTexture::Map*>(texture_maps[i]);
-        const auto t =
-            static_cast<const VulkanTexture*>(texture_maps[i]->texture);
+        const auto tm = static_cast<const VulkanTexture::Map*>(
+            texture_maps[i] ? texture_maps[i] : _texture_system->default_map
+        );
+        const auto t = static_cast<const VulkanTexture*>(tm->texture);
 
         vk::DescriptorImageInfo image_info {};
-        image_info.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+        image_info.setImageLayout(
+            // TODO: HACK
+            t->is_writable() ? vk::ImageLayout::eDepthStencilReadOnlyOptimal
+                             : vk::ImageLayout::eShaderReadOnlyOptimal
+        );
         image_info.setImageView(t->image()->view);
         image_info.setSampler(tm->sampler);
         image_infos.push_back(image_info);
@@ -970,10 +977,12 @@ Vector<vk::DescriptorImageInfo>& VulkanShader::get_image_infos(
 
 vk::DescriptorType get_descriptor_type(Shader::Binding::Type type) {
     switch (type) {
-    case Shader::Binding::Type::Uniform: return vk::DescriptorType::eUniformBuffer;
+    case Shader::Binding::Type::Uniform:
+        return vk::DescriptorType::eUniformBuffer;
     case Shader::Binding::Type::Sampler:
         return vk::DescriptorType::eCombinedImageSampler;
-    case Shader::Binding::Type::Storage: return vk::DescriptorType::eStorageBuffer;
+    case Shader::Binding::Type::Storage:
+        return vk::DescriptorType::eStorageBuffer;
     default:
         Logger::fatal(
             RENDERER_VULKAN_LOG,

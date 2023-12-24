@@ -54,10 +54,9 @@ RenderViewWorld::~RenderViewWorld() {}
 // RENDER VIEW UI PUBLIC METHODS //
 // ///////////////////////////// //
 
-RenderViewPacket RenderViewWorld::on_build_pocket() {
-    // Get geometry data
-    static Vector<GeometryRenderData> geometries_data {};
-    geometries_data.clear();
+RenderView::Packet* RenderViewWorld::on_build_pocket() {
+    // Clear geometry data
+    _geom_data.clear();
 
     // TODO: Performance :/
     typedef std::pair<float32, GeometryRenderData> TGeomData;
@@ -66,55 +65,53 @@ RenderViewPacket RenderViewWorld::on_build_pocket() {
     transparent_geometries.clear();
 
     // Check if render data is set
-    if (_render_data != nullptr) {
-        // Add all opaque geometries
-        for (const auto& mesh : _render_data->meshes) {
-            const auto model_matrix = mesh->transform.world();
-            for (auto* const geom : mesh->geometries()) {
-                const GeometryRenderData render_data { geom, model_matrix };
-                // TODO: Add something in material to check for transparency.
-                if (geom->material()->diffuse_map()->texture->has_transparency(
-                    ) == false)
-                    geometries_data.push_back(render_data);
-                else {
-                    const auto geom3d   = dynamic_cast<Geometry3D*>(geom);
-                    const auto center   = geom3d->bbox.get_center();
-                    const auto distance = glm::distance(
-                        _world_camera->transform.position(),
-                        { model_matrix * glm::vec4(center, 1) }
-                    );
-                    transparent_geometries.push_back({ distance, render_data });
-                }
-            }
-        }
-
-        // Sort transparent geometry list
-        Parallel::sort(
-            transparent_geometries.begin(),
-            transparent_geometries.end(),
-            [](const TGeomData& x, const TGeomData& y) -> bool {
-                return x.first > y.first;
-            }
-        );
-
-        // Add all transparent geometries
-        for (const auto& t_geom : transparent_geometries)
-            geometries_data.push_back(t_geom.second);
-    } else {
+    if (_render_data == nullptr) {
         Logger::warning(
             RENDER_VIEW_WORLD_LOG,
             "Render data not set for view `",
             _name,
             "`. Not much will be drawn."
         );
+        return new (MemoryTag::Temp) Packet { this };
     }
 
-    return { this,
-             _world_camera->transform.position(),
-             _world_camera->view(),
-             _proj_matrix,
-             _shader,
-             geometries_data };
+    // Add all opaque geometries
+    for (const auto& mesh : _render_data->meshes) {
+        const auto model_matrix = mesh->transform.world();
+        for (auto* const geom : mesh->geometries()) {
+            const GeometryRenderData render_data { geom,
+                                                   geom->material,
+                                                   model_matrix };
+            // TODO: Add something in material to check for transparency.
+            if (geom->material()->diffuse_map()->texture->has_transparency() ==
+                false)
+                _geom_data.push_back(render_data);
+            else {
+                const auto geom3d   = dynamic_cast<Geometry3D*>(geom);
+                const auto center   = geom3d->bbox.get_center();
+                const auto distance = glm::distance(
+                    _world_camera->transform.position(),
+                    { model_matrix * glm::vec4(center, 1) }
+                );
+                transparent_geometries.push_back({ distance, render_data });
+            }
+        }
+    }
+
+    // Sort transparent geometry list
+    Parallel::sort(
+        transparent_geometries.begin(),
+        transparent_geometries.end(),
+        [](const TGeomData& x, const TGeomData& y) -> bool {
+            return x.first > y.first;
+        }
+    );
+
+    // Add all transparent geometries
+    for (const auto& t_geom : transparent_geometries)
+        _geom_data.push_back(t_geom.second);
+
+    return new (MemoryTag::Temp) Packet { this };
 }
 
 void RenderViewWorld::on_resize(const uint32 width, const uint32 height) {
@@ -128,10 +125,10 @@ void RenderViewWorld::on_resize(const uint32 width, const uint32 height) {
 }
 
 void RenderViewWorld::on_render(
-    Renderer* const         renderer,
-    const RenderViewPacket& packet,
-    const uint64            frame_number,
-    const uint64            render_target_index
+    Renderer* const     renderer,
+    const Packet* const packet,
+    const uint64        frame_number,
+    const uint64        render_target_index
 ) {
     for (const auto& pass : _passes) {
         // Bind pass
@@ -144,10 +141,9 @@ void RenderViewWorld::on_render(
         apply_globals(frame_number);
 
         // Draw geometries
-        for (const auto& geo_data : packet.geometry_data) {
+        for (const auto& geo_data : _geom_data) {
             // Update material instance
-            Material* const geo_material = geo_data.geometry->material;
-            geo_material->apply_instance();
+            geo_data.material->apply_instance();
 
             // Apply local
             apply_locals(geo_data.model);
@@ -209,9 +205,9 @@ void RenderViewWorld::apply_globals(const uint64 frame_number) const {
     uniform_set(mode, _render_mode);
 
     // Apply lights
-    auto point_light_data = _light_system->get_point_data();
+    auto point_light_data  = _light_system->get_point_data();
     auto directional_light = _light_system->get_directional_data();
-    auto num_point_lights = point_light_data.size();
+    auto num_point_lights  = point_light_data.size();
     uniform_set(directional_light, directional_light);
     uniform_set(num_point_lights, num_point_lights);
     uniform_set(point_lights, *(point_light_data.data()));

@@ -21,14 +21,14 @@ class RenderViewWorld : public RenderView {
     );
     virtual ~RenderViewWorld() override;
 
-    virtual RenderViewPacket on_build_pocket() override;
-    virtual void on_resize(const uint32 width, const uint32 height) override;
-    virtual void on_render(
-        Renderer* const         renderer,
-        const RenderViewPacket& packet,
-        const uint64            frame_number,
-        const uint64            render_target_index
-    ) override;
+    virtual Packet* on_build_pocket() override;
+    virtual void    on_resize(const uint32 width, const uint32 height) override;
+    virtual void    on_render(
+           Renderer* const     renderer,
+           const Packet* const packet,
+           const uint64        frame_number,
+           const uint64        render_target_index
+       ) override;
 
     virtual void set_render_data_ref(const MeshRenderData* const data) {
         _render_data = data;
@@ -47,21 +47,23 @@ class RenderViewWorld : public RenderView {
     Camera*   _world_camera;
     glm::vec4 _ambient_color;
 
+    Vector<GeometryRenderData> _geom_data {};
+
     LightSystem* _light_system; // Reference to the light system
 
     DebugViewMode _render_mode = DebugViewMode::Default;
 
     // Uniforms
     struct UIndex {
-        uint16 projection    = -1;
-        uint16 view          = -1;
-        uint16 ambient_color = -1;
-        uint16 view_position = -1;
-        uint16 mode          = -1;
-        uint16 model         = -1;
+        uint16 projection        = -1;
+        uint16 view              = -1;
+        uint16 ambient_color     = -1;
+        uint16 view_position     = -1;
+        uint16 mode              = -1;
+        uint16 model             = -1;
         uint16 directional_light = -1;
-        uint16 num_point_lights = -1;
-        uint16 point_lights     = -1;
+        uint16 num_point_lights  = -1;
+        uint16 point_lights      = -1;
 
         UIndex() {}
         UIndex(const Shader* const shader);

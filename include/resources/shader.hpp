@@ -8,7 +8,6 @@
 namespace ENGINE_NAMESPACE {
 
 class TextureSystem;
-class Renderer;
 
 /// @brief Byte range description
 struct ByteRange {
@@ -28,6 +27,8 @@ class Shader {
         StringEnum MaterialShader = "builtin.material_shader";
         StringEnum UIShader       = "builtin.ui_shader";
         StringEnum SkyboxShader   = "builtin.skybox_shader";
+        StringEnum DepthShader    = "builtin.depth_shader";
+        StringEnum AOShader       = "builtin.ao_shader";
     };
 
     /// @brief Supported shader attribute types
@@ -87,7 +88,7 @@ class Shader {
         /// @brief Shader uniform configuration
         struct Config {
             String      name;
-            uint32       size;
+            uint32      size;
             uint32      array_index;
             UniformType type;
         };
@@ -206,15 +207,10 @@ class Shader {
 
     /**
      * @brief Construct a new Shader object
-     * @param renderer Renderer which owns this shader
      * @param texture_system Texture system reference
      * @param config Shader configuration used
      */
-    Shader(
-        Renderer* const      renderer,
-        TextureSystem* const texture_system,
-        const Config&        config
-    );
+    Shader(TextureSystem* const texture_system, const Config& config);
     virtual ~Shader();
 
     // TODO: TEMP
@@ -350,7 +346,6 @@ class Shader {
 
   protected:
     TextureSystem* _texture_system;
-    Renderer*      _renderer;
 
     String   _name;
     CullMode _cull_mode;

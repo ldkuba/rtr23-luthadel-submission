@@ -477,9 +477,7 @@ void VulkanBackend::draw_geometry(Geometry* const geometry) {
 // -----------------------------------------------------------------------------
 
 Shader* VulkanBackend::create_shader(
-    Renderer* const       renderer,
-    TextureSystem* const  texture_system,
-    const Shader::Config& config
+    TextureSystem* const texture_system, const Shader::Config& config
 ) {
     Logger::trace(RENDERER_VULKAN_LOG, "Creating shader.");
 
@@ -492,7 +490,6 @@ Shader* VulkanBackend::create_shader(
 
     // Create shader
     auto shader = new (MemoryTag::Shader) VulkanShader(
-        renderer,
         texture_system,
         config,
         _device,
@@ -570,6 +567,26 @@ Result<RenderPass*, RuntimeError> VulkanBackend::get_render_pass(
 // -----------------------------------------------------------------------------
 // Attachments
 // -----------------------------------------------------------------------------
+
+void VulkanBackend::make_depth_attachment_readable() const {
+    const auto res =
+        _swapchain->get_depth_texture()->image()->transition_image_layout(
+            *_command_buffer->handle,
+            vk::ImageLayout::eDepthStencilAttachmentOptimal,
+            vk::ImageLayout::eDepthStencilReadOnlyOptimal
+        );
+    if (res.has_error()) {
+        Logger::fatal(
+            RENDERER_VULKAN_LOG,
+            "Depth attachment couldn't be made readable. ",
+            res.error().what()
+        );
+    }
+}
+
+void VulkanBackend::make_color_attachment_readable() const {
+    // TODO: Finish this once its needed
+}
 
 uint8 VulkanBackend::get_current_window_attachment_index() const {
     return _swapchain->get_current_index();

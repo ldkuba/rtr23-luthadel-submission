@@ -48,11 +48,16 @@ class VulkanSwapchain {
     uint8 get_render_texture_count() const;
 
     /// @brief Active render texture at @p index
-    Texture* get_render_texture(const uint8 index) const;
-    /// @brief Active depth texture for depth testing
-    Texture* get_depth_texture() const;
-    /// @brief Active color / resolve texture for multisampling
-    Texture* get_color_texture() const;
+    VulkanTexture* get_render_texture(const uint8 index) const;
+    /// @brief Active depth texture
+    VulkanTexture* get_depth_texture() const;
+    /// @brief Active color texture
+    VulkanTexture* get_color_texture() const;
+
+    /// @brief Active multi-sampled depth texture
+    VulkanTexture* get_ms_depth_texture() const;
+    /// @brief Active multi-sampled color texture
+    VulkanTexture* get_ms_color_texture() const;
 
     /// @return Format currently used by the color attachment
     vk::Format get_color_attachment_format() const;
@@ -87,6 +92,7 @@ class VulkanSwapchain {
     uint32                  _depth_format_channel_count;
     vk::Extent2D            _extent;
     vk::SampleCountFlagBits _msaa_samples;
+    bool                    _use_multisampling;
 
     uint32 _current_image_index = 0;
 
@@ -98,14 +104,19 @@ class VulkanSwapchain {
     Vector<VulkanTexture*> _render_textures {};
     VulkanTexture*         _depth_attachment {};
     VulkanTexture*         _color_attachment {};
+    // For MSAA, != nullptr if multi-sampling is enabled
+    VulkanTexture*         _ms_depth_attachment {};
+    VulkanTexture*         _ms_color_attachment {};
 
     void create();
     void destroy();
     void recreate();
 
+    void find_depth_format();
+
     void create_color_resource();
     void create_depth_resources();
-    void find_depth_format();
+    void create_resource();
 };
 
 } // namespace ENGINE_NAMESPACE

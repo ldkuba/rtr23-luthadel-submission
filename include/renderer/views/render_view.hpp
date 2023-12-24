@@ -1,8 +1,10 @@
 #pragma once
 
-#include "renderer/renderer.hpp"
+#include "renderer/render_pass.hpp"
 
 namespace ENGINE_NAMESPACE {
+
+class Renderer;
 
 /**
  * @brief Generic render view class. Responsible for generation of render view
@@ -13,7 +15,7 @@ class RenderView {
     /**
      * @brief Render view known types. They have logic associated.
      */
-    enum class Type { World, UI, Skybox, Custom };
+    enum class Type { World, UI, Skybox, Depth, AO, Custom };
     /**
      * @brief Render view known `view matrix` source.
      */
@@ -27,6 +29,9 @@ class RenderView {
         Custom
     };
 
+    /**
+     * @brief Configuration for creation of generic render view
+     */
     struct Config {
         String name;
         String shader_name;
@@ -40,6 +45,18 @@ class RenderView {
         Vector<RenderPass*> passes;
     };
 
+    /**
+     * @brief Render data required by given render view. Used by renderer during
+     * frame draw.
+     */
+    struct Packet {
+        RenderView* const view;
+        const bool        read_depth = false;
+
+        Packet(RenderView* const view, const bool read_depth = false)
+            : view(view), read_depth(read_depth) {}
+    };
+
   public:
     RenderView(const Config& config)
         : _name(config.name), _width(config.width), _height(config.height),
@@ -50,14 +67,32 @@ class RenderView {
     }
     virtual ~RenderView() {}
 
-    virtual RenderViewPacket on_build_pocket()                      = 0;
-    virtual void on_resize(const uint32 width, const uint32 height) = 0;
-    virtual void on_render(
-        Renderer* const         renderer,
-        const RenderViewPacket& packet,
-        const uint64            frame_number,
-        const uint64            render_target_index
-    ) = 0;
+    /**
+     * @brief Build render packet and update internal state.
+     * @return Packet* Resulting render packet
+     */
+    virtual Packet* on_build_pocket()                                  = 0;
+    /**
+     * @brief Callback called upon screen resize
+     * @param width New width in pixels
+     * @param height New height in pixels
+     */
+    virtual void    on_resize(const uint32 width, const uint32 height) = 0;
+    /**
+     * @brief Render provided render data
+     *
+     * @param renderer Renderer which will perform given render commands
+     * @param packet Render data
+     * @param frame_number Current frame index. Used for internal
+     * synchronization.
+     * @param render_target_index Index of render target we are rendering to
+     */
+    virtual void    on_render(
+           Renderer* const     renderer,
+           const Packet* const packet,
+           const uint64        frame_number,
+           const uint64        render_target_index
+       ) = 0;
 
   protected:
     String _name;

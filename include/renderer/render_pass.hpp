@@ -9,6 +9,7 @@ namespace ENGINE_NAMESPACE {
  */
 class RenderPass {
   public:
+
     /**
      * @brief List of standard builtin render passes
      */
@@ -16,6 +17,8 @@ class RenderPass {
         StringEnum WorldPass  = "Renderpass.Builtin.World";
         StringEnum UIPass     = "Renderpass.Builtin.UI";
         StringEnum SkyboxPass = "Renderpass.Builtin.Skybox";
+        StringEnum AOPass     = "Renderpass.Builtin.AO";
+        StringEnum DepthPass  = "Renderpass.Builtin.Depth";
     };
 
     /// @brief Type used by clear flags
@@ -29,7 +32,8 @@ class RenderPass {
         None    = 0x0,
         Color   = 0x1,
         Depth   = 0x2,
-        Stencil = 0x4
+        Stencil = 0x4,
+        Resolve = 0x8
     };
 
     /**
@@ -37,14 +41,11 @@ class RenderPass {
      * render basses per renderer configuration.
      */
     struct Config {
-        String        name;
-        String        prev_name;
-        String        next_name;
-        glm::vec2     render_offset;
-        glm::vec4     clear_color;
-        ClearFlagType clear_flags;
-        bool          depth_testing;
-        bool          multisampling;
+        String    name;
+        glm::vec2 render_offset;
+        glm::vec4 clear_color;
+        bool      depth_testing;
+        bool      multisampling;
     };
 
   public:
@@ -81,8 +82,9 @@ class RenderPass {
      * @param config Render pass configurations
      */
     RenderPass(const uint16 id, const Config& config)
-        : _id(id), _render_offset(config.render_offset),
-          _clear_color(config.clear_color), _clear_flags(config.clear_flags),
+        : _id(id), _name(config.name), //
+          _render_offset(config.render_offset),
+          _clear_color(config.clear_color),
           _multisampling_enabled(config.multisampling),
           _depth_testing_enabled(config.depth_testing) {}
     virtual ~RenderPass() {}
@@ -119,23 +121,52 @@ class RenderPass {
      * more than one render target will be added.
      */
     virtual void add_window_as_render_target() = 0;
+
     /**
-     * @brief Creates and adds new render target to this pass
-     * @param width Render target width in pixels
-     * @param height TRender target height in pixels
-     * @param attachments Array of target attachments (Textures)
+     * @brief Creates and adds new render target to this pass. Render targets
+     * are fully initialized only after render pass initialization.
+     *
+     * @param config Render target configuration
      */
-    virtual void add_render_target(
-        const uint32            width,
-        const uint32            height,
-        const Vector<Texture*>& attachments
-    ) = 0;
+    virtual void add_render_target(const RenderTarget::Config config) {
+        _render_target_configs.push_back(config);
+    }
 
     /**
      * @brief Clear render pass of all associated targets. Targets will be
      * destroyed.
      */
     virtual void clear_render_targets() = 0;
+
+    /**
+     * @brief Disable color output for this render pass. Makes render pass
+     * output nothing to its color attachments. Should be set before
+     * initialization. This function does nothing after initialization.
+     */
+    void disable_color_output() { _color_output = false; }
+
+  private:
+    struct RenderPassInitializer {
+        RenderPass*   pass;
+        ClearFlagType clear_flags {};
+
+        RenderPassInitializer       operator>>(RenderPass* const pass) const;
+        const RenderPassInitializer operator>>(const String& clear_flags) const;
+        RenderPassInitializer&      operator>>(RenderPass* const next_pass);
+        RenderPassInitializer&      operator>>(const String& clear_flags);
+        void operator>>(const RenderPassInitializer& init);
+
+      private:
+        static ClearFlagType parse_clear_flags(const String& clear_flags);
+        void                 update_attachment_info();
+    };
+
+  public:
+    // Initializer
+    /// @brief Start initializing render passes. Signifies frame entry.
+    const static RenderPassInitializer start;
+    /// @brief Finish render pass initialization. Signifies completed frame.
+    const static RenderPassInitializer finish;
 
   protected:
     uint16                _id;
@@ -145,6 +176,21 @@ class RenderPass {
     bool                  _multisampling_enabled;
     bool                  _depth_testing_enabled;
     Vector<RenderTarget*> _render_targets {};
+
+    // State
+    bool _color_output = true;
+    bool _init_color   = true;
+    bool _init_depth   = true;
+    bool _init_resolve = true;
+
+    String _name = "";
+    String _prev = "";
+    String _next = "";
+
+    Vector<RenderTarget::Config> _render_target_configs {};
+
+    virtual void initialize()                = 0;
+    virtual void initialize_render_targets() = 0;
 };
 
 } // namespace ENGINE_NAMESPACE

@@ -36,7 +36,6 @@ class VulkanShader : public Shader {
   public:
     /**
      * @brief Construct a new Vulkan Shader object.
-     * @param renderer Reference to renderer which owns this shader
      * @param texture_system Reference to a texture system
      * @param config Shader configuration used
      * @param device Device on which this shader will be used
@@ -45,7 +44,6 @@ class VulkanShader : public Shader {
      * @param command_buffer Buffer on which commands will be issued
      */
     VulkanShader(
-        Renderer* const                      renderer,
         TextureSystem* const                 texture_system,
         const Config&                        config,
         const VulkanDevice* const            device,
@@ -64,10 +62,10 @@ class VulkanShader : public Shader {
 
     // maps is a flattened vector of maps for all instance sets -> for all
     // sampler bindings
-    // TODO: when sampler binding "names" are implemented properly maybe it's a good
-    // idea to change the vector to something that knows which Vector of maps
-    // belongs to which set and binding for example: Map<uint32, Map<String,
-    // Vector<Texture::Map*>>>
+    // TODO: when sampler binding "names" are implemented properly maybe it's a
+    // good idea to change the vector to something that knows which Vector of
+    // maps belongs to which set and binding for example: Map<uint32,
+    // Map<String, Vector<Texture::Map*>>>
     uint32 acquire_instance_resources(const Vector<Texture::Map*>& maps
     ) override;
     void   release_instance_resources(uint32 instance_id) override;
@@ -104,8 +102,7 @@ class VulkanShader : public Shader {
 
     // TODO: For now all used shader staged are passed to each binding. Some
     // bindings should only be available in a specific stage
-    void compute_uniforms(const Vector<vk::ShaderStageFlagBits>& shader_stages
-    );
+    void compute_uniforms(const Vector<vk::ShaderStageFlagBits>& shader_stages);
 
     void create_pipeline(
         const Vector<vk::PipelineShaderStageCreateInfo>& shader_stages,
@@ -117,9 +114,7 @@ class VulkanShader : public Shader {
         const Vector<Texture::Map*>& texture_maps
     ) const;
 
-    void apply_descriptor_set(
-        DescriptorSet& set, uint32 state_id
-    );
+    void apply_descriptor_set(DescriptorSet& set, uint32 state_id);
 };
 
 } // namespace ENGINE_NAMESPACE
