@@ -5,6 +5,10 @@ namespace ENGINE_NAMESPACE {
 #define RP RenderPass
 #define RPI RenderPass::RenderPassInitializer
 
+// -----------------------------------------------------------------------------
+// Render pass initializer
+// -----------------------------------------------------------------------------
+
 const RPI RP::start  = {};
 const RPI RP::finish = {};
 

@@ -51,6 +51,7 @@ class RenderViewAO : public RenderView {
 
     void create_texture_maps();
     void destroy_texture_maps();
+    void generate_kernel(const uint32 sample_count);
 
     // Uniforms
     struct UIndex {

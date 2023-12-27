@@ -29,9 +29,14 @@ layout(location = 0)out vec4 out_color;
 vec3 calculate_view_position(vec2 coords);
 
 void main() {
-    float x = texture(samplers[0], in_texture_coords).r;
-    out_color = vec4(x, 0, 1, 1);
-    return;
+    // float fragment_depth = texture(samplers[depth_i], in_texture_coords).r;
+    // float depth = pow(fragment_depth, 128);
+    // out_color = vec4(vec3(depth), 1);
+    // return;
+    
+    // vec3 noise = texture(samplers[noise_i], in_texture_coords).rgb;
+    // out_color = vec4(noise, 1);
+    // return;
     
     vec3 view_pos = calculate_view_position(in_texture_coords);
     
@@ -47,6 +52,7 @@ void main() {
     // we calculate a random offset using the noise texture sample.
     //This will be applied as rotation to all samples for our current fragments.
     vec3 random_vector = texture(samplers[noise_i], in_texture_coords * GlobalUBO.noise_scale).xyz;
+    random_vector = vec3(random_vector.xy * 2.0 - 1.0, random_vector.z);
     // here we apply the Gramm-Schmidt process to calculate the TBN matrix
     // with a random offset applied.
     vec3 tangent = normalize(random_vector - view_normal * dot(random_vector, view_normal));
@@ -88,10 +94,11 @@ void main() {
     visibility_factor = pow(visibility_factor, 2.0);
     
     // out_color = visibility_factor;
+    out_color = vec4(vec3(visibility_factor), 1);
 }
 
 vec3 calculate_view_position(vec2 coords) {
-    float fragment_depth = texture(samplers[depth_i], coords).r;
+    float fragment_depth = texture(samplers[depth_i], coords).w;
     
     // Convert coords and fragment_depth to
     // normalized device coordinates (clip space)
@@ -105,8 +112,8 @@ vec3 calculate_view_position(vec2 coords) {
     // Transform to view space using inverse camera projection matrix.
     vec4 vs_pos = GlobalUBO.projection_inverse * ndc;
     
-    // since we used a projection transformation (even if it was in inverse)
-    // we need to convert our homogeneous coordinates using the perspective divide.
+    // Since we used a projection transformation (even if it was in inverse)
+    // we need to convert our homogen eous coordinates using the perspective divide.
     vs_pos.xyz = vs_pos.xyz / vs_pos.w;
     
     return vs_pos.xyz;

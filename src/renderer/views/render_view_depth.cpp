@@ -98,7 +98,7 @@ void RenderViewDepth::on_render(
 ) {
     for (const auto& pass : _passes) {
         // Bind pass
-        pass->begin((uint64) 0);
+        pass->begin(render_target_index);
 
         // Setup shader
         _shader->use();

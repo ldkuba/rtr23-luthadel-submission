@@ -33,6 +33,7 @@ class VulkanTexture : public Texture {
      * @param config Texture configuration
      * @param image Vulkan image which holds GPU data of this texture
      * @param command_pool Vulkan command pool reference
+     * @param command_buffer Main vulkan command buffer used for frame rendering
      * @param device Vulkan device reference
      * @param allocator Allocator used
      */
@@ -40,15 +41,18 @@ class VulkanTexture : public Texture {
         const Config&                        config,
         VulkanImage* const                   image,
         const VulkanCommandPool* const       command_pool,
+        const VulkanCommandBuffer* const     command_buffer,
         const VulkanDevice* const            device,
         const vk::AllocationCallbacks* const allocator
     );
-    ~VulkanTexture();
+    virtual ~VulkanTexture();
 
     Outcome write(
         const byte* const data, const uint32 size, const uint32 offset
     ) override;
     Outcome resize(const uint32 width, const uint32 height) override;
+
+    Outcome transition_render_target() const override;
 
     static vk::Format channel_count_to_SRGB(const uint8 channel_count);
     static vk::Format channel_count_to_UNORM(const uint8 channel_count);
@@ -56,6 +60,7 @@ class VulkanTexture : public Texture {
   private:
     VulkanImage*                         _image;
     const VulkanCommandPool* const       _command_pool;
+    const VulkanCommandBuffer* const     _command_buffer;
     const VulkanDevice*                  _device;
     const vk::AllocationCallbacks* const _allocator;
 };

@@ -179,15 +179,6 @@ class RendererBackend {
     ) const                                                         = 0;
 
     /**
-     * @brief Make depth attachment into a valid target for samplers
-     */
-    virtual void make_depth_attachment_readable() const = 0;
-    /**
-     * @brief Make color attachment into a valid target for samplers
-     */
-    virtual void make_color_attachment_readable() const = 0;
-
-    /**
      * @return uint8 Current window attachment index
      */
     virtual uint8 get_current_window_attachment_index() const = 0;
@@ -215,7 +206,7 @@ class RendererBackend {
     virtual Texture* get_color_attachment() const                   = 0;
 
   private:
-    uint64 _frame_number = 0;
+    uint64 _frame_number = -1;
 };
 
 } // namespace ENGINE_NAMESPACE

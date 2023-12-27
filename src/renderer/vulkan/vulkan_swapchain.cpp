@@ -289,6 +289,7 @@ void VulkanSwapchain::create() {
                     },
                     image,
                     nullptr,
+                    nullptr,
                     _device,
                     _allocator
                 );
@@ -381,6 +382,7 @@ void VulkanSwapchain::create_color_resource() {
             },
             nullptr,
             nullptr,
+            nullptr,
             _device,
             _allocator
         );
@@ -425,6 +427,7 @@ void VulkanSwapchain::create_color_resource() {
             },
             nullptr,
             nullptr,
+            nullptr,
             _device,
             _allocator
         );
@@ -463,6 +466,7 @@ void VulkanSwapchain::create_depth_resources() {
             },
             nullptr,
             nullptr,
+            nullptr,
             _device,
             _allocator
         );
@@ -480,8 +484,7 @@ void VulkanSwapchain::create_depth_resources() {
         vk::SampleCountFlagBits::e1,
         _depth_format,
         vk::ImageTiling::eOptimal,
-        vk::ImageUsageFlagBits::eDepthStencilAttachment |
-            vk::ImageUsageFlagBits::eSampled,
+        vk::ImageUsageFlagBits::eDepthStencilAttachment,
         vk::MemoryPropertyFlagBits::eDeviceLocal,
         vk::ImageAspectFlagBits::eDepth
     );
@@ -504,6 +507,7 @@ void VulkanSwapchain::create_depth_resources() {
                 true,  // Writable
                 true   // Wrapped
             },
+            nullptr,
             nullptr,
             nullptr,
             _device,

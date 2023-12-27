@@ -65,9 +65,6 @@ class VulkanBackend : public RendererBackend {
     ) const override;
 
     // Attachments
-    void make_depth_attachment_readable() const override;
-    void make_color_attachment_readable() const override;
-
     uint8    get_current_window_attachment_index() const override;
     uint8    get_window_attachment_count() const override;
     Texture* get_window_attachment(const uint8 index) const override;

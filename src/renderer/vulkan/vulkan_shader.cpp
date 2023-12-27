@@ -468,10 +468,12 @@ uint32 VulkanShader::acquire_instance_resources( //
         }
 
         // Allocate one descriptor set per frame in flight.
-        std::
-            array<vk::DescriptorSetLayout, VulkanSettings::max_frames_in_flight>
-                layouts;
-        auto*   backend_data =
+        std::array< //
+            vk::DescriptorSetLayout,
+            VulkanSettings::max_frames_in_flight>
+            layouts;
+
+        auto* backend_data =
             static_cast<VulkanDescriptorSetBackendData*>(set.backend_data);
         for (uint32 i = 0; i < VulkanSettings::max_frames_in_flight; i++)
             layouts[i] = backend_data->layout;
@@ -948,15 +950,18 @@ Vector<vk::DescriptorImageInfo>& VulkanShader::get_image_infos(
         const auto tm = static_cast<const VulkanTexture::Map*>(
             texture_maps[i] ? texture_maps[i] : _texture_system->default_map
         );
-        const auto t = static_cast<const VulkanTexture*>(tm->texture);
+        auto texture = static_cast<const VulkanTexture*>(tm->texture);
+
+        if (tm->texture->is_render_target()) {
+            const auto pt = static_cast<const PackedTexture*>(tm->texture);
+            texture       = static_cast<const VulkanTexture*>(
+                pt->get_at(_command_buffer->current_frame)
+            );
+        }
 
         vk::DescriptorImageInfo image_info {};
-        image_info.setImageLayout(
-            // TODO: HACK
-            t->is_writable() ? vk::ImageLayout::eDepthStencilReadOnlyOptimal
-                             : vk::ImageLayout::eShaderReadOnlyOptimal
-        );
-        image_info.setImageView(t->image()->view);
+        image_info.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+        image_info.setImageView(texture->image()->view);
         image_info.setSampler(tm->sampler);
         image_infos.push_back(image_info);
 

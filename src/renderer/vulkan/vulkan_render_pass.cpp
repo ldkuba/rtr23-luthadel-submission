@@ -19,6 +19,7 @@ VulkanRenderPass::VulkanRenderPass(
       _depth(1.0), _stencil(0) {}
 VulkanRenderPass::~VulkanRenderPass() {
     clear_render_targets();
+
     if (_handle) _device->destroyRenderPass(_handle, _allocator);
     Logger::trace(RENDERER_VULKAN_LOG, "Render pass destroyed.");
 }
@@ -89,14 +90,13 @@ void VulkanRenderPass::clear_render_targets() {
 
 void VulkanRenderPass::initialize() {
     if (_initialized) {
-        Logger::warning(
+        Logger::debug(
             RENDERER_VULKAN_LOG,
-            "Initialization of render pass '",
+            "Render pass '",
             _name,
-            "' attempted, but this render pass was already initialized. "
-            "Nothing was done."
+            "' will be reinitialized. [Make sure no errors can come from this]"
         );
-        return;
+        if (_handle) _device->destroyRenderPass(_handle, _allocator);
     }
     Logger::trace(
         RENDERER_VULKAN_LOG, "Initializing '", _name, "' render pass."
@@ -188,9 +188,9 @@ void VulkanRenderPass::initialize() {
     }
 
     // === Cleanup ===
-    if (color_attachment_ref) del(color_attachment_ref);
-    if (depth_attachment_ref) del(depth_attachment_ref);
     if (resolve_attachment_ref) del(resolve_attachment_ref);
+    if (depth_attachment_ref) del(depth_attachment_ref);
+    if (color_attachment_ref) del(color_attachment_ref);
 
     // === Compute default clear values ===
     // Default background values of color and depth stencil for rendered area of
@@ -220,35 +220,66 @@ void VulkanRenderPass::initialize() {
 
 void VulkanRenderPass::initialize_render_targets() {
     for (const auto& config : _render_target_configs) {
-        // Scan for image views needed for framebuffer
-        Vector<vk::ImageView> view_attachments { config.attachments.size() };
-        for (uint32 i = 0; i < config.attachments.size(); i++) {
-            const auto v_texture = (VulkanTexture*) config.attachments[i];
-            view_attachments[i]  = v_texture->image()->view;
+        // Check how many frame buffers need to be initialized
+        if (config.one_per_frame_in_flight) {
+            // Scan for image views needed for framebuffer
+            for (uint8 i = 0; i < VulkanSettings::max_frames_in_flight; i++) {
+                // For attachment list
+                Vector<Texture*> attachments {};
+                for (const auto& attachment : config.attachments) {
+                    if (attachment->is_render_target()) {
+                        const auto pack =
+                            static_cast<PackedTexture*>(attachment);
+                        attachments.push_back(pack->get_at(i));
+                    } else attachments.push_back(attachment);
+                }
+
+                // Create target under these settings
+                const auto target = create_render_target(
+                    config.width, config.height, attachments
+                );
+
+                // Add this target
+                _render_targets.push_back(target);
+            }
+        } else {
+            // Create target under these settings
+            const auto target = create_render_target(
+                config.width, config.height, config.attachments
+            );
+
+            // Add this target
+            _render_targets.push_back(target);
         }
-
-        // Create render target appropriate framebuffer
-        const auto framebuffer = new (MemoryTag::GPUBuffer) VulkanFramebuffer(
-            _device,
-            _allocator,
-            this,
-            config.width,
-            config.height,
-            view_attachments
-        );
-
-        // Store to render target
-        const auto target = new (MemoryTag::GPUBuffer) RenderTarget(
-            config.attachments, framebuffer, config.width, config.height
-        );
-
-        // Sync to window resize
-        // TODO: Use `_sync_to_window_resize` bool
-        _swapchain->recreate_event.subscribe(target, &RenderTarget::resize);
-
-        // Add this target
-        _render_targets.push_back(target);
     }
+}
+
+// Helper
+RenderTarget* VulkanRenderPass::create_render_target(
+    uint32 width, uint32 height, const Vector<Texture*>& attachments
+) {
+    // Create view attachments for framebuffer initialization
+    Vector<vk::ImageView> view_attachments { attachments.size() };
+    for (uint32 j = 0; j < attachments.size(); j++) {
+        const auto texture   = attachments[j];
+        const auto v_texture = (VulkanTexture*) attachments[j];
+        view_attachments[j]  = v_texture->image()->view;
+    }
+
+    // Create render target appropriate framebuffer
+    const auto framebuffer = new (MemoryTag::GPUBuffer) VulkanFramebuffer(
+        _device, _allocator, this, width, height, view_attachments
+    );
+
+    // Store to render targets
+    const auto target = new (MemoryTag::GPUBuffer)
+        RenderTarget(attachments, framebuffer, width, height);
+
+    // Sync to window resize
+    // TODO: Use `_sync_to_window_resize` bool
+    _swapchain->recreate_event.subscribe(target, &RenderTarget::resize);
+
+    return target;
 }
 
 // ////////////////////////////////// //

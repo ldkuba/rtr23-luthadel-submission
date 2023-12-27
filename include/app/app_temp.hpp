@@ -32,7 +32,7 @@ class TestApplication {
     Renderer _app_renderer { RendererBackend::Type::Vulkan, _app_surface };
 
     // Main camera
-    Camera* main_camera {};
+    Camera* _main_camera {};
 
     // Systems
     InputSystem      _input_system {};
@@ -63,9 +63,15 @@ class TestApplication {
     RenderViewDepth*  _de_render_view;
     RenderViewAO*     _ao_render_view;
 
-    Skybox default_skybox { 0, 0, 0 };
+    Skybox         _default_skybox { 0, 0, 0 };
+    MeshRenderData _world_mesh_data;
+    MeshRenderData _ui_mesh_data;
 
+    void setup_camera();
     void setup_input();
+    void setup_render_passes();
+    void setup_scene_geometry();
+    void setup_lights();
 };
 
 } // namespace ENGINE_NAMESPACE

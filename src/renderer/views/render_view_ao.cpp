@@ -1,5 +1,6 @@
 #include "renderer/views/render_view_ao.hpp"
 
+#include "random.hpp"
 #include "resources/mesh.hpp"
 #include "multithreading/parallel.hpp"
 #include "systems/light_system.hpp"
@@ -46,6 +47,10 @@ RenderViewAO::RenderViewAO(
     );
     _proj_inv_matrix = glm::inverse(_proj_matrix);
 
+    // Setup SSAO parameters
+    _sample_radius = 0.5f;
+    _noise_scale   = glm::vec2(_width / 2.f, _height / 2.f);
+
     // Create full screen render packet
     // Size is [2, 2], since shader converts positions: [0, 2] -> [-1, 1]
     _full_screen_geometry =
@@ -53,6 +58,9 @@ RenderViewAO::RenderViewAO(
 
     //  Create texture maps
     create_texture_maps();
+
+    // Generate kernel
+    generate_kernel(_kernel_size);
 }
 RenderViewAO::~RenderViewAO() { destroy_texture_maps(); }
 
@@ -61,7 +69,7 @@ RenderViewAO::~RenderViewAO() { destroy_texture_maps(); }
 // ///////////////////////////// //
 
 RenderView::Packet* RenderViewAO::on_build_pocket() {
-    return new (MemoryTag::Temp) Packet { this, true };
+    return new (MemoryTag::Temp) Packet { this };
 }
 
 void RenderViewAO::on_resize(const uint32 width, const uint32 height) {
@@ -72,6 +80,9 @@ void RenderViewAO::on_resize(const uint32 width, const uint32 height) {
     _proj_matrix = glm::perspective(
         _fov, (float32) _width / _height, _near_clip, _far_clip
     );
+    _proj_inv_matrix = glm::inverse(_proj_matrix);
+
+    _noise_scale = glm::vec2(_width / 2.f, _height / 2.f);
 }
 
 void RenderViewAO::on_render(
@@ -80,9 +91,13 @@ void RenderViewAO::on_render(
     const uint64        frame_number,
     const uint64        render_target_index
 ) {
+    // Transition used render targets
+    const auto pt = static_cast<const PackedTexture*>(_depth_map->texture);
+    pt->get_at(frame_number % 2)->transition_render_target();
+
     for (const auto& pass : _passes) {
         // Bind pass
-        pass->begin(render_target_index);
+        pass->begin(frame_number % 2);
 
         // Setup shader
         _shader->use();
@@ -105,37 +120,29 @@ void RenderViewAO::on_render(
 void RenderViewAO::create_texture_maps() {
     // Depth texture
     const auto depth_texture = _renderer->get_depth_texture();
+    // _texture_system->acquire("DepthPrePassTarget", false);
 
     // Noise texture
-    byte* const texture_data =
-        new (MemoryTag::Temp) byte[16 * 3] { -119, 99,   0, //
-                                             -55,  -109, 0, //
-                                             114,  -114, 0, //
-                                             115,  41,   0, //
-                                             9,    -42,  0, //
-                                             -61,  -104, 0, //
-                                             -48,  86,   0, //
-                                             113,  -100, 0, //
-                                             -61,  -117, 0, //
-                                             1,    114,  0, //
-                                             -101, 95,   0, //
-                                             -4,   -30,  0, //
-                                             36,   87,   0, //
-                                             -74,  84,   0, //
-                                             -29,  -79,  0, //
-                                             23,   -37,  0 };
+    ubyte* const texture_data = new (MemoryTag::Temp) ubyte[16 * 4];
+    for (uint8 i = 0; i < 16; i++) {
+        texture_data[i * 4 + 0] = Random::uint8();
+        texture_data[i * 4 + 1] = Random::uint8();
+        texture_data[i * 4 + 2] = 128;
+        texture_data[i * 4 + 3] = 255;
+    }
 
     const auto noise_texture = _texture_system->create(
         { "SSAO_noise",
           4,     // Width
           4,     // Height
-          1,     // Channel count
+          4,     // Channel count
           false, // Mip-mapped
           false, // Transparency
           false, // Writable
           false, // Wrapped
+          false, // Render target
           Texture::Type::T2D },
-        texture_data,
+        (byte*) texture_data,
         true
     );
 
@@ -145,9 +152,9 @@ void RenderViewAO::create_texture_maps() {
                                         Texture::Use::Unknown,
                                         Texture::Filter::NearestNeighbour,
                                         Texture::Filter::NearestNeighbour,
-                                        Texture::Repeat::Repeat,
-                                        Texture::Repeat::Repeat,
-                                        Texture::Repeat::Repeat });
+                                        Texture::Repeat::ClampToEdge,
+                                        Texture::Repeat::ClampToEdge,
+                                        Texture::Repeat::ClampToEdge });
     _noise_map =
         _renderer->create_texture_map({ noise_texture,
                                         Texture::Use::Unknown,
@@ -163,6 +170,29 @@ void RenderViewAO::create_texture_maps() {
 void RenderViewAO::destroy_texture_maps() {
     if (_depth_map) _renderer->destroy_texture_map(_depth_map);
     if (_noise_map) _renderer->destroy_texture_map(_noise_map);
+}
+
+void RenderViewAO::generate_kernel(const uint32) {
+    uint i = 0;
+    for (auto& sample : _kernel) {
+        // Generate random sample
+        sample.x = Random::float32(-1.0, 1.0);
+        sample.y = Random::float32(-1.0, 1.0);
+        sample.z = Random::float32_01();
+
+        // Normalize it
+        sample = glm::normalize(sample);
+
+        // After normalization the sample points lie on the surface of the
+        // hemisphere and each sample point vector has the same length. We want
+        // to randomly change the sample points to sample more points inside the
+        // hemisphere as close to our fragment as possible. we will use an
+        // accelerating interpolation to do this.
+        float32 scale               = (float32) i++ / _kernel_size;
+        float32 interpolation_scale = 0.1 + 0.9 * scale * scale;
+
+        sample *= interpolation_scale;
+    }
 }
 
 #define uniform_index(uniform)                                                 \

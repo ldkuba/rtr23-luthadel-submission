@@ -93,8 +93,26 @@ inline const constexpr float32 Epsilon32 =
     std::numeric_limits<float32>::epsilon();
 inline const constexpr float64 Epsilon64 =
     std::numeric_limits<float64>::epsilon();
-inline const constexpr float64 Epsilon128 =
+inline const constexpr float128 Epsilon128 =
     std::numeric_limits<float128>::epsilon();
+
+// Smallest finite float
+inline const constexpr float32 float32_min =
+    std::numeric_limits<float32>::lowest();
+inline const constexpr float64 float64_min =
+    std::numeric_limits<float64>::lowest();
+inline const constexpr float128 float128_min =
+    std::numeric_limits<float128>::lowest();
+
+// Largest float
+inline const constexpr float32 float32_max =
+    std::numeric_limits<float32>::max();
+inline const constexpr float64 float64_max =
+    std::numeric_limits<float64>::max();
+inline const constexpr float128 float128_max =
+    std::numeric_limits<float128>::max();
+
+// Infinity
 inline const constexpr float32 Infinity32 =
     std::numeric_limits<float32>::infinity();
 inline const constexpr float64 Infinity64 =

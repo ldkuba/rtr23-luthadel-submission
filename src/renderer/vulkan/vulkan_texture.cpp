@@ -9,14 +9,15 @@ VulkanTexture::VulkanTexture(
     const Config&                        config,
     VulkanImage* const                   image,
     const VulkanCommandPool* const       command_pool,
+    const VulkanCommandBuffer* const     command_buffer,
     const VulkanDevice* const            device,
     const vk::AllocationCallbacks* const allocator
 )
     : Texture(config), _image(image), _command_pool(command_pool),
-      _device(device), _allocator(allocator) {}
+      _command_buffer(command_buffer), _device(device), _allocator(allocator) {}
 
 VulkanTexture::~VulkanTexture() {
-    if (image) del(_image);
+    if (_image) del(_image);
 }
 
 // ///////////////////////////// //
@@ -76,7 +77,9 @@ Outcome VulkanTexture::resize(const uint32 width, const uint32 height) {
     del(_image);
 
     // Get format
-    const auto texture_format = channel_count_to_UNORM(channel_count);
+    const auto texture_format = is_render_target()
+                                    ? channel_count_to_SRGB(channel_count)
+                                    : channel_count_to_UNORM(channel_count);
 
     // Create new image
     auto texture_image =
@@ -88,10 +91,12 @@ Outcome VulkanTexture::resize(const uint32 width, const uint32 height) {
         vk::SampleCountFlagBits::e1,
         texture_format,
         vk::ImageTiling::eOptimal,
-        vk::ImageUsageFlagBits::eTransferSrc |
-            vk::ImageUsageFlagBits::eTransferDst |
-            vk::ImageUsageFlagBits::eSampled |
-            vk::ImageUsageFlagBits::eColorAttachment,
+        is_render_target() ? vk::ImageUsageFlagBits::eColorAttachment |
+                                 vk::ImageUsageFlagBits::eSampled
+                           : vk::ImageUsageFlagBits::eTransferSrc |
+                                 vk::ImageUsageFlagBits::eTransferDst |
+                                 vk::ImageUsageFlagBits::eSampled |
+                                 vk::ImageUsageFlagBits::eColorAttachment,
         vk::MemoryPropertyFlagBits::eDeviceLocal,
         vk::ImageAspectFlagBits::eColor
     );
@@ -102,12 +107,37 @@ Outcome VulkanTexture::resize(const uint32 width, const uint32 height) {
     return Outcome::Successful;
 }
 
+Outcome VulkanTexture::transition_render_target() const {
+    if (!is_render_target()) {
+        Logger::error(
+            RENDERER_VULKAN_LOG,
+            "Texture transition for render target texture attempted, but given "
+            "texture isn't marked as render target. Operation failed."
+        );
+        return Outcome::Failed;
+    }
+    const auto res = _image->transition_image_layout(
+        *_command_buffer->handle,
+        vk::ImageLayout::eColorAttachmentOptimal,
+        vk::ImageLayout::eShaderReadOnlyOptimal
+    );
+    if (res.has_error()) {
+        Logger::fatal(
+            RENDERER_VULKAN_LOG,
+            "Texture transition from attachment to readable texture failed. ",
+            res.error().what()
+        );
+        return Outcome::Failed;
+    }
+    return Outcome::Successful;
+}
+
 vk::Format VulkanTexture::channel_count_to_SRGB(const uint8 channel_count) {
     switch (channel_count) {
     case 1: return vk::Format::eR8Srgb;
     case 2: return vk::Format::eR8G8Srgb;
-    case 3: return vk::Format::eR8G8B8Srgb;
-    case 4: return vk::Format::eR8G8B8A8Srgb;
+    case 3: return vk::Format::eB8G8R8Srgb;
+    case 4: return vk::Format::eB8G8R8A8Srgb;
     default: return vk::Format::eR8G8B8A8Srgb;
     }
 }

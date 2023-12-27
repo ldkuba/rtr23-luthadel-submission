@@ -73,7 +73,7 @@ struct PhysicalDeviceInfo {
  */
 struct VulkanCommandBuffer {
     /// @brief Currently recorded frame
-    uint32                   current_frame;
+    uint8                    current_frame;
     /// @brief Handle to the currently recorded buffer
     const vk::CommandBuffer* handle;
 
@@ -84,7 +84,7 @@ struct VulkanCommandBuffer {
      * @brief Flushes contents and resets recording
      * @param current_frame Index of the next frame
      */
-    void reset(const uint32 current_frame);
+    void reset(const uint8 current_frame);
 
   private:
     const Vector<vk::CommandBuffer> _buffers;

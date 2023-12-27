@@ -67,6 +67,7 @@ class Texture {
         const bool   has_transparency = false;
         const bool   is_writable      = false;
         const bool   is_wrapped       = false;
+        const bool   is_render_target = false;
         const Type   type             = Type::T2D;
 
         Config(
@@ -76,9 +77,10 @@ class Texture {
             const uint32 channel_count,
             const bool   mip_mapping,
             const bool   has_transparency,
-            const bool   is_writable = false,
-            const bool   is_wrapped  = false,
-            const Type   type        = Type::T2D
+            const bool   is_writable      = false,
+            const bool   is_wrapped       = false,
+            const bool   is_render_target = false,
+            const Type   type             = Type::T2D
         );
     };
 
@@ -121,7 +123,7 @@ class Texture {
      * @param config Texture configuration used
      */
     Texture(const Config& config);
-    ~Texture() {}
+    virtual ~Texture() {}
 
     /// @brief True if texture uses any transparency
     bool has_transparency() const { return _flags & HasTransparency; }
@@ -129,6 +131,8 @@ class Texture {
     bool is_writable() const { return _flags & IsWritable; }
     /// @brief True if this texture was created via wrapping
     bool is_wrapped() const { return _flags & IsWrapped; }
+    /// @brief True if image is used as render target
+    bool is_render_target() const { return _flags & IsRenderTarget; }
 
     /**
      * @brief Write raw data into texture. Optimal for writable textures. Works
@@ -160,12 +164,19 @@ class Texture {
      */
     virtual Outcome resize(const uint32 width, const uint32 height);
 
+    /**
+     * @brief Transition render target into readable format. Only useful if this
+     * texture is a render target which we want to sample later on.
+     */
+    virtual Outcome transition_render_target() const = 0;
+
   protected:
     typedef uint8 TextureFlagType;
     enum TextureFlag : TextureFlagType {
-        HasTransparency = 0b001,
-        IsWritable      = 0b010,
-        IsWrapped       = 0b100
+        HasTransparency = 0b0001,
+        IsWritable      = 0b0010,
+        IsWrapped       = 0b0100,
+        IsRenderTarget  = 0b1000
     };
 
     TextureFlagType _flags;
@@ -177,6 +188,32 @@ class Texture {
     uint32 _mip_levels;
     uint64 _total_size;
     Type   _type;
+};
+
+class PackedTexture : public Texture {
+  public:
+    PackedTexture(const Config& config, const Vector<Texture*>& textures)
+        : Texture(config) {
+        _textures.reserve(textures.size());
+        for (const auto& texture : textures)
+            _textures.push_back(texture);
+    }
+    ~PackedTexture() {
+        for (const auto& texture : _textures)
+            del(texture);
+        _textures.clear();
+    }
+
+    Texture* get_at(uint8 index) const;
+
+    virtual Outcome write(
+        const byte* const data, const uint32 size, const uint32 offset
+    ) override;
+    virtual Outcome resize(const uint32 width, const uint32 height) override;
+    virtual Outcome transition_render_target() const override;
+
+  private:
+    Vector<Texture*> _textures {};
 };
 
 } // namespace ENGINE_NAMESPACE

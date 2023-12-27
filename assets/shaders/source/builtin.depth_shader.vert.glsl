@@ -17,6 +17,12 @@ layout(location = 2)in vec3 in_tangent;
 layout(location = 3)in vec4 in_color;
 layout(location = 4)in vec2 in_texture_coordinate;
 
+layout(location = 0)out vec4 out_ss_position;
+layout(location = 1)out vec3 out_normal;
+
 void main() {
-    gl_Position = UBO.projection * UBO.view * PC.model * vec4(in_position, 1.0);
+    out_ss_position = UBO.projection * UBO.view * PC.model * vec4(in_position, 1.0);
+    out_normal = normalize(mat3(PC.model) * in_normal);
+    
+    gl_Position = out_ss_position;
 }

@@ -22,7 +22,7 @@ void* StackAllocator::allocate(const uint64 size, const uint64 alignment) {
     );
 
     if (_offset + padding + size > _total_size)
-        Logger::fatal(ALLOCATOR_LOG, "Linear allocator out of memory error.");
+        Logger::fatal(ALLOCATOR_LOG, "Stack allocator out of memory error.");
 
     _offset += padding;
 
@@ -30,7 +30,7 @@ void* StackAllocator::allocate(const uint64 size, const uint64 alignment) {
     const uint64      header_address = next_address - sizeof(AllocationHeader);
     AllocationHeader  allocation_header { (uint8) padding };
     AllocationHeader* header_ptr = (AllocationHeader*) header_address;
-    header_ptr                   = &allocation_header;
+    *header_ptr                  = allocation_header;
 
     _offset += size;
 
@@ -45,13 +45,21 @@ void StackAllocator::free(void* ptr) {
     // Move offset back to clear address
     const uint64 current_address = (uint64) ptr;
     const uint64 header_address  = current_address - sizeof(AllocationHeader);
-    const AllocationHeader* allocation_header {
-        (AllocationHeader*) header_address
-    };
+    const AllocationHeader* allocation_header =
+        (AllocationHeader*) header_address;
 
-    _offset =
-        current_address - (uint64) _start_ptr - allocation_header->padding;
-    _used = _offset;
+    const auto object_offset = current_address - (uint64) _start_ptr;
+    if (object_offset > _offset) {
+        Logger::warning(
+            ALLOCATOR_LOG,
+            "Stack allocator deallocation order is disturbed. Make sure stack "
+            "deallocations happen in reverse order of their allocations."
+        );
+        return;
+    }
+
+    _offset = object_offset - allocation_header->padding;
+    _used   = _offset;
 }
 
 void StackAllocator::reset() {

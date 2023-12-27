@@ -73,6 +73,8 @@ class TextureSystem {
      * @param width Texture width in pixels
      * @param height Texture height in pixels
      * @param channel_count Number of channels per pixel
+     * @param use_as_render_target Indicates whether the texture will be used as
+     * render target by a render pass
      * @param has_transparency Indicates whether the texture will have
      * transparency
      * @return Texture* Requested texture resource
@@ -82,7 +84,8 @@ class TextureSystem {
         const uint32 width,
         const uint32 height,
         const uint8  channel_count,
-        const bool   has_transparency
+        const bool   use_as_render_target = false,
+        const bool   has_transparency     = false
     );
 
     /**

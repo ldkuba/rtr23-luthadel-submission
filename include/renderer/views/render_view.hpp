@@ -51,10 +51,6 @@ class RenderView {
      */
     struct Packet {
         RenderView* const view;
-        const bool        read_depth = false;
-
-        Packet(RenderView* const view, const bool read_depth = false)
-            : view(view), read_depth(read_depth) {}
     };
 
   public:

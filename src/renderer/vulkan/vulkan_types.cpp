@@ -85,7 +85,7 @@ VulkanCommandBuffer::VulkanCommandBuffer(Vector<vk::CommandBuffer>&& buffers)
     handle = &_buffers[current_frame];
 }
 
-void VulkanCommandBuffer::reset(const uint32 current_frame) {
+void VulkanCommandBuffer::reset(const uint8 current_frame) {
     this->current_frame = current_frame;
     handle              = &_buffers[current_frame];
     handle->reset();

@@ -24,41 +24,41 @@ Renderer::Renderer(
         );
     }
 
-    // Setup render passes TODO: CONFIGURABLE
+    // === Render passes ===
+    // Get width & height
     const auto width  = surface->get_width_in_pixels();
     const auto height = surface->get_height_in_pixels();
 
     // Create render passes
-    const auto depth_renderpass = _backend->create_render_pass({
+    const auto depth_renderpass  = create_render_pass({
         RenderPass::BuiltIn::DepthPass,       // Name
         glm::vec2 { 0, 0 },                   // Draw offset
         glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f }, // Clear color
         true,                                 // Depth testing
         false                                 // Multisampling
     });
-    depth_renderpass->disable_color_output();
-    const auto ao_renderpass     = _backend->create_render_pass({
+    const auto ao_renderpass     = create_render_pass({
         RenderPass::BuiltIn::AOPass,          // Name
         glm::vec2 { 0, 0 },                   // Draw offset
         glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f }, // Clear color
         false,                                // Depth testing
         false                                 // Multisampling
     });
-    const auto skybox_renderpass = _backend->create_render_pass({
+    const auto skybox_renderpass = create_render_pass({
         RenderPass::BuiltIn::SkyboxPass,      // Name
         glm::vec2 { 0, 0 },                   // Draw offset
         glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f }, // Clear color
         false,                                // Depth testing
         true                                  // Multisampling
     });
-    const auto world_renderpass  = _backend->create_render_pass({
+    const auto world_renderpass  = create_render_pass({
         RenderPass::BuiltIn::WorldPass,       // Name
         glm::vec2 { 0, 0 },                   // Draw offset
         glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f }, // Clear color
         true,                                 // Depth testing
         true                                  // Multisampling
     });
-    const auto ui_renderpass     = _backend->create_render_pass({
+    const auto ui_renderpass     = create_render_pass({
         RenderPass::BuiltIn::UIPass,          // Name
         glm::vec2 { 0, 0 },                   // Draw offset
         glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f }, // Clear color
@@ -66,32 +66,41 @@ Renderer::Renderer(
         false                                 // Multisampling
     });
 
+    // Create render target textures
+    // const auto depth_normals_texture = _texture_system.acquire_writable(
+    //     "DepthPrePassTarget", width, height, 4, true
+    // );
+
     // Create render targets
     world_renderpass->add_window_as_render_target();
     ui_renderpass->add_window_as_render_target();
     skybox_renderpass->add_window_as_render_target();
-    depth_renderpass->add_render_target(
-        { width, height, { _backend->get_depth_attachment() } }
-    );
     ao_renderpass->add_window_as_render_target();
+    depth_renderpass->add_window_as_render_target();
+    // depth_renderpass->add_render_target(RenderTarget::Config {
+    //     width,
+    //     height,
+    //     { depth_normals_texture, _app_renderer.get_depth_texture() },
+    //     true });
 
     // Initialize render passes (BASIC)
-    // RenderPass::start >> "C" >> skybox_renderpass >> "DS" >> world_renderpass
-    // >>
-    //     ui_renderpass >> RenderPass::finish;
+    RenderPass::start >> "C" >> skybox_renderpass >> "DS" >> world_renderpass >>
+        ui_renderpass >> RenderPass::finish;
 
     // Initialize no skybox basic rp
     // RenderPass::start >> "CDS" >> world_renderpass >> ui_renderpass >>
     //     RenderPass::finish;
 
     // Initialize render passes
-    // RenderPass::start >> "DS" >> depth_renderpass >> "C" >> skybox_renderpass
-    // >>
-    //     "DS" >> world_renderpass >> ui_renderpass >> RenderPass::finish;
+    // RenderPass::start >> "DSC" >> depth_renderpass >> "C" >>
+    //     skybox_renderpass >> "DS" >> world_renderpass >> ui_renderpass >>
+    //     RenderPass::finish;
 
     // Initialize AO only
-    RenderPass::start >> "DS" >> depth_renderpass >> "C" >> ao_renderpass >>
-        RenderPass::finish;
+    // RenderPass::start >> "DS" >> depth_renderpass >> "C" >> ao_renderpass >>
+    //     RenderPass::finish;
+
+    // RenderPass::start >> "CDS" >> depth_renderpass >> RenderPass::finish;
 }
 Renderer::~Renderer() { del(_backend); }
 
@@ -112,13 +121,14 @@ Result<void, RuntimeError> Renderer::draw_frame(
     const auto att_index = _backend->get_current_window_attachment_index();
 
     // Render each view
-    for (auto& data : render_data->view_data) {
-        if (data->read_depth) _backend->make_depth_attachment_readable();
+    for (auto& data : render_data->view_data)
         data->view->on_render(
             this, data, _backend->get_current_frame(), att_index
         );
-        del(data);
-    }
+
+    // Clear render view packets in reverse order
+    for (int32 i = render_data->view_data.size() - 1; i >= 0; i--)
+        del(render_data->view_data[i]);
 
     // End frame
     result = _backend->end_frame(delta_time);

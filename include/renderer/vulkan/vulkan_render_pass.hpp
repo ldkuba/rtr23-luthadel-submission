@@ -72,6 +72,10 @@ class VulkanRenderPass : public RenderPass {
     void initialize() override;
     void initialize_render_targets() override;
 
+    RenderTarget* create_render_target(
+        uint32 width, uint32 height, const Vector<Texture*>& attachments
+    );
+
   private:
     const vk::Device*                    _device;
     const vk::AllocationCallbacks* const _allocator;

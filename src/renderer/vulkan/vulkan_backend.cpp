@@ -278,8 +278,14 @@ Texture* VulkanBackend::create_texture(
     }
 
     // Create texture
-    const auto texture = new (MemoryTag::Texture
-    ) VulkanTexture(config, texture_image, _command_pool, _device, _allocator);
+    const auto texture = new (MemoryTag::Texture) VulkanTexture( //
+        config,
+        texture_image,
+        _command_pool,
+        _command_buffer,
+        _device,
+        _allocator
+    );
 
     // Write data
     texture->write(data, texture->total_size, 0);
@@ -291,35 +297,95 @@ Texture* VulkanBackend::create_texture(
 Texture* VulkanBackend::create_writable_texture(const Texture::Config& config) {
     Logger::trace(RENDERER_VULKAN_LOG, "Creating texture.");
 
-    // Get format
-    const auto texture_format =
-        VulkanTexture::channel_count_to_UNORM(config.channel_count);
+    if (config.is_writable == false)
+        Logger::fatal(
+            RENDERER_VULKAN_LOG,
+            "Texture creation failed. Writable texture is not set as writable."
+        );
 
-    // Create device side image
-    // NOTE: Lots of assumptions here
-    auto texture_image =
-        new (MemoryTag::GPUTexture) VulkanImage(_device, _allocator);
-    texture_image->create_2d(
-        config.width,
-        config.height,
-        config.mip_level_count,
-        vk::SampleCountFlagBits::e1,
-        texture_format,
-        vk::ImageTiling::eOptimal,
-        vk::ImageUsageFlagBits::eTransferSrc |
-            vk::ImageUsageFlagBits::eTransferDst |
-            vk::ImageUsageFlagBits::eSampled |
-            vk::ImageUsageFlagBits::eColorAttachment,
-        vk::MemoryPropertyFlagBits::eDeviceLocal,
-        vk::ImageAspectFlagBits::eColor
-    );
+    Texture* resulting_texture;
 
-    // Create texture
-    const auto texture = new (MemoryTag::Texture
-    ) VulkanTexture(config, texture_image, _command_pool, _device, _allocator);
+    // Different creation depending on whether texture is used as render target
+    if (config.is_render_target) {
+        // Get format
+        const auto texture_format =
+            VulkanTexture::channel_count_to_SRGB(config.channel_count);
+
+        // Create one texture for each frame in flight
+        Vector<Texture*> textures {};
+        textures.reserve(VulkanSettings::max_frames_in_flight);
+        for (uint8 i = 0; i < VulkanSettings::max_frames_in_flight; i++) {
+            // Create device side image, one per frame in flight
+            // NOTE: Lots of assumptions here
+            auto texture_image =
+                new (MemoryTag::GPUTexture) VulkanImage(_device, _allocator);
+            texture_image->create_2d(
+                config.width,
+                config.height,
+                config.mip_level_count,
+                vk::SampleCountFlagBits::e1,
+                texture_format,
+                vk::ImageTiling::eOptimal,
+                vk::ImageUsageFlagBits::eColorAttachment |
+                    vk::ImageUsageFlagBits::eSampled,
+                vk::MemoryPropertyFlagBits::eDeviceLocal,
+                vk::ImageAspectFlagBits::eColor
+            );
+
+            // Create
+            const auto texture = new (MemoryTag::Texture) VulkanTexture(
+                config,
+                texture_image,
+                _command_pool,
+                _command_buffer,
+                _device,
+                _allocator
+            );
+
+            // Add to the list of texture
+            textures.push_back(texture);
+        }
+
+        // Return as packed texture
+        resulting_texture =
+            new (MemoryTag::Array) PackedTexture(config, textures);
+    } else {
+        // Get format
+        const auto texture_format =
+            VulkanTexture::channel_count_to_UNORM(config.channel_count);
+
+        // Create device side image
+        // NOTE: Lots of assumptions here
+        auto texture_image =
+            new (MemoryTag::GPUTexture) VulkanImage(_device, _allocator);
+        texture_image->create_2d(
+            config.width,
+            config.height,
+            config.mip_level_count,
+            vk::SampleCountFlagBits::e1,
+            texture_format,
+            vk::ImageTiling::eOptimal,
+            vk::ImageUsageFlagBits::eTransferSrc |
+                vk::ImageUsageFlagBits::eTransferDst |
+                vk::ImageUsageFlagBits::eSampled |
+                vk::ImageUsageFlagBits::eColorAttachment,
+            vk::MemoryPropertyFlagBits::eDeviceLocal,
+            vk::ImageAspectFlagBits::eColor
+        );
+
+        // Create texture
+        resulting_texture = new (MemoryTag::Texture) VulkanTexture(
+            config,
+            texture_image,
+            _command_pool,
+            _command_buffer,
+            _device,
+            _allocator
+        );
+    }
 
     Logger::trace(RENDERER_VULKAN_LOG, "Texture created.");
-    return texture;
+    return resulting_texture;
 }
 
 void VulkanBackend::destroy_texture(Texture* const texture) {
@@ -567,26 +633,6 @@ Result<RenderPass*, RuntimeError> VulkanBackend::get_render_pass(
 // -----------------------------------------------------------------------------
 // Attachments
 // -----------------------------------------------------------------------------
-
-void VulkanBackend::make_depth_attachment_readable() const {
-    const auto res =
-        _swapchain->get_depth_texture()->image()->transition_image_layout(
-            *_command_buffer->handle,
-            vk::ImageLayout::eDepthStencilAttachmentOptimal,
-            vk::ImageLayout::eDepthStencilReadOnlyOptimal
-        );
-    if (res.has_error()) {
-        Logger::fatal(
-            RENDERER_VULKAN_LOG,
-            "Depth attachment couldn't be made readable. ",
-            res.error().what()
-        );
-    }
-}
-
-void VulkanBackend::make_color_attachment_readable() const {
-    // TODO: Finish this once its needed
-}
 
 uint8 VulkanBackend::get_current_window_attachment_index() const {
     return _swapchain->get_current_index();

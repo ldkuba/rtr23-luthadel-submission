@@ -21,10 +21,8 @@ TextureSystem::TextureSystem(
     Logger::trace(TEXTURE_SYS_LOG, "Texture system created.");
 }
 TextureSystem::~TextureSystem() {
-    for (auto& texture : _registered_textures) {
+    for (auto& texture : _registered_textures)
         _renderer->destroy_texture(texture.second.handle);
-        del(texture.second.handle);
-    }
     _registered_textures.clear();
     destroy_default_textures();
 
@@ -179,6 +177,7 @@ Texture* TextureSystem::acquire_cube(
           false, // No transparency
           false, // Not writable
           false, // Not wrapped
+          false, // Not render target
           Texture::Type::TCube },
         pixels.data()
     );
@@ -196,6 +195,7 @@ Texture* TextureSystem::acquire_writable(
     const uint32 width,
     const uint32 height,
     const uint8  channel_count,
+    const bool   use_as_render_target,
     const bool   has_transparency
 ) {
     Logger::trace(
@@ -218,9 +218,16 @@ Texture* TextureSystem::acquire_writable(
     }
 
     // Texture wasn't found, create new one
-    const auto texture = _renderer->create_writable_texture(
-        { name, width, height, channel_count, has_transparency, true }
-    );
+    const auto texture =
+        _renderer->create_writable_texture({ name,
+                                             width,
+                                             height,
+                                             channel_count,
+                                             false,
+                                             has_transparency,
+                                             true,
+                                             false,
+                                             use_as_render_target });
     texture->id = (uint64) texture;
 
     // Create its reference
