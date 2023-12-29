@@ -84,17 +84,18 @@ Renderer::Renderer(
     //     true });
 
     // Initialize render passes (BASIC)
-    RenderPass::start >> "C" >> skybox_renderpass >> "DS" >> world_renderpass >>
-        ui_renderpass >> RenderPass::finish;
+    // RenderPass::start >> "C" >> skybox_renderpass >> "DS" >> world_renderpass
+    // >>
+    //     ui_renderpass >> RenderPass::finish;
 
     // Initialize no skybox basic rp
     // RenderPass::start >> "CDS" >> world_renderpass >> ui_renderpass >>
     //     RenderPass::finish;
 
     // Initialize render passes
-    // RenderPass::start >> "DSC" >> depth_renderpass >> "C" >>
-    //     skybox_renderpass >> "DS" >> world_renderpass >> ui_renderpass >>
-    //     RenderPass::finish;
+    RenderPass::start >> "DSC" >> depth_renderpass >> "C" >>
+        skybox_renderpass >> "DS" >> world_renderpass >> ui_renderpass >>
+        RenderPass::finish;
 
     // Initialize AO only
     // RenderPass::start >> "DS" >> depth_renderpass >> "C" >> ao_renderpass >>

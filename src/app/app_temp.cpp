@@ -48,7 +48,7 @@ void TestApplication::run() {
         // Construct render packet
         Renderer::Packet packet {};
         // Add views
-        // packet.view_data.push_back(_de_render_view->on_build_pocket());
+        packet.view_data.push_back(_de_render_view->on_build_pocket());
         // packet.view_data.push_back(_ao_render_view->on_build_pocket());
         packet.view_data.push_back(_sb_render_view->on_build_pocket());
         packet.view_data.push_back(_ow_render_view->on_build_pocket());
@@ -416,27 +416,30 @@ void TestApplication::setup_scene_geometry() {
 void TestApplication::setup_lights() {
     _ow_render_view->set_light_system(&_light_system);
 
-    DirectionalLight directional_light = { "dir_light",
-                                           { glm::vec4(-0.7, 0.0, -0.7, 1.0),
-                                             glm::vec4(0.5, 0.5, 0.5, 1.0) } };
-    _light_system.add_directional(&directional_light);
+    const auto directional_light = new (MemoryTag::Scene)
+        DirectionalLight { "dir_light",
+                           { glm::vec4(-0.7, 0.0, -0.7, 1.0),
+                             glm::vec4(0.5, 0.5, 0.5, 1.0) } };
+    _light_system.add_directional(directional_light);
 
-    PointLight pl0 = { "pl0",
-                       { glm::vec4(1.0, 1.0, 2.0, 1.0),
-                         glm::vec4(0.0, 5.0, 0.0, 1.0),
-                         1.0,
-                         0.35,
-                         0.44,
-                         0.0 } };
-    PointLight pl1 = { "pl1",
-                       { glm::vec4(5.0, 1.0, 2.0, 1.0),
-                         glm::vec4(5.0, 0.0, 0.0, 1.0),
-                         1.0,
-                         0.35,
-                         0.44,
-                         0.0 } };
-    _light_system.add_point(&pl0);
-    _light_system.add_point(&pl1);
+    const auto pl0 =
+        new (MemoryTag::Scene) PointLight { "pl0",
+                                            { glm::vec4(1.0, 1.0, 2.0, 1.0),
+                                              glm::vec4(0.0, 5.0, 0.0, 1.0),
+                                              1.0,
+                                              0.35,
+                                              0.44,
+                                              0.0 } };
+    const auto pl1 =
+        new (MemoryTag::Scene) PointLight { "pl1",
+                                            { glm::vec4(5.0, 1.0, 2.0, 1.0),
+                                              glm::vec4(5.0, 0.0, 0.0, 1.0),
+                                              1.0,
+                                              0.35,
+                                              0.44,
+                                              0.0 } };
+    _light_system.add_point(pl0);
+    _light_system.add_point(pl1);
 }
 
 } // namespace ENGINE_NAMESPACE
