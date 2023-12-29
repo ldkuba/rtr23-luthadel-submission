@@ -204,6 +204,75 @@ void TestApplication::setup_render_passes() {
     const auto width  = _app_surface->get_width_in_pixels();
     const auto height = _app_surface->get_height_in_pixels();
 
+    // Create render passes
+    const auto world_renderpass =
+        _app_renderer.get_renderpass(RenderPass::BuiltIn::WorldPass)
+            .expect("World pass somehow absent.");
+    const auto depth_renderpass  = _app_renderer.create_render_pass({
+        RenderPass::BuiltIn::DepthPass,       // Name
+        glm::vec2 { 0, 0 },                   // Draw offset
+        glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f }, // Clear color
+        true,                                 // Depth testing
+        false                                 // Multisampling
+    });
+    const auto ao_renderpass     = _app_renderer.create_render_pass({
+        RenderPass::BuiltIn::AOPass,          // Name
+        glm::vec2 { 0, 0 },                   // Draw offset
+        glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f }, // Clear color
+        false,                                // Depth testing
+        false                                 // Multisampling
+    });
+    const auto skybox_renderpass = _app_renderer.create_render_pass({
+        RenderPass::BuiltIn::SkyboxPass,      // Name
+        glm::vec2 { 0, 0 },                   // Draw offset
+        glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f }, // Clear color
+        false,                                // Depth testing
+        true                                  // Multisampling
+    });
+    const auto ui_renderpass     = _app_renderer.create_render_pass({
+        RenderPass::BuiltIn::UIPass,          // Name
+        glm::vec2 { 0, 0 },                   // Draw offset
+        glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f }, // Clear color
+        false,                                // Depth testing
+        false                                 // Multisampling
+    });
+
+    // Create render target textures
+    // const auto depth_normals_texture = _texture_system.acquire_writable(
+    //     "DepthPrePassTarget", width, height, 4, true
+    // );
+
+    // Create render targets
+    ui_renderpass->add_window_as_render_target();
+    skybox_renderpass->add_window_as_render_target();
+    ao_renderpass->add_window_as_render_target();
+    depth_renderpass->add_window_as_render_target();
+    // depth_renderpass->add_render_target(RenderTarget::Config {
+    //     width,
+    //     height,
+    //     { depth_normals_texture, _app_renderer.get_depth_texture() },
+    //     true });
+
+    // Initialize render passes (BASIC)
+    // RenderPass::start >> "C" >> skybox_renderpass >> "DS" >> world_renderpass
+    // >>
+    //     ui_renderpass >> RenderPass::finish;
+
+    // Initialize no skybox basic rp
+    // RenderPass::start >> "CDS" >> world_renderpass >> ui_renderpass >>
+    //     RenderPass::finish;
+
+    // Initialize render passes
+    RenderPass::start >> "DSC" >> depth_renderpass >> "C" >>
+        skybox_renderpass >> "DS" >> world_renderpass >> ui_renderpass >>
+        RenderPass::finish;
+
+    // Initialize AO only
+    // RenderPass::start >> "DS" >> depth_renderpass >> "C" >> ao_renderpass >>
+    //     RenderPass::finish;
+
+    // RenderPass::start >> "CDS" >> depth_renderpass >> RenderPass::finish;
+
     // === Shaders ===
     // Create shaders
     _app_renderer.material_shader =
