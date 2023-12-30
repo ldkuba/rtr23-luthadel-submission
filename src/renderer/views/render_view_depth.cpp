@@ -98,7 +98,8 @@ void RenderViewDepth::on_render(
 ) {
     for (const auto& pass : _passes) {
         // Bind pass
-        pass->begin(render_target_index);
+        // TODO: Vulkan agnostic way of indexing frames in flight
+        pass->begin(frame_number % VulkanSettings::max_frames_in_flight);
 
         // Setup shader
         _shader->use();

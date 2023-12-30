@@ -172,6 +172,7 @@ VulkanShader::VulkanShader(
     uint64 total_buffer_size =
         total_global_buffers_size +
         total_instance_buffers_size * Shader::max_instance_count;
+    if (total_buffer_size == 0) total_buffer_size = _required_ubo_alignment;
 
     _uniform_buffer =
         new (MemoryTag::GPUBuffer) VulkanManagedBuffer(_device, _allocator);
@@ -320,10 +321,6 @@ void VulkanShader::use() {
 }
 
 void VulkanShader::apply_descriptor_set(DescriptorSet& set, uint32 state_id) {
-    // All descriptor writes for this set
-    static Vector<vk::WriteDescriptorSet> descriptor_writes {};
-    descriptor_writes.clear();
-
     const auto state =
         static_cast<VulkanDescriptorSetState*>(set.states[state_id]);
     auto& descriptor_set_id =
@@ -335,46 +332,107 @@ void VulkanShader::apply_descriptor_set(DescriptorSet& set, uint32 state_id) {
     bool should_update = state->should_update || !descriptor_set_id.has_value();
 
     if (should_update) {
-        Vector<vk::DescriptorBufferInfo>        buffer_infos {};
-        Vector<Vector<vk::DescriptorImageInfo>> image_infos {};
+        // All descriptor writes for this set
+        static Vector<vk::WriteDescriptorSet> descriptor_writes {};
+        descriptor_writes.clear();
 
+        // Keep track of temporary allocated objects
+        Vector<std::pair<vk::DescriptorBufferInfo*, vk::DescriptorImageInfo*>>
+            allocated_infos {};
+
+        // Iterate bindings
         for (auto& binding : set.bindings) {
-            // descriptor_set_id is a hack for initializing all 3 frames
+            // descriptor_set_id is a hack for initializing all frames in flight
             if (!binding.was_modified && descriptor_set_id.has_value())
                 continue;
 
+            // Add new write
             vk::WriteDescriptorSet binding_write {};
-            binding_write.setDstSet(vk_descriptor_set);
-            binding_write.setDstBinding(binding.binding_index);
-            binding_write.setDescriptorType(get_descriptor_type(binding.type));
-            binding_write.setDstArrayElement(0);
-            binding_write.setDescriptorCount(binding.count);
+            binding_write //
+                .setDstSet(vk_descriptor_set)
+                .setDstBinding(binding.binding_index)
+                .setDescriptorType(get_descriptor_type(binding.type))
+                .setDstArrayElement(0)
+                .setDescriptorCount(binding.count);
 
+            // Samplers & other uniforms treated differently
             if (binding.type == Binding::Type::Sampler) {
-                image_infos.push_back(
-                    get_image_infos(state->texture_maps[binding.binding_index])
-                );
-                binding_write.setImageInfo(image_infos.back());
+                const auto& texture_maps =
+                    state->texture_maps[binding.binding_index];
+
+                // Allocate temporary info for initialization
+                const auto image_infos = new (MemoryTag::Temp)
+                    vk::DescriptorImageInfo[texture_maps.size()];
+
+                // Keep track of these objects
+                allocated_infos.push_back({ nullptr, image_infos });
+                binding_write.setPImageInfo(image_infos);
+
+                // Set all image infos
+                for (uint32 i = 0; i < texture_maps.size(); ++i) {
+                    // TODO: only update in the list if actually needing an
+                    // update.
+                    const auto tm = static_cast<const VulkanTexture::Map*>(
+                        texture_maps[i] ? texture_maps[i]
+                                        : _texture_system->default_map
+                    );
+                    auto texture =
+                        static_cast<const VulkanTexture*>(tm->texture);
+
+                    if (tm->texture->is_render_target()) {
+                        const auto pt =
+                            static_cast<const PackedTexture*>(tm->texture);
+                        texture = static_cast<const VulkanTexture*>(
+                            pt->get_at(_command_buffer->current_frame)
+                        );
+                    }
+
+                    image_infos[i]
+                        .setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
+                        .setImageView(texture->image()->view)
+                        .setSampler(tm->sampler);
+
+                    // TODO: change up descriptor state to handle this properly.
+                    // Sync frame generation if not using a default texture.
+                    // if (t->generation != INVALID_ID) {
+                    //     *descriptor_generation = t->generation;
+                    //     *descriptor_id = t->id;
+                    // }
+                }
             } else /* Uniform or storage buffer */ {
-                buffer_infos.push_back({});
-                auto& last_info = buffer_infos.back();
-                last_info.setBuffer(_uniform_buffer->handle);
-                last_info.setOffset(state->offset + binding.byte_range.offset);
-                last_info.setRange(binding.byte_range.size);
-                binding_write.setBufferInfo(last_info);
+                // Allocate temporary info for initialization
+                const auto buffer_info =
+                    new (MemoryTag::Temp) vk::DescriptorBufferInfo {};
+
+                // Keep track of these objects
+                allocated_infos.push_back({ buffer_info, nullptr });
+                binding_write.setPBufferInfo(buffer_info);
+
+                // Set values
+                buffer_info->setBuffer(_uniform_buffer->handle())
+                    .setOffset(state->offset + binding.byte_range.offset)
+                    .setRange(binding.byte_range.size);
             }
 
+            // Add this write
             descriptor_writes.push_back(binding_write);
             binding.was_modified = false;
         }
 
         state->should_update = false;
         descriptor_set_id    = 884;
-    }
 
-    // Throws no exceptions
-    if (descriptor_writes.size() > 0)
-        _device->handle().updateDescriptorSets(descriptor_writes, nullptr);
+        // Preform update
+        // Throws no exceptions
+        if (descriptor_writes.size() > 0)
+            _device->handle().updateDescriptorSets(descriptor_writes, nullptr);
+
+        // Free temporary memory
+        if (!allocated_infos.empty()) {
+            if (allocated_infos[0].first) del(allocated_infos[0].first);
+            if (allocated_infos[0].second) del(allocated_infos[0].second);
+        }
+    }
 
     // Bind the global descriptor set to be updated.
     _command_buffer->handle->bindDescriptorSets(
@@ -784,7 +842,7 @@ void VulkanShader::create_pipeline(
         depth_stencil.setDepthWriteEnable(true);
         // Comparison operation preformed for depth test
         depth_stencil.setDepthCompareOp(vk::CompareOp::eLess);
-        // Should depth bods test be preformed
+        // Should depth bounds test be preformed
         depth_stencil.setDepthBoundsTestEnable(false);
         // Minimum non-discarded fragment depth value
         depth_stencil.setMinDepthBounds(0.0f);
@@ -802,7 +860,7 @@ void VulkanShader::create_pipeline(
     // Controls whether blending is enabled for the corresponding color
     // attachment If blending is not enabled, the source fragment’s color is
     // passed through unmodified.
-    color_blend_attachments[0].setBlendEnable(true);
+    color_blend_attachments[0].setBlendEnable(_enable_blending);
     // Specifies which RGBA components are enabled for blending
     color_blend_attachments[0].setColorWriteMask(
         vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG |

@@ -25,6 +25,7 @@ struct ShaderVars {
     STRING_ENUM(renderpass);
     STRING_ENUM(stages);
     STRING_ENUM(cull_mode);
+    STRING_ENUM(enable_blending);
     STRING_ENUM(attributes);
     STRING_ENUM(descriptor_sets);
     STRING_ENUM(set_index);
@@ -53,10 +54,11 @@ Result<Resource*, RuntimeError> ShaderLoader::load(const String name) {
     String                                shader_name             = name;
     String                                shader_render_pass_name = "";
     uint8                                 shader_stages           = 0;
-    Vector<Shader::Attribute>             shader_attributes       = {};
-    Vector<Shader::DescriptorSet::Config> shader_sets             = {};
-    Vector<Shader::Uniform::Config>       shader_push_constants   = {};
-    Shader::CullMode shader_cull_mode = Shader::CullMode::Back;
+    Vector<Shader::Attribute>             shader_attributes {};
+    Vector<Shader::DescriptorSet::Config> shader_sets {};
+    Vector<Shader::Uniform::Config>       shader_push_constants {};
+    Shader::CullMode shader_cull_mode       = Shader::CullMode::Back;
+    bool             shader_enable_blending = true;
 
     // Load material configuration from file
     String file_name = name + ".shadercfg";
@@ -100,13 +102,13 @@ Result<Resource*, RuntimeError> ShaderLoader::load(const String name) {
         shader_settings_json.at(ShaderVars::stages);
     auto stage_flags = parse_shader_stage_flags(shader_settings_stages);
 
-    if (shader_settings.has_error()) {
+    if (stage_flags.has_error()) {
         Logger::warning(
             RESOURCE_LOG,
             "Couldn't parse shader stages in file ",
             file_name,
             ". Invalid shader stage \"",
-            shader_settings.error().what(),
+            stage_flags.error().what(),
             "\" passed."
         );
     } else {
@@ -123,6 +125,10 @@ Result<Resource*, RuntimeError> ShaderLoader::load(const String name) {
         shader_cull_mode = Shader::CullMode::Front;
     else if (culling_mode.compare("both") == 0)
         shader_cull_mode = Shader::CullMode::Both;
+
+    // === Blending ===
+    shader_enable_blending =
+        shader_settings_json.value(ShaderVars::enable_blending, true);
 
     // === Attributes ===
     Vector<json> shader_settings_attributes =
@@ -307,7 +313,8 @@ Result<Resource*, RuntimeError> ShaderLoader::load(const String name) {
         shader_attributes,
         shader_sets,
         shader_push_constants,
-        shader_cull_mode
+        shader_cull_mode,
+        shader_enable_blending
     );
     shader_config->full_path   = file_path;
     shader_config->loader_type = ResourceType::Shader;

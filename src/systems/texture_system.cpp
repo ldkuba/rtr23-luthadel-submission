@@ -73,6 +73,7 @@ Texture* TextureSystem::acquire(
           image->width,
           image->height,
           image->channel_count,
+          Texture::Format::RGBA8Unorm,
           true, // Mipmaping TODO: conf.
           image->has_transparency() },
         image->pixels
@@ -173,6 +174,7 @@ Texture* TextureSystem::acquire_cube(
           texture_width,
           texture_height,
           texture_channel_count,
+          Texture::Format::RGBA8Unorm,
           false, // No mipmaping
           false, // No transparency
           false, // Not writable
@@ -191,12 +193,13 @@ Texture* TextureSystem::acquire_cube(
 }
 
 Texture* TextureSystem::acquire_writable(
-    const String name,
-    const uint32 width,
-    const uint32 height,
-    const uint8  channel_count,
-    const bool   use_as_render_target,
-    const bool   has_transparency
+    const String          name,
+    const uint32          width,
+    const uint32          height,
+    const uint8           channel_count,
+    const Texture::Format format,
+    const bool            use_as_render_target,
+    const bool            has_transparency
 ) {
     Logger::trace(
         TEXTURE_SYS_LOG, "Texture \"", name, "\" (writable) requested."
@@ -223,6 +226,7 @@ Texture* TextureSystem::acquire_writable(
                                              width,
                                              height,
                                              channel_count,
+                                             format,
                                              false,
                                              has_transparency,
                                              true,
@@ -343,6 +347,7 @@ void TextureSystem::create_default_textures() {
           texture_dimension,
           texture_dimension,
           channels,
+          Texture::Format::RGBA8Unorm,
           true,
           false },
         pixels
@@ -355,6 +360,7 @@ void TextureSystem::create_default_textures() {
           texture_dimension,
           texture_dimension,
           channels,
+          Texture::Format::RGBA8Unorm,
           true,
           false },
         pixels
@@ -369,6 +375,7 @@ void TextureSystem::create_default_textures() {
           texture_dimension,
           texture_dimension,
           channels,
+          Texture::Format::RGBA8Unorm,
           true,
           false },
         pixels
@@ -383,6 +390,7 @@ void TextureSystem::create_default_textures() {
           texture_dimension,
           texture_dimension,
           channels,
+          Texture::Format::RGBA8Unorm,
           true,
           false },
         pixels

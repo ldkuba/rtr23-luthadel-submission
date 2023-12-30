@@ -39,17 +39,21 @@ layout(std430, set = 0, binding = 1)uniform global_frag_uniform_buffer {
     PointLight point_lights[MAX_POINT_LIGHTS];
 }GlobalUBO;
 
+// Global InstSamplers
+const int ssao_i = 0;
+layout(set = 0, binding = 2)uniform sampler2D GlobalSamplers[1];
+
 // Instance uniforms
 layout(std430, set = 1, binding = 1)uniform local_uniform_buffer {
     vec4 diffuse_color;
     float shininess;
 }UBO;
 
-// Samplers
+// Instance InstSamplers
 const int diffuse_i = 0;
 const int specular_i = 1;
 const int normal_i = 2;
-layout(set = 1, binding = 2)uniform sampler2D samplers[3];
+layout(set = 1, binding = 2)uniform sampler2D InstSamplers[3];
 
 // From vertex shader
 layout(location = 0)flat in uint in_mode;
@@ -62,12 +66,14 @@ layout(location = 1)in struct data_transfer_object {
     vec2 texture_coordinate;
     vec3 view_position;
     vec3 frag_position;
+    vec4 clip_position;
     vec4 color;
 }InDTO;
 
 layout(location = 0)out vec4 out_color;
 
 // Function prototypes
+vec4 sample_ssao();
 vec4 calculate_directional_lights(DirectionalLight light, vec3 normal, vec3 view_direction);
 vec4 calculate_point_lights(PointLight light, vec3 normal, vec3 frag_position, vec3 view_direction);
 
@@ -85,45 +91,62 @@ void main() {
     TBN = mat3(tangent, bitangent, normal);
     
     // Texture normal sample (normalized to range 0 - 1)
-    // vec3 local_normal=2.*sqrt(texture(samplers[normal_i],InDTO.texture_coordinate).rgb)-1.;
-    vec3 local_normal = 2.0 * texture(samplers[normal_i], InDTO.texture_coordinate).rgb - 1.0;
+    // vec3 local_normal=2.*sqrt(texture(InstSamplers[normal_i],InDTO.texture_coordinate).rgb)-1.;
+    vec3 local_normal = 2.0 * texture(InstSamplers[normal_i], InDTO.texture_coordinate).rgb - 1.0;
     normal = normalize(TBN * local_normal);
     
-    if (in_mode == 0||in_mode == 1) {
+    if (in_mode == 0||in_mode == 1 || in_mode == 4) {
         vec3 view_direction = normalize(InDTO.view_position - InDTO.frag_position);
         out_color = calculate_directional_lights(GlobalUBO.directional_light, normal, view_direction);
         
         for(int i = 0; i < min(GlobalUBO.num_point_lights.num, MAX_POINT_LIGHTS); i ++ ) {
             out_color += calculate_point_lights(GlobalUBO.point_lights[i], normal, InDTO.frag_position, view_direction);
         }
-        
-    }else if (in_mode == 2) {
+    } else if (in_mode == 2) {
         out_color = vec4(max(normal, 0), 1.0);
+    } else if (in_mode == 3) {
+        out_color = sample_ssao();
     }
 }
 
 // Functions
+vec4 sample_ssao() {
+    if (in_mode == 4)return vec4(1);
+    vec2 ndc_position = InDTO.clip_position.xy / InDTO.clip_position.w;
+    vec2 screen_position = ndc_position * 0.5 + 0.5;
+    screen_position.y = 1.0 - screen_position.y;
+    float vf = texture(GlobalSamplers[ssao_i], screen_position).r;
+    return vec4(vec3(vf), 1);
+}
+
 vec4 calculate_directional_lights(DirectionalLight light, vec3 normal, vec3 view_direction) {
     // Diffuse color
     float diffuse_factor = max(dot(normal, - light.direction.xyz), 0.0);
-    vec4 diffuse_samp = texture(samplers[diffuse_i], InDTO.texture_coordinate);
+    vec4 diffuse_samp = texture(InstSamplers[diffuse_i], InDTO.texture_coordinate);
     
-    vec4 diffuse = vec4(vec3(light.color * diffuse_factor), diffuse_samp.a);
+    vec4 diffuse = vec4(
+        vec3(light.color * diffuse_factor), diffuse_samp.a
+    );
     
     // Ambient color
-    vec4 ambient = vec4(vec3(InDTO.ambient_color * UBO.diffuse_color), diffuse_samp.a);
+    vec4 visibility_factor = sample_ssao();
+    vec4 ambient = visibility_factor * vec4(
+        vec3(InDTO.ambient_color * UBO.diffuse_color), diffuse_samp.a
+    );
     
     // Specular highlight
     vec3 half_direction = normalize(view_direction - light.direction.xyz);
     float specular_factor = pow(max(0.0, dot(normal, half_direction)), UBO.shininess);
     
-    vec4 specular = vec4(vec3(light.color * specular_factor), diffuse_samp.a);
+    vec4 specular = vec4(
+        vec3(light.color * specular_factor), diffuse_samp.a
+    );
     
     // Add texture info
-    if (in_mode == 0) {
+    if (in_mode == 0 || in_mode == 4) {
         diffuse *= diffuse_samp;
         ambient *= diffuse_samp;
-        specular *= vec4(texture(samplers[specular_i], InDTO.texture_coordinate).rgb, diffuse.a);
+        specular *= vec4(texture(InstSamplers[specular_i], InDTO.texture_coordinate).rgb, diffuse.a);
     }
     
     return ambient + diffuse + specular;
@@ -136,20 +159,23 @@ vec4 calculate_point_lights(PointLight light, vec3 normal, vec3 frag_position, v
     vec3 reflect_dir = reflect(-light_direction, normal);
     float specular_factor = pow(max(0.0, dot(view_direction, reflect_dir)), UBO.shininess);
     
+    // Account for SSAO
+    vec4 visibility_factor = sample_ssao();
+    
     // Callculate falloff with distance (Attenuation)
     float l_distance = length(light.position.xyz - frag_position);
     float attenuation = 1.0 / (light.constant + light.linear * l_distance + light.quadratic * l_distance * l_distance);
     
-    vec4 ambient = InDTO.ambient_color;
+    vec4 ambient = InDTO.ambient_color * visibility_factor;
     vec4 diffuse = light.color * diffuse_factor;
     vec4 specular = light.color * specular_factor;
     
     // Apply texture
-    if (in_mode == 0) {
-        vec4 diffuse_samp = texture(samplers[diffuse_i], InDTO.texture_coordinate);
+    if (in_mode == 0 || in_mode == 4) {
+        vec4 diffuse_samp = texture(InstSamplers[diffuse_i], InDTO.texture_coordinate);
         diffuse *= diffuse_samp;
         ambient *= diffuse_samp;
-        specular *= vec4(texture(samplers[specular_i], InDTO.texture_coordinate).rgb, diffuse.a);
+        specular *= vec4(texture(InstSamplers[specular_i], InDTO.texture_coordinate).rgb, diffuse.a);
     }
     
     // Apply attenuation

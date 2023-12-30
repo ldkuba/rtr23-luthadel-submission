@@ -48,7 +48,7 @@ RenderViewAO::RenderViewAO(
     _proj_inv_matrix = glm::inverse(_proj_matrix);
 
     // Setup SSAO parameters
-    _sample_radius = 0.5f;
+    _sample_radius = 2.0f;
     _noise_scale   = glm::vec2(_width / 2.f, _height / 2.f);
 
     // Create full screen render packet
@@ -93,11 +93,13 @@ void RenderViewAO::on_render(
 ) {
     // Transition used render targets
     const auto pt = static_cast<const PackedTexture*>(_depth_map->texture);
-    pt->get_at(frame_number % 2)->transition_render_target();
+    pt->get_at(frame_number % VulkanSettings::max_frames_in_flight)
+        ->transition_render_target(); // TODO: Vulkan agnostic
 
     for (const auto& pass : _passes) {
         // Bind pass
-        pass->begin(frame_number % 2);
+        pass->begin(frame_number % VulkanSettings::max_frames_in_flight);
+        // pass->begin(render_target_index);
 
         // Setup shader
         _shader->use();
@@ -119,8 +121,8 @@ void RenderViewAO::on_render(
 
 void RenderViewAO::create_texture_maps() {
     // Depth texture
-    const auto depth_texture = _renderer->get_depth_texture();
-    // _texture_system->acquire("DepthPrePassTarget", false);
+    const auto depth_texture =
+        _texture_system->acquire("DepthPrePassTarget", false);
 
     // Noise texture
     ubyte* const texture_data = new (MemoryTag::Temp) ubyte[16 * 4];
@@ -133,9 +135,10 @@ void RenderViewAO::create_texture_maps() {
 
     const auto noise_texture = _texture_system->create(
         { "SSAO_noise",
-          4,     // Width
-          4,     // Height
-          4,     // Channel count
+          4, // Width
+          4, // Height
+          4, // Channel count
+          Texture::Format::RGBA8Unorm,
           false, // Mip-mapped
           false, // Transparency
           false, // Writable

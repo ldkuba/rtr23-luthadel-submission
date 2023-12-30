@@ -19,6 +19,7 @@ class RenderPass {
         StringEnum SkyboxPass = "Renderpass.Builtin.Skybox";
         StringEnum AOPass     = "Renderpass.Builtin.AO";
         StringEnum DepthPass  = "Renderpass.Builtin.Depth";
+        StringEnum BlurPass   = "Renderpass.Builtin.Blur";
     };
 
     /// @brief Type used by clear flags
@@ -144,6 +145,13 @@ class RenderPass {
      * initialization. This function does nothing after initialization.
      */
     void disable_color_output() { _color_output = false; }
+
+    /// @brief Get color attachment index
+    virtual uint8 get_color_index()   = 0;
+    /// @brief Get depth attachment index
+    virtual uint8 get_depth_index()   = 0;
+    /// @brief Get resolve attachment index
+    virtual uint8 get_resolve_index() = 0;
 
   private:
     struct RenderPassInitializer {

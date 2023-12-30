@@ -13,6 +13,7 @@ TestApplication::~TestApplication() {
     );
     _texture_system.release(_default_skybox.cube_map()->texture->name());
     _app_renderer.destroy_texture_map(_default_skybox.cube_map);
+    _app_renderer.destroy_texture_map(_ssao_map);
 
     del(_app_surface);
 }
@@ -49,7 +50,8 @@ void TestApplication::run() {
         Renderer::Packet packet {};
         // Add views
         packet.view_data.push_back(_de_render_view->on_build_pocket());
-        // packet.view_data.push_back(_ao_render_view->on_build_pocket());
+        packet.view_data.push_back(_ao_render_view->on_build_pocket());
+        packet.view_data.push_back(_bl_render_view->on_build_pocket());
         packet.view_data.push_back(_sb_render_view->on_build_pocket());
         packet.view_data.push_back(_ow_render_view->on_build_pocket());
         packet.view_data.push_back(_ui_render_view->on_build_pocket());
@@ -187,6 +189,10 @@ void TestApplication::setup_input() {
         [&rv](float32, float32) { rv->render_mode = DebugViewMode::Lighting; };
     mode_2_c->event +=
         [&rv](float32, float32) { rv->render_mode = DebugViewMode::Normals; };
+    mode_3_c->event +=
+        [&rv](float32, float32) { rv->render_mode = DebugViewMode::SSAO; };
+    mode_4_c->event +=
+        [&rv](float32, float32) { rv->render_mode = DebugViewMode::DefNoSSAO; };
 
     // Other
     spin_cube->event +=
@@ -222,6 +228,13 @@ void TestApplication::setup_render_passes() {
         false,                                // Depth testing
         false                                 // Multisampling
     });
+    const auto blur_renderpass   = _app_renderer.create_render_pass({
+        RenderPass::BuiltIn::BlurPass,        // Name
+        glm::vec2 { 0, 0 },                   // Draw offset
+        glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f }, // Clear color
+        false,                                // Depth testing
+        false                                 // Multisampling
+    });
     const auto skybox_renderpass = _app_renderer.create_render_pass({
         RenderPass::BuiltIn::SkyboxPass,      // Name
         glm::vec2 { 0, 0 },                   // Draw offset
@@ -238,40 +251,54 @@ void TestApplication::setup_render_passes() {
     });
 
     // Create render target textures
-    // const auto depth_normals_texture = _texture_system.acquire_writable(
-    //     "DepthPrePassTarget", width, height, 4, true
-    // );
+    const auto depth_normals_texture = _texture_system.acquire_writable(
+        "DepthPrePassTarget",
+        width,
+        height,
+        4,
+        Texture::Format::RGBA32Sfloat,
+        true
+    );
+
+    const auto ssao_texture = _texture_system.acquire_writable( //
+        "SSAOPassTarget",
+        width,
+        height,
+        1,
+        Texture::Format::RGBA8Unorm,
+        true
+    );
+
+    const auto blured_ssao_texture = _texture_system.acquire_writable(
+        "BluredSSAOPassTarget",
+        width,
+        height,
+        1,
+        Texture::Format::RGBA8Unorm,
+        true
+    );
 
     // Create render targets
     ui_renderpass->add_window_as_render_target();
     skybox_renderpass->add_window_as_render_target();
-    ao_renderpass->add_window_as_render_target();
-    depth_renderpass->add_window_as_render_target();
-    // depth_renderpass->add_render_target(RenderTarget::Config {
-    //     width,
-    //     height,
-    //     { depth_normals_texture, _app_renderer.get_depth_texture() },
-    //     true });
-
-    // Initialize render passes (BASIC)
-    // RenderPass::start >> "C" >> skybox_renderpass >> "DS" >> world_renderpass
-    // >>
-    //     ui_renderpass >> RenderPass::finish;
-
-    // Initialize no skybox basic rp
-    // RenderPass::start >> "CDS" >> world_renderpass >> ui_renderpass >>
-    //     RenderPass::finish;
-
-    // Initialize render passes
-    RenderPass::start >> "DSC" >> depth_renderpass >> "C" >>
-        skybox_renderpass >> "DS" >> world_renderpass >> ui_renderpass >>
-        RenderPass::finish;
+    depth_renderpass->add_render_target({ width,
+                                          height,
+                                          { depth_normals_texture,
+                                            _app_renderer.get_depth_texture() },
+                                          true });
+    ao_renderpass->add_render_target({ width, height, { ssao_texture }, true });
+    blur_renderpass->add_render_target(
+        { width, height, { blured_ssao_texture }, true }
+    );
 
     // Initialize AO only
-    // RenderPass::start >> "DS" >> depth_renderpass >> "C" >> ao_renderpass >>
-    //     RenderPass::finish;
-
-    // RenderPass::start >> "CDS" >> depth_renderpass >> RenderPass::finish;
+    RenderPass::start >>
+        // SSAO
+        "CDS" >> depth_renderpass >> "C" >> ao_renderpass >> "C" >>
+        blur_renderpass >>
+        // Main render loop
+        "C" >> skybox_renderpass >> "DS" >> world_renderpass >> ui_renderpass >>
+        RenderPass::finish;
 
     // === Shaders ===
     // Create shaders
@@ -290,6 +317,9 @@ void TestApplication::setup_render_passes() {
     _app_renderer.ao_shader = //
         _shader_system.acquire(Shader::BuiltIn::AOShader)
             .expect("Failed to load builtin ao shader.");
+    _app_renderer.ao_shader = //
+        _shader_system.acquire(Shader::BuiltIn::BlurShader)
+            .expect("Failed to load builtin blur shader.");
 
     _app_renderer.material_shader->reload();
 
@@ -350,6 +380,17 @@ void TestApplication::setup_render_passes() {
         { _app_renderer.get_renderpass(RenderPass::BuiltIn::AOPass)
               .expect("Renderpass not found.") }
     };
+    RenderView::Config blur_view_config {
+        "blur",
+        Shader::BuiltIn::BlurShader,
+        width,
+        height,
+        RenderView::Type::Blur,
+        RenderView::ViewMatrixSource::SceneCamera,
+        RenderView::ProjectionMatrixSource::DefaultPerspective,
+        { _app_renderer.get_renderpass(RenderPass::BuiltIn::BlurPass)
+              .expect("Renderpass not found.") }
+    };
 
     // Create
     const auto res_owv = _render_view_system.create(opaque_world_view_config);
@@ -357,8 +398,9 @@ void TestApplication::setup_render_passes() {
     const auto res_sbv = _render_view_system.create(skybox_view_config);
     const auto res_dev = _render_view_system.create(depth_view_config);
     const auto res_aov = _render_view_system.create(ao_view_config);
+    const auto res_blv = _render_view_system.create(blur_view_config);
     if (res_owv.has_error() || res_uiv.has_error() || res_sbv.has_error() ||
-        res_dev.has_error() || res_aov.has_error())
+        res_dev.has_error() || res_aov.has_error() || res_blv.has_error())
         Logger::fatal("Render view creation failed.");
 
     _ow_render_view = dynamic_cast<RenderViewWorld*>(res_owv.value());
@@ -366,6 +408,18 @@ void TestApplication::setup_render_passes() {
     _sb_render_view = dynamic_cast<RenderViewSkybox*>(res_sbv.value());
     _de_render_view = dynamic_cast<RenderViewDepth*>(res_dev.value());
     _ao_render_view = dynamic_cast<RenderViewAO*>(res_aov.value());
+    _bl_render_view = dynamic_cast<RenderViewBlur*>(res_blv.value());
+
+    // Set render view textures
+    _ssao_map =
+        _app_renderer.create_texture_map({ blured_ssao_texture,
+                                           Texture::Use::Unknown,
+                                           Texture::Filter::BiLinear,
+                                           Texture::Filter::BiLinear,
+                                           Texture::Repeat::ClampToEdge,
+                                           Texture::Repeat::ClampToEdge,
+                                           Texture::Repeat::ClampToEdge });
+    _ow_render_view->set_ssao_texture(_ssao_map);
 }
 
 void TestApplication::setup_scene_geometry() {

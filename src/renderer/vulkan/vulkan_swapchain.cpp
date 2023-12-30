@@ -274,6 +274,10 @@ void VulkanSwapchain::create() {
             image->create(swapchain_images[i], _extent.width, _extent.height);
             image->format = _format;
 
+            // Get generic texture format
+            const auto texture_format =
+                VulkanTexture::parse_format_from_vulkan(_format);
+
             // Create new wrapped texture (Not managed by the texture system)
             VulkanTexture* const texture =
                 new (MemoryTag::Texture) VulkanTexture(
@@ -281,7 +285,8 @@ void VulkanSwapchain::create() {
                         texture_name,
                         _extent.width,
                         _extent.height,
-                        4,     // Channel count
+                        4, // Channel count
+                        texture_format,
                         false, // Mipmaping
                         false, // Transparent
                         true,  // Writable
@@ -367,14 +372,18 @@ void VulkanSwapchain::recreate() {
 }
 
 void VulkanSwapchain::create_color_resource() {
-    if (_color_attachment == nullptr)
+    if (_color_attachment == nullptr) {
+        // Get generic texture format
+        const auto texture_format =
+            VulkanTexture::parse_format_from_vulkan(_format);
         // Create new wrapped texture (Not managed by the texture system)
         _color_attachment = new (MemoryTag::Texture) VulkanTexture(
             {
                 "__default_color_attachment_texture__",
                 _extent.width,
                 _extent.height,
-                4,     // Channel count
+                4, // Channel count
+                texture_format,
                 false, // Mipmaping
                 false, // Transparent
                 true,  // Writable
@@ -386,7 +395,7 @@ void VulkanSwapchain::create_color_resource() {
             _device,
             _allocator
         );
-    else
+    } else
         // Resize
         _color_attachment->resize(_extent.width, _extent.height);
 
@@ -412,14 +421,18 @@ void VulkanSwapchain::create_color_resource() {
         return;
     }
 
-    if (_ms_color_attachment == nullptr)
+    if (_ms_color_attachment == nullptr) {
+        // Get generic texture format
+        const auto texture_format =
+            VulkanTexture::parse_format_from_vulkan(_format);
         // Create new wrapped texture (Not managed by the texture system)
         _ms_color_attachment = new (MemoryTag::Texture) VulkanTexture(
             {
                 "__default_ms_color_attachment_texture__",
                 _extent.width,
                 _extent.height,
-                4,     // Channel count
+                4, // Channel count
+                texture_format,
                 false, // Mipmaping
                 false, // Transparent
                 true,  // Writable
@@ -431,7 +444,7 @@ void VulkanSwapchain::create_color_resource() {
             _device,
             _allocator
         );
-    else
+    } else
         // Resize
         _ms_color_attachment->resize(_extent.width, _extent.height);
 
@@ -451,7 +464,10 @@ void VulkanSwapchain::create_color_resource() {
     );
 }
 void VulkanSwapchain::create_depth_resources() {
-    if (_depth_attachment == nullptr)
+    if (_depth_attachment == nullptr) {
+        // Get generic texture format
+        const auto texture_format =
+            VulkanTexture::parse_format_from_vulkan(_depth_format);
         // Create new wrapped texture (Not managed by the texture system)
         _depth_attachment = new (MemoryTag::Texture) VulkanTexture(
             {
@@ -459,6 +475,7 @@ void VulkanSwapchain::create_depth_resources() {
                 _extent.width,
                 _extent.height,
                 _depth_format_channel_count,
+                texture_format,
                 false, // Mipmaping
                 false, // Transparent
                 true,  // Writable
@@ -470,7 +487,7 @@ void VulkanSwapchain::create_depth_resources() {
             _device,
             _allocator
         );
-    else
+    } else
         // Resize
         _depth_attachment->resize(_extent.width, _extent.height);
 
@@ -494,7 +511,10 @@ void VulkanSwapchain::create_depth_resources() {
     if (!_use_multisampling)
         // We are done
         return;
-    if (_ms_depth_attachment == nullptr)
+    if (_ms_depth_attachment == nullptr) {
+        // Get generic texture format
+        const auto texture_format =
+            VulkanTexture::parse_format_from_vulkan(_depth_format);
         // Create new wrapped texture (Not managed by the texture system)
         _ms_depth_attachment = new (MemoryTag::Texture) VulkanTexture(
             {
@@ -502,6 +522,7 @@ void VulkanSwapchain::create_depth_resources() {
                 _extent.width,
                 _extent.height,
                 _depth_format_channel_count,
+                texture_format,
                 false, // Mipmaping
                 false, // Transparent
                 true,  // Writable
@@ -513,7 +534,7 @@ void VulkanSwapchain::create_depth_resources() {
             _device,
             _allocator
         );
-    else
+    } else
         // Resize
         _ms_depth_attachment->resize(_extent.width, _extent.height);
 

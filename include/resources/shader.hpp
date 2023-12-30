@@ -29,6 +29,7 @@ class Shader {
         StringEnum SkyboxShader   = "builtin.skybox_shader";
         StringEnum DepthShader    = "builtin.depth_shader";
         StringEnum AOShader       = "builtin.ao_shader";
+        StringEnum BlurShader     = "builtin.blur_shader";
     };
 
     /// @brief Supported shader attribute types
@@ -179,6 +180,7 @@ class Shader {
         const Vector<DescriptorSet::Config> sets;
         const Vector<Uniform::Config>       push_constants;
         const CullMode                      cull_mode;
+        const bool                          enable_blending;
 
         Config(
             const String&                        name,
@@ -187,11 +189,13 @@ class Shader {
             const Vector<Attribute>&             attributes,
             const Vector<DescriptorSet::Config>& sets,
             const Vector<Uniform::Config>&       push_constants,
-            const CullMode                       cull_mode
+            const CullMode                       cull_mode,
+            const bool                           enable_blending
         )
             : Resource(name), render_pass_name(render_pass_name),
               shader_stages(shader_stages), attributes(attributes), sets(sets),
-              push_constants(push_constants), cull_mode(cull_mode) {}
+              push_constants(push_constants), cull_mode(cull_mode),
+              enable_blending(enable_blending) {}
         ~Config() {}
     };
 
@@ -349,6 +353,7 @@ class Shader {
 
     String   _name;
     CullMode _cull_mode;
+    bool     _enable_blending;
     uint64   _required_ubo_alignment;
 
     // Uniform counts

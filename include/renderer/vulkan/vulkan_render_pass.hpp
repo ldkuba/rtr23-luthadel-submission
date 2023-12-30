@@ -68,6 +68,10 @@ class VulkanRenderPass : public RenderPass {
     void add_window_as_render_target() override;
     void clear_render_targets() override;
 
+    uint8 get_color_index() override;
+    uint8 get_depth_index() override;
+    uint8 get_resolve_index() override;
+
   protected:
     void initialize() override;
     void initialize_render_targets() override;
@@ -91,6 +95,11 @@ class VulkanRenderPass : public RenderPass {
 
     // Internal state
     bool _initialized = false;
+
+    // Format
+    vk::Format _color_format;
+    vk::Format _depth_format;
+    vk::Format _resolve_format;
 
     Vector<vk::ClearValue> _clear_values { 1 };
 

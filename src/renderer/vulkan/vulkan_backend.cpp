@@ -235,8 +235,9 @@ Texture* VulkanBackend::create_texture(
     Logger::trace(RENDERER_VULKAN_LOG, "Creating texture.");
 
     // Get format
-    const auto texture_format =
-        VulkanTexture::channel_count_to_UNORM(config.channel_count);
+    const auto texture_format = VulkanTexture::parse_format_for_vulkan(
+        config.format, config.channel_count
+    );
 
     // Create device side image
     // NOTE: Lots of assumptions here
@@ -308,8 +309,9 @@ Texture* VulkanBackend::create_writable_texture(const Texture::Config& config) {
     // Different creation depending on whether texture is used as render target
     if (config.is_render_target) {
         // Get format
-        const auto texture_format =
-            VulkanTexture::channel_count_to_SRGB(config.channel_count);
+        const auto texture_format = VulkanTexture::parse_format_for_vulkan(
+            config.format, config.channel_count
+        );
 
         // Create one texture for each frame in flight
         Vector<Texture*> textures {};
@@ -351,8 +353,9 @@ Texture* VulkanBackend::create_writable_texture(const Texture::Config& config) {
             new (MemoryTag::Array) PackedTexture(config, textures);
     } else {
         // Get format
-        const auto texture_format =
-            VulkanTexture::channel_count_to_UNORM(config.channel_count);
+        const auto texture_format = VulkanTexture::parse_format_for_vulkan(
+            config.format, config.channel_count
+        );
 
         // Create device side image
         // NOTE: Lots of assumptions here

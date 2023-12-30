@@ -77,9 +77,7 @@ Outcome VulkanTexture::resize(const uint32 width, const uint32 height) {
     del(_image);
 
     // Get format
-    const auto texture_format = is_render_target()
-                                    ? channel_count_to_SRGB(channel_count)
-                                    : channel_count_to_UNORM(channel_count);
+    const auto texture_format = get_vulkan_format();
 
     // Create new image
     auto texture_image =
@@ -132,23 +130,119 @@ Outcome VulkanTexture::transition_render_target() const {
     return Outcome::Successful;
 }
 
-vk::Format VulkanTexture::channel_count_to_SRGB(const uint8 channel_count) {
-    switch (channel_count) {
-    case 1: return vk::Format::eR8Srgb;
-    case 2: return vk::Format::eR8G8Srgb;
-    case 3: return vk::Format::eB8G8R8Srgb;
-    case 4: return vk::Format::eB8G8R8A8Srgb;
-    default: return vk::Format::eR8G8B8A8Srgb;
-    }
+vk::Format VulkanTexture::get_vulkan_format() const {
+    return parse_format_for_vulkan(_format, _channel_count);
 }
-vk::Format VulkanTexture::channel_count_to_UNORM(const uint8 channel_count) {
-    switch (channel_count) {
-    case 1: return vk::Format::eR8Unorm;
-    case 2: return vk::Format::eR8G8Unorm;
-    case 3: return vk::Format::eR8G8B8Unorm;
-    case 4: return vk::Format::eR8G8B8A8Unorm;
-    default: return vk::Format::eR8G8B8A8Unorm;
+
+vk::Format VulkanTexture::parse_format_for_vulkan(
+    const Format format, const uint32 channel_count
+) {
+    switch (format) {
+    case Format::RGBA8Unorm:
+        switch (channel_count) {
+        case 1: return vk::Format::eR8Unorm;
+        case 2: return vk::Format::eR8G8Unorm;
+        case 3: return vk::Format::eR8G8B8Unorm;
+        case 4: return vk::Format::eR8G8B8A8Unorm;
+        }
+    case Format::RGBA8Srgb:
+        switch (channel_count) {
+        case 1: return vk::Format::eR8Srgb;
+        case 2: return vk::Format::eR8G8Srgb;
+        case 3: return vk::Format::eR8G8B8Srgb;
+        case 4: return vk::Format::eR8G8B8A8Srgb;
+        }
+    case Format::RGBA16Unorm:
+        switch (channel_count) {
+        case 1: return vk::Format::eR16Unorm;
+        case 2: return vk::Format::eR16G16Unorm;
+        case 3: return vk::Format::eR16G16B16Unorm;
+        case 4: return vk::Format::eR16G16B16A16Unorm;
+        }
+    case Format::RGBA16Sfloat:
+        switch (channel_count) {
+        case 1: return vk::Format::eR16Sfloat;
+        case 2: return vk::Format::eR16G16Sfloat;
+        case 3: return vk::Format::eR16G16B16Sfloat;
+        case 4: return vk::Format::eR16G16B16A16Sfloat;
+        }
+    case Format::RGBA32Sfloat:
+        switch (channel_count) {
+        case 1: return vk::Format::eR32Sfloat;
+        case 2: return vk::Format::eR32G32Sfloat;
+        case 3: return vk::Format::eR32G32B32Sfloat;
+        case 4: return vk::Format::eR32G32B32A32Sfloat;
+        }
+    case Format::BGRA8Unorm:
+        switch (channel_count) {
+        case 1: return vk::Format::eR8Unorm;
+        case 2: return vk::Format::eR8G8Unorm;
+        case 3: return vk::Format::eB8G8R8Unorm;
+        case 4: return vk::Format::eB8G8R8A8Unorm;
+        }
+    case Format::BGRA8Srgb:
+        switch (channel_count) {
+        case 1: return vk::Format::eR8Srgb;
+        case 2: return vk::Format::eR8G8Srgb;
+        case 3: return vk::Format::eB8G8R8Srgb;
+        case 4: return vk::Format::eB8G8R8A8Srgb;
+        }
+    case Format::D32:
+        if (channel_count != 4) Logger::fatal(RENDERER_VULKAN_LOG, "");
+        return vk::Format::eD32Sfloat;
+    case Format::DS32:
+        if (channel_count != 4) Logger::fatal(RENDERER_VULKAN_LOG, "");
+        return vk::Format::eD32SfloatS8Uint;
+    case Format::DS24:
+        if (channel_count != 3) Logger::fatal(RENDERER_VULKAN_LOG, "");
+        return vk::Format::eD24UnormS8Uint;
+    default:
+        Logger::fatal(
+            RENDERER_VULKAN_LOG,
+            "Unimplemented texture format conversion requested."
+        );
     }
+    return {};
+}
+
+Texture::Format VulkanTexture::parse_format_from_vulkan( //
+    const vk::Format format
+) {
+    switch (format) {
+    case vk::Format::eR8Unorm:
+    case vk::Format::eR8G8Unorm:
+    case vk::Format::eR8G8B8Unorm:
+    case vk::Format::eR8G8B8A8Unorm: return Format::RGBA8Unorm;
+    case vk::Format::eR8Srgb:
+    case vk::Format::eR8G8Srgb:
+    case vk::Format::eR8G8B8Srgb:
+    case vk::Format::eR8G8B8A8Srgb: return Format::RGBA8Srgb;
+    case vk::Format::eR16Unorm:
+    case vk::Format::eR16G16Unorm:
+    case vk::Format::eR16G16B16Unorm:
+    case vk::Format::eR16G16B16A16Unorm: return Format::RGBA16Unorm;
+    case vk::Format::eR16Sfloat:
+    case vk::Format::eR16G16Sfloat:
+    case vk::Format::eR16G16B16Sfloat:
+    case vk::Format::eR16G16B16A16Sfloat: return Format::RGBA16Sfloat;
+    case vk::Format::eR32Sfloat:
+    case vk::Format::eR32G32Sfloat:
+    case vk::Format::eR32G32B32Sfloat:
+    case vk::Format::eR32G32B32A32Sfloat: return Format::RGBA32Sfloat;
+    case vk::Format::eB8G8R8Unorm:
+    case vk::Format::eB8G8R8A8Unorm: return Format::BGRA8Unorm;
+    case vk::Format::eB8G8R8Srgb:
+    case vk::Format::eB8G8R8A8Srgb: return Format::BGRA8Srgb;
+    case vk::Format::eD32Sfloat: return Format::D32;
+    case vk::Format::eD32SfloatS8Uint: return Format::DS32;
+    case vk::Format::eD24UnormS8Uint: return Format::DS24;
+    default:
+        Logger::fatal(
+            RENDERER_VULKAN_LOG,
+            "Unimplemented vulkan format conversion requested."
+        );
+    }
+    return {};
 }
 
 } // namespace ENGINE_NAMESPACE

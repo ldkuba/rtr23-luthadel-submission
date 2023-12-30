@@ -3,7 +3,7 @@
 
 // Consts
 precision mediump float;
-const int MAX_KERNEL_SIZE = 20;
+const int MAX_KERNEL_SIZE = 64;
 const float INV_MAX_KERNEL_SIZE_F = 1.0 / float(MAX_KERNEL_SIZE);
 const vec2 HALF_2 = vec2(0.5);
 
@@ -17,7 +17,7 @@ layout(std430, set = 0, binding = 0)uniform global_frag_uniform_buffer {
 }GlobalUBO;
 
 // Samplers
-const int depth_i = 0;
+const int depth_normals_i = 0;
 const int noise_i = 1;
 layout(set = 0, binding = 1)uniform sampler2D samplers[2];
 
@@ -29,30 +29,18 @@ layout(location = 0)out vec4 out_color;
 vec3 calculate_view_position(vec2 coords);
 
 void main() {
-    // float fragment_depth = texture(samplers[depth_i], in_texture_coords).r;
-    // float depth = pow(fragment_depth, 128);
-    // out_color = vec4(vec3(depth), 1);
-    // return;
-    
-    // vec3 noise = texture(samplers[noise_i], in_texture_coords).rgb;
-    // out_color = vec4(noise, 1);
-    // return;
-    
     vec3 view_pos = calculate_view_position(in_texture_coords);
     
-    // The dFdy and dFdX are glsl functions used to calculate two vectors in view space that lie
-    // on the plane of the surface being drawn. We pass the view space position to these functions.
-    // The cross product of these two vectors give us the normal in view space.
-    vec3 view_normal = cross(dFdy(view_pos.xyz), dFdx(view_pos.xyz));
+    vec3 view_normal = texture(samplers[depth_normals_i], in_texture_coords).xyz;
+    view_normal = normalize(view_normal);
+    // vec3 view_normal = cross(dFdy(view_pos.xyz), dFdx(view_pos.xyz));
+    // view_normal = normalize(view_normal * -1.0);
     
-    // The normal is initilly away from the screen based on the order in which we calculate the cross products.
-    // Here, we need to invert it to point towards the screen by multiplying by -1.
-    // Then we normalize this vector to get a unit normal vector.
-    view_normal = normalize(view_normal * -1.0);
     // we calculate a random offset using the noise texture sample.
     //This will be applied as rotation to all samples for our current fragments.
     vec3 random_vector = texture(samplers[noise_i], in_texture_coords * GlobalUBO.noise_scale).xyz;
     random_vector = vec3(random_vector.xy * 2.0 - 1.0, random_vector.z);
+    
     // here we apply the Gramm-Schmidt process to calculate the TBN matrix
     // with a random offset applied.
     vec3 tangent = normalize(random_vector - view_normal * dot(random_vector, view_normal));
@@ -94,11 +82,11 @@ void main() {
     visibility_factor = pow(visibility_factor, 2.0);
     
     // out_color = visibility_factor;
-    out_color = vec4(vec3(visibility_factor), 1);
+    out_color = vec4(visibility_factor, 0, 0, 1);
 }
 
 vec3 calculate_view_position(vec2 coords) {
-    float fragment_depth = texture(samplers[depth_i], coords).w;
+    float fragment_depth = texture(samplers[depth_normals_i], coords).w;
     
     // Convert coords and fragment_depth to
     // normalized device coordinates (clip space)

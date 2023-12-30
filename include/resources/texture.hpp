@@ -55,6 +55,19 @@ class Texture {
               repeat_v(config.repeat_v), repeat_w(config.repeat_w) {}
     };
 
+    enum class Format {
+        RGBA8Unorm,
+        RGBA8Srgb,
+        RGBA16Unorm,
+        RGBA16Sfloat,
+        RGBA32Sfloat,
+        BGRA8Unorm,
+        BGRA8Srgb,
+        D32,
+        DS32,
+        DS24,
+    };
+
     /**
      * @brief Texture configuration used during initialization
      */
@@ -63,6 +76,7 @@ class Texture {
         const uint32 width            = 0;
         const uint32 height           = 0;
         const uint32 channel_count    = 0;
+        const Format format           = Format::RGBA8Unorm;
         const uint32 mip_level_count  = 0;
         const bool   has_transparency = false;
         const bool   is_writable      = false;
@@ -75,6 +89,7 @@ class Texture {
             const uint32 width,
             const uint32 height,
             const uint32 channel_count,
+            const Format format,
             const bool   mip_mapping,
             const bool   has_transparency,
             const bool   is_writable      = false,
@@ -185,6 +200,7 @@ class Texture {
     int32  _width;
     int32  _height;
     int32  _channel_count;
+    Format _format;
     uint32 _mip_levels;
     uint64 _total_size;
     Type   _type;

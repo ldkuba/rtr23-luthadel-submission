@@ -34,18 +34,23 @@ class RenderViewWorld : public RenderView {
         _render_data = data;
     };
 
-    void set_light_system(LightSystem* light_system) {
+    virtual void set_light_system(LightSystem* light_system) {
         _light_system = light_system;
     }
 
+    virtual void set_ssao_texture(Texture::Map* const ssao_map) {
+        _ssao_texture_map = ssao_map;
+    }
+
   protected:
-    Shader*   _shader;
-    float32   _fov;
-    float32   _near_clip;
-    float32   _far_clip;
-    glm::mat4 _proj_matrix;
-    Camera*   _world_camera;
-    glm::vec4 _ambient_color;
+    Shader*       _shader;
+    float32       _fov;
+    float32       _near_clip;
+    float32       _far_clip;
+    glm::mat4     _proj_matrix;
+    Camera*       _world_camera;
+    glm::vec4     _ambient_color;
+    Texture::Map* _ssao_texture_map;
 
     Vector<GeometryRenderData> _geom_data {};
 
@@ -64,6 +69,7 @@ class RenderViewWorld : public RenderView {
         uint16 directional_light = -1;
         uint16 num_point_lights  = -1;
         uint16 point_lights      = -1;
+        uint16 ssao_texture      = -1;
 
         UIndex() {}
         UIndex(const Shader* const shader);

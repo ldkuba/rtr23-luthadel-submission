@@ -14,7 +14,8 @@ const uint32 Shader::max_name_length;
 // Constructor & Destructor
 Shader::Shader(TextureSystem* const texture_system, const Config& config)
     : _texture_system(texture_system), _name(config.name),
-      _cull_mode(config.cull_mode), _bound_instance_id(0) {
+      _cull_mode(config.cull_mode), _enable_blending(config.enable_blending),
+      _bound_instance_id(0) {
     // Process attributes
     for (const auto attribute : config.attributes) {
         _attribute_stride += attribute.size;

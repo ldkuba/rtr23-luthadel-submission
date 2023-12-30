@@ -168,7 +168,7 @@ class FrameBuffer {
 /**
  * @brief Render debug view modes
  */
-enum DebugViewMode : uint8 { Default, Lighting, Normals };
+enum DebugViewMode : uint8 { Default, Lighting, Normals, SSAO, DefNoSSAO };
 
 class Geometry;
 class Material;

@@ -31,6 +31,7 @@ layout(location = 1)out struct data_transfer_object {
     vec2 texture_coordinate;
     vec3 view_position;
     vec3 frag_position;
+    vec4 clip_position;
     vec4 color;
 }OutDTO;
 
@@ -46,6 +47,7 @@ void main() {
     OutDTO.color = in_color;
     
     gl_Position = UBO.projection * UBO.view * PC.model * vec4(in_position, 1.0);
+    OutDTO.clip_position = gl_Position;
     
     out_mode = UBO.mode;
 }

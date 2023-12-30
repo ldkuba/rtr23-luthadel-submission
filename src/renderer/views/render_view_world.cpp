@@ -130,6 +130,12 @@ void RenderViewWorld::on_render(
     const uint64        frame_number,
     const uint64        render_target_index
 ) {
+    // Transition used render targets
+    const auto pt =
+        static_cast<const PackedTexture*>(_ssao_texture_map->texture);
+    pt->get_at(frame_number % VulkanSettings::max_frames_in_flight)
+        ->transition_render_target(); // TODO: Vulkan agnostic
+
     for (const auto& pass : _passes) {
         // Bind pass
         pass->begin(render_target_index);
@@ -179,6 +185,7 @@ RenderViewWorld::UIndex::UIndex(const Shader* const shader) {
     uniform_index(directional_light);
     uniform_index(num_point_lights);
     uniform_index(point_lights);
+    uniform_index(ssao_texture);
 }
 
 #define uniform_set(uniform, value)                                            \
@@ -188,6 +195,17 @@ RenderViewWorld::UIndex::UIndex(const Shader* const shader) {
         if (res_##uniform.has_error()) {                                       \
             Logger::error(                                                     \
                 RENDER_VIEW_WORLD_LOG, res_##uniform.error().what()            \
+            );                                                                 \
+            return;                                                            \
+        }                                                                      \
+    }
+#define sampler_set(sampler, texture_map)                                      \
+    if (_u_index.sampler != (uint16) -1) {                                     \
+        const auto res_##sampler =                                             \
+            _shader->set_sampler(_u_index.sampler, texture_map);               \
+        if (res_##sampler.has_error()) {                                       \
+            Logger::error(                                                     \
+                RENDER_VIEW_WORLD_LOG, res_##sampler.error().what()            \
             );                                                                 \
             return;                                                            \
         }                                                                      \
@@ -203,6 +221,7 @@ void RenderViewWorld::apply_globals(const uint64 frame_number) const {
     uniform_set(ambient_color, _ambient_color);
     uniform_set(view_position, _world_camera->transform.position());
     uniform_set(mode, _render_mode);
+    sampler_set(ssao_texture, _ssao_texture_map);
 
     // Apply lights
     auto point_light_data  = _light_system->get_point_data();

@@ -84,9 +84,30 @@ void VulkanRenderPass::clear_render_targets() {
     }
 }
 
+uint8 VulkanRenderPass::get_color_index() { return _color_output ? 0 : -1; }
+uint8 VulkanRenderPass::get_depth_index() {
+    return _depth_testing_enabled ? (_color_output ? 1 : 0) : -1;
+}
+uint8 VulkanRenderPass::get_resolve_index() {
+    return _multisampling_enabled ? (_depth_testing_enabled ? 2 : 1) : -1;
+}
+
 // //////////////////////////////////// //
 // VULKAN RENDER PASS PROTECTED METHODS //
 // //////////////////////////////////// //
+
+// Helper for initialization
+VulkanTexture* get_texture(
+    const Vector<Texture*>& attachments, const uint32 index
+) {
+    if (index >= attachments.size()) return nullptr;
+    const auto texture = attachments[index];
+    if (texture->is_render_target()) {
+        const auto pack = static_cast<PackedTexture*>(texture);
+        return static_cast<VulkanTexture*>(pack->get_at(0));
+    }
+    return static_cast<VulkanTexture*>(texture);
+}
 
 void VulkanRenderPass::initialize() {
     if (_initialized) {
@@ -101,6 +122,27 @@ void VulkanRenderPass::initialize() {
     Logger::trace(
         RENDERER_VULKAN_LOG, "Initializing '", _name, "' render pass."
     );
+
+    // Update formats from render targets (if any)
+    if (_render_target_configs.size() != 0) {
+        const auto attachments = _render_target_configs[0].attachments;
+
+        if (_color_output) {
+            const auto ci = get_color_index();
+            const auto ct = get_texture(attachments, ci);
+            if (ct) _color_format = ct->get_vulkan_format();
+        }
+        if (_depth_testing_enabled) {
+            const auto di = get_depth_index();
+            const auto dt = get_texture(attachments, di);
+            if (dt) _depth_format = dt->get_vulkan_format();
+        }
+        if (_multisampling_enabled) {
+            const auto ri = get_resolve_index();
+            const auto rt = get_texture(attachments, ri);
+            if (rt) _resolve_format = rt->get_vulkan_format();
+        }
+    }
 
     // Compute state
     const auto sample_count = (_multisampling_enabled)
@@ -299,8 +341,7 @@ vk::AttachmentDescription VulkanRenderPass::get_color_attachment() {
                                     : vk::ImageLayout::ePresentSrcKHR;
 
     vk::AttachmentDescription color_attachment {};
-    color_attachment.setFormat(_swapchain->get_color_attachment_format()
-    ); // TODO: Configure
+    color_attachment.setFormat(_color_format);
     color_attachment.setSamples(sample_count);
     color_attachment.setLoadOp(color_load_op);
     color_attachment.setStoreOp(vk::AttachmentStoreOp::eStore);
@@ -322,7 +363,7 @@ vk::AttachmentDescription VulkanRenderPass::get_depth_attachment() {
                       : vk::ImageLayout::eDepthStencilAttachmentOptimal;
 
     vk::AttachmentDescription depth_attachment {};
-    depth_attachment.setFormat(_swapchain->get_depth_attachment_format());
+    depth_attachment.setFormat(_depth_format);
     depth_attachment.setSamples(sample_count);
     depth_attachment.setLoadOp(depth_load_op);
     depth_attachment.setStoreOp(vk::AttachmentStoreOp::eStore);
@@ -349,7 +390,7 @@ vk::AttachmentDescription VulkanRenderPass::get_resolve_attachment() {
                                   : vk::ImageLayout::ePresentSrcKHR;
 
     vk::AttachmentDescription resolve_attachment {};
-    resolve_attachment.setFormat(_swapchain->get_color_attachment_format());
+    resolve_attachment.setFormat(_resolve_format);
     resolve_attachment.setSamples(vk::SampleCountFlagBits::e1);
     resolve_attachment.setLoadOp(res_load_op);
     resolve_attachment.setStoreOp(vk::AttachmentStoreOp::eStore);

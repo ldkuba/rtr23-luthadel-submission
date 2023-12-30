@@ -86,6 +86,20 @@
                             "size": 480
                         }
                     ]
+                },
+                {
+                    "type": "sampler",
+                    "binding_index": 2,
+                    "count": 1,
+                    "stages": [
+                        "fragment"
+                    ],
+                    "uniforms": [
+                        {
+                            "name": "ssao_texture",
+                            "type": "sampler2D"
+                        }
+                    ]
                 }
             ]
         },

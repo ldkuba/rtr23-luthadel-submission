@@ -13,6 +13,7 @@
 #include "renderer/views/render_view_skybox.hpp"
 #include "renderer/views/render_view_depth.hpp"
 #include "renderer/views/render_view_ao.hpp"
+#include "renderer/views/render_view_blur.hpp"
 
 namespace ENGINE_NAMESPACE {
 
@@ -62,10 +63,12 @@ class TestApplication {
     RenderViewSkybox* _sb_render_view;
     RenderViewDepth*  _de_render_view;
     RenderViewAO*     _ao_render_view;
+    RenderViewBlur*   _bl_render_view;
 
     Skybox         _default_skybox { 0, 0, 0 };
     MeshRenderData _world_mesh_data;
     MeshRenderData _ui_mesh_data;
+    Texture::Map*  _ssao_map;
 
     void setup_camera();
     void setup_input();

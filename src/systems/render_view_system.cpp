@@ -6,6 +6,7 @@
 #include "renderer/views/render_view_ui.hpp"
 #include "renderer/views/render_view_depth.hpp"
 #include "renderer/views/render_view_ao.hpp"
+#include "renderer/views/render_view_blur.hpp"
 
 namespace ENGINE_NAMESPACE {
 
@@ -95,6 +96,12 @@ Result<RenderView*, RuntimeError> RenderViewSystem::create(
     case RenderView::Type::AO:
         // TODO: temp just default camera
         view = new (MemoryTag::RenderView) RenderViewAO(
+            config, _renderer, _texture_system, _geometry_system, _shader_system
+        );
+        break;
+    case RenderView::Type::Blur:
+        // TODO: temp just default camera
+        view = new (MemoryTag::RenderView) RenderViewBlur(
             config, _renderer, _texture_system, _geometry_system, _shader_system
         );
         break;

@@ -54,8 +54,12 @@ class VulkanTexture : public Texture {
 
     Outcome transition_render_target() const override;
 
-    static vk::Format channel_count_to_SRGB(const uint8 channel_count);
-    static vk::Format channel_count_to_UNORM(const uint8 channel_count);
+    vk::Format get_vulkan_format() const;
+
+    static vk::Format parse_format_for_vulkan(
+        const Format format, const uint32 channel_count
+    );
+    static Format parse_format_from_vulkan(const vk::Format format);
 
   private:
     VulkanImage*                         _image;
