@@ -158,14 +158,13 @@ void RenderViewAO::create_texture_maps() {
                                         Texture::Repeat::ClampToEdge,
                                         Texture::Repeat::ClampToEdge,
                                         Texture::Repeat::ClampToEdge });
-    _noise_map =
-        _renderer->create_texture_map({ noise_texture,
-                                        Texture::Use::Unknown,
-                                        Texture::Filter::NearestNeighbour,
-                                        Texture::Filter::NearestNeighbour,
-                                        Texture::Repeat::Repeat,
-                                        Texture::Repeat::Repeat,
-                                        Texture::Repeat::Repeat });
+    _noise_map = _renderer->create_texture_map({ noise_texture,
+                                                 Texture::Use::Unknown,
+                                                 Texture::Filter::BiLinear,
+                                                 Texture::Filter::BiLinear,
+                                                 Texture::Repeat::Repeat,
+                                                 Texture::Repeat::Repeat,
+                                                 Texture::Repeat::Repeat });
 
     // Clean resources
     del(texture_data);

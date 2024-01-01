@@ -625,6 +625,7 @@ Outcome VulkanShader::set_uniform(const uint16 id, void* value) {
     if (uniform.type == UniformType::sampler) {
         state->texture_maps[binding->binding_index][uniform.array_index] =
             (Texture::Map*) value;
+        state->should_update = true;
     } else {
         auto address =
             _uniform_buffer_offset + state->offset + uniform.byte_range.offset;

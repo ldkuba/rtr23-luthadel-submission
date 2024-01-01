@@ -22,6 +22,8 @@ RenderTarget::~RenderTarget() {}
 void RenderTarget::resize(const uint32 width, const uint32 height) {
     _width  = width;
     _height = height;
+    for (const auto& att : _attachments)
+        if (att->is_render_target()) att->resize(width, height);
     _framebuffer->recreate(width, height, _attachments);
 }
 
