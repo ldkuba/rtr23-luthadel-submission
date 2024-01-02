@@ -3,6 +3,8 @@
 #include "renderer/vulkan/vulkan_framebuffer.hpp"
 #include "resources/geometry.hpp"
 
+#include "timer.hpp"
+
 namespace ENGINE_NAMESPACE {
 
 // Helper functions
@@ -124,6 +126,8 @@ VulkanBackend::~VulkanBackend() {
 
 Result<void, RuntimeError> VulkanBackend::begin_frame(const float32 delta_time
 ) {
+    Timer& timer = Timer::global_timer;
+
     // Wait for previous frame to finish drawing
     std::array<vk::Fence, 1> fences { _fences_in_flight[_current_frame] };
     try {
@@ -136,6 +140,8 @@ Result<void, RuntimeError> VulkanBackend::begin_frame(const float32 delta_time
         Logger::fatal(RENDERER_VULKAN_LOG, e.what());
     }
 
+    timer.time("Previous frame finished in ");
+
     // Compute next swapchain image index
     _swapchain->compute_next_image_index(
         _semaphores_image_available[_current_frame]
@@ -147,6 +153,8 @@ Result<void, RuntimeError> VulkanBackend::begin_frame(const float32 delta_time
     } catch (const vk::SystemError& e) {
         Logger::fatal(RENDERER_VULKAN_LOG, e.what());
     }
+
+    timer.time("Fences reset in ");
 
     // Begin recording commands
     _command_buffer->reset(_current_frame);

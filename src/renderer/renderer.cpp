@@ -1,6 +1,7 @@
 #include "renderer/renderer.hpp"
 
 #include "renderer/views/render_view.hpp"
+#include "timer.hpp"
 
 namespace ENGINE_NAMESPACE {
 
@@ -45,12 +46,17 @@ Result<void, RuntimeError> Renderer::draw_frame(
 ) {
     _backend->increment_frame_number();
 
+    // Timer
+    Timer& timer = Timer::global_timer;
+
     // Begin frame
     auto result = _backend->begin_frame(delta_time);
     if (result.has_error()) { return {}; }
 
     // Get current window att index
     const auto att_index = _backend->get_current_window_attachment_index();
+
+    timer.time("Frame begun in ");
 
     // Render each view
     for (auto& data : render_data->view_data)
@@ -61,6 +67,8 @@ Result<void, RuntimeError> Renderer::draw_frame(
     // Clear render view packets in reverse order
     for (int32 i = render_data->view_data.size() - 1; i >= 0; i--)
         del(render_data->view_data[i]);
+
+    timer.time("On render preformed in ");
 
     // End frame
     result = _backend->end_frame(delta_time);

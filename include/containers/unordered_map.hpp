@@ -40,11 +40,8 @@ class UnorderedMap
     typedef std::unordered_map<_Key, _Tp, _Hash, _Pred, allocator_type>
                                                         _base_class;
     typedef std::unordered_map<_Key, _Tp, _Hash, _Pred> default_version;
-    typedef std::__cxx1998::
-        __umap_hashtable<_Key, _Tp, _Hash, _Pred, allocator_type>
-                                           _Hashtable;
-    typedef typename _Hashtable::hasher    hasher;
-    typedef typename _Hashtable::key_equal key_equal;
+    typedef typename _base_class::hasher                hasher;
+    typedef typename _base_class::key_equal             key_equal;
 
   public:
     using std::unordered_map<_Key, _Tp, _Hash, _Pred, allocator_type>::

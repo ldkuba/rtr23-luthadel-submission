@@ -53,10 +53,12 @@ class TestApplication {
     LightSystem    _light_system { 10 };
 
     float64 calculate_delta_time();
+    float64 calculate_elapsed_time();
 
     // TODO: TEMP
     bool _app_should_close = false;
     bool _cube_rotation    = false;
+    bool _log_fps          = false;
 
     RenderViewWorld*  _ow_render_view;
     RenderViewUI*     _ui_render_view;

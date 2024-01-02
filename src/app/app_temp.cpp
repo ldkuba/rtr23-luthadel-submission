@@ -1,6 +1,7 @@
 #include "app/app_temp.hpp"
 
 #include "resources/loaders/mesh_loader.hpp"
+#include "timer.hpp"
 
 namespace ENGINE_NAMESPACE {
 
@@ -30,10 +31,28 @@ void TestApplication::run() {
     setup_scene_geometry();
     setup_lights();
 
+    // === Performance meter ===
+    Timer& timer = Timer::global_timer;
+
     // === Main loop ===
     while (!_app_surface->should_close() && _app_should_close == false) {
-        auto delta_time = calculate_delta_time();
+        const auto delta_time   = calculate_delta_time();
+        const auto elapsed_time = calculate_elapsed_time();
 
+        // FPS COUNTER
+        static float64 last_print  = 0;
+        static uint64  frame_count = 0;
+        frame_count++;
+        if (std::abs(last_print - elapsed_time) > 1.0 && _log_fps) {
+            const auto sec = std::abs(last_print - elapsed_time);
+            const auto fps = frame_count / sec;
+            Logger::debug("FPS: ", fps);
+            last_print  = elapsed_time;
+            frame_count = 0;
+            timer.start();
+        }
+
+        timer.reset();
         _app_surface->process_events(delta_time);
 
         // TODO: Temp code; update one and only object
@@ -45,6 +64,7 @@ void TestApplication::run() {
                 );
             }
         }
+        timer.time("Events processed in ");
 
         // Construct render packet
         Renderer::Packet packet {};
@@ -56,11 +76,16 @@ void TestApplication::run() {
         packet.view_data.push_back(_ow_render_view->on_build_pocket());
         packet.view_data.push_back(_ui_render_view->on_build_pocket());
 
+        timer.time("Packets packed in ");
+
         auto result = _app_renderer.draw_frame(&packet, delta_time);
         if (result.has_error()) {
             // TODO: PROCESS ERROR
             Logger::error(result.error().what());
         }
+
+        timer.time("Frame rendered in ");
+        timer.stop();
     }
 }
 
@@ -74,6 +99,12 @@ float64 TestApplication::calculate_delta_time() {
     auto        delta_time   = current_time - start_time;
     start_time               = current_time;
     return delta_time;
+}
+
+float64 TestApplication::calculate_elapsed_time() {
+    static auto start_time   = Platform::get_absolute_time();
+    auto        current_time = Platform::get_absolute_time();
+    return current_time - start_time;
 }
 
 // TODO: Still temp
@@ -127,6 +158,7 @@ void TestApplication::setup_input() {
     // Other
     PressControl(spin_cube, SPACE);
     PressControl(shader_reload, Z);
+    PressControl(show_fps, F);
 
     // === Events ===
     // Application controls
@@ -199,6 +231,7 @@ void TestApplication::setup_input() {
         [&](float32, float32) { _cube_rotation = !_cube_rotation; };
     shader_reload->event +=
         [&](float32, float32) { _app_renderer.material_shader->reload(); };
+    show_fps->event += [&](float32, float32) { _log_fps = !_log_fps; };
 }
 
 void TestApplication::setup_render_passes() {
