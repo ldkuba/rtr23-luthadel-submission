@@ -81,13 +81,21 @@ RenderView::Packet* RenderViewDepth::on_build_pocket() {
 }
 
 void RenderViewDepth::on_resize(const uint32 width, const uint32 height) {
-    if (width == _width && height == _height) return;
+    const auto half_width  = std::max<uint32>(width / 2, 1);
+    const auto half_height = std::max<uint32>(height / 2, 1);
 
-    _width       = width;
-    _height      = height;
+    if (half_width == _width && half_height == _height) return;
+
+    _width       = half_width;
+    _height      = half_height;
     _proj_matrix = glm::perspective(
         _fov, (float32) _width / _height, _near_clip, _far_clip
     );
+
+    for (const auto& pass : _passes) {
+        for (const auto& target : pass->render_targets())
+            target->resize(half_width, half_height);
+    }
 }
 
 void RenderViewDepth::on_render(
@@ -97,6 +105,10 @@ void RenderViewDepth::on_render(
     const uint64        render_target_index
 ) {
     for (const auto& pass : _passes) {
+        // Set viewport and scissors
+        renderer->viewport_set({ 0.0f, 0.0f, _width, _height });
+        renderer->scissors_set({ 0.0f, 0.0f, _width, _height });
+
         // Bind pass
         // TODO: Vulkan agnostic way of indexing frames in flight
         pass->begin(frame_number % VulkanSettings::max_frames_in_flight);

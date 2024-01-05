@@ -167,23 +167,8 @@ Result<void, RuntimeError> VulkanBackend::begin_frame(const float32 delta_time
     command_buffer->begin(begin_info);
 
     // Set dynamic states
-    // Viewport
-    vk::Viewport viewport {};
-    viewport.setX(0.0f);
-    viewport.setY(static_cast<float32>(_swapchain->extent().height));
-    viewport.setWidth(static_cast<float32>(_swapchain->extent().width));
-    viewport.setHeight(-static_cast<float32>(_swapchain->extent().height));
-    viewport.setMinDepth(0.0f);
-    viewport.setMaxDepth(1.0f);
-
-    command_buffer->setViewport(0, 1, &viewport);
-
-    // Scissors
-    vk::Rect2D scissor {};
-    scissor.setOffset({ 0, 0 });
-    scissor.setExtent(_swapchain->extent);
-
-    command_buffer->setScissor(0, 1, &scissor);
+    viewport_reset();
+    scissors_reset();
 
     return {};
 }
@@ -259,31 +244,36 @@ void VulkanBackend::resized(const uint32 width, const uint32 height) {
 void VulkanBackend::viewport_set(glm::vec4 rect) {
     vk::Viewport viewport {};
     viewport.setX(rect.x)
-            .setY(rect.y + rect.w)
-            .setWidth(rect.z)
-            .setHeight(-rect.w)
-            .setMinDepth(0.0f)
-            .setMaxDepth(1.0f);
+        .setY(rect.y + rect.w)
+        .setWidth(rect.z)
+        .setHeight(-rect.w)
+        .setMinDepth(0.0f)
+        .setMaxDepth(1.0f);
 
     _command_buffer->handle->setViewport(0, 1, &viewport);
 }
 
 void VulkanBackend::viewport_reset() {
+    const auto w = (float32) _swapchain->extent().width;
+    const auto h = (float32) _swapchain->extent().height;
+
     vk::Viewport viewport {};
     viewport.setX(0.0)
-            .setY(static_cast<float32>(_swapchain->extent().height))
-            .setWidth(static_cast<float32>(_swapchain->extent().width))
-            .setHeight(-static_cast<float32>(_swapchain->extent().height))
-            .setMinDepth(0.0f)
-            .setMaxDepth(1.0f);
+        .setY(h)
+        .setWidth(w)
+        .setHeight(-h)
+        .setMinDepth(0.0f)
+        .setMaxDepth(1.0f);
 
     _command_buffer->handle->setViewport(0, 1, &viewport);
 }
 
 void VulkanBackend::scissors_set(glm::vec4 rect) {
     vk::Rect2D scissor {};
-    scissor.setOffset({ static_cast<int32>(rect.x), static_cast<int32>(rect.y) });
-    scissor.setExtent({ static_cast<uint32>(rect.z), static_cast<uint32>(rect.w) });
+    scissor.setOffset({ static_cast<int32>(rect.x), //
+                        static_cast<int32>(rect.y) });
+    scissor.setExtent({ static_cast<uint32>(rect.z),
+                        static_cast<uint32>(rect.w) });
 
     _command_buffer->handle->setScissor(0, 1, &scissor);
 }
@@ -312,7 +302,7 @@ Texture* VulkanBackend::create_texture(
 
     // Get usage and aspect flags
     vk::ImageAspectFlagBits aspect_flags;
-    if(Texture::has_depth_format(config.format)) {
+    if (Texture::has_depth_format(config.format)) {
         aspect_flags = vk::ImageAspectFlagBits::eDepth;
     } else {
         aspect_flags = vk::ImageAspectFlagBits::eColor;
@@ -386,13 +376,13 @@ Texture* VulkanBackend::create_writable_texture(const Texture::Config& config) {
     Texture* resulting_texture;
 
     // Get usage and aspect flags
-    vk::ImageUsageFlagBits usage_flags;
+    vk::ImageUsageFlagBits  usage_flags;
     vk::ImageAspectFlagBits aspect_flags;
-    if(Texture::has_depth_format(config.format)) {
-        usage_flags = vk::ImageUsageFlagBits::eDepthStencilAttachment;
+    if (Texture::has_depth_format(config.format)) {
+        usage_flags  = vk::ImageUsageFlagBits::eDepthStencilAttachment;
         aspect_flags = vk::ImageAspectFlagBits::eDepth;
     } else {
-        usage_flags = vk::ImageUsageFlagBits::eColorAttachment;
+        usage_flags  = vk::ImageUsageFlagBits::eColorAttachment;
         aspect_flags = vk::ImageAspectFlagBits::eColor;
     }
 
@@ -418,8 +408,7 @@ Texture* VulkanBackend::create_writable_texture(const Texture::Config& config) {
                 vk::SampleCountFlagBits::e1,
                 texture_format,
                 vk::ImageTiling::eOptimal,
-                usage_flags |
-                    vk::ImageUsageFlagBits::eSampled,
+                usage_flags | vk::ImageUsageFlagBits::eSampled,
                 vk::MemoryPropertyFlagBits::eDeviceLocal,
                 aspect_flags
             );
@@ -460,8 +449,7 @@ Texture* VulkanBackend::create_writable_texture(const Texture::Config& config) {
             vk::ImageTiling::eOptimal,
             vk::ImageUsageFlagBits::eTransferSrc |
                 vk::ImageUsageFlagBits::eTransferDst |
-                vk::ImageUsageFlagBits::eSampled |
-                usage_flags,
+                vk::ImageUsageFlagBits::eSampled | usage_flags,
             vk::MemoryPropertyFlagBits::eDeviceLocal,
             aspect_flags
         );

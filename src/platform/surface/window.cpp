@@ -86,7 +86,7 @@ void Window::framebuffer_resize_callback(
     GLFWwindow* window, int32 width, int32 height
 ) {
     auto surface = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
-    surface->resize_event(width, height);
+    surface->resize_event(std::max(width, 1), std::max(height, 1));
 }
 
 KeyCode* setup_key_code_translator();

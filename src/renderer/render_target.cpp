@@ -10,7 +10,8 @@ RenderTarget::RenderTarget(
     const uint32            height,
     const bool              sync_to_window_resize
 )
-    : _framebuffer(framebuffer), _sync_to_window_resize(sync_to_window_resize), //
+    : _framebuffer(framebuffer),
+      _sync_to_window_resize(sync_to_window_resize), //
       _width(width), _height(height) {
     add_attachments(attachments);
 }
@@ -24,8 +25,8 @@ void RenderTarget::resize(const uint32 width, const uint32 height) {
     _width  = width;
     _height = height;
     for (const auto& att : _attachments)
-        if (att->is_render_target()) att->resize(width, height);
-    _framebuffer->recreate(width, height, _attachments);
+        att->resize(_width, _height);
+    _framebuffer->recreate(_width, _height, _attachments);
 }
 
 void RenderTarget::add_attachments(const Vector<Texture*>& attachments) {

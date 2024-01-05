@@ -61,10 +61,18 @@ RenderView::Packet* RenderViewBlur::on_build_pocket() {
 }
 
 void RenderViewBlur::on_resize(const uint32 width, const uint32 height) {
-    if (width == _width && height == _height) return;
+    const auto half_width  = std::max<uint32>(width / 2, 1);
+    const auto half_height = std::max<uint32>(height / 2, 1);
 
-    _width  = width;
-    _height = height;
+    if (half_width == _width && half_height == _height) return;
+
+    _width  = half_width;
+    _height = half_height;
+
+    for (const auto& pass : _passes) {
+        for (const auto& target : pass->render_targets())
+            target->resize(half_width, half_height);
+    }
 }
 
 void RenderViewBlur::on_render(

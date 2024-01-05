@@ -271,8 +271,10 @@ void TestApplication::setup_render_passes() {
 
     // === Render passes ===
     // Get width & height
-    const auto width  = _app_surface->get_width_in_pixels();
-    const auto height = _app_surface->get_height_in_pixels();
+    const auto width       = _app_surface->get_width_in_pixels();
+    const auto height      = _app_surface->get_height_in_pixels();
+    const auto half_width  = width / 2;
+    const auto half_height = height / 2;
 
     const auto shadowmap_directional_size = 4096;
 
@@ -327,26 +329,34 @@ void TestApplication::setup_render_passes() {
     // Create render target textures
     const auto depth_normals_texture = _texture_system.acquire_writable(
         "DepthPrePassTarget",
-        width,
-        height,
+        half_width,
+        half_height,
         4,
         Texture::Format::RGBA32Sfloat,
         true
     );
+    const auto low_res_depth_texture = _texture_system.acquire_writable(
+        "LowResDepthTarget",
+        half_width,
+        half_height,
+        4,
+        Texture::Format::D32,
+        true
+    );
 
-    const auto ssao_texture = _texture_system.acquire_writable( //
+    // SSAO
+    const auto ssao_texture = _texture_system.acquire_writable(
         "SSAOPassTarget",
-        width,
-        height,
+        half_width,
+        half_height,
         1,
         Texture::Format::RGBA8Unorm,
         true
     );
-
     const auto blured_ssao_texture = _texture_system.acquire_writable(
         "BluredSSAOPassTarget",
-        width,
-        height,
+        half_width,
+        half_height,
         1,
         Texture::Format::RGBA8Unorm,
         true
@@ -376,14 +386,17 @@ void TestApplication::setup_render_passes() {
     // Create render targets
     ui_renderpass->add_window_as_render_target();
     skybox_renderpass->add_window_as_render_target();
-    depth_renderpass->add_render_target({ width,
-                                          height,
+    depth_renderpass->add_render_target({ half_width,
+                                          half_height,
                                           { depth_normals_texture,
-                                            _app_renderer.get_depth_texture() },
-                                          true });
-    ao_renderpass->add_render_target({ width, height, { ssao_texture }, true });
+                                            low_res_depth_texture },
+                                          true,
+                                          false });
+    ao_renderpass->add_render_target(
+        { half_width, half_height, { ssao_texture }, true, false }
+    );
     blur_renderpass->add_render_target(
-        { width, height, { blured_ssao_texture }, true }
+        { half_width, half_height, { blured_ssao_texture }, true, false }
     );
     shadowmap_directional_renderpass->add_render_target(
         { shadowmap_directional_size,
@@ -477,8 +490,8 @@ void TestApplication::setup_render_passes() {
     RenderView::Config depth_view_config {
         "depth",
         Shader::BuiltIn::DepthShader,
-        width,
-        height,
+        half_width,
+        half_height,
         RenderView::Type::Depth,
         RenderView::ViewMatrixSource::SceneCamera,
         RenderView::ProjectionMatrixSource::DefaultPerspective,
@@ -488,8 +501,8 @@ void TestApplication::setup_render_passes() {
     RenderView::Config ao_view_config {
         "ao",
         Shader::BuiltIn::AOShader,
-        width,
-        height,
+        half_width,
+        half_height,
         RenderView::Type::AO,
         RenderView::ViewMatrixSource::SceneCamera,
         RenderView::ProjectionMatrixSource::DefaultPerspective,
@@ -499,8 +512,8 @@ void TestApplication::setup_render_passes() {
     RenderView::Config blur_view_config {
         "blur",
         Shader::BuiltIn::BlurShader,
-        width,
-        height,
+        half_width,
+        half_height,
         RenderView::Type::Blur,
         RenderView::ViewMatrixSource::SceneCamera,
         RenderView::ProjectionMatrixSource::DefaultPerspective,
