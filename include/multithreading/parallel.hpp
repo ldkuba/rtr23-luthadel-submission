@@ -32,7 +32,7 @@ class Parallel {
      * @brief Mutex lock. Allows only one thread to enter code between @p
      * `lock()` and @p `unlock()` calls.
      */
-    class Mutex : public tbb::mutex {};
+    class Mutex : public tbb::spin_mutex {};
 
   public:
     // Parallel algorithms

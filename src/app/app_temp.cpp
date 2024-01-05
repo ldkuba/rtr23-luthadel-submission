@@ -28,7 +28,7 @@ void TestApplication::run() {
     setup_camera();
     setup_input();
     setup_render_passes();
-    setup_scene_geometry();
+    setup_scene_geometry(2);
     setup_lights();
 
     // === Performance meter ===
@@ -69,9 +69,9 @@ void TestApplication::run() {
         // Construct render packet
         Renderer::Packet packet {};
         // Add views
-        packet.view_data.push_back(_de_render_view->on_build_pocket());
-        packet.view_data.push_back(_ao_render_view->on_build_pocket());
-        packet.view_data.push_back(_bl_render_view->on_build_pocket());
+        // packet.view_data.push_back(_de_render_view->on_build_pocket());
+        // packet.view_data.push_back(_ao_render_view->on_build_pocket());
+        // packet.view_data.push_back(_bl_render_view->on_build_pocket());
         packet.view_data.push_back(_sb_render_view->on_build_pocket());
         packet.view_data.push_back(_ow_render_view->on_build_pocket());
         packet.view_data.push_back(_ui_render_view->on_build_pocket());
@@ -326,11 +326,17 @@ void TestApplication::setup_render_passes() {
 
     // Initialize AO only
     RenderPass::start >>
+        // Depth normals
+        // "CDS" >> depth_renderpass >>
         // SSAO
-        "CDS" >> depth_renderpass >> "C" >> ao_renderpass >> "C" >>
-        blur_renderpass >>
-        // Main render loop
-        "C" >> skybox_renderpass >> "DS" >> world_renderpass >> ui_renderpass >>
+        // "C" >> ao_renderpass >> "C" >> blur_renderpass >>
+        // Skybox
+        "C" >> skybox_renderpass >>
+        // World
+        "DS" >> world_renderpass >>
+        // UI
+        ui_renderpass >>
+        // Finish
         RenderPass::finish;
 
     // === Shaders ===
@@ -455,74 +461,75 @@ void TestApplication::setup_render_passes() {
     _ow_render_view->set_ssao_texture(_ssao_map);
 }
 
-void TestApplication::setup_scene_geometry() {
+void TestApplication::setup_scene_geometry(const uint32 scene_id) {
     Vector<Mesh*> meshes {};
     Vector<Mesh*> ui_meshes {};
 
-#define CURRENT_SCENE 2
-#if CURRENT_SCENE == 0
-    // Create geometries
-    Geometry* const geometry_1 =
-        _geometry_system.generate_cube("cube", "test_material");
-    Geometry* const geometry_2 =
-        _geometry_system.generate_cube("cube", "test_material");
-    Geometry* const geometry_3 =
-        _geometry_system.generate_cube("cube", "test_material");
+    if (scene_id == 0) {
+        // Create geometries
+        Geometry* const geometry_1 =
+            _geometry_system.generate_cube("cube", "test_material");
+        Geometry* const geometry_2 =
+            _geometry_system.generate_cube("cube", "test_material");
+        Geometry* const geometry_3 =
+            _geometry_system.generate_cube("cube", "test_material");
 
-    // Create meshes
-    Mesh* mesh_1 = new (MemoryTag::Geometry) Mesh(geometry_1);
-    Mesh* mesh_2 = new (MemoryTag::Geometry) Mesh(geometry_2);
-    Mesh* mesh_3 = new (MemoryTag::Geometry) Mesh(geometry_3);
+        // Create meshes
+        Mesh* const mesh_1 = new (MemoryTag::Geometry) Mesh(geometry_1);
+        Mesh* const mesh_2 = new (MemoryTag::Geometry) Mesh(geometry_2);
+        Mesh* const mesh_3 = new (MemoryTag::Geometry) Mesh(geometry_3);
 
-    // Mesh 2 transform
-    mesh_2->transform.scale_by(0.4f);
-    mesh_2->transform.rotate_by_deg(glm::vec3(0, 1, 0), 30.f);
-    mesh_2->transform.translate_by(glm::vec3(0.f, 1.f, 0.f));
-    mesh_2->transform.parent = &mesh_1->transform;
+        // Mesh 2 transform
+        mesh_2->transform.scale_by(0.4f);
+        mesh_2->transform.rotate_by_deg(glm::vec3(0, 1, 0), 30.f);
+        mesh_2->transform.translate_by(glm::vec3(0.f, 1.f, 0.f));
+        mesh_2->transform.parent = &mesh_1->transform;
 
-    // Mesh 3 transform
-    mesh_3->transform.scale_by(0.2f);
-    mesh_3->transform.rotate_by_deg(glm::vec3(1, 0, 0), -30.f);
-    mesh_3->transform.translate_by(glm::vec3(0.f, 1.f, 0.f));
-    mesh_3->transform.parent = &mesh_2->transform;
+        // Mesh 3 transform
+        mesh_3->transform.scale_by(0.2f);
+        mesh_3->transform.rotate_by_deg(glm::vec3(1, 0, 0), -30.f);
+        mesh_3->transform.translate_by(glm::vec3(0.f, 1.f, 0.f));
+        mesh_3->transform.parent = &mesh_2->transform;
 
-    // Add meshes
-    meshes.push_back(mesh_1);
-    meshes.push_back(mesh_2);
-    meshes.push_back(mesh_3);
-#else
-    /// Load MESH TEST
-    MeshLoader loader {};
-#    if CURRENT_SCENE == 1
-    auto       load_result = loader.load("falcon");
-#    elif CURRENT_SCENE == 2
-    auto load_result = loader.load("sponza");
-#    elif CURRENT_SCENE == 3
-    auto load_result = loader.load("viking_room");
-#    endif
-    if (load_result.has_error()) {
-        Logger::error(load_result.error().what());
-        Logger::fatal("Mesh loading failed");
+        // Add meshes
+        meshes.push_back(mesh_1);
+        meshes.push_back(mesh_2);
+        meshes.push_back(mesh_3);
+    } else {
+        const auto obj_name = (scene_id == 1)   ? "falcon"
+                              : (scene_id == 2) ? "sponza"
+                                                : "viking_room";
+
+        /// Load MESH TEST
+        MeshLoader loader {};
+        const auto load_result = loader.load(obj_name);
+        if (load_result.has_error()) {
+            Logger::error(load_result.error().what());
+            Logger::fatal("Mesh loading failed");
+        }
+        const auto config_array =
+            dynamic_cast<GeometryConfigArray*>(load_result.value());
+
+        // Add all geometries
+        Vector<Geometry*> geometries {};
+        geometries.reserve(config_array->configs.size());
+        for (auto config : config_array->configs)
+            geometries.push_back(_geometry_system.acquire(*config));
+
+        // Add mesh
+        Mesh* const mesh = new (MemoryTag::Geometry) Mesh(geometries);
+        meshes.push_back(mesh);
+
+        // Transform mesh as needed
+        switch (scene_id) {
+        case 2:
+            mesh->transform.scale_by(0.02f);
+            mesh->transform.translate_by(glm::vec3(0, -1, 0));
+        case 1: //
+            mesh->transform.rotate_by_deg(glm::vec3(1, 0, 0), 90.f);
+            break;
+        }
     }
-    auto config_array = dynamic_cast<GeometryConfigArray*>(load_result.value());
-
-    // Add all geometries
-    Vector<Geometry*> geometries {};
-    geometries.reserve(config_array->configs.size());
-    for (auto config : config_array->configs)
-        geometries.push_back(_geometry_system.acquire(*config));
-
-    // Add mesh
-    Mesh* mesh = new (MemoryTag::Geometry) Mesh(geometries);
-#    if CURRENT_SCENE == 2 || CURRENT_SCENE == 1
-#        if CURRENT_SCENE == 2
-    mesh->transform.scale_by(0.02f);
-    mesh->transform.translate_by(glm::vec3(0, -1, 0));
-#        endif
-    mesh->transform.rotate_by_deg(glm::vec3(1, 0, 0), 90.f);
-#    endif
-    meshes.push_back(mesh);
-#endif
 
     /// Load GUI TEST
     // Create geometry

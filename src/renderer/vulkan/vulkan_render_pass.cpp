@@ -191,6 +191,12 @@ void VulkanRenderPass::initialize() {
     // Preserve and input attachments not used
 
     // === Subpass dependencies === TODO: MAKE CONFIGURABLE
+    auto destination_access_mask = vk::AccessFlagBits::eColorAttachmentWrite |
+                                   vk::AccessFlagBits::eColorAttachmentRead;
+    // if (_depth_testing_enabled) TODO: Maybe we add this... we will see
+    //     destination_access_mask |=
+    //         vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+
     // Controls image layout transitions between subpasses
     vk::SubpassDependency dependency {};
     // Refers to the implicit subpass before current render pass
@@ -200,18 +206,11 @@ void VulkanRenderPass::initialize() {
     // Operations to wait on before transitioning (Memory access we want)
     dependency.setSrcAccessMask(vk::AccessFlagBits::eNone);
     // Operations that wait for transition (Memory access we want)
-    dependency.setDstAccessMask(
-        vk::AccessFlagBits::eColorAttachmentWrite |
-        vk::AccessFlagBits::eDepthStencilAttachmentWrite
-    );
+    dependency.setDstAccessMask(destination_access_mask);
     // Stages at which the above mentioned operations occur
-    dependency.setSrcStageMask(
-        vk::PipelineStageFlagBits::eColorAttachmentOutput |
-        vk::PipelineStageFlagBits::eEarlyFragmentTests
+    dependency.setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput
     );
-    dependency.setDstStageMask(
-        vk::PipelineStageFlagBits::eColorAttachmentOutput |
-        vk::PipelineStageFlagBits::eEarlyFragmentTests
+    dependency.setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput
     );
 
     // === Create render pass ===

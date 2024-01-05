@@ -114,10 +114,11 @@ Outcome VulkanTexture::transition_render_target() const {
         );
         return Outcome::Failed;
     }
-    const auto res = _image->transition_image_layout(
-        *_command_buffer->handle,
-        vk::ImageLayout::eColorAttachmentOptimal,
-        vk::ImageLayout::eShaderReadOnlyOptimal
+    const auto from = used_by_render_pass
+                          ? vk::ImageLayout::eColorAttachmentOptimal
+                          : vk::ImageLayout::eUndefined;
+    const auto res  = _image->transition_image_layout(
+        *_command_buffer->handle, from, vk::ImageLayout::eShaderReadOnlyOptimal
     );
     if (res.has_error()) {
         Logger::fatal(

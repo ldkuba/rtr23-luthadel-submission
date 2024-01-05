@@ -211,6 +211,15 @@ Result<void, InvalidArgument> VulkanImage::transition_image_layout(
 
         source_stage      = vk::PipelineStageFlagBits::eColorAttachmentOutput;
         destination_stage = vk::PipelineStageFlagBits::eFragmentShader;
+    } else if ( //
+        old_layout == vk::ImageLayout::eUndefined &&
+        new_layout == vk::ImageLayout::eShaderReadOnlyOptimal
+    ) {
+        barrier.setSrcAccessMask(vk::AccessFlagBits::eNone);
+        barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+
+        source_stage      = vk::PipelineStageFlagBits::eTopOfPipe;
+        destination_stage = vk::PipelineStageFlagBits::eFragmentShader;
     } else return Failure("Unsupported layout transition.");
 
     // Transition image layout with barrier

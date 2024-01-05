@@ -75,7 +75,7 @@ class TestApplication {
     void setup_camera();
     void setup_input();
     void setup_render_passes();
-    void setup_scene_geometry();
+    void setup_scene_geometry(const uint32 scene_id);
     void setup_lights();
 };
 

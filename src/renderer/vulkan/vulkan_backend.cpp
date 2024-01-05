@@ -147,14 +147,14 @@ Result<void, RuntimeError> VulkanBackend::begin_frame(const float32 delta_time
         _semaphores_image_available[_current_frame]
     );
 
+    timer.time("Next swapchain image computed in ");
+
     // Reset fence
     try {
         _device->handle().resetFences(fences);
     } catch (const vk::SystemError& e) {
         Logger::fatal(RENDERER_VULKAN_LOG, e.what());
     }
-
-    timer.time("Fences reset in ");
 
     // Begin recording commands
     _command_buffer->reset(_current_frame);
@@ -189,6 +189,8 @@ Result<void, RuntimeError> VulkanBackend::begin_frame(const float32 delta_time
 }
 
 Result<void, RuntimeError> VulkanBackend::end_frame(const float32 delta_time) {
+    Timer& timer = Timer::global_timer;
+
     // End recording
     auto command_buffer = _command_buffer->handle;
     command_buffer->end();
@@ -220,8 +222,29 @@ Result<void, RuntimeError> VulkanBackend::end_frame(const float32 delta_time) {
         Logger::fatal(RENDERER_VULKAN_LOG, e.what());
     }
 
+    timer.time("Queue submitted in ");
+
+    // Wait for draw to finish. Gives us good reference point from which to time
+    // GPU operations accurately
+    std::array<vk::Fence, 1> fences { _fences_in_flight[_current_frame] };
+    try {
+        auto result = _device->handle().waitForFences(fences, true, uint64_max);
+        if (result != vk::Result::eSuccess) {
+            Logger::error(
+                RENDERER_VULKAN_LOG, "End of frame fence time d-out."
+            );
+            return Failure("Failed initialization failed.");
+        }
+    } catch (const vk::SystemError& e) {
+        Logger::fatal(RENDERER_VULKAN_LOG, e.what());
+    }
+
+    timer.time("Render completed in ");
+
     // Present swapchain
     _swapchain->present(signal_semaphores);
+
+    timer.time("Presented in ");
 
     // Advance current frame
     _current_frame =

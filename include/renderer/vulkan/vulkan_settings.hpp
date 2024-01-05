@@ -112,7 +112,7 @@ class VulkanSettings {
         vk::PresentModeKHR::eMailbox;
 
     // Framebuffer
-    constexpr static uint32 max_frames_in_flight = 2;
+    constexpr static uint32 max_frames_in_flight = 3;
 
     // Anti-aliasing
     constexpr static auto max_msaa_samples = vk::SampleCountFlagBits::e16;
