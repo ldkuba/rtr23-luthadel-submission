@@ -69,9 +69,9 @@ void TestApplication::run() {
         // Construct render packet
         Renderer::Packet packet {};
         // Add views
-        // packet.view_data.push_back(_de_render_view->on_build_pocket());
-        // packet.view_data.push_back(_ao_render_view->on_build_pocket());
-        // packet.view_data.push_back(_bl_render_view->on_build_pocket());
+        packet.view_data.push_back(_de_render_view->on_build_pocket());
+        packet.view_data.push_back(_ao_render_view->on_build_pocket());
+        packet.view_data.push_back(_bl_render_view->on_build_pocket());
         packet.view_data.push_back(_sb_render_view->on_build_pocket());
         packet.view_data.push_back(_ow_render_view->on_build_pocket());
         packet.view_data.push_back(_ui_render_view->on_build_pocket());
@@ -327,9 +327,9 @@ void TestApplication::setup_render_passes() {
     // Initialize AO only
     RenderPass::start >>
         // Depth normals
-        // "CDS" >> depth_renderpass >>
+        "CDS" >> depth_renderpass >>
         // SSAO
-        // "C" >> ao_renderpass >> "C" >> blur_renderpass >>
+        "C" >> ao_renderpass >> "C" >> blur_renderpass >>
         // Skybox
         "C" >> skybox_renderpass >>
         // World
