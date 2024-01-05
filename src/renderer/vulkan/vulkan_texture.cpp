@@ -79,6 +79,17 @@ Outcome VulkanTexture::resize(const uint32 width, const uint32 height) {
     // Get format
     const auto texture_format = get_vulkan_format();
 
+    // Get usage flags
+    vk::ImageUsageFlagBits usage_flags;
+    vk::ImageAspectFlagBits aspect_flags;
+    if(Texture::has_depth_format(_format)) {
+        usage_flags = vk::ImageUsageFlagBits::eDepthStencilAttachment;
+        aspect_flags = vk::ImageAspectFlagBits::eDepth;
+    } else {
+        usage_flags = vk::ImageUsageFlagBits::eColorAttachment;
+        aspect_flags = vk::ImageAspectFlagBits::eColor;
+    }
+
     // Create new image
     auto texture_image =
         new (MemoryTag::GPUTexture) VulkanImage(_device, _allocator);
@@ -89,14 +100,14 @@ Outcome VulkanTexture::resize(const uint32 width, const uint32 height) {
         vk::SampleCountFlagBits::e1,
         texture_format,
         vk::ImageTiling::eOptimal,
-        is_render_target() ? vk::ImageUsageFlagBits::eColorAttachment |
+        is_render_target() ? usage_flags |
                                  vk::ImageUsageFlagBits::eSampled
                            : vk::ImageUsageFlagBits::eTransferSrc |
                                  vk::ImageUsageFlagBits::eTransferDst |
                                  vk::ImageUsageFlagBits::eSampled |
-                                 vk::ImageUsageFlagBits::eColorAttachment,
+                                 usage_flags,
         vk::MemoryPropertyFlagBits::eDeviceLocal,
-        vk::ImageAspectFlagBits::eColor
+        aspect_flags
     );
 
     // Assign
@@ -114,10 +125,21 @@ Outcome VulkanTexture::transition_render_target() const {
         );
         return Outcome::Failed;
     }
+
+    vk::ImageLayout attachment_type;
+    vk::ImageLayout target_type;
+    if(Texture::has_depth_format(_format)) {
+        attachment_type = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+        target_type = vk::ImageLayout::eDepthStencilReadOnlyOptimal;
+    } else {
+        attachment_type = vk::ImageLayout::eColorAttachmentOptimal;
+        target_type = vk::ImageLayout::eShaderReadOnlyOptimal;
+    }
+
     const auto res = _image->transition_image_layout(
         *_command_buffer->handle,
-        vk::ImageLayout::eColorAttachmentOptimal,
-        vk::ImageLayout::eShaderReadOnlyOptimal
+        attachment_type,
+        target_type
     );
     if (res.has_error()) {
         Logger::fatal(

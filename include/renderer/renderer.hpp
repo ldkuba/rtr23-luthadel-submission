@@ -23,11 +23,12 @@ class Renderer {
 
   public:
     // TODO: TEMP TEST CODE BEGIN
-    Shader* material_shader = nullptr;
-    Shader* ui_shader       = nullptr;
-    Shader* skybox_shader   = nullptr;
-    Shader* depth_shader    = nullptr;
-    Shader* ao_shader       = nullptr;
+    Shader* material_shader              = nullptr;
+    Shader* ui_shader                    = nullptr;
+    Shader* skybox_shader                = nullptr;
+    Shader* depth_shader                 = nullptr;
+    Shader* ao_shader                    = nullptr;
+    Shader* shadowmap_directional_shader = nullptr;
     // TODO: TEMP TEST CODE END
 
     /**
@@ -66,6 +67,28 @@ class Renderer {
      * @param height New height in pixels
      */
     void on_resize(const uint32 width, const uint32 height);
+
+    /**
+     * @brief Set viewport to the given rectangle
+     * @param rect Rectangle to set viewport to
+     */
+    void viewport_set(glm::vec4 rect);
+
+    /**
+     * @brief Reset viewport to the swapchain size
+     */
+    void viewport_reset();
+
+    /**
+     * @brief Set scissors to the given rectangle
+     * @param rect Rectangle to set scissors to
+     */
+    void scissors_set(glm::vec4 rect);
+
+    /**
+     * @brief Reset scissors to the swapchain size
+     */
+    void scissors_reset();
 
     /**
      * @brief Create a texture and upload its relevant data to the GPU

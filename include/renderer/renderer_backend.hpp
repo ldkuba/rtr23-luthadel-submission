@@ -69,6 +69,28 @@ class RendererBackend {
     virtual void resized(const uint32 width, const uint32 height) = 0;
 
     /**
+     * @brief Set viewport to the given rectangle
+     * @param rect Rectangle to set viewport to
+     */
+    virtual void viewport_set(glm::vec4 rect) = 0;
+
+    /**
+     * @brief Reset viewport to the swapchain size
+     */
+    virtual void viewport_reset() = 0;
+
+    /**
+     * @brief Set scissors to the given rectangle
+     * @param rect Rectangle to set scissors to
+     */
+    virtual void scissors_set(glm::vec4 rect) = 0;
+
+    /**
+     * @brief Reset scissors to the swapchain size
+     */
+    virtual void scissors_reset() = 0;
+
+    /**
      * @brief Create a texture and upload its relevant data to the GPU
      *
      * @param config Texture configuration under which texture will be created

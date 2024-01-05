@@ -60,6 +60,10 @@
                         {
                             "name": "mode",
                             "type": "uint32"
+                        },
+                        {
+                            "name": "light_space_directional",
+                            "type": "mat4"
                         }
                     ]
                 },
@@ -90,13 +94,17 @@
                 {
                     "type": "sampler",
                     "binding_index": 2,
-                    "count": 1,
+                    "count": 2,
                     "stages": [
                         "fragment"
                     ],
                     "uniforms": [
                         {
                             "name": "ssao_texture",
+                            "type": "sampler2D"
+                        },
+                        {
+                            "name": "shadowmap_directional_texture",
                             "type": "sampler2D"
                         }
                     ]

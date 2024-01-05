@@ -42,6 +42,12 @@ class RenderViewWorld : public RenderView {
         _ssao_texture_map = ssao_map;
     }
 
+    virtual void set_shadowmap_directional_texture(
+        Texture::Map* const shadowmap_directional_map
+    ) {
+        _shadowmap_directional_texture_map = shadowmap_directional_map;
+    }
+
   protected:
     Shader*       _shader;
     float32       _fov;
@@ -51,6 +57,7 @@ class RenderViewWorld : public RenderView {
     Camera*       _world_camera;
     glm::vec4     _ambient_color;
     Texture::Map* _ssao_texture_map;
+    Texture::Map* _shadowmap_directional_texture_map;
 
     Vector<GeometryRenderData> _geom_data {};
 
@@ -60,16 +67,18 @@ class RenderViewWorld : public RenderView {
 
     // Uniforms
     struct UIndex {
-        uint16 projection        = -1;
-        uint16 view              = -1;
-        uint16 ambient_color     = -1;
-        uint16 view_position     = -1;
-        uint16 mode              = -1;
-        uint16 model             = -1;
-        uint16 directional_light = -1;
-        uint16 num_point_lights  = -1;
-        uint16 point_lights      = -1;
-        uint16 ssao_texture      = -1;
+        uint16 projection                    = -1;
+        uint16 view                          = -1;
+        uint16 ambient_color                 = -1;
+        uint16 view_position                 = -1;
+        uint16 mode                          = -1;
+        uint16 light_space_directional       = -1;
+        uint16 model                         = -1;
+        uint16 directional_light             = -1;
+        uint16 num_point_lights              = -1;
+        uint16 point_lights                  = -1;
+        uint16 ssao_texture                  = -1;
+        uint16 shadowmap_directional_texture = -1;
 
         UIndex() {}
         UIndex(const Shader* const shader);

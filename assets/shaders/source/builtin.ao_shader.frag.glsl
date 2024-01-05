@@ -2,7 +2,6 @@
 #extension GL_EXT_scalar_block_layout : require
 
 // Consts
-precision mediump float;
 const int MAX_KERNEL_SIZE = 64;
 const float INV_MAX_KERNEL_SIZE_F = 1.0 / float(MAX_KERNEL_SIZE);
 const vec2 HALF_2 = vec2(0.5);

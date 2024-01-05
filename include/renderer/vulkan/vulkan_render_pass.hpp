@@ -77,7 +77,10 @@ class VulkanRenderPass : public RenderPass {
     void initialize_render_targets() override;
 
     RenderTarget* create_render_target(
-        uint32 width, uint32 height, const Vector<Texture*>& attachments
+        uint32                  width,
+        uint32                  height,
+        const Vector<Texture*>& attachments,
+        bool                    sync_to_window_resize = true
     );
 
   private:

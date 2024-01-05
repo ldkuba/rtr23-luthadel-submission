@@ -7,9 +7,10 @@ RenderTarget::RenderTarget(
     const Vector<Texture*>& attachments,
     FrameBuffer* const      framebuffer,
     const uint32            width,
-    const uint32            height
+    const uint32            height,
+    const bool              sync_to_window_resize
 )
-    : _framebuffer(framebuffer), _sync_to_window_resize(true), //
+    : _framebuffer(framebuffer), _sync_to_window_resize(sync_to_window_resize), //
       _width(width), _height(height) {
     add_attachments(attachments);
 }

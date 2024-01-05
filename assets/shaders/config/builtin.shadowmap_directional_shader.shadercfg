@@ -1,0 +1,60 @@
+{
+    "version": 1.0,
+    "name": "builtin.shadowmap_directional_shader",
+    "renderpass": "Renderpass.Builtin.ShadowmapDirectional",
+    "stages": [
+        "vertex",
+        "fragment"
+    ],
+    "cull_mode": "back",
+    "enable_blending": false,
+    "attributes": [
+        {
+            "name": "in_position",
+            "type": "vec3"
+        },
+        {
+            "name": "in_normal",
+            "type": "vec3"
+        },
+        {
+            "name": "in_tangent",
+            "type": "vec3"
+        },
+        {
+            "name": "in_color",
+            "type": "vec4"
+        },
+        {
+            "name": "in_texcoord",
+            "type": "vec2"
+        }
+    ],
+    "descriptor_sets": [
+        {
+            "scope": "global",
+            "set_index": 0,
+            "bindings": [
+                {
+                    "type": "uniform",
+                    "binding_index": 0,
+                    "stages": [
+                        "vertex"
+                    ],
+                    "uniforms": [
+                        {
+                            "name": "light_space",
+                            "type": "mat4"
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "push_constants": [
+        {
+            "name": "model",
+            "type": "mat4"
+        }
+    ]
+}

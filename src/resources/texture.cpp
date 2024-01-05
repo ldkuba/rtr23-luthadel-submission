@@ -62,6 +62,11 @@ Outcome Texture::resize(const uint32 width, const uint32 height) {
     return Outcome::Successful;
 }
 
+bool Texture::has_depth_format(Format format) {
+    return format == Format::DS24 ||
+           format == Format::D32 || format == Format::DS32;
+}
+
 // -----------------------------------------------------------------------------
 // Packed texture
 // -----------------------------------------------------------------------------

@@ -131,9 +131,16 @@ void RenderViewWorld::on_render(
     const uint64        render_target_index
 ) {
     // Transition used render targets
-    const auto pt =
+    const auto pt_ssao =
         static_cast<const PackedTexture*>(_ssao_texture_map->texture);
-    pt->get_at(frame_number % VulkanSettings::max_frames_in_flight)
+    pt_ssao->get_at(frame_number % VulkanSettings::max_frames_in_flight)
+        ->transition_render_target(); // TODO: Vulkan agnostic
+
+    const auto pt_shadowmap_directional = static_cast<const PackedTexture*>(
+        _shadowmap_directional_texture_map->texture
+    );
+    pt_shadowmap_directional
+        ->get_at(frame_number % VulkanSettings::max_frames_in_flight)
         ->transition_render_target(); // TODO: Vulkan agnostic
 
     for (const auto& pass : _passes) {
@@ -181,11 +188,13 @@ RenderViewWorld::UIndex::UIndex(const Shader* const shader) {
     uniform_index(ambient_color);
     uniform_index(view_position);
     uniform_index(mode);
+    uniform_index(light_space_directional);
     uniform_index(model);
     uniform_index(directional_light);
     uniform_index(num_point_lights);
     uniform_index(point_lights);
     uniform_index(ssao_texture);
+    uniform_index(shadowmap_directional_texture);
 }
 
 #define uniform_set(uniform, value)                                            \
@@ -215,13 +224,22 @@ void RenderViewWorld::apply_globals(const uint64 frame_number) const {
     // Globals can be updated only once per frame
     if (frame_number == _shader->rendered_frame_number) return;
 
+    glm::mat4 light_space_directional =
+        _light_system->get_directional()->get_light_space_matrix(
+            _world_camera->transform.position()
+        );
+
     // Apply globals update
     uniform_set(projection, _proj_matrix);
     uniform_set(view, _world_camera->view());
     uniform_set(ambient_color, _ambient_color);
     uniform_set(view_position, _world_camera->transform.position());
     uniform_set(mode, _render_mode);
+    uniform_set(light_space_directional, light_space_directional);
     sampler_set(ssao_texture, _ssao_texture_map);
+    sampler_set(
+        shadowmap_directional_texture, _shadowmap_directional_texture_map
+    );
 
     // Apply lights
     auto point_light_data  = _light_system->get_point_data();

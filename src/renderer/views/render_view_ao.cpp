@@ -175,7 +175,7 @@ void RenderViewAO::destroy_texture_maps() {
 }
 
 void RenderViewAO::generate_kernel(const uint32) {
-    uint i = 0;
+    uint32 i = 0;
     for (auto& sample : _kernel) {
         // Generate random sample
         sample.x = Random::float32(-1.0, 1.0);

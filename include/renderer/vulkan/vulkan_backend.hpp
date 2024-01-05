@@ -25,6 +25,14 @@ class VulkanBackend : public RendererBackend {
 
     void resized(const uint32 width, const uint32 height) override;
 
+    // Viewport
+    void viewport_set(glm::vec4 rect) override;
+    void viewport_reset() override;
+
+    // Scissors
+    void scissors_set(glm::vec4 rect) override;
+    void scissors_reset() override;
+
     // Texture
     Texture* create_texture(
         const Texture::Config& config, const byte* const data

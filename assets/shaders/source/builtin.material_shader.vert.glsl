@@ -7,6 +7,7 @@ layout(std430, set = 0, binding = 0)uniform global_uniform_buffer {
     vec4 ambient_color;
     vec3 view_position;
     uint mode;
+    mat4 light_space_directional;
 }UBO;
 
 layout(push_constant)uniform push_constants {
@@ -33,7 +34,14 @@ layout(location = 1)out struct data_transfer_object {
     vec3 frag_position;
     vec4 clip_position;
     vec4 color;
+    vec4 shadow_coord_directional;
 }OutDTO;
+
+const mat4 shadow_bias = mat4( 
+	0.5, 0.0, 0.0, 0.0,
+	0.0, 0.5, 0.0, 0.0,
+	0.0, 0.0, 1.0, 0.0,
+	0.5, 0.5, 0.0, 1.0 );
 
 void main() {
     mat3 model_m3 = mat3(PC.model);
@@ -49,5 +57,7 @@ void main() {
     gl_Position = UBO.projection * UBO.view * PC.model * vec4(in_position, 1.0);
     OutDTO.clip_position = gl_Position;
     
+    OutDTO.shadow_coord_directional = (shadow_bias * UBO.light_space_directional * PC.model) * vec4(in_position, 1.0);
+
     out_mode = UBO.mode;
 }

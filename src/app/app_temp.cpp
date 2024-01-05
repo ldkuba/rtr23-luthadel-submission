@@ -2,6 +2,7 @@
 
 #include "resources/loaders/mesh_loader.hpp"
 #include "timer.hpp"
+#include <chrono>
 
 namespace ENGINE_NAMESPACE {
 
@@ -15,6 +16,7 @@ TestApplication::~TestApplication() {
     _texture_system.release(_default_skybox.cube_map()->texture->name());
     _app_renderer.destroy_texture_map(_default_skybox.cube_map);
     _app_renderer.destroy_texture_map(_ssao_map);
+    _app_renderer.destroy_texture_map(_shadowmap_directional_map);
 
     del(_app_surface);
 }
@@ -64,6 +66,24 @@ void TestApplication::run() {
                 );
             }
         }
+
+        // Directional light rotation example
+        // Get value oscilating between -0.2f and 0.2f using std::chrono::system_clock
+        const auto oscillating_value = [](float32 frequency, float32 amplitude, float32 phase = 0) {
+            const auto now = std::chrono::system_clock::now();
+            const auto now_ms =
+                std::chrono::time_point_cast<std::chrono::milliseconds>(now);
+            const auto epoch = now_ms.time_since_epoch();
+            const auto value =
+                std::sin(2 * M_PI * frequency * epoch.count() / 1000.0 + phase);
+            return value * amplitude;
+        };
+
+        if(_move_directional_light_flag) {
+            const_cast<DirectionalLight*>(_light_system.get_directional())->data.direction.x = oscillating_value(0.1f, 0.2f);
+            const_cast<DirectionalLight*>(_light_system.get_directional())->data.direction.y = oscillating_value(0.1f, 0.05f, M_PI / 2.0f) + 0.1f;
+        }
+
         timer.time("Events processed in ");
 
         // Construct render packet
@@ -72,6 +92,7 @@ void TestApplication::run() {
         packet.view_data.push_back(_de_render_view->on_build_pocket());
         packet.view_data.push_back(_ao_render_view->on_build_pocket());
         packet.view_data.push_back(_bl_render_view->on_build_pocket());
+        packet.view_data.push_back(_smd_render_view->on_build_pocket());
         packet.view_data.push_back(_sb_render_view->on_build_pocket());
         packet.view_data.push_back(_ow_render_view->on_build_pocket());
         packet.view_data.push_back(_ui_render_view->on_build_pocket());
@@ -159,6 +180,7 @@ void TestApplication::setup_input() {
     PressControl(spin_cube, SPACE);
     PressControl(shader_reload, Z);
     PressControl(show_fps, F);
+    PressControl(move_directional_light, B);
 
     // === Events ===
     // Application controls
@@ -232,6 +254,9 @@ void TestApplication::setup_input() {
     shader_reload->event +=
         [&](float32, float32) { _app_renderer.material_shader->reload(); };
     show_fps->event += [&](float32, float32) { _log_fps = !_log_fps; };
+    move_directional_light->event += [&](float32, float32) {
+        _move_directional_light_flag = !_move_directional_light_flag;
+    };
 }
 
 void TestApplication::setup_render_passes() {
@@ -242,6 +267,8 @@ void TestApplication::setup_render_passes() {
     // Get width & height
     const auto width  = _app_surface->get_width_in_pixels();
     const auto height = _app_surface->get_height_in_pixels();
+
+    const auto shadowmap_directional_size = 4096;
 
     // Create render passes
     const auto world_renderpass =
@@ -282,6 +309,14 @@ void TestApplication::setup_render_passes() {
         false,                                // Depth testing
         false                                 // Multisampling
     });
+    const auto shadowmap_directional_renderpass =
+        _app_renderer.create_render_pass({
+            RenderPass::BuiltIn::ShadowmapDirectionalPass, // Name
+            glm::vec2 { 0, 0 },                            // Draw offset
+            glm::vec4 { 1.0f, 1.0f, 1.0f, 1.0f },          // Clear color
+            true,                                          // Depth testing
+            false                                          // Multisampling
+        });
 
     // Create render target textures
     const auto depth_normals_texture = _texture_system.acquire_writable(
@@ -311,6 +346,27 @@ void TestApplication::setup_render_passes() {
         true
     );
 
+    // Shadowmap Directional Textures
+    const auto shadowmap_directional_color_texture =
+        _texture_system.acquire_writable(
+            "DirectionalShadowMapColorTarget",
+            shadowmap_directional_size,
+            shadowmap_directional_size,
+            4,
+            Texture::Format::RGBA32Sfloat,
+            true
+        );
+
+    const auto shadowmap_directional_depth_texture =
+        _texture_system.acquire_writable(
+            "DirectionalShadowMapDepthTarget",
+            shadowmap_directional_size,
+            shadowmap_directional_size,
+            4,
+            Texture::Format::D32,
+            true
+        );
+
     // Create render targets
     ui_renderpass->add_window_as_render_target();
     skybox_renderpass->add_window_as_render_target();
@@ -323,12 +379,24 @@ void TestApplication::setup_render_passes() {
     blur_renderpass->add_render_target(
         { width, height, { blured_ssao_texture }, true }
     );
+    shadowmap_directional_renderpass->add_render_target(
+        { shadowmap_directional_size,
+          shadowmap_directional_size,
+          { shadowmap_directional_color_texture,
+            shadowmap_directional_depth_texture },
+          true,
+          false }
+    );
+
+    // shadowmap_directional_renderpass->disable_color_output();
 
     // Initialize AO only
     RenderPass::start >>
         // SSAO
         "CDS" >> depth_renderpass >> "C" >> ao_renderpass >> "C" >>
         blur_renderpass >>
+        // Directional Shadowmapping
+        "DS" >> shadowmap_directional_renderpass >>
         // Main render loop
         "C" >> skybox_renderpass >> "DS" >> world_renderpass >> ui_renderpass >>
         RenderPass::finish;
@@ -353,6 +421,9 @@ void TestApplication::setup_render_passes() {
     _app_renderer.ao_shader = //
         _shader_system.acquire(Shader::BuiltIn::BlurShader)
             .expect("Failed to load builtin blur shader.");
+    _app_renderer.shadowmap_directional_shader = //
+        _shader_system.acquire(Shader::BuiltIn::ShadowmapDirectionalShader)
+            .expect("Failed to load builtin shadowmap directional shader.");
 
     _app_renderer.material_shader->reload();
 
@@ -424,6 +495,18 @@ void TestApplication::setup_render_passes() {
         { _app_renderer.get_renderpass(RenderPass::BuiltIn::BlurPass)
               .expect("Renderpass not found.") }
     };
+    RenderView::Config shadowmap_directional_view_config {
+        "shadowmap_directional",
+        Shader::BuiltIn::ShadowmapDirectionalShader,
+        shadowmap_directional_size,
+        shadowmap_directional_size,
+        RenderView::Type::ShadowmapDirectional,
+        RenderView::ViewMatrixSource::LightCamera,
+        RenderView::ProjectionMatrixSource::DefaultOrthographic,
+        { _app_renderer
+              .get_renderpass(RenderPass::BuiltIn::ShadowmapDirectionalPass)
+              .expect("Renderpass not found.") }
+    };
 
     // Create
     const auto res_owv = _render_view_system.create(opaque_world_view_config);
@@ -432,8 +515,11 @@ void TestApplication::setup_render_passes() {
     const auto res_dev = _render_view_system.create(depth_view_config);
     const auto res_aov = _render_view_system.create(ao_view_config);
     const auto res_blv = _render_view_system.create(blur_view_config);
+    const auto res_smdv =
+        _render_view_system.create(shadowmap_directional_view_config);
     if (res_owv.has_error() || res_uiv.has_error() || res_sbv.has_error() ||
-        res_dev.has_error() || res_aov.has_error() || res_blv.has_error())
+        res_dev.has_error() || res_aov.has_error() || res_blv.has_error() ||
+        res_smdv.has_error())
         Logger::fatal("Render view creation failed.");
 
     _ow_render_view = dynamic_cast<RenderViewWorld*>(res_owv.value());
@@ -442,6 +528,8 @@ void TestApplication::setup_render_passes() {
     _de_render_view = dynamic_cast<RenderViewDepth*>(res_dev.value());
     _ao_render_view = dynamic_cast<RenderViewAO*>(res_aov.value());
     _bl_render_view = dynamic_cast<RenderViewBlur*>(res_blv.value());
+    _smd_render_view =
+        dynamic_cast<RenderViewShadowmapDirectional*>(res_smdv.value());
 
     // Set render view textures
     _ssao_map =
@@ -453,6 +541,18 @@ void TestApplication::setup_render_passes() {
                                            Texture::Repeat::ClampToEdge,
                                            Texture::Repeat::ClampToEdge });
     _ow_render_view->set_ssao_texture(_ssao_map);
+
+    _shadowmap_directional_map =
+        _app_renderer.create_texture_map({ shadowmap_directional_depth_texture,
+                                           Texture::Use::Unknown,
+                                           Texture::Filter::BiLinear,
+                                           Texture::Filter::BiLinear,
+                                           Texture::Repeat::ClampToEdge,
+                                           Texture::Repeat::ClampToEdge,
+                                           Texture::Repeat::ClampToEdge });
+    _ow_render_view->set_shadowmap_directional_texture(
+        _shadowmap_directional_map
+    );
 }
 
 void TestApplication::setup_scene_geometry() {
@@ -494,7 +594,7 @@ void TestApplication::setup_scene_geometry() {
     /// Load MESH TEST
     MeshLoader loader {};
 #    if CURRENT_SCENE == 1
-    auto       load_result = loader.load("falcon");
+    auto load_result = loader.load("falcon");
 #    elif CURRENT_SCENE == 2
     auto load_result = loader.load("sponza");
 #    elif CURRENT_SCENE == 3
@@ -567,14 +667,16 @@ void TestApplication::setup_scene_geometry() {
     _ui_render_view->set_render_data_ref(&_ui_mesh_data);
     _sb_render_view->set_skybox_ref(&_default_skybox);
     _de_render_view->set_render_data_ref(&_world_mesh_data);
+    _smd_render_view->set_render_data_ref(&_world_mesh_data);
 }
 
 void TestApplication::setup_lights() {
     _ow_render_view->set_light_system(&_light_system);
+    _smd_render_view->set_light_system(&_light_system);
 
     const auto directional_light = new (MemoryTag::Scene)
         DirectionalLight { "dir_light",
-                           { glm::vec4(-0.7, 0.0, -0.7, 1.0),
+                           { glm::vec4(0.0f, 0.2f, -1.0, 1.0),
                              glm::vec4(0.5, 0.5, 0.5, 1.0) } };
     _light_system.add_directional(directional_light);
 
