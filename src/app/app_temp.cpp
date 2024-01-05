@@ -358,8 +358,8 @@ void TestApplication::setup_render_passes() {
             "DirectionalShadowMapColorTarget",
             shadowmap_directional_size,
             shadowmap_directional_size,
-            4,
-            Texture::Format::RGBA32Sfloat,
+            1,
+            Texture::Format::RGBA8Srgb,
             true
         );
 

@@ -127,14 +127,13 @@ class Texture {
         GET { return _total_size; }
     };
 
-    /// @brief True if any render pass utilizes this texture as an attachment
-    bool used_by_render_pass = false;
-
     /// @brief Maximum length a texture name can have
     const static constexpr uint32 max_name_length = 256;
 
     static bool has_depth_format(Format format);
-    inline bool has_depth_format() const { return Texture::has_depth_format(_format); }
+    inline bool has_depth_format() const {
+        return Texture::has_depth_format(_format);
+    }
 
     /**
      * @brief Construct a new Texture object
@@ -151,6 +150,12 @@ class Texture {
     bool is_wrapped() const { return _flags & IsWrapped; }
     /// @brief True if image is used as render target
     bool is_render_target() const { return _flags & IsRenderTarget; }
+
+    /// @brief True if any render pass utilizes this texture as an attachment
+    bool used_in_render_pass() const { return _flags & UsedInPass; }
+
+    /// @brief Mark texture as one used by a render pass
+    virtual void marked_as_used() { _flags |= UsedInPass; }
 
     /**
      * @brief Write raw data into texture. Optimal for writable textures. Works
@@ -191,10 +196,11 @@ class Texture {
   protected:
     typedef uint8 TextureFlagType;
     enum TextureFlag : TextureFlagType {
-        HasTransparency = 0b0001,
-        IsWritable      = 0b0010,
-        IsWrapped       = 0b0100,
-        IsRenderTarget  = 0b1000
+        HasTransparency = 0b00001,
+        IsWritable      = 0b00010,
+        IsWrapped       = 0b00100,
+        IsRenderTarget  = 0b01000,
+        UsedInPass      = 0b10000
     };
 
     TextureFlagType _flags;
@@ -224,6 +230,8 @@ class PackedTexture : public Texture {
     }
 
     Texture* get_at(uint8 index) const;
+
+    virtual void marked_as_used() override;
 
     virtual Outcome write(
         const byte* const data, const uint32 size, const uint32 offset

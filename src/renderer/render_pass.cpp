@@ -73,7 +73,7 @@ void RPI::update_attachment_info() {
             const auto& att = config.attachments[i];
 
             // If this is the first use of this attachment do nothing
-            if (!att->used_by_render_pass) continue;
+            if (!att->used_in_render_pass()) continue;
 
             // This attachment was already seen before.
             // Turn off initialization for this attachment
@@ -93,7 +93,7 @@ void RPI::update_attachment_info() {
     // Mark all attachments as used
     for (const auto& config : pass->_render_target_configs) {
         for (const auto& att : config.attachments)
-            att->used_by_render_pass = true;
+            att->marked_as_used();
     }
 }
 

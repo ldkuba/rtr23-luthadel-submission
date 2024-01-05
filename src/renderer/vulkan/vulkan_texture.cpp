@@ -126,7 +126,7 @@ Outcome VulkanTexture::transition_render_target() const {
 
     const auto depth_format = has_depth_format(_format);
     const auto from =
-        used_by_render_pass
+        used_in_render_pass()
             ? depth_format ? vk::ImageLayout::eDepthStencilAttachmentOptimal
                            : vk::ImageLayout::eColorAttachmentOptimal
             : vk::ImageLayout::eUndefined;

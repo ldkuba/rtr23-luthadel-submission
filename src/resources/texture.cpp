@@ -63,8 +63,8 @@ Outcome Texture::resize(const uint32 width, const uint32 height) {
 }
 
 bool Texture::has_depth_format(Format format) {
-    return format == Format::DS24 ||
-           format == Format::D32 || format == Format::DS32;
+    return format == Format::DS24 || format == Format::D32 ||
+           format == Format::DS32;
 }
 
 // -----------------------------------------------------------------------------
@@ -82,6 +82,12 @@ Texture* PackedTexture::get_at(uint8 index) const {
             "Attempting to index packed texture passed its final index."
         );
     return _textures[index];
+}
+
+void PackedTexture::marked_as_used() {
+    Texture::marked_as_used();
+    for (auto& texture : _textures)
+        texture->marked_as_used();
 }
 
 Outcome PackedTexture::write(const byte* const, const uint32, const uint32) {
