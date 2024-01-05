@@ -17,7 +17,8 @@ shader_list = [
     ("builtin.skybox_shader", ["vert", "frag"]),
     ("builtin.depth_shader", ["vert", "frag"]),
     ("builtin.ao_shader", ["vert", "frag"]),
-    ("builtin.blur_shader", ["vert", "frag"])
+    ("builtin.blur_shader", ["vert", "frag"]),
+    ("builtin.shadowmap_directional_shader", ["vert", "frag"])
 ]
 
 for shader, phases in shader_list:

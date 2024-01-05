@@ -7,6 +7,7 @@
 #include "renderer/views/render_view_depth.hpp"
 #include "renderer/views/render_view_ao.hpp"
 #include "renderer/views/render_view_blur.hpp"
+#include "renderer/views/render_view_shadowmap_directional.hpp"
 
 namespace ENGINE_NAMESPACE {
 
@@ -103,6 +104,12 @@ Result<RenderView*, RuntimeError> RenderViewSystem::create(
         // TODO: temp just default camera
         view = new (MemoryTag::RenderView) RenderViewBlur(
             config, _renderer, _texture_system, _geometry_system, _shader_system
+        );
+        break;
+    case RenderView::Type::ShadowmapDirectional:
+        // TODO: temp just default camera
+        view = new (MemoryTag::RenderView) RenderViewShadowmapDirectional(
+            config, _shader_system, _camera_system->default_camera
         );
         break;
     default:

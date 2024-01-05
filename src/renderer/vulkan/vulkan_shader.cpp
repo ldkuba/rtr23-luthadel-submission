@@ -387,8 +387,15 @@ void VulkanShader::apply_descriptor_set(DescriptorSet& set, uint32 state_id) {
                         );
                     }
 
+                    vk::ImageLayout layout;
+                    if(texture->has_depth_format()) {
+                        layout = vk::ImageLayout::eDepthStencilReadOnlyOptimal;
+                    } else {
+                        layout = vk::ImageLayout::eShaderReadOnlyOptimal;
+                    }
+
                     image_infos[i]
-                        .setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
+                        .setImageLayout(layout)
                         .setImageView(texture->image()->view)
                         .setSampler(tm->sampler);
 
@@ -1018,8 +1025,15 @@ Vector<vk::DescriptorImageInfo>& VulkanShader::get_image_infos(
             );
         }
 
+        vk::ImageLayout layout;
+        if(texture->has_depth_format()) {
+            layout = vk::ImageLayout::eDepthStencilReadOnlyOptimal;
+        } else {
+            layout = vk::ImageLayout::eShaderReadOnlyOptimal;
+        }
+
         vk::DescriptorImageInfo image_info {};
-        image_info.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+        image_info.setImageLayout(layout);
         image_info.setImageView(texture->image()->view);
         image_info.setSampler(tm->sampler);
         image_infos.push_back(image_info);

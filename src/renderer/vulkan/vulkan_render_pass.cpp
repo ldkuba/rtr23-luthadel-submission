@@ -277,7 +277,10 @@ void VulkanRenderPass::initialize_render_targets() {
 
                 // Create target under these settings
                 const auto target = create_render_target(
-                    config.width, config.height, attachments
+                    config.width,
+                    config.height,
+                    attachments,
+                    config.sync_to_window_resize
                 );
 
                 // Add this target
@@ -286,7 +289,10 @@ void VulkanRenderPass::initialize_render_targets() {
         } else {
             // Create target under these settings
             const auto target = create_render_target(
-                config.width, config.height, config.attachments
+                config.width,
+                config.height,
+                config.attachments,
+                config.sync_to_window_resize
             );
 
             // Add this target
@@ -297,7 +303,10 @@ void VulkanRenderPass::initialize_render_targets() {
 
 // Helper
 RenderTarget* VulkanRenderPass::create_render_target(
-    uint32 width, uint32 height, const Vector<Texture*>& attachments
+    uint32                  width,
+    uint32                  height,
+    const Vector<Texture*>& attachments,
+    bool                    sync_to_window_resize
 ) {
     // Create view attachments for framebuffer initialization
     Vector<vk::ImageView> view_attachments { attachments.size() };
@@ -313,12 +322,14 @@ RenderTarget* VulkanRenderPass::create_render_target(
     );
 
     // Store to render targets
-    const auto target = new (MemoryTag::GPUBuffer)
-        RenderTarget(attachments, framebuffer, width, height);
+    const auto target = new (MemoryTag::GPUBuffer) RenderTarget(
+        attachments, framebuffer, width, height, sync_to_window_resize
+    );
 
     // Sync to window resize
     // TODO: Use `_sync_to_window_resize` bool
-    _swapchain->recreate_event.subscribe(target, &RenderTarget::resize);
+    if (sync_to_window_resize)
+        _swapchain->recreate_event.subscribe(target, &RenderTarget::resize);
 
     return target;
 }

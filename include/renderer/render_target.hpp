@@ -23,6 +23,7 @@ class RenderTarget {
         const uint32           height {};
         const Vector<Texture*> attachments {};
         const bool             one_per_frame_in_flight = false;
+        const bool             sync_to_window_resize   = true;
     };
 
   public:
@@ -44,7 +45,8 @@ class RenderTarget {
         const Vector<Texture*>& attachments,
         FrameBuffer* const      framebuffer,
         const uint32            width,
-        const uint32            height
+        const uint32            height,
+        const bool              sync_to_window_resize
     );
     ~RenderTarget();
 

@@ -133,6 +133,9 @@ class Texture {
     /// @brief Maximum length a texture name can have
     const static constexpr uint32 max_name_length = 256;
 
+    static bool has_depth_format(Format format);
+    inline bool has_depth_format() const { return Texture::has_depth_format(_format); }
+
     /**
      * @brief Construct a new Texture object
      * @param config Texture configuration used

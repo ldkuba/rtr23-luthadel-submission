@@ -89,6 +89,14 @@ void Renderer::on_resize(const uint32 width, const uint32 height) {
     _backend->resized(width, height);
 }
 
+void Renderer::viewport_set(glm::vec4 rect) { _backend->viewport_set(rect); }
+
+void Renderer::viewport_reset() { _backend->viewport_reset(); }
+
+void Renderer::scissors_set(glm::vec4 rect) { _backend->scissors_set(rect); }
+
+void Renderer::scissors_reset() { _backend->scissors_reset(); }
+
 // -----------------------------------------------------------------------------
 // Texture
 // -----------------------------------------------------------------------------

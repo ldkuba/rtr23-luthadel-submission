@@ -46,5 +46,15 @@ class DirectionalLight : public Light {
     DirectionalLight(const String& name, const DirectionalLightData& data);
 
     DirectionalLightData data;
+    
+    glm::mat4 get_light_space_matrix(const glm::vec3& camera_pos) const;
+
+  private:
+    // Shadow mapping settings
+    struct ShadowmapSettings {
+      float32 shadowmap_near_plane;
+      float32 shadowmap_far_plane;
+      float32 shadowmap_extent;
+    } _shadowmap_settings;
 };
 } // namespace ENGINE_NAMESPACE

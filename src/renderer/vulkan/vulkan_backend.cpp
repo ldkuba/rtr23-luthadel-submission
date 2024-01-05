@@ -256,6 +256,46 @@ void VulkanBackend::resized(const uint32 width, const uint32 height) {
     if (_swapchain != nullptr) _swapchain->change_extent(width, height);
 }
 
+void VulkanBackend::viewport_set(glm::vec4 rect) {
+    vk::Viewport viewport {};
+    viewport.setX(rect.x)
+            .setY(rect.y + rect.w)
+            .setWidth(rect.z)
+            .setHeight(-rect.w)
+            .setMinDepth(0.0f)
+            .setMaxDepth(1.0f);
+
+    _command_buffer->handle->setViewport(0, 1, &viewport);
+}
+
+void VulkanBackend::viewport_reset() {
+    vk::Viewport viewport {};
+    viewport.setX(0.0)
+            .setY(static_cast<float32>(_swapchain->extent().height))
+            .setWidth(static_cast<float32>(_swapchain->extent().width))
+            .setHeight(-static_cast<float32>(_swapchain->extent().height))
+            .setMinDepth(0.0f)
+            .setMaxDepth(1.0f);
+
+    _command_buffer->handle->setViewport(0, 1, &viewport);
+}
+
+void VulkanBackend::scissors_set(glm::vec4 rect) {
+    vk::Rect2D scissor {};
+    scissor.setOffset({ static_cast<int32>(rect.x), static_cast<int32>(rect.y) });
+    scissor.setExtent({ static_cast<uint32>(rect.z), static_cast<uint32>(rect.w) });
+
+    _command_buffer->handle->setScissor(0, 1, &scissor);
+}
+
+void VulkanBackend::scissors_reset() {
+    vk::Rect2D scissor {};
+    scissor.setOffset({ 0, 0 });
+    scissor.setExtent(_swapchain->extent);
+
+    _command_buffer->handle->setScissor(0, 1, &scissor);
+}
+
 // -----------------------------------------------------------------------------
 // Textures
 // -----------------------------------------------------------------------------
@@ -269,6 +309,14 @@ Texture* VulkanBackend::create_texture(
     const auto texture_format = VulkanTexture::parse_format_for_vulkan(
         config.format, config.channel_count
     );
+
+    // Get usage and aspect flags
+    vk::ImageAspectFlagBits aspect_flags;
+    if(Texture::has_depth_format(config.format)) {
+        aspect_flags = vk::ImageAspectFlagBits::eDepth;
+    } else {
+        aspect_flags = vk::ImageAspectFlagBits::eColor;
+    }
 
     // Create device side image
     // NOTE: Lots of assumptions here
@@ -286,7 +334,7 @@ Texture* VulkanBackend::create_texture(
                 vk::ImageUsageFlagBits::eTransferDst |
                 vk::ImageUsageFlagBits::eSampled,
             vk::MemoryPropertyFlagBits::eDeviceLocal,
-            vk::ImageAspectFlagBits::eColor
+            aspect_flags
         );
     } else if (config.type == Texture::Type::TCube) {
         texture_image->create_cube(
@@ -300,7 +348,7 @@ Texture* VulkanBackend::create_texture(
                 vk::ImageUsageFlagBits::eTransferDst |
                 vk::ImageUsageFlagBits::eSampled,
             vk::MemoryPropertyFlagBits::eDeviceLocal,
-            vk::ImageAspectFlagBits::eColor
+            aspect_flags
         );
     } else {
         Logger::fatal(
@@ -337,6 +385,17 @@ Texture* VulkanBackend::create_writable_texture(const Texture::Config& config) {
 
     Texture* resulting_texture;
 
+    // Get usage and aspect flags
+    vk::ImageUsageFlagBits usage_flags;
+    vk::ImageAspectFlagBits aspect_flags;
+    if(Texture::has_depth_format(config.format)) {
+        usage_flags = vk::ImageUsageFlagBits::eDepthStencilAttachment;
+        aspect_flags = vk::ImageAspectFlagBits::eDepth;
+    } else {
+        usage_flags = vk::ImageUsageFlagBits::eColorAttachment;
+        aspect_flags = vk::ImageAspectFlagBits::eColor;
+    }
+
     // Different creation depending on whether texture is used as render target
     if (config.is_render_target) {
         // Get format
@@ -359,10 +418,10 @@ Texture* VulkanBackend::create_writable_texture(const Texture::Config& config) {
                 vk::SampleCountFlagBits::e1,
                 texture_format,
                 vk::ImageTiling::eOptimal,
-                vk::ImageUsageFlagBits::eColorAttachment |
+                usage_flags |
                     vk::ImageUsageFlagBits::eSampled,
                 vk::MemoryPropertyFlagBits::eDeviceLocal,
-                vk::ImageAspectFlagBits::eColor
+                aspect_flags
             );
 
             // Create
@@ -402,9 +461,9 @@ Texture* VulkanBackend::create_writable_texture(const Texture::Config& config) {
             vk::ImageUsageFlagBits::eTransferSrc |
                 vk::ImageUsageFlagBits::eTransferDst |
                 vk::ImageUsageFlagBits::eSampled |
-                vk::ImageUsageFlagBits::eColorAttachment,
+                usage_flags,
             vk::MemoryPropertyFlagBits::eDeviceLocal,
-            vk::ImageAspectFlagBits::eColor
+            aspect_flags
         );
 
         // Create texture

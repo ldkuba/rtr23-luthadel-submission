@@ -2,7 +2,6 @@
 #extension GL_EXT_scalar_block_layout : require
 
 // Consts
-precision mediump float;
 const float INV_TOTAL_SAMPLES_FACTOR = 1.0 / 16.0;
 
 // Samplers
