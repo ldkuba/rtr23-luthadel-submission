@@ -3,8 +3,7 @@
     "name": "builtin.shadowmap_directional_shader",
     "renderpass": "Renderpass.Builtin.ShadowmapDirectional",
     "stages": [
-        "vertex",
-        "fragment"
+        "vertex"
     ],
     "cull_mode": "back",
     "enable_blending": false,
