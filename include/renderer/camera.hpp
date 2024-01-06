@@ -26,6 +26,19 @@ class Camera {
         }
     };
 
+    /// @brief Camera forward vector
+    Property<glm::vec3> forward {
+        GET { return _forward; }
+    };
+    /// @brief Camera left vector
+    Property<glm::vec3> left {
+        GET { return _left; }
+    };
+    /// @brief Camera up vector
+    Property<glm::vec3> up {
+        GET { return _up; }
+    };
+
     /// @brief Maximum length a camera name can have
     const static constexpr uint32 max_name_length = 256;
 

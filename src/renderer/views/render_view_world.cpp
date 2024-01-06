@@ -3,6 +3,7 @@
 #include "resources/mesh.hpp"
 #include "multithreading/parallel.hpp"
 #include "systems/light_system.hpp"
+#include "component/frustum.hpp"
 
 namespace ENGINE_NAMESPACE {
 
@@ -58,9 +59,10 @@ RenderView::Packet* RenderViewWorld::on_build_pocket() {
     // Clear geometry data
     _geom_data.clear();
 
-    // TODO: Performance :/
+    // Keep a list of transparent objects
     typedef std::pair<float32, GeometryRenderData> TGeomData;
 
+    // TODO: Performance :/
     static Vector<TGeomData> transparent_geometries {};
     transparent_geometries.clear();
 
@@ -75,10 +77,29 @@ RenderView::Packet* RenderViewWorld::on_build_pocket() {
         return new (MemoryTag::Temp) Packet { this };
     }
 
+    // Create frustum for culling
+    Frustum frustum { _world_camera->transform.position(),
+                      _world_camera->forward(),
+                      -_world_camera->left(),
+                      _world_camera->up(),
+                      (float32) _width / _height,
+                      _fov,
+                      _near_clip,
+                      _far_clip };
+    uint32  included_count = 0;
+
     // Add all opaque geometries
     for (const auto& mesh : _render_data->meshes) {
         const auto model_matrix = mesh->transform.world();
         for (auto* const geom : mesh->geometries()) {
+            // Check if geometry is inside view frustum
+            const auto geom_3d = static_cast<Geometry3D*>(geom);
+            const auto aabb    = geom_3d->bbox.get_transformed(model_matrix);
+            if (!frustum.contains(aabb))
+                // We are skipping this geometry. It wont be rendered
+                continue;
+            included_count++;
+
             const GeometryRenderData render_data { geom,
                                                    geom->material,
                                                    model_matrix };

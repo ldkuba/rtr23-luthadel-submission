@@ -17,6 +17,9 @@ class AxisAlignedBBox : public BoundingBox<AxisAlignedBBox<Dim>, Dim>,
     typedef glm::vec<Dim, float32> Vector;
     typedef AxisAlignedBBox<Dim>   BBox;
 
+    typedef glm::mat<Dim, Dim, float32>         Matrix;
+    typedef glm::mat<Dim + 1, Dim + 1, float32> TransformMatrix;
+
     // Min & Max
     Vector min;
     Vector max;
@@ -84,6 +87,13 @@ class AxisAlignedBBox : public BoundingBox<AxisAlignedBBox<Dim>, Dim>,
     virtual void clip(const BBox& bbox) override;
     virtual void expand_by(const Vector& p) override;
     virtual void expand_by(const BBox& bbox) override;
+
+    // Get changed
+    virtual AxisAlignedBBox<Dim> get_transformed(const TransformMatrix& M
+    ) const;
+    virtual AxisAlignedBBox<Dim> get_transformed(
+        const Matrix& M, const Vector& T
+    ) const;
 
     serializable_attributes(min, max);
 };
@@ -290,6 +300,43 @@ template<uint8 Dim>
 void AxisAlignedBBox<Dim>::expand_by(const BBox& bbox) {
     min = glm::min(min, bbox.min);
     max = glm::max(max, bbox.max);
+}
+
+template<uint8 Dim>
+AxisAlignedBBox<Dim> AxisAlignedBBox<Dim>::get_transformed(
+    const TransformMatrix& M
+) const {
+    const auto RS = Matrix(M);
+    const auto T  = Vector(M[Dim]);
+    return get_transformed(RS, T);
+}
+template<uint8 Dim>
+AxisAlignedBBox<Dim> AxisAlignedBBox<Dim>::get_transformed(
+    const Matrix& M, const Vector& T
+) const {
+    Vector min, max;
+
+    // For dim
+    for (uint8 i = 0; i < Dim; i++) {
+        // Start with degenerate intervals. Accounts for translation
+        min[i] = max[i] = T[i];
+
+        // Add in extreme values obtained by computing the products of the mins
+        // and maxes with the elements of the i’th row of M
+        for (uint8 j = 0; j < Dim; j++) {
+            const auto a = M[j][i] * this->min[j];
+            const auto b = M[j][i] * this->max[j];
+            if (a > b) {
+                min[i] += b;
+                max[i] += a;
+            } else {
+                min[i] += a;
+                max[i] += b;
+            }
+        }
+    }
+
+    return AxisAlignedBBox<Dim>(min, max);
 }
 
 } // namespace ENGINE_NAMESPACE
