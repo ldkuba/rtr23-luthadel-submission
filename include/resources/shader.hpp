@@ -30,7 +30,10 @@ class Shader {
         StringEnum DepthShader    = "builtin.depth_shader";
         StringEnum AOShader       = "builtin.ao_shader";
         StringEnum BlurShader     = "builtin.blur_shader";
-        StringEnum ShadowmapDirectionalShader = "builtin.shadowmap_directional_shader";
+        StringEnum ShadowmapDirectionalShader =
+            "builtin.shadowmap_directional_shader";
+        StringEnum ShadowmapSamplingShader =
+            "builtin.shadowmap_sampling_shader";
     };
 
     /// @brief Supported shader attribute types

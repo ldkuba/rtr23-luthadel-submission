@@ -7,19 +7,14 @@ namespace ENGINE_NAMESPACE {
 
 class LightSystem;
 
-class RenderViewWorld : public RenderView {
+class RenderViewShadowmapSampling : public RenderView {
   public:
-    Property<DebugViewMode> render_mode {
-        GET { return _render_mode; }
-        SET { _render_mode = value; }
-    };
-
-    RenderViewWorld(
+    RenderViewShadowmapSampling(
         const Config&       config,
         ShaderSystem* const shader_system,
         Camera* const       world_camera
     );
-    virtual ~RenderViewWorld() override;
+    virtual ~RenderViewShadowmapSampling() override;
 
     virtual Packet* on_build_pocket() override;
     virtual void    on_resize(const uint32 width, const uint32 height) override;
@@ -38,14 +33,10 @@ class RenderViewWorld : public RenderView {
         _light_system = light_system;
     }
 
-    virtual void set_ssao_texture(Texture::Map* const ssao_map) {
-        _ssao_texture_map = ssao_map;
-    }
-
-    virtual void set_shadowmap_sampled_texture(
-        Texture::Map* const shadowmap_sampled_map
+    virtual void set_shadowmap_directional_texture(
+        Texture::Map* const shadowmap_directional_map
     ) {
-        _shadowmap_sampled_texture_map = shadowmap_sampled_map;
+        _shadowmap_directional_texture_map = shadowmap_directional_map;
     }
 
   protected:
@@ -55,29 +46,18 @@ class RenderViewWorld : public RenderView {
     float32       _far_clip;
     glm::mat4     _proj_matrix;
     Camera*       _world_camera;
-    glm::vec4     _ambient_color;
-    Texture::Map* _ssao_texture_map;
-    Texture::Map* _shadowmap_sampled_texture_map;
+    LightSystem*  _light_system;
+    Texture::Map* _shadowmap_directional_texture_map;
 
     Vector<GeometryRenderData> _geom_data {};
 
-    LightSystem* _light_system; // Reference to the light system
-
-    DebugViewMode _render_mode = DebugViewMode::Default;
-
     // Uniforms
     struct UIndex {
-        uint16 projection                = -1;
-        uint16 view                      = -1;
-        uint16 ambient_color             = -1;
-        uint16 view_position             = -1;
-        uint16 mode                      = -1;
-        uint16 model                     = -1;
-        uint16 directional_light         = -1;
-        uint16 num_point_lights          = -1;
-        uint16 point_lights              = -1;
-        uint16 ssao_texture              = -1;
-        uint16 shadowmap_sampled_texture = -1;
+        uint16 projection                    = -1;
+        uint16 view                          = -1;
+        uint16 light_space_directional       = -1;
+        uint16 model                         = -1;
+        uint16 shadowmap_directional_texture = -1;
 
         UIndex() {}
         UIndex(const Shader* const shader);

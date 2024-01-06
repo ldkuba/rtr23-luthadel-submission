@@ -1,16 +1,15 @@
-#include "renderer/views/render_view_world.hpp"
+#include "renderer/views/render_view_shadowmap_sampling.hpp"
 
 #include "resources/mesh.hpp"
 #include "multithreading/parallel.hpp"
 #include "systems/light_system.hpp"
-#include "component/frustum.hpp"
 
 namespace ENGINE_NAMESPACE {
 
-#define RENDER_VIEW_WORLD_LOG "RenderViewWorld :: "
+#define RENDER_VIEW_SHADOWMAP_SAMPLING_LOG "RenderViewShadowmapSampling :: "
 
 // Constructor & Destructor
-RenderViewWorld::RenderViewWorld(
+RenderViewShadowmapSampling::RenderViewShadowmapSampling(
     const Config&       config,
     ShaderSystem* const shader_system,
     Camera* const       world_camera
@@ -19,14 +18,15 @@ RenderViewWorld::RenderViewWorld(
     auto res = shader_system->acquire(_shader_name);
     if (res.has_error()) {
         Logger::error(
-            RENDER_VIEW_WORLD_LOG,
+            RENDER_VIEW_SHADOWMAP_SAMPLING_LOG,
             "Shader `",
             _shader_name,
             "` does not exist. View creation is faulty. For now default "
-            "Material shader will be used. This could result in some undefined "
+            "Shadowmap Sampling shader will be used. This could result in "
+            "some undefined "
             "behaviour."
         );
-        res = shader_system->acquire(Shader::BuiltIn::MaterialShader);
+        res = shader_system->acquire(Shader::BuiltIn::ShadowmapSamplingShader);
     }
 
     // Setup values
@@ -45,31 +45,21 @@ RenderViewWorld::RenderViewWorld(
     );
 
     _world_camera = world_camera;
-
-    // TODO: Obtain ambient color from the scene
-    _ambient_color = glm::vec4(0.05f, 0.05f, 0.05f, .5f);
 }
-RenderViewWorld::~RenderViewWorld() {}
+RenderViewShadowmapSampling::~RenderViewShadowmapSampling() {}
 
 // ///////////////////////////// //
 // RENDER VIEW UI PUBLIC METHODS //
 // ///////////////////////////// //
 
-RenderView::Packet* RenderViewWorld::on_build_pocket() {
+RenderView::Packet* RenderViewShadowmapSampling::on_build_pocket() {
     // Clear geometry data
     _geom_data.clear();
-
-    // Keep a list of transparent objects
-    typedef std::pair<float32, GeometryRenderData> TGeomData;
-
-    // TODO: Performance :/
-    static Vector<TGeomData> transparent_geometries {};
-    transparent_geometries.clear();
 
     // Check if render data is set
     if (_render_data == nullptr) {
         Logger::warning(
-            RENDER_VIEW_WORLD_LOG,
+            RENDER_VIEW_SHADOWMAP_SAMPLING_LOG,
             "Render data not set for view `",
             _name,
             "`. Not much will be drawn."
@@ -77,93 +67,54 @@ RenderView::Packet* RenderViewWorld::on_build_pocket() {
         return new (MemoryTag::Temp) Packet { this };
     }
 
-    // Create frustum for culling
-    const auto forward = _world_camera->forward();
-    const auto right   = -_world_camera->left();
-    const auto up      = glm::cross(right, forward);
-    Frustum    frustum {
-        _world_camera->transform.position(), forward, right,      up,
-        (float32) _width / _height,          _fov,    _near_clip, _far_clip
-    };
-    uint32 included_count = 0;
-
-    // Add all opaque geometries
+    // Add all geometries
     for (const auto& mesh : _render_data->meshes) {
         const auto model_matrix = mesh->transform.world();
         for (auto* const geom : mesh->geometries()) {
-            // Check if geometry is inside view frustum
-            const auto geom_3d = static_cast<Geometry3D*>(geom);
-            const auto aabb    = geom_3d->bbox.get_transformed(model_matrix);
-            if (!frustum.contains(aabb))
-                // We are skipping this geometry. It wont be rendered
-                continue;
-            included_count++;
-
             const GeometryRenderData render_data { geom,
                                                    geom->material,
                                                    model_matrix };
-            // TODO: Add something in material to check for transparency.
-            if (geom->material()->diffuse_map()->texture->has_transparency() ==
-                false)
-                _geom_data.push_back(render_data);
-            else {
-                const auto geom3d   = dynamic_cast<Geometry3D*>(geom);
-                const auto center   = geom3d->bbox.get_center();
-                const auto distance = glm::distance(
-                    _world_camera->transform.position(),
-                    { model_matrix * glm::vec4(center, 1) }
-                );
-                transparent_geometries.push_back({ distance, render_data });
-            }
+            _geom_data.push_back(render_data);
         }
     }
-
-    // Sort transparent geometry list
-    Parallel::sort(
-        transparent_geometries.begin(),
-        transparent_geometries.end(),
-        [](const TGeomData& x, const TGeomData& y) -> bool {
-            return x.first > y.first;
-        }
-    );
-
-    // Add all transparent geometries
-    for (const auto& t_geom : transparent_geometries)
-        _geom_data.push_back(t_geom.second);
 
     return new (MemoryTag::Temp) Packet { this };
 }
 
-void RenderViewWorld::on_resize(const uint32 width, const uint32 height) {
-    if (width == _width && height == _height) return;
+void RenderViewShadowmapSampling::on_resize(
+    const uint32 width, const uint32 height
+) {
+    _width  = width;
+    _height = height;
 
-    _width       = width;
-    _height      = height;
     _proj_matrix = glm::perspective(
         _fov, (float32) _width / _height, _near_clip, _far_clip
     );
 }
 
-void RenderViewWorld::on_render(
+void RenderViewShadowmapSampling::on_render(
     Renderer* const     renderer,
     const Packet* const packet,
     const uint64        frame_number,
     const uint64        render_target_index
 ) {
-    // Transition used render targets
-    const auto pt_ssao =
-        static_cast<const PackedTexture*>(_ssao_texture_map->texture);
-    pt_ssao->get_at(frame_number % VulkanSettings::max_frames_in_flight)
-        ->transition_render_target(); // TODO: Vulkan agnostic
-
-    const auto pt_shadowmap_sampled =
-        static_cast<const PackedTexture*>(_shadowmap_sampled_texture_map->texture);
-    pt_shadowmap_sampled->get_at(frame_number % VulkanSettings::max_frames_in_flight)
+    const auto pt_shadowmap_directional = static_cast<const PackedTexture*>(
+        _shadowmap_directional_texture_map->texture
+    );
+    pt_shadowmap_directional
+        ->get_at(frame_number % VulkanSettings::max_frames_in_flight)
         ->transition_render_target(); // TODO: Vulkan agnostic
 
     for (const auto& pass : _passes) {
+
+        // Set viewport and scissors
+        renderer->viewport_set({ 0.0f, 0.0f, _width, _height });
+        renderer->scissors_set({ 0.0f, 0.0f, _width, _height });
+
         // Bind pass
-        pass->begin(render_target_index);
+        // TODO: Vulkan agnostic way of indexing frames in flight
+        pass->begin(frame_number % VulkanSettings::max_frames_in_flight);
+        // pass->begin(render_target_index);
 
         // Setup shader
         _shader->use();
@@ -173,9 +124,6 @@ void RenderViewWorld::on_render(
 
         // Draw geometries
         for (const auto& geo_data : _geom_data) {
-            // Update material instance
-            geo_data.material->apply_instance();
-
             // Apply local
             apply_locals(geo_data.model);
 
@@ -185,6 +133,10 @@ void RenderViewWorld::on_render(
 
         // End pass
         pass->end();
+
+        // Reset viewport and scissors
+        renderer->viewport_reset();
+        renderer->scissors_reset();
     }
 }
 
@@ -196,22 +148,17 @@ void RenderViewWorld::on_render(
     auto _u_##uniform##_id = shader->get_uniform_index(#uniform);              \
     if (_u_##uniform##_id.has_error()) {                                       \
         Logger::error(                                                         \
-            RENDER_VIEW_WORLD_LOG, _u_##uniform##_id.error().what()            \
+            RENDER_VIEW_SHADOWMAP_SAMPLING_LOG,                                \
+            _u_##uniform##_id.error().what()                                   \
         );                                                                     \
     } else uniform = _u_##uniform##_id.value()
 
-RenderViewWorld::UIndex::UIndex(const Shader* const shader) {
+RenderViewShadowmapSampling::UIndex::UIndex(const Shader* const shader) {
     uniform_index(projection);
     uniform_index(view);
-    uniform_index(ambient_color);
-    uniform_index(view_position);
-    uniform_index(mode);
+    uniform_index(light_space_directional);
     uniform_index(model);
-    uniform_index(directional_light);
-    uniform_index(num_point_lights);
-    uniform_index(point_lights);
-    uniform_index(ssao_texture);
-    uniform_index(shadowmap_sampled_texture);
+    uniform_index(shadowmap_directional_texture);
 }
 
 #define uniform_set(uniform, value)                                            \
@@ -220,57 +167,49 @@ RenderViewWorld::UIndex::UIndex(const Shader* const shader) {
             _shader->set_uniform(_u_index.uniform, &value);                    \
         if (res_##uniform.has_error()) {                                       \
             Logger::error(                                                     \
-                RENDER_VIEW_WORLD_LOG, res_##uniform.error().what()            \
+                RENDER_VIEW_SHADOWMAP_SAMPLING_LOG,                            \
+                res_##uniform.error().what()                                   \
             );                                                                 \
             return;                                                            \
         }                                                                      \
     }
+
 #define sampler_set(sampler, texture_map)                                      \
     if (_u_index.sampler != (uint16) -1) {                                     \
         const auto res_##sampler =                                             \
             _shader->set_sampler(_u_index.sampler, texture_map);               \
         if (res_##sampler.has_error()) {                                       \
             Logger::error(                                                     \
-                RENDER_VIEW_WORLD_LOG, res_##sampler.error().what()            \
+                RENDER_VIEW_SHADOWMAP_SAMPLING_LOG,                            \
+                res_##sampler.error().what()                                   \
             );                                                                 \
             return;                                                            \
         }                                                                      \
     }
 
-void RenderViewWorld::apply_globals(const uint64 frame_number) const {
+void RenderViewShadowmapSampling::apply_globals(const uint64 frame_number
+) const {
     // Globals can be updated only once per frame
     if (frame_number == _shader->rendered_frame_number) return;
+
+    // Apply globals update
+
+    uniform_set(projection, _proj_matrix);
+    uniform_set(view, _world_camera->view());
 
     glm::mat4 light_space_directional =
         _light_system->get_directional()->get_light_space_matrix(
             _world_camera->transform.position()
         );
-
-    // Apply globals update
-    uniform_set(projection, _proj_matrix);
-    uniform_set(view, _world_camera->view());
-    uniform_set(ambient_color, _ambient_color);
-    uniform_set(view_position, _world_camera->transform.position());
-    uniform_set(mode, _render_mode);
-    sampler_set(ssao_texture, _ssao_texture_map);
-    sampler_set(
-        shadowmap_sampled_texture, _shadowmap_sampled_texture_map
-    );
-
-    // Apply lights
-    auto point_light_data  = _light_system->get_point_data();
-    auto directional_light = _light_system->get_directional_data();
-    auto num_point_lights  = point_light_data.size();
-    uniform_set(directional_light, directional_light);
-    uniform_set(num_point_lights, num_point_lights);
-    uniform_set(point_lights, *(point_light_data.data()));
+    uniform_set(light_space_directional, light_space_directional);
+    sampler_set(shadowmap_directional_texture, _shadowmap_directional_texture_map);
 
     _shader->apply_global();
 
     // Update render frame number
     _shader->rendered_frame_number = frame_number;
 }
-void RenderViewWorld::apply_locals(const glm::mat4 model) const {
+void RenderViewShadowmapSampling::apply_locals(const glm::mat4 model) const {
     uniform_set(model, model);
 }
 

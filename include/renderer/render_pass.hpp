@@ -21,6 +21,7 @@ class RenderPass {
         StringEnum DepthPass  = "Renderpass.Builtin.Depth";
         StringEnum BlurPass   = "Renderpass.Builtin.Blur";
         StringEnum ShadowmapDirectionalPass = "Renderpass.Builtin.ShadowmapDirectional";
+        StringEnum ShadowmapSamplingPass = "Renderpass.Builtin.ShadowmapSampling";
     };
 
     /// @brief Type used by clear flags

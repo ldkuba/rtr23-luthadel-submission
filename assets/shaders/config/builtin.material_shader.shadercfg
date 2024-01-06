@@ -104,7 +104,7 @@
                             "type": "sampler2D"
                         },
                         {
-                            "name": "shadowmap_directional_texture",
+                            "name": "shadowmap_sampled_texture",
                             "type": "sampler2D"
                         }
                     ]

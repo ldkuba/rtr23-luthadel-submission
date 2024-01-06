@@ -29,6 +29,7 @@ class Renderer {
     Shader* depth_shader                 = nullptr;
     Shader* ao_shader                    = nullptr;
     Shader* shadowmap_directional_shader = nullptr;
+    Shader* shadowmap_sampling_shader    = nullptr;
     // TODO: TEMP TEST CODE END
 
     /**

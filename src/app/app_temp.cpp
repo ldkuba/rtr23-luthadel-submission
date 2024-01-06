@@ -17,6 +17,7 @@ TestApplication::~TestApplication() {
     _app_renderer.destroy_texture_map(_default_skybox.cube_map);
     _app_renderer.destroy_texture_map(_ssao_map);
     _app_renderer.destroy_texture_map(_shadowmap_directional_map);
+    _app_renderer.destroy_texture_map(_shadowmap_sampled_map);
 
     del(_app_surface);
 }
@@ -100,6 +101,7 @@ void TestApplication::run() {
         packet.view_data.push_back(_bl_render_view->on_build_pocket());
         packet.view_data.push_back(_smd_render_view->on_build_pocket());
         packet.view_data.push_back(_sb_render_view->on_build_pocket());
+        packet.view_data.push_back(_sms_render_view->on_build_pocket());
         packet.view_data.push_back(_ow_render_view->on_build_pocket());
         packet.view_data.push_back(_ui_render_view->on_build_pocket());
 
@@ -325,6 +327,14 @@ void TestApplication::setup_render_passes() {
             true,                                          // Depth testing
             false                                          // Multisampling
         });
+    const auto shadowmap_sampling_renderpass =
+        _app_renderer.create_render_pass({
+            RenderPass::BuiltIn::ShadowmapSamplingPass, // Name
+            glm::vec2 { 0, 0 },                         // Draw offset
+            glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f },       // Clear color
+            true,                                       // Depth testing
+            false                                       // Multisampling
+        });
 
     // Create render target textures
     const auto depth_normals_texture = _texture_system.acquire_writable(
@@ -371,6 +381,14 @@ void TestApplication::setup_render_passes() {
             Texture::Format::D32,
             true
         );
+    const auto shadowmap_sampled_texture = _texture_system.acquire_writable(
+        "ShadowmapSampledTarget",
+        width,
+        height,
+        1,
+        Texture::Format::RGBA32Sfloat,
+        true
+    );
 
     // Create render targets
     ui_renderpass->add_window_as_render_target();
@@ -395,6 +413,9 @@ void TestApplication::setup_render_passes() {
           false }
     );
     shadowmap_directional_renderpass->disable_color_output();
+    shadowmap_sampling_renderpass->add_render_target(
+        { width, height, { shadowmap_sampled_texture, _app_renderer.get_depth_texture() }, true, true }
+    );
 
     // Initialize AO only
     RenderPass::start >>
@@ -403,7 +424,7 @@ void TestApplication::setup_render_passes() {
         // SSAO
         "C" >> ao_renderpass >> "C" >> blur_renderpass >>
         // Directional Shadow-mapping
-        "DS" >> shadowmap_directional_renderpass >>
+        "DS" >> shadowmap_directional_renderpass >> "CDS" >> shadowmap_sampling_renderpass >>
         // Skybox
         "C" >> skybox_renderpass >>
         // World
@@ -436,6 +457,9 @@ void TestApplication::setup_render_passes() {
     _app_renderer.shadowmap_directional_shader = //
         _shader_system.acquire(Shader::BuiltIn::ShadowmapDirectionalShader)
             .expect("Failed to load builtin shadowmap directional shader.");
+    _app_renderer.shadowmap_sampling_shader = //
+        _shader_system.acquire(Shader::BuiltIn::ShadowmapSamplingShader)
+            .expect("Failed to load builtin shadowmap sampling shader.");
 
     _app_renderer.material_shader->reload();
 
@@ -519,6 +543,18 @@ void TestApplication::setup_render_passes() {
               .get_renderpass(RenderPass::BuiltIn::ShadowmapDirectionalPass)
               .expect("Renderpass not found.") }
     };
+    RenderView::Config shadowmap_sampling_view_config {
+        "shadowmap_sampling",
+        Shader::BuiltIn::ShadowmapSamplingShader,
+        width,
+        height,
+        RenderView::Type::ShadowmapSampling,
+        RenderView::ViewMatrixSource::SceneCamera,
+        RenderView::ProjectionMatrixSource::DefaultPerspective,
+        { _app_renderer
+              .get_renderpass(RenderPass::BuiltIn::ShadowmapSamplingPass)
+              .expect("Renderpass not found.") }
+    };
 
     // Create
     const auto res_owv = _render_view_system.create(opaque_world_view_config);
@@ -529,9 +565,11 @@ void TestApplication::setup_render_passes() {
     const auto res_blv = _render_view_system.create(blur_view_config);
     const auto res_smdv =
         _render_view_system.create(shadowmap_directional_view_config);
+    const auto res_ssv =
+        _render_view_system.create(shadowmap_sampling_view_config);
     if (res_owv.has_error() || res_uiv.has_error() || res_sbv.has_error() ||
         res_dev.has_error() || res_aov.has_error() || res_blv.has_error() ||
-        res_smdv.has_error())
+        res_smdv.has_error() || res_ssv.has_error())
         Logger::fatal("Render view creation failed.");
 
     _ow_render_view = dynamic_cast<RenderViewWorld*>(res_owv.value());
@@ -542,8 +580,22 @@ void TestApplication::setup_render_passes() {
     _bl_render_view = dynamic_cast<RenderViewBlur*>(res_blv.value());
     _smd_render_view =
         dynamic_cast<RenderViewShadowmapDirectional*>(res_smdv.value());
+    _sms_render_view =
+        dynamic_cast<RenderViewShadowmapSampling*>(res_ssv.value());
 
     // Set render view textures
+    _shadowmap_directional_map =
+        _app_renderer.create_texture_map({ shadowmap_directional_depth_texture,
+                                           Texture::Use::Unknown,
+                                           Texture::Filter::BiLinear,
+                                           Texture::Filter::BiLinear,
+                                           Texture::Repeat::ClampToEdge,
+                                           Texture::Repeat::ClampToEdge,
+                                           Texture::Repeat::ClampToEdge });
+    _sms_render_view->set_shadowmap_directional_texture(
+        _shadowmap_directional_map
+    );
+
     _ssao_map =
         _app_renderer.create_texture_map({ blured_ssao_texture,
                                            Texture::Use::Unknown,
@@ -554,17 +606,15 @@ void TestApplication::setup_render_passes() {
                                            Texture::Repeat::ClampToEdge });
     _ow_render_view->set_ssao_texture(_ssao_map);
 
-    _shadowmap_directional_map =
-        _app_renderer.create_texture_map({ shadowmap_directional_depth_texture,
+    _shadowmap_sampled_map =
+        _app_renderer.create_texture_map({ shadowmap_sampled_texture,
                                            Texture::Use::Unknown,
                                            Texture::Filter::BiLinear,
                                            Texture::Filter::BiLinear,
                                            Texture::Repeat::ClampToEdge,
                                            Texture::Repeat::ClampToEdge,
                                            Texture::Repeat::ClampToEdge });
-    _ow_render_view->set_shadowmap_directional_texture(
-        _shadowmap_directional_map
-    );
+    _ow_render_view->set_shadowmap_sampled_texture(_shadowmap_sampled_map);
 }
 
 void TestApplication::setup_scene_geometry(const uint32 scene_id) {
@@ -681,11 +731,13 @@ void TestApplication::setup_scene_geometry(const uint32 scene_id) {
     _sb_render_view->set_skybox_ref(&_default_skybox);
     _de_render_view->set_render_data_ref(&_world_mesh_data);
     _smd_render_view->set_render_data_ref(&_world_mesh_data);
+    _sms_render_view->set_render_data_ref(&_world_mesh_data);
 }
 
 void TestApplication::setup_lights() {
     _ow_render_view->set_light_system(&_light_system);
     _smd_render_view->set_light_system(&_light_system);
+    _sms_render_view->set_light_system(&_light_system);
 
     const auto directional_light = new (MemoryTag::Scene)
         DirectionalLight { "dir_light",
