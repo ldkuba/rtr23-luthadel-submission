@@ -64,4 +64,6 @@ class Frustum {
     std::array<Plane, 6> _sides {};
 };
 
+template<> bool Frustum::Plane::contains<3>(const AxisAlignedBBox<3>& aabb) const;
+
 } // namespace ENGINE_NAMESPACE
