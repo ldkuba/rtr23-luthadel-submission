@@ -362,17 +362,6 @@ void TestApplication::setup_render_passes() {
         true
     );
 
-    // Shadowmap Directional Textures
-    const auto shadowmap_directional_color_texture =
-        _texture_system.acquire_writable(
-            "DirectionalShadowMapColorTarget",
-            shadowmap_directional_size,
-            shadowmap_directional_size,
-            1,
-            Texture::Format::RGBA8Unorm,
-            true
-        );
-
     const auto shadowmap_directional_depth_texture =
         _texture_system.acquire_writable(
             "DirectionalShadowMapDepthTarget",
@@ -401,13 +390,11 @@ void TestApplication::setup_render_passes() {
     shadowmap_directional_renderpass->add_render_target(
         { shadowmap_directional_size,
           shadowmap_directional_size,
-          { shadowmap_directional_color_texture,
-            shadowmap_directional_depth_texture },
+          { shadowmap_directional_depth_texture },
           true,
           false }
     );
-
-    // shadowmap_directional_renderpass->disable_color_output();
+    shadowmap_directional_renderpass->disable_color_output();
 
     // Initialize AO only
     RenderPass::start >>

@@ -236,16 +236,20 @@ void VulkanRenderPass::initialize() {
     // === Compute default clear values ===
     // Default background values of color and depth stencil for rendered area of
     // the render pass
-    if (_clear_flags & ClearFlags::Color)
+    if (_clear_flags & ClearFlags::Color && _color_output)
         _clear_values[0].setColor(
             { _clear_color.x, _clear_color.y, _clear_color.z, _clear_color.w }
         );
     if (_clear_flags & ClearFlags::Depth) {
-        _clear_values.push_back({});
+        int depth_index = 0;
+        if(_color_output) {
+            _clear_values.push_back({});
+            depth_index++;
+        }
         if (_clear_flags & ClearFlags::Depth)
-            _clear_values[1].depthStencil.setDepth(_depth);
+            _clear_values[depth_index].depthStencil.setDepth(_depth);
         if (_clear_flags & ClearFlags::Stencil)
-            _clear_values[1].depthStencil.setStencil(_stencil);
+            _clear_values[depth_index].depthStencil.setStencil(_stencil);
     }
 
     Logger::trace(
