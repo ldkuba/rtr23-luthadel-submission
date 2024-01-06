@@ -78,15 +78,14 @@ RenderView::Packet* RenderViewWorld::on_build_pocket() {
     }
 
     // Create frustum for culling
-    Frustum frustum { _world_camera->transform.position(),
-                      _world_camera->forward(),
-                      -_world_camera->left(),
-                      _world_camera->up(),
-                      (float32) _width / _height,
-                      _fov,
-                      _near_clip,
-                      _far_clip };
-    uint32  included_count = 0;
+    const auto forward = _world_camera->forward();
+    const auto right   = -_world_camera->left();
+    const auto up      = glm::cross(right, forward);
+    Frustum    frustum {
+        _world_camera->transform.position(), forward, right,      up,
+        (float32) _width / _height,          _fov,    _near_clip, _far_clip
+    };
+    uint32 included_count = 0;
 
     // Add all opaque geometries
     for (const auto& mesh : _render_data->meshes) {
