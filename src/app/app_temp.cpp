@@ -369,7 +369,7 @@ void TestApplication::setup_render_passes() {
             shadowmap_directional_size,
             shadowmap_directional_size,
             1,
-            Texture::Format::RGBA8Srgb,
+            Texture::Format::RGBA8Unorm,
             true
         );
 
