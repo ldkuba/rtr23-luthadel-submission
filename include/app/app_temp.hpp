@@ -28,7 +28,7 @@ class TestApplication {
   private:
     // Surface
     Platform::Surface* _app_surface =
-        Platform::Surface::get_instance(1920, 1080, std::string(APP_NAME));
+        Platform::Surface::get_instance(800, 600, std::string(APP_NAME));
 
     // Renderer
     Renderer _app_renderer { RendererBackend::Type::Vulkan, _app_surface };
