@@ -305,27 +305,25 @@ class Shader {
                 "\" because no such uniform exists."
             )));
         // Set uniform with id
-        return set_uniform<T>(id.value(), value);
+        set_uniform<T>(id.value(), value);
+        return {};
     }
     /**
      * @brief Set the uniform value by uniform id
      *
      * @tparam T Value type
-     * @param name Uniform id
+     * @param name Uniform id. Its assumed that correct id is passed
      * @param value Value we wish to set
-     * @throws InvalidArgument exception if no uniform is found
      */
     template<typename T>
-    Result<void, InvalidArgument> set_uniform(const uint16 id, const T* value) {
+    void set_uniform(const uint16 id, const T* value) {
         if (id < 0 || id >= _uniforms.size())
-            return Failure(InvalidArgument(String::build(
-                "Couldn't set required uniform id=",
+            Logger::fatal(
+                "Shader :: Couldn't set required uniform id=",
                 id,
                 " because no such uniform exists."
-            )));
-        if (set_uniform(id, (void*) value).failed())
-            Logger::fatal("Shader :: Uniform_set failed for some reason.");
-        return {};
+            );
+        set_uniform(id, (void*) value);
     }
 
     /**
@@ -341,13 +339,10 @@ class Shader {
     /**
      * @brief Set the sampler texture by sampler id
      *
-     * @param name Sampler id
+     * @param name Sampler id. Its assumed that this id is correct
      * @param texture Texture the sampler will use
-     * @throws InvalidArgument exception if no sampler is found
      */
-    Result<void, InvalidArgument> set_sampler(
-        const uint16 id, const Texture::Map* const texture_map
-    );
+    void set_sampler(const uint16 id, const Texture::Map* const texture_map);
 
     const static uint32 max_name_length    = 256;
     const static uint32 max_instance_count = 1024;
@@ -396,13 +391,12 @@ class Shader {
 
     /**
      * @brief Set the uniform object. If uniform is in instance set,
-     * _bound_instance_id will be used
+     * @a bound_instance_id will be used
      *
      * @param id id of the uniform
      * @param value value to set
-     * @return Outcome
      */
-    virtual Outcome set_uniform(const uint16 id, void* value);
+    virtual void set_uniform(const uint16 id, void* value);
 
     Binding* get_binding(uint32 set_index, uint32 binding_index);
 

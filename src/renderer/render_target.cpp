@@ -3,17 +3,10 @@
 namespace ENGINE_NAMESPACE {
 
 // Constructor && Destructor
-RenderTarget::RenderTarget(
-    const Vector<Texture*>& attachments,
-    FrameBuffer* const      framebuffer,
-    const uint32            width,
-    const uint32            height,
-    const bool              sync_to_window_resize
-)
-    : _framebuffer(framebuffer),
-      _sync_to_window_resize(sync_to_window_resize), //
-      _width(width), _height(height) {
-    add_attachments(attachments);
+RenderTarget::RenderTarget(FrameBuffer* const framebuffer, const Config& config)
+    : _framebuffer(framebuffer), _sync_mode(config.sync_mode),
+      _width(config.width), _height(config.height) {
+    add_attachments(config.attachments);
 }
 RenderTarget::~RenderTarget() {}
 
@@ -24,6 +17,12 @@ RenderTarget::~RenderTarget() {}
 void RenderTarget::resize(const uint32 width, const uint32 height) {
     _width  = width;
     _height = height;
+
+    if (_sync_mode == SynchMode::HalfResolution) {
+        _width  = std::max(_width / 2, 1u);
+        _height = std::max(_height / 2, 1u);
+    }
+
     for (const auto& att : _attachments)
         att->resize(_width, _height);
     _framebuffer->recreate(_width, _height, _attachments);

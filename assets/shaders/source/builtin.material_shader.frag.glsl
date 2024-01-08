@@ -95,7 +95,7 @@ void main() {
     // vec3 local_normal=2.*sqrt(texture(InstSamplers[normal_i],InDTO.texture_coordinate).rgb)-1.;
     vec3 local_normal = 2.0 * texture(InstSamplers[normal_i], InDTO.texture_coordinate).rgb - 1.0;
     normal = normalize(TBN * local_normal);
-
+    
     // Sample directional shadow map
     
     if (in_mode == 0||in_mode == 1 || in_mode == 4) {
@@ -136,7 +136,7 @@ vec4 calculate_directional_lights(DirectionalLight light, vec3 normal, vec3 view
     vec4 ambient = visibility_factor * vec4(
         vec3(InDTO.ambient_color * UBO.diffuse_color), diffuse_samp.a
     );
-
+    
     // Specular highlight
     vec3 half_direction = normalize(view_direction - light.direction.xyz);
     float specular_factor = pow(max(0.0, dot(normal, half_direction)), UBO.shininess);
@@ -152,13 +152,13 @@ vec4 calculate_directional_lights(DirectionalLight light, vec3 normal, vec3 view
         specular *= vec4(texture(InstSamplers[specular_i], InDTO.texture_coordinate).rgb, diffuse.a);
     }
     
-    // TODO: this will contain all shadows, not just directional but for now idk how to 
+    // TODO: this will contain all shadows, not just directional but for now idk how to
     // deal with ambient being different for directional and point lights.
     vec2 ndc_position = InDTO.clip_position.xy / InDTO.clip_position.w;
     vec2 screen_position = ndc_position * 0.5 + 0.5;
     screen_position.y = 1.0 - screen_position.y;
     float shadow = float(texture(GlobalSamplers[shadow_sampled_i], screen_position));
-
+    
     return shadow * (diffuse + specular) + ambient;
 }
 

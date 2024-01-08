@@ -36,6 +36,8 @@ class MaterialSystem {
     MaterialSystem(MaterialSystem const&)            = delete;
     MaterialSystem& operator=(MaterialSystem const&) = delete;
 
+    void initialize();
+
     /// @brief Acquire material resource from the material system. Materia
     /// system will load requested material from the appropriate location if
     /// it isn't already loaded.

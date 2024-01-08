@@ -1,14 +1,7 @@
 #include "systems/render_view_system.hpp"
 
-// TODO: TEMP INCLUSION, do by factory
-#include "renderer/views/render_view_skybox.hpp"
-#include "renderer/views/render_view_world.hpp"
-#include "renderer/views/render_view_ui.hpp"
-#include "renderer/views/render_view_depth.hpp"
-#include "renderer/views/render_view_ao.hpp"
-#include "renderer/views/render_view_blur.hpp"
-#include "renderer/views/render_view_shadowmap_directional.hpp"
-#include "renderer/views/render_view_shadowmap_sampling.hpp"
+#include "renderer/views/render_view_perspective.hpp"
+#include "renderer/views/render_view_orthographic.hpp"
 
 namespace ENGINE_NAMESPACE {
 
@@ -16,16 +9,9 @@ namespace ENGINE_NAMESPACE {
 
 // Constructor & Destructor
 RenderViewSystem::RenderViewSystem(
-    Renderer* const          renderer,
-    TextureSystem* const     texture_system,
-    GeometrySystem* const    geometry_system,
-    ShaderSystem* const      shader_system,
-    CameraSystem* const      camera_system,
-    Platform::Surface* const surface
+    Renderer* const renderer, Platform::Surface* const surface
 )
-    : _renderer(renderer), _texture_system(texture_system),
-      _geometry_system(geometry_system), _shader_system(shader_system),
-      _camera_system(camera_system) {
+    : _renderer(renderer) {
     surface->resize_event.subscribe(this, &RenderViewSystem::on_window_resize);
 }
 RenderViewSystem::~RenderViewSystem() {
@@ -50,13 +36,6 @@ Result<RenderView*, RuntimeError> RenderViewSystem::create(
     // Validate config
     const auto name_check_res = name_is_valid(config.name);
     if (name_check_res.has_error()) return Failure(name_check_res.error());
-    if (config.passes.size() < 1) {
-        const auto error_message =
-            String::build("View creation failed. RenderView config has to have "
-                          "at least one render pass.");
-        Logger::error(RENDER_VIEW_SYS_LOG, error_message);
-        return Failure(error_message);
-    }
 
     // Make sure this name isn't used already
     if (_registered_views.contains(config.name)) {
@@ -74,50 +53,12 @@ Result<RenderView*, RuntimeError> RenderViewSystem::create(
     RenderView* view {};
     // TODO: temp, should be done by a factory
     switch (config.type) {
-    case RenderView::Type::UI:
-        view = new (MemoryTag::RenderView) RenderViewUI(_shader_system, config);
+    case RenderView::Type::DefaultPerspective:
+        view = new (MemoryTag::RenderView) RenderViewPerspective(config);
         break;
-    case RenderView::Type::World:
+    case RenderView::Type::DefaultOrthographic:
         // TODO: temp just default camera
-        view = new (MemoryTag::RenderView) RenderViewWorld(
-            config, _shader_system, _camera_system->default_camera
-        );
-        break;
-    case RenderView::Type::Skybox:
-        // TODO: temp just default camera
-        view = new (MemoryTag::RenderView) RenderViewSkybox(
-            config, _shader_system, _camera_system->default_camera
-        );
-        break;
-    case RenderView::Type::Depth:
-        // TODO: temp just default camera
-        view = new (MemoryTag::RenderView) RenderViewDepth(
-            config, _shader_system, _camera_system->default_camera
-        );
-        break;
-    case RenderView::Type::AO:
-        // TODO: temp just default camera
-        view = new (MemoryTag::RenderView) RenderViewAO(
-            config, _renderer, _texture_system, _geometry_system, _shader_system
-        );
-        break;
-    case RenderView::Type::Blur:
-        // TODO: temp just default camera
-        view = new (MemoryTag::RenderView) RenderViewBlur(
-            config, _renderer, _texture_system, _geometry_system, _shader_system
-        );
-        break;
-    case RenderView::Type::ShadowmapDirectional:
-        // TODO: temp just default camera
-        view = new (MemoryTag::RenderView) RenderViewShadowmapDirectional(
-            config, _shader_system, _camera_system->default_camera
-        );
-        break;
-    case RenderView::Type::ShadowmapSampling:
-        // TODO: temp just default camera
-        view = new (MemoryTag::RenderView) RenderViewShadowmapSampling(
-            config, _shader_system, _camera_system->default_camera
-        );
+        view = new (MemoryTag::RenderView) RenderViewOrthographic(config);
         break;
     default:
         const auto error_message = String::build(

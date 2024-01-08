@@ -106,11 +106,15 @@ Outcome PackedTexture::resize(const uint32 width, const uint32 height) {
     }
     return Outcome::Successful;
 }
-Outcome PackedTexture::transition_render_target() const {
-    for (auto& texture : _textures) {
-        if (texture->transition_render_target().failed())
-            return Outcome::Failed;
-    }
+Outcome PackedTexture::transition_render_target(const uint64 frame_number) {
+    if (frame_number == _last_transition_frame_number) return Outcome::Failed;
+    if (_textures[_currently_used_i]
+            ->transition_render_target(frame_number)
+            .failed())
+        return Outcome::Failed;
+    _last_transition_frame_number = frame_number;
+    _currently_used_i++;
+    _currently_used_i %= _textures.size();
     return Outcome::Successful;
 }
 

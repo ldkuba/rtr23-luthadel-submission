@@ -1,6 +1,6 @@
 #include "renderer/renderer.hpp"
 
-#include "renderer/views/render_view.hpp"
+#include "renderer/modules/render_module.hpp"
 #include "timer.hpp"
 
 namespace ENGINE_NAMESPACE {
@@ -24,16 +24,6 @@ Renderer::Renderer(
             RENDERER_LOG, "Unimplemented backend passed on initialization."
         );
     }
-
-    // Create world pass
-    const auto world_renderpass = create_render_pass({
-        RenderPass::BuiltIn::WorldPass,       // Name
-        glm::vec2 { 0, 0 },                   // Draw offset
-        glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f }, // Clear color
-        true,                                 // Depth testing
-        true                                  // Multisampling
-    });
-    world_renderpass->add_window_as_render_target();
 }
 Renderer::~Renderer() { del(_backend); }
 
@@ -58,15 +48,13 @@ Result<void, RuntimeError> Renderer::draw_frame(
 
     timer.time("Frame begun in ");
 
-    // Render each view
-    for (auto& data : render_data->view_data)
-        data->view->on_render(
-            this, data, _backend->get_current_frame(), att_index
-        );
+    // Render each module
+    for (const auto& data : render_data->module_data)
+        data->module->render(data, _backend->get_current_frame());
 
-    // Clear render view packets in reverse order
-    for (int32 i = render_data->view_data.size() - 1; i >= 0; i--)
-        del(render_data->view_data[i]);
+    // Clear render module packets in reverse order
+    for (int32 i = render_data->module_data.size() - 1; i >= 0; i--)
+        del(render_data->module_data[i]);
 
     timer.time("On render preformed in ");
 

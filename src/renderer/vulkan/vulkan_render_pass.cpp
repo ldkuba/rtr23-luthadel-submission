@@ -28,7 +28,29 @@ VulkanRenderPass::~VulkanRenderPass() {
 // VULKAN RENDER PASS PUBLIC METHODS //
 // ///////////////////////////////// //
 
+void VulkanRenderPass::begin() {
+    // Compute next index
+    uint8 index;
+    switch (_target_redundancy) {
+    case PerFrame: index = 0; break;
+    case PerSwapchainImage: index = _swapchain->get_current_index(); break;
+    case PerFrameInFlight: index = _command_buffer->current_frame; break;
+    }
+
+    // Begin pass proper
+    begin(_render_targets[index]);
+}
+
 void VulkanRenderPass::begin(RenderTarget* const render_target) {
+    // Set viewport and scissors
+    // TODO: Maybe shouldn't be done here
+    const glm::vec4 rect { _render_offset.x,
+                           _render_offset.y,
+                           render_target->width,
+                           render_target->height };
+    set_viewport(rect);
+    set_scissors(rect);
+
     // Get relevant framebuffer
     const auto framebuffer =
         dynamic_cast<VulkanFramebuffer*>(render_target->framebuffer());
@@ -52,6 +74,15 @@ void VulkanRenderPass::begin(RenderTarget* const render_target) {
 void VulkanRenderPass::end() { _command_buffer->handle->endRenderPass(); }
 
 void VulkanRenderPass::add_window_as_render_target() {
+    if (_target_redundancy == PerFrameInFlight)
+        Logger::fatal(
+            RENDERER_VULKAN_LOG,
+            "Bad render pass configuration. Some targets are set to update "
+            "once per frame in flight, while others are set to once per "
+            "swapchain image. Coexistence of these two modes is not supported."
+        );
+    _target_redundancy = PerSwapchainImage;
+
     const auto count = _swapchain->get_render_texture_count();
     for (uint8 i = 0; i < count; i++) {
         // Gather render target attachments
@@ -242,7 +273,7 @@ void VulkanRenderPass::initialize() {
         );
     if (_clear_flags & ClearFlags::Depth) {
         int depth_index = 0;
-        if(_color_output) {
+        if (_color_output) {
             _clear_values.push_back({});
             depth_index++;
         }
@@ -267,37 +298,42 @@ void VulkanRenderPass::initialize_render_targets() {
     for (const auto& config : _render_target_configs) {
         // Check how many frame buffers need to be initialized
         if (config.one_per_frame_in_flight) {
+            // This one will be updated per frame in flight
+            if (_target_redundancy == PerSwapchainImage)
+                Logger::fatal(
+                    RENDERER_VULKAN_LOG,
+                    "Bad render pass configuration. Some targets are set to "
+                    "update once per frame in flight, while others are set to "
+                    "once per swapchain image. Coexistence of these two modes "
+                    "is not supported."
+                );
+            _target_redundancy = PerFrameInFlight;
+
             // Scan for image views needed for framebuffer
             for (uint8 i = 0; i < VulkanSettings::max_frames_in_flight; i++) {
+                // Create new config
+                RenderTarget::Config new_cfg = {
+                    config.width, config.height, {}, false, config.sync_mode
+                };
+
                 // For attachment list
-                Vector<Texture*> attachments {};
                 for (const auto& attachment : config.attachments) {
                     if (attachment->is_render_target()) {
                         const auto pack =
                             static_cast<PackedTexture*>(attachment);
-                        attachments.push_back(pack->get_at(i));
-                    } else attachments.push_back(attachment);
+                        new_cfg.attachments.push_back(pack->get_at(i));
+                    } else new_cfg.attachments.push_back(attachment);
                 }
 
                 // Create target under these settings
-                const auto target = create_render_target(
-                    config.width,
-                    config.height,
-                    attachments,
-                    config.sync_to_window_resize
-                );
+                const auto target = create_render_target(new_cfg);
 
                 // Add this target
                 _render_targets.push_back(target);
             }
         } else {
             // Create target under these settings
-            const auto target = create_render_target(
-                config.width,
-                config.height,
-                config.attachments,
-                config.sync_to_window_resize
-            );
+            const auto target = create_render_target(config);
 
             // Add this target
             _render_targets.push_back(target);
@@ -307,32 +343,27 @@ void VulkanRenderPass::initialize_render_targets() {
 
 // Helper
 RenderTarget* VulkanRenderPass::create_render_target(
-    uint32                  width,
-    uint32                  height,
-    const Vector<Texture*>& attachments,
-    bool                    sync_to_window_resize
+    const RenderTarget::Config config
 ) {
     // Create view attachments for framebuffer initialization
-    Vector<vk::ImageView> view_attachments { attachments.size() };
-    for (uint32 j = 0; j < attachments.size(); j++) {
-        const auto texture   = attachments[j];
-        const auto v_texture = (VulkanTexture*) attachments[j];
+    Vector<vk::ImageView> view_attachments { config.attachments.size() };
+    for (uint32 j = 0; j < config.attachments.size(); j++) {
+        const auto texture   = config.attachments[j];
+        const auto v_texture = (VulkanTexture*) config.attachments[j];
         view_attachments[j]  = v_texture->image()->view;
     }
 
     // Create render target appropriate framebuffer
     const auto framebuffer = new (MemoryTag::GPUBuffer) VulkanFramebuffer(
-        _device, _allocator, this, width, height, view_attachments
+        _device, _allocator, this, config.width, config.height, view_attachments
     );
 
     // Store to render targets
-    const auto target = new (MemoryTag::GPUBuffer) RenderTarget(
-        attachments, framebuffer, width, height, sync_to_window_resize
-    );
+    const auto target =
+        new (MemoryTag::GPUBuffer) RenderTarget(framebuffer, config);
 
     // Sync to window resize
-    // TODO: Use `_sync_to_window_resize` bool
-    if (sync_to_window_resize)
+    if (config.sync_mode != RenderTarget::SynchMode::None)
         _swapchain->recreate_event.subscribe(target, &RenderTarget::resize);
 
     return target;
@@ -414,6 +445,27 @@ vk::AttachmentDescription VulkanRenderPass::get_resolve_attachment() {
     resolve_attachment.setFinalLayout(res_final_layout);
 
     return resolve_attachment;
+}
+
+void VulkanRenderPass::set_viewport(glm::vec4 rect) const {
+    vk::Viewport viewport {};
+    viewport.setX(rect.x)
+        .setY(rect.y + rect.w)
+        .setWidth(rect.z)
+        .setHeight(-rect.w)
+        .setMinDepth(0.0f)
+        .setMaxDepth(1.0f);
+
+    _command_buffer->handle->setViewport(0, 1, &viewport);
+}
+void VulkanRenderPass::set_scissors(glm::vec4 rect) const {
+    vk::Rect2D scissor {};
+    scissor.setOffset({ static_cast<int32>(rect.x), //
+                        static_cast<int32>(rect.y) });
+    scissor.setExtent({ static_cast<uint32>(rect.z),
+                        static_cast<uint32>(rect.w) });
+
+    _command_buffer->handle->setScissor(0, 1, &scissor);
 }
 
 } // namespace ENGINE_NAMESPACE

@@ -20,7 +20,6 @@ MaterialSystem::MaterialSystem(
             MATERIAL_SYS_LOG,
             "Const _max_material_count must be greater than 0."
         );
-    create_default_material();
 
     Logger::trace(MATERIAL_SYS_LOG, "Material system created.");
 }
@@ -28,11 +27,13 @@ MaterialSystem::~MaterialSystem() {
     for (auto& material : _registered_materials)
         destroy_material(material.second.handle);
     _registered_materials.clear();
-    _default_material->release_map_resources();
-    _renderer->destroy_texture_map(_default_material->diffuse_map);
-    _renderer->destroy_texture_map(_default_material->specular_map);
-    _renderer->destroy_texture_map(_default_material->normal_map);
-    del(_default_material);
+    if (_default_material) {
+        _default_material->release_map_resources();
+        _renderer->destroy_texture_map(_default_material->diffuse_map);
+        _renderer->destroy_texture_map(_default_material->specular_map);
+        _renderer->destroy_texture_map(_default_material->normal_map);
+        del(_default_material);
+    }
 
     Logger::trace(MATERIAL_SYS_LOG, "Material system destroyed.");
 }
@@ -40,6 +41,8 @@ MaterialSystem::~MaterialSystem() {
 // ////////////////////////////// //
 // MATERIAL SYSTEM PUBLIC METHODS //
 // ////////////////////////////// //
+
+void MaterialSystem::initialize() { create_default_material(); }
 
 Material* MaterialSystem::acquire(const String name) {
     Logger::trace(MATERIAL_SYS_LOG, "Material \"", name, "\" requested.");

@@ -1,0 +1,60 @@
+{
+    "version": 1.0,
+    "name": "builtin.ssr_shader",
+    "renderpass": "Renderpass.Builtin.SSR",
+    "stages": [
+        "vertex",
+        "fragment"
+    ],
+    "cull_mode": "none",
+    "attributes": [
+        {
+            "name": "in_position",
+            "type": "vec2"
+        },
+        {
+            "name": "in_texcoord",
+            "type": "vec2"
+        }
+    ],
+    "descriptor_sets": [
+        {
+            "scope": "global",
+            "set_index": 0,
+            "bindings": [
+                {
+                    "type": "uniform",
+                    "binding_index": 0,
+                    "stages": [
+                        "fragment"
+                    ],
+                    "uniforms": [
+                        {
+                            "name": "projection_inverse",
+                            "type": "mat4"
+                        }
+                    ]
+                },
+                {
+                    "type": "sampler",
+                    "binding_index": 1,
+                    "count": 2,
+                    "stages": [
+                        "fragment"
+                    ],
+                    "uniforms": [
+                        {
+                            "name": "color_texture",
+                            "type": "sampler2D"
+                        },
+                        {
+                            "name": "depth_normals_texture",
+                            "type": "sampler2D"
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "push_constants": []
+}

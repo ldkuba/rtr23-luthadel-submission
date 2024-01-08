@@ -3,9 +3,10 @@
 #include "renderer/vulkan/vulkan_backend.hpp"
 #include "camera.hpp"
 #include "resources/geometry.hpp"
-#include "views/render_view.hpp"
 
 namespace ENGINE_NAMESPACE {
+
+class ModulePacket;
 
 /**
  * @brief The renderer frontend. Interacts with the device using the backend, in
@@ -18,20 +19,10 @@ class Renderer {
      * rendering of one frame.
      */
     struct Packet {
-        Vector<RenderView::Packet*> view_data;
+        Vector<ModulePacket*> module_data;
     };
 
   public:
-    // TODO: TEMP TEST CODE BEGIN
-    Shader* material_shader              = nullptr;
-    Shader* ui_shader                    = nullptr;
-    Shader* skybox_shader                = nullptr;
-    Shader* depth_shader                 = nullptr;
-    Shader* ao_shader                    = nullptr;
-    Shader* shadowmap_directional_shader = nullptr;
-    Shader* shadowmap_sampling_shader    = nullptr;
-    // TODO: TEMP TEST CODE END
-
     /**
      * @brief Construct a new Renderer object
      *

@@ -388,7 +388,7 @@ void VulkanShader::apply_descriptor_set(DescriptorSet& set, uint32 state_id) {
                     }
 
                     vk::ImageLayout layout;
-                    if(texture->has_depth_format()) {
+                    if (texture->has_depth_format()) {
                         layout = vk::ImageLayout::eDepthStencilReadOnlyOptimal;
                     } else {
                         layout = vk::ImageLayout::eShaderReadOnlyOptimal;
@@ -593,7 +593,7 @@ void VulkanShader::release_instance_resources(uint32 instance_id) {
 // VULKAN SHADER PROTECTED METHODS //
 // /////////////////////////////// //
 
-Outcome VulkanShader::set_uniform(const uint16 id, void* value) {
+void VulkanShader::set_uniform(const uint16 id, void* value) {
     auto uniform = _uniforms[id];
 
     if (uniform.scope == Shader::Scope::Local) {
@@ -605,7 +605,7 @@ Outcome VulkanShader::set_uniform(const uint16 id, void* value) {
             uniform.byte_range.size,
             value
         );
-        return Outcome::Successful;
+        return;
     }
 
     // Get binding, set and state
@@ -638,8 +638,6 @@ Outcome VulkanShader::set_uniform(const uint16 id, void* value) {
             _uniform_buffer_offset + state->offset + uniform.byte_range.offset;
         memcpy((void*) address, value, uniform.byte_range.size);
     }
-
-    return Outcome::Successful;
 }
 
 // ///////////////////////////// //
@@ -1026,7 +1024,7 @@ Vector<vk::DescriptorImageInfo>& VulkanShader::get_image_infos(
         }
 
         vk::ImageLayout layout;
-        if(texture->has_depth_format()) {
+        if (texture->has_depth_format()) {
             layout = vk::ImageLayout::eDepthStencilReadOnlyOptimal;
         } else {
             layout = vk::ImageLayout::eShaderReadOnlyOptimal;

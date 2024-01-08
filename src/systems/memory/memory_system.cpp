@@ -170,6 +170,7 @@ Allocator** MemorySystem::initialize_allocator_array(MemoryMap& memory_map) {
     assign_allocator(Geometry, geom_allocator);
     assign_allocator(Shader, permanent_allocator);
     assign_allocator(RenderView, permanent_allocator);
+    assign_allocator(RenderModule, permanent_allocator);
     // Game
     assign_allocator(Game, init_allocator);
     assign_allocator(Control, control_pool);

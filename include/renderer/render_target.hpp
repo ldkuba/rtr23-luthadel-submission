@@ -13,17 +13,28 @@ namespace ENGINE_NAMESPACE {
 class RenderTarget {
   public:
     /**
+     * @brief Render target surface size syncronization mode
+     *  * None - Dont synchronize render target to render surface size
+     *  * Resolution - Synchronize target resolution to render surface size
+     * (full resolution rendering)
+     *  * HalfResolution - Synchronize target resolution to half the render
+     * surface size (half resolution rendering)
+     */
+    enum class SynchMode { None, Resolution, HalfResolution };
+
+    /**
      * @brief Render tag configuration
      * @a width Render target width in pixels
      * @a height TRender target height in pixels
      * @a attachments Array of target attachments (Textures)
+     * @a sync_mode Render surface size syncronization mode
      */
     struct Config {
-        const uint32           width {};
-        const uint32           height {};
-        const Vector<Texture*> attachments {};
-        const bool             one_per_frame_in_flight = false;
-        const bool             sync_to_window_resize   = true;
+        const uint32     width {};
+        const uint32     height {};
+        Vector<Texture*> attachments {};
+        const bool       one_per_frame_in_flight = false;
+        const SynchMode  sync_mode = RenderTarget::SynchMode::Resolution;
     };
 
   public:
@@ -41,13 +52,7 @@ class RenderTarget {
         GET { return _height; }
     };
 
-    RenderTarget(
-        const Vector<Texture*>& attachments,
-        FrameBuffer* const      framebuffer,
-        const uint32            width,
-        const uint32            height,
-        const bool              sync_to_window_resize
-    );
+    RenderTarget(FrameBuffer* const framebuffer, const Config& config);
     ~RenderTarget();
 
     /**
@@ -71,7 +76,7 @@ class RenderTarget {
     uint32           _width, _height;
     Vector<Texture*> _attachments {};
     FrameBuffer*     _framebuffer {};
-    bool             _sync_to_window_resize;
+    SynchMode        _sync_mode;
 };
 
 } // namespace ENGINE_NAMESPACE

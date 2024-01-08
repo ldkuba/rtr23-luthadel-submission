@@ -60,6 +60,8 @@ class VulkanRenderPass : public RenderPass {
     ~VulkanRenderPass() override;
 
     /// @brief Begin render pass
+    void begin() override;
+    /// @brief Begin render pass
     /// @param render_target Targeted to be used
     void begin(RenderTarget* const render_target) override;
     /// @brief End render pass
@@ -76,12 +78,7 @@ class VulkanRenderPass : public RenderPass {
     void initialize() override;
     void initialize_render_targets() override;
 
-    RenderTarget* create_render_target(
-        uint32                  width,
-        uint32                  height,
-        const Vector<Texture*>& attachments,
-        bool                    sync_to_window_resize = true
-    );
+    RenderTarget* create_render_target(const RenderTarget::Config config);
 
   private:
     const vk::Device*                    _device;
@@ -109,6 +106,9 @@ class VulkanRenderPass : public RenderPass {
     vk::AttachmentDescription get_color_attachment();
     vk::AttachmentDescription get_depth_attachment();
     vk::AttachmentDescription get_resolve_attachment();
+
+    void set_viewport(glm::vec4 rect) const;
+    void set_scissors(glm::vec4 rect) const;
 };
 
 } // namespace ENGINE_NAMESPACE

@@ -54,6 +54,7 @@ enum class MemoryTag : MemoryTagType {
     Geometry,
     Shader,
     RenderView,
+    RenderModule,
     // === Game allocations ===
     Game,
     Control,

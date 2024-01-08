@@ -8,19 +8,7 @@ namespace ENGINE_NAMESPACE {
 
 // Constructor & Destructor
 TestApplication::TestApplication() {}
-TestApplication::~TestApplication() {
-    // Temp
-    _app_renderer.skybox_shader->release_instance_resources(
-        _default_skybox.instance_id
-    );
-    _texture_system.release(_default_skybox.cube_map()->texture->name());
-    _app_renderer.destroy_texture_map(_default_skybox.cube_map);
-    _app_renderer.destroy_texture_map(_ssao_map);
-    _app_renderer.destroy_texture_map(_shadowmap_directional_map);
-    _app_renderer.destroy_texture_map(_shadowmap_sampled_map);
-
-    del(_app_surface);
-}
+TestApplication::~TestApplication() { del(_app_surface); }
 
 // /////////////////////// //
 // APP TEMP PUBLIC METHODS //
@@ -31,6 +19,9 @@ void TestApplication::run() {
     setup_camera();
     setup_input();
     setup_render_passes();
+    _material_system.initialize(); // TODO: This is stupid imo :(
+    setup_views();
+    setup_modules();
     setup_scene_geometry(2);
     setup_lights();
 
@@ -69,7 +60,7 @@ void TestApplication::run() {
         }
 
         // Directional light rotation example
-        // Get value oscilating between -0.2f and 0.2f using
+        // Get value osculating between -0.2f and 0.2f using
         // std::chrono::system_clock
         const auto oscillating_value = [](float32 frequency,
                                           float32 amplitude,
@@ -95,15 +86,9 @@ void TestApplication::run() {
 
         // Construct render packet
         Renderer::Packet packet {};
-        // Add views
-        packet.view_data.push_back(_de_render_view->on_build_pocket());
-        packet.view_data.push_back(_ao_render_view->on_build_pocket());
-        packet.view_data.push_back(_bl_render_view->on_build_pocket());
-        packet.view_data.push_back(_smd_render_view->on_build_pocket());
-        packet.view_data.push_back(_sb_render_view->on_build_pocket());
-        packet.view_data.push_back(_sms_render_view->on_build_pocket());
-        packet.view_data.push_back(_ow_render_view->on_build_pocket());
-        packet.view_data.push_back(_ui_render_view->on_build_pocket());
+        // Add module render data
+        for (const auto module : _modules)
+            packet.module_data.push_back(module->build_pocket());
 
         timer.time("Packets packed in ");
 
@@ -186,7 +171,7 @@ void TestApplication::setup_input() {
     PressControl(mode_6_c, NUM_6);
     // Other
     PressControl(spin_cube, SPACE);
-    PressControl(shader_reload, Z);
+    // PressControl(shader_reload, Z); // TODO:
     PressControl(show_fps, F);
     PressControl(move_directional_light, B);
 
@@ -244,23 +229,24 @@ void TestApplication::setup_input() {
     };
 
     // Rendering
-    auto& rv = _ow_render_view;
+    auto& wm = _module.world;
     mode_0_c->event +=
-        [&rv](float32, float32) { rv->render_mode = DebugViewMode::Default; };
+        [&wm](float32, float32) { wm->set_mode(DebugViewMode::Default); };
     mode_1_c->event +=
-        [&rv](float32, float32) { rv->render_mode = DebugViewMode::Lighting; };
+        [&wm](float32, float32) { wm->set_mode(DebugViewMode::Lighting); };
     mode_2_c->event +=
-        [&rv](float32, float32) { rv->render_mode = DebugViewMode::Normals; };
+        [&wm](float32, float32) { wm->set_mode(DebugViewMode::Normals); };
     mode_3_c->event +=
-        [&rv](float32, float32) { rv->render_mode = DebugViewMode::SSAO; };
+        [&wm](float32, float32) { wm->set_mode(DebugViewMode::SSAO); };
     mode_4_c->event +=
-        [&rv](float32, float32) { rv->render_mode = DebugViewMode::DefNoSSAO; };
+        [&wm](float32, float32) { wm->set_mode(DebugViewMode::DefNoSSAO); };
 
     // Other
     spin_cube->event +=
         [&](float32, float32) { _cube_rotation = !_cube_rotation; };
-    shader_reload->event +=
-        [&](float32, float32) { _app_renderer.material_shader->reload(); };
+    // TODO: Hot reload-able shaders
+    // shader_reload->event +=
+    //     [&](float32, float32) { _app_renderer.material_shader->reload(); };
     show_fps->event += [&](float32, float32) { _log_fps = !_log_fps; };
     move_directional_light->event += [&](float32, float32) {
         _move_directional_light_flag = !_move_directional_light_flag;
@@ -281,9 +267,15 @@ void TestApplication::setup_render_passes() {
     const auto shadowmap_directional_size = 4096;
 
     // Create render passes
-    const auto world_renderpass =
-        _app_renderer.get_renderpass(RenderPass::BuiltIn::WorldPass)
-            .expect("World pass somehow absent.");
+    const auto world_renderpass = _app_renderer.create_render_pass({
+        RenderPass::BuiltIn::WorldPass,       // Name
+        glm::vec2 { 0, 0 },                   // Draw offset
+        glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f }, // Clear color
+        true,                                 // Depth testing
+        true                                  // Multisampling
+    });
+    _app_renderer.get_renderpass(RenderPass::BuiltIn::WorldPass)
+        .expect("World pass somehow absent.");
     const auto depth_renderpass  = _app_renderer.create_render_pass({
         RenderPass::BuiltIn::DepthPass,       // Name
         glm::vec2 { 0, 0 },                   // Draw offset
@@ -335,28 +327,28 @@ void TestApplication::setup_render_passes() {
             true,                                       // Depth testing
             false                                       // Multisampling
         });
+    const auto ssr_renderpass = _app_renderer.create_render_pass({
+        RenderPass::BuiltIn::SSRPass,         // Name
+        glm::vec2 { 0, 0 },                   // Draw offset
+        glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f }, // Clear color
+        false,                                // Depth testing
+        false                                 // Multisampling
+    });
 
-    // Create render target textures
+    // === Create render target textures ===
+    // G buffer
     const auto depth_normals_texture = _texture_system.acquire_writable(
-        "DepthPrePassTarget",
-        half_width,
-        half_height,
+        UsedTextures::DepthPrePassTarget,
+        width,
+        height,
         4,
         Texture::Format::RGBA32Sfloat,
-        true
-    );
-    const auto low_res_depth_texture = _texture_system.acquire_writable(
-        "LowResDepthTarget",
-        half_width,
-        half_height,
-        4,
-        Texture::Format::D32,
         true
     );
 
     // SSAO
     const auto ssao_texture = _texture_system.acquire_writable(
-        "SSAOPassTarget",
+        UsedTextures::SSAOPassTarget,
         half_width,
         half_height,
         1,
@@ -364,7 +356,7 @@ void TestApplication::setup_render_passes() {
         true
     );
     const auto blured_ssao_texture = _texture_system.acquire_writable(
-        "BluredSSAOPassTarget",
+        UsedTextures::BluredSSAOPassTarget,
         half_width,
         half_height,
         1,
@@ -372,9 +364,10 @@ void TestApplication::setup_render_passes() {
         true
     );
 
+    // Shadow maps
     const auto shadowmap_directional_depth_texture =
         _texture_system.acquire_writable(
-            "DirectionalShadowMapDepthTarget",
+            UsedTextures::DirectionalShadowMapDepthTarget,
             shadowmap_directional_size,
             shadowmap_directional_size,
             4,
@@ -382,7 +375,7 @@ void TestApplication::setup_render_passes() {
             true
         );
     const auto shadowmap_sampled_texture = _texture_system.acquire_writable(
-        "ShadowmapSampledTarget",
+        UsedTextures::ShadowmapSampledTarget,
         width,
         height,
         1,
@@ -390,41 +383,63 @@ void TestApplication::setup_render_passes() {
         true
     );
 
-    // Create render targets
+    // World pass color target
+    const auto color_texture = _texture_system.acquire_writable(
+        UsedTextures::WorldColorTarget,
+        width,
+        height,
+        4,
+        Texture::Format::RGBA8Unorm,
+        true
+    );
+
+    // === Create render targets ===
+    world_renderpass->add_window_as_render_target();
     ui_renderpass->add_window_as_render_target();
     skybox_renderpass->add_window_as_render_target();
-    depth_renderpass->add_render_target({ half_width,
-                                          half_height,
+    depth_renderpass->add_render_target({ width,
+                                          height,
                                           { depth_normals_texture,
-                                            low_res_depth_texture },
-                                          true,
-                                          false });
-    ao_renderpass->add_render_target(
-        { half_width, half_height, { ssao_texture }, true, false }
+                                            _app_renderer.get_depth_texture() },
+                                          true });
+    ao_renderpass->add_render_target({ half_width,
+                                       half_height,
+                                       { ssao_texture },
+                                       true,
+                                       RenderTarget::SynchMode::HalfResolution }
     );
     blur_renderpass->add_render_target(
-        { half_width, half_height, { blured_ssao_texture }, true, false }
+        { half_width,
+          half_height,
+          { blured_ssao_texture },
+          true,
+          RenderTarget::SynchMode::HalfResolution }
     );
     shadowmap_directional_renderpass->add_render_target(
         { shadowmap_directional_size,
           shadowmap_directional_size,
           { shadowmap_directional_depth_texture },
           true,
-          false }
+          RenderTarget::SynchMode::None }
     );
     shadowmap_directional_renderpass->disable_color_output();
     shadowmap_sampling_renderpass->add_render_target(
-        { width, height, { shadowmap_sampled_texture, _app_renderer.get_depth_texture() }, true, true }
+        { width,
+          height,
+          { shadowmap_sampled_texture, _app_renderer.get_depth_texture() },
+          true }
     );
+    ssr_renderpass->add_window_as_render_target();
 
-    // Initialize AO only
+    // === Initialize ===
     RenderPass::start >>
         // Depth normals
         "CDS" >> depth_renderpass >>
         // SSAO
         "C" >> ao_renderpass >> "C" >> blur_renderpass >>
         // Directional Shadow-mapping
-        "DS" >> shadowmap_directional_renderpass >> "CDS" >> shadowmap_sampling_renderpass >>
+        "DS" >> shadowmap_directional_renderpass >> "CDS" >>
+        shadowmap_sampling_renderpass >>
         // Skybox
         "C" >> skybox_renderpass >>
         // World
@@ -433,188 +448,104 @@ void TestApplication::setup_render_passes() {
         ui_renderpass >>
         // Finish
         RenderPass::finish;
+}
 
-    // === Shaders ===
-    // Create shaders
-    _app_renderer.material_shader =
-        _shader_system.acquire(Shader::BuiltIn::MaterialShader)
-            .expect("Failed to load builtin material shader.");
-    _app_renderer.ui_shader = //
-        _shader_system.acquire(Shader::BuiltIn::UIShader)
-            .expect("Failed to load builtin ui shader.");
-    _app_renderer.skybox_shader =
-        _shader_system.acquire(Shader::BuiltIn::SkyboxShader)
-            .expect("Failed to load builtin skybox shader.");
-    _app_renderer.depth_shader =
-        _shader_system.acquire(Shader::BuiltIn::DepthShader)
-            .expect("Failed to load builtin depth shader.");
-    _app_renderer.ao_shader = //
-        _shader_system.acquire(Shader::BuiltIn::AOShader)
-            .expect("Failed to load builtin ao shader.");
-    _app_renderer.ao_shader = //
-        _shader_system.acquire(Shader::BuiltIn::BlurShader)
-            .expect("Failed to load builtin blur shader.");
-    _app_renderer.shadowmap_directional_shader = //
-        _shader_system.acquire(Shader::BuiltIn::ShadowmapDirectionalShader)
-            .expect("Failed to load builtin shadowmap directional shader.");
-    _app_renderer.shadowmap_sampling_shader = //
-        _shader_system.acquire(Shader::BuiltIn::ShadowmapSamplingShader)
-            .expect("Failed to load builtin shadowmap sampling shader.");
+void TestApplication::setup_views() {
+    const auto width  = _app_surface->get_width_in_pixels();
+    const auto height = _app_surface->get_height_in_pixels();
 
-    _app_renderer.material_shader->reload();
-
-    // === Render views ===
-    // Configure
-    RenderView::Config skybox_view_config {
-        "skybox",
-        Shader::BuiltIn::SkyboxShader,
-        width,
-        height,
-        RenderView::Type::Skybox,
-        RenderView::ViewMatrixSource::SceneCamera,
-        RenderView::ProjectionMatrixSource::DefaultPerspective,
-        { _app_renderer.get_renderpass(RenderPass::BuiltIn::SkyboxPass)
-              .expect("Renderpass not found.") }
+    // Config
+    RenderViewPerspective::Config main_world_view_config {
+        "MainWorldView",    width, height, RenderView::Type::DefaultPerspective,
+        glm::radians(45.0), 0.1,   1000.0, _main_camera
     };
-    RenderView::Config opaque_world_view_config {
-        "world_opaque",
-        Shader::BuiltIn::MaterialShader,
-        width,
-        height,
-        RenderView::Type::World,
-        RenderView::ViewMatrixSource::SceneCamera,
-        RenderView::ProjectionMatrixSource::DefaultPerspective,
-        { _app_renderer.get_renderpass(RenderPass::BuiltIn::WorldPass)
-              .expect("Renderpass not found.") }
+    RenderViewOrthographic::Config main_ui_view_config {
+        "MainUIView", width, height,      RenderView::Type::DefaultOrthographic,
+        -100.0,       100.0, _main_camera
     };
-    RenderView::Config ui_view_config {
-        "ui",
-        Shader::BuiltIn::UIShader,
-        width,
-        height,
-        RenderView::Type::UI,
-        RenderView::ViewMatrixSource::SceneCamera,
-        RenderView::ProjectionMatrixSource::DefaultPerspective,
-        { _app_renderer.get_renderpass(RenderPass::BuiltIn::UIPass)
-              .expect("Renderpass not found.") }
-    };
-    RenderView::Config depth_view_config {
-        "depth",
-        Shader::BuiltIn::DepthShader,
-        half_width,
-        half_height,
-        RenderView::Type::Depth,
-        RenderView::ViewMatrixSource::SceneCamera,
-        RenderView::ProjectionMatrixSource::DefaultPerspective,
-        { _app_renderer.get_renderpass(RenderPass::BuiltIn::DepthPass)
-              .expect("Renderpass not found.") }
-    };
-    RenderView::Config ao_view_config {
-        "ao",
-        Shader::BuiltIn::AOShader,
-        half_width,
-        half_height,
-        RenderView::Type::AO,
-        RenderView::ViewMatrixSource::SceneCamera,
-        RenderView::ProjectionMatrixSource::DefaultPerspective,
-        { _app_renderer.get_renderpass(RenderPass::BuiltIn::AOPass)
-              .expect("Renderpass not found.") }
-    };
-    RenderView::Config blur_view_config {
-        "blur",
-        Shader::BuiltIn::BlurShader,
-        half_width,
-        half_height,
-        RenderView::Type::Blur,
-        RenderView::ViewMatrixSource::SceneCamera,
-        RenderView::ProjectionMatrixSource::DefaultPerspective,
-        { _app_renderer.get_renderpass(RenderPass::BuiltIn::BlurPass)
-              .expect("Renderpass not found.") }
-    };
-    RenderView::Config shadowmap_directional_view_config {
-        "shadowmap_directional",
-        Shader::BuiltIn::ShadowmapDirectionalShader,
-        shadowmap_directional_size,
-        shadowmap_directional_size,
-        RenderView::Type::ShadowmapDirectional,
-        RenderView::ViewMatrixSource::LightCamera,
-        RenderView::ProjectionMatrixSource::DefaultOrthographic,
-        { _app_renderer
-              .get_renderpass(RenderPass::BuiltIn::ShadowmapDirectionalPass)
-              .expect("Renderpass not found.") }
-    };
-    RenderView::Config shadowmap_sampling_view_config {
-        "shadowmap_sampling",
-        Shader::BuiltIn::ShadowmapSamplingShader,
-        width,
-        height,
-        RenderView::Type::ShadowmapSampling,
-        RenderView::ViewMatrixSource::SceneCamera,
-        RenderView::ProjectionMatrixSource::DefaultPerspective,
-        { _app_renderer
-              .get_renderpass(RenderPass::BuiltIn::ShadowmapSamplingPass)
-              .expect("Renderpass not found.") }
+    RenderViewOrthographic::Config dir_light_view_config {
+        "DirLightView", width,
+        height,         RenderView::Type::DefaultOrthographic,
+        -100.0,         100.0,
+        _main_camera
     };
 
-    // Create
-    const auto res_owv = _render_view_system.create(opaque_world_view_config);
-    const auto res_uiv = _render_view_system.create(ui_view_config);
-    const auto res_sbv = _render_view_system.create(skybox_view_config);
-    const auto res_dev = _render_view_system.create(depth_view_config);
-    const auto res_aov = _render_view_system.create(ao_view_config);
-    const auto res_blv = _render_view_system.create(blur_view_config);
-    const auto res_smdv =
-        _render_view_system.create(shadowmap_directional_view_config);
-    const auto res_ssv =
-        _render_view_system.create(shadowmap_sampling_view_config);
-    if (res_owv.has_error() || res_uiv.has_error() || res_sbv.has_error() ||
-        res_dev.has_error() || res_aov.has_error() || res_blv.has_error() ||
-        res_smdv.has_error() || res_ssv.has_error())
-        Logger::fatal("Render view creation failed.");
+    // Create views
+    _main_world_view = static_cast<RenderViewPerspective*>(
+        _render_view_system.create(main_world_view_config)
+            .expect("Render View creation failed.")
+    );
+    _main_ui_view = static_cast<RenderViewOrthographic*>(
+        _render_view_system.create(main_ui_view_config)
+            .expect("Render View creation failed.")
+    );
+    _dir_light_view = static_cast<RenderViewOrthographic*>(
+        _render_view_system.create(dir_light_view_config)
+            .expect("Render View creation failed.")
+    );
+}
 
-    _ow_render_view = dynamic_cast<RenderViewWorld*>(res_owv.value());
-    _ui_render_view = dynamic_cast<RenderViewUI*>(res_uiv.value());
-    _sb_render_view = dynamic_cast<RenderViewSkybox*>(res_sbv.value());
-    _de_render_view = dynamic_cast<RenderViewDepth*>(res_dev.value());
-    _ao_render_view = dynamic_cast<RenderViewAO*>(res_aov.value());
-    _bl_render_view = dynamic_cast<RenderViewBlur*>(res_blv.value());
-    _smd_render_view =
-        dynamic_cast<RenderViewShadowmapDirectional*>(res_smdv.value());
-    _sms_render_view =
-        dynamic_cast<RenderViewShadowmapSampling*>(res_ssv.value());
-
-    // Set render view textures
-    _shadowmap_directional_map =
-        _app_renderer.create_texture_map({ shadowmap_directional_depth_texture,
-                                           Texture::Use::Unknown,
-                                           Texture::Filter::BiLinear,
-                                           Texture::Filter::BiLinear,
-                                           Texture::Repeat::ClampToEdge,
-                                           Texture::Repeat::ClampToEdge,
-                                           Texture::Repeat::ClampToEdge });
-    _sms_render_view->set_shadowmap_directional_texture(
-        _shadowmap_directional_map
+void TestApplication::setup_modules() {
+    // Create render modules
+    _module.g_pass = _render_module_system.create<RenderModuleGPrepass>(
+        { Shader::BuiltIn::DepthShader,
+          RenderPass::BuiltIn::DepthPass,
+          _main_world_view }
+    );
+    _module.ao = _render_module_system.create<RenderModuleAO>(
+        { Shader::BuiltIn::AOShader,
+          RenderPass::BuiltIn::AOPass,
+          _main_world_view,
+          UsedTextures::DepthPrePassTarget }
+    );
+    _module.blur = _render_module_system.create<RenderModulePostProcessing>(
+        { Shader::BuiltIn::BlurShader,
+          RenderPass::BuiltIn::BlurPass,
+          _main_world_view,
+          UsedTextures::SSAOPassTarget }
+    );
+    _module.shadow_dir =
+        _render_module_system.create<RenderModuleShadowmapDirectional>(
+            { Shader::BuiltIn::ShadowmapDirectionalShader,
+              RenderPass::BuiltIn::ShadowmapDirectionalPass,
+              _dir_light_view }
+        );
+    _module.shadow_sampling =
+        _render_module_system.create<RenderModuleShadowmapSampling>(
+            { Shader::BuiltIn::ShadowmapSamplingShader,
+              RenderPass::BuiltIn::ShadowmapSamplingPass,
+              _main_world_view,
+              UsedTextures::DirectionalShadowMapDepthTarget }
+        );
+    _module.skybox = _render_module_system.create<RenderModuleSkybox>(
+        { Shader::BuiltIn::SkyboxShader,
+          RenderPass::BuiltIn::SkyboxPass,
+          _main_world_view,
+          "skybox/skybox" }
+    );
+    _module.world = _render_module_system.create<RenderModuleWorld>(
+        { Shader::BuiltIn::MaterialShader,
+          RenderPass::BuiltIn::WorldPass,
+          _main_world_view,
+          UsedTextures::BluredSSAOPassTarget,
+          UsedTextures::ShadowmapSampledTarget,
+          glm::vec4(0.05f, 0.05f, 0.05f, 1.0f) }
+    );
+    _module.ui = _render_module_system.create<RenderModuleUI>(
+        { Shader::BuiltIn::UIShader,
+          RenderPass::BuiltIn::UIPass,
+          _main_ui_view }
     );
 
-    _ssao_map =
-        _app_renderer.create_texture_map({ blured_ssao_texture,
-                                           Texture::Use::Unknown,
-                                           Texture::Filter::BiLinear,
-                                           Texture::Filter::BiLinear,
-                                           Texture::Repeat::ClampToEdge,
-                                           Texture::Repeat::ClampToEdge,
-                                           Texture::Repeat::ClampToEdge });
-    _ow_render_view->set_ssao_texture(_ssao_map);
-
-    _shadowmap_sampled_map =
-        _app_renderer.create_texture_map({ shadowmap_sampled_texture,
-                                           Texture::Use::Unknown,
-                                           Texture::Filter::BiLinear,
-                                           Texture::Filter::BiLinear,
-                                           Texture::Repeat::ClampToEdge,
-                                           Texture::Repeat::ClampToEdge,
-                                           Texture::Repeat::ClampToEdge });
-    _ow_render_view->set_shadowmap_sampled_texture(_shadowmap_sampled_map);
+    // Fill list of render commands
+    _modules.push_back(_module.g_pass);
+    _modules.push_back(_module.ao);
+    _modules.push_back(_module.blur);
+    _modules.push_back(_module.shadow_dir);
+    _modules.push_back(_module.shadow_sampling);
+    _modules.push_back(_module.skybox);
+    _modules.push_back(_module.world);
+    _modules.push_back(_module.ui);
 }
 
 void TestApplication::setup_scene_geometry(const uint32 scene_id) {
@@ -693,29 +624,6 @@ void TestApplication::setup_scene_geometry(const uint32 scene_id) {
         "ui", 128, 128, "test_ui_material"
     );
 
-    /// Load skybox
-    // Create geometry
-    Geometry* const skybox_geometry =
-        _geometry_system.generate_cube("cube", "");
-
-    // Create texture map
-    const auto skybox_map =
-        _app_renderer.create_texture_map(Texture::Map::Config {
-            _texture_system.acquire_cube("skybox/skybox", true),
-            Texture::Use::MapCube,
-            Texture::Filter::BiLinear,
-            Texture::Filter::BiLinear,
-            Texture::Repeat::Repeat,
-            Texture::Repeat::Repeat,
-            Texture::Repeat::Repeat });
-
-    // Acquire instance resources
-    const auto skybox_instance_id =
-        _app_renderer.skybox_shader->acquire_instance_resources({ skybox_map });
-
-    // Create skybox
-    _default_skybox = { skybox_instance_id, skybox_map, skybox_geometry };
-
     // === Mesh render data ===
     // Create mesh
     Mesh* mesh_ui = new (MemoryTag::Geometry) Mesh(geom_2d);
@@ -726,19 +634,12 @@ void TestApplication::setup_scene_geometry(const uint32 scene_id) {
     _ui_mesh_data    = { ui_meshes };
 
     // Set mesh data
-    _ow_render_view->set_render_data_ref(&_world_mesh_data);
-    _ui_render_view->set_render_data_ref(&_ui_mesh_data);
-    _sb_render_view->set_skybox_ref(&_default_skybox);
-    _de_render_view->set_render_data_ref(&_world_mesh_data);
-    _smd_render_view->set_render_data_ref(&_world_mesh_data);
-    _sms_render_view->set_render_data_ref(&_world_mesh_data);
+    _main_world_view->set_visible_meshes(_world_mesh_data.meshes);
+    _main_ui_view->set_visible_meshes(_ui_mesh_data.meshes);
+    _dir_light_view->set_visible_meshes(_world_mesh_data.meshes);
 }
 
 void TestApplication::setup_lights() {
-    _ow_render_view->set_light_system(&_light_system);
-    _smd_render_view->set_light_system(&_light_system);
-    _sms_render_view->set_light_system(&_light_system);
-
     const auto directional_light = new (MemoryTag::Scene)
         DirectionalLight { "dir_light",
                            { glm::vec4(0.0f, 0.2f, -1.0, 1.0),

@@ -30,6 +30,7 @@ class Skybox {
      */
     Skybox(uint32 instance_id, Texture::Map* cube_map, Geometry* geometry)
         : _instance_id(instance_id), _cube_map(cube_map), _geometry(geometry) {}
+    Skybox() {}
     ~Skybox() {}
 
     void operator=(Skybox const& value) {

@@ -31,7 +31,7 @@
                     ],
                     "uniforms": [
                         {
-                            "name": "target_texture",
+                            "name": "color_texture",
                             "type": "sampler2D"
                         }
                     ]

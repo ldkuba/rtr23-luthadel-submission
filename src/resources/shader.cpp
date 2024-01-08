@@ -125,7 +125,7 @@ Result<void, InvalidArgument> Shader::set_sampler(
 ) {
     return set_uniform<const Texture::Map>(name, texture_map);
 }
-Result<void, InvalidArgument> Shader::set_sampler(
+void Shader::set_sampler(
     const uint16 id, const Texture::Map* const texture_map
 ) {
     return set_uniform<const Texture::Map>(id, texture_map);
@@ -135,9 +135,7 @@ Result<void, InvalidArgument> Shader::set_sampler(
 // SHADER PROTECTED METHODS //
 // //////////////////////// //
 
-Outcome Shader::set_uniform(const uint16 id, void* value) {
-    return Outcome::Successful;
-}
+void Shader::set_uniform(const uint16 id, void* value) {}
 
 Shader::Binding* Shader::get_binding(uint32 set_index, uint32 binding_index) {
     if (set_index >= _descriptor_sets.size())

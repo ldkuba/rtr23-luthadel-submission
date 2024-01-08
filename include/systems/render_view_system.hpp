@@ -1,8 +1,7 @@
 #pragma once
 
 #include "renderer/views/render_view.hpp"
-#include "systems/camera_system.hpp"
-#include "systems/geometry_system.hpp"
+#include "unordered_map.hpp"
 
 namespace ENGINE_NAMESPACE {
 
@@ -14,12 +13,7 @@ class ShaderSystem;
 class RenderViewSystem {
   public:
     RenderViewSystem(
-        Renderer* const          renderer,
-        TextureSystem* const     texture_system,
-        GeometrySystem* const    geometry_system,
-        ShaderSystem* const      shader_system,
-        CameraSystem* const      camera_system,
-        Platform::Surface* const surface
+        Renderer* const renderer, Platform::Surface* const surface
     );
     ~RenderViewSystem();
 
@@ -41,11 +35,7 @@ class RenderViewSystem {
     Result<RenderView*, RuntimeError> acquire(const String& name);
 
   private:
-    Renderer* const       _renderer;
-    TextureSystem* const  _texture_system;
-    GeometrySystem* const _geometry_system;
-    ShaderSystem* const   _shader_system;
-    CameraSystem* const   _camera_system;
+    Renderer* const _renderer;
 
     UnorderedMap<String, RenderView*> _registered_views;
 

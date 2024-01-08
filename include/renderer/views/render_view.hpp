@@ -15,89 +15,92 @@ class RenderView {
     /**
      * @brief Render view known types. They have logic associated.
      */
-    enum class Type { World, UI, Skybox, Depth, AO, Blur, ShadowmapDirectional, ShadowmapSampling, Custom };
-    /**
-     * @brief Render view known `view matrix` source.
-     */
-    enum class ViewMatrixSource { SceneCamera, UICamera, LightCamera, Custom };
-    /**
-     * @brief Render view known `projection matrix` source.
-     */
-    enum class ProjectionMatrixSource {
-        DefaultPerspective,
-        DefaultOrthographic,
-        Custom
-    };
+    enum class Type { DefaultPerspective, DefaultOrthographic, Custom };
 
     /**
      * @brief Configuration for creation of generic render view
      */
     struct Config {
         String name;
-        String shader_name;
-        uint32 width;  // Set to 0 for 100% width
-        uint32 height; // Set to 0 for 100% height
+        uint32 width;
+        uint32 height;
         Type   type;
-
-        ViewMatrixSource       view_matrix_src;
-        ProjectionMatrixSource proj_matrix_src;
-
-        Vector<RenderPass*> passes;
-    };
-
-    /**
-     * @brief Render data required by given render view. Used by renderer during
-     * frame draw.
-     */
-    struct Packet {
-        RenderView* const view;
     };
 
   public:
+    /// @brief View width in pixels
+    Property<uint32> width {
+        GET { return _width; }
+    };
+    /// @brief View height in pixels
+    Property<uint32> height {
+        GET { return _height; }
+    };
+    /// @brief True if view was updated
+    Property<bool> updated {
+        GET { return _updated; }
+    };
+    /// @brief View projection matrix
+    Property<glm::mat4> proj_matrix {
+        GET { return _proj_matrix; }
+    };
+    /// @brief Inverse view projection matrix
+    Property<glm::mat4> proj_inv_matrix {
+        GET { return _proj_inv_matrix; }
+    };
+
     RenderView(const Config& config)
         : _name(config.name), _width(config.width), _height(config.height),
-          _type(config.type), _shader_name(config.shader_name) {
-        _passes.resize(config.passes.size());
-        for (uint32 i = 0; i < _passes.size(); i++)
-            _passes[i] = config.passes[i];
-    }
+          _type(config.type) {}
     virtual ~RenderView() {}
 
-    /**
-     * @brief Build render packet and update internal state.
-     * @return Packet* Resulting render packet
-     */
-    virtual Packet* on_build_pocket()                                  = 0;
     /**
      * @brief Callback called upon screen resize
      * @param width New width in pixels
      * @param height New height in pixels
      */
-    virtual void    on_resize(const uint32 width, const uint32 height) = 0;
+    virtual void on_resize(const uint32 width, const uint32 height) {
+        _width   = width;
+        _height  = height;
+        _updated = true;
+    }
+
     /**
-     * @brief Render provided render data
-     *
-     * @param renderer Renderer which will perform given render commands
-     * @param packet Render data
-     * @param frame_number Current frame index. Used for internal
-     * synchronization.
-     * @param render_target_index Index of render target we are rendering to
+     * @brief Setup a list of objects which could potentially be seen by this
+     * view. All non-mentioned meshes will be invisible to it.
+     * @param meshes List of potentially visible meshes
      */
-    virtual void    on_render(
-           Renderer* const     renderer,
-           const Packet* const packet,
-           const uint64        frame_number,
-           const uint64        render_target_index
-       ) = 0;
+    void set_visible_meshes(const Vector<Mesh*>& meshes) {
+        // Copy references over
+        _potentially_visible_meshes.resize(meshes.size());
+        for (uint64 i = 0; i < meshes.size(); i++)
+            _potentially_visible_meshes[i] = meshes[i];
+    }
+
+    /**
+     * @brief Get render data of geometries that are currently within view.
+     * Represents a subset of all potentially visible geometries.
+     * @param frame_number Index of the current frame. Internally values wont be
+     * recomputed if prompted twice on the same frame.
+     * @return Vector<GeometryRenderData>& Visible render data
+     */
+    virtual Vector<GeometryRenderData>& get_visible_render_data(
+        const uint32 frame_number
+    ) = 0;
 
   protected:
-    String _name;
-    uint32 _width;
-    uint32 _height;
-    Type   _type;
-    String _shader_name;
+    String    _name;
+    uint32    _width;
+    uint32    _height;
+    Type      _type;
+    glm::mat4 _proj_matrix;
+    glm::mat4 _proj_inv_matrix;
+    uint64    _last_frame = -1;
 
-    Vector<RenderPass*> _passes {};
+    Vector<Mesh*>              _potentially_visible_meshes {};
+    Vector<GeometryRenderData> _visible_render_data {};
+
+    bool _updated;
 };
 
 } // namespace ENGINE_NAMESPACE

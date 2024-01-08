@@ -20,8 +20,11 @@ class RenderPass {
         StringEnum AOPass     = "Renderpass.Builtin.AO";
         StringEnum DepthPass  = "Renderpass.Builtin.Depth";
         StringEnum BlurPass   = "Renderpass.Builtin.Blur";
-        StringEnum ShadowmapDirectionalPass = "Renderpass.Builtin.ShadowmapDirectional";
-        StringEnum ShadowmapSamplingPass = "Renderpass.Builtin.ShadowmapSampling";
+        StringEnum ShadowmapDirectionalPass =
+            "Renderpass.Builtin.ShadowmapDirectional";
+        StringEnum ShadowmapSamplingPass =
+            "Renderpass.Builtin.ShadowmapSampling";
+        StringEnum SSRPass = "Renderpass.Builtin.SSR";
     };
 
     /// @brief Type used by clear flags
@@ -93,7 +96,12 @@ class RenderPass {
     virtual ~RenderPass() {}
 
     /**
-     * @brief Start recording of render pass commands
+     * @brief Start recording of render pass commands for next available target
+     */
+    virtual void begin() = 0;
+
+    /**
+     * @brief Start recording of render pass commands for a specific target
      * @param index Render target to be used (index of)
      */
     void begin(const uint32 index) {
@@ -109,7 +117,7 @@ class RenderPass {
         begin(_render_targets[index]);
     }
     /**
-     * @brief Start recording of render pass commands
+     * @brief Start recording of render pass commands for a specific target
      * @param target Render target to be used
      */
     virtual void begin(RenderTarget* const render_target) = 0;
@@ -154,6 +162,10 @@ class RenderPass {
     virtual uint8 get_depth_index()   = 0;
     /// @brief Get resolve attachment index
     virtual uint8 get_resolve_index() = 0;
+
+  protected:
+    enum TargetRedundancy { PerFrame, PerSwapchainImage, PerFrameInFlight };
+    TargetRedundancy _target_redundancy = PerFrame;
 
   private:
     struct RenderPassInitializer {

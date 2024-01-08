@@ -13,7 +13,14 @@ class Texture {
     enum class Type { T2D, T2DArray, T3D, TCube };
 
     /// @brief Collection of texture uses
-    enum class Use { Unknown, MapDiffuse, MapSpecular, MapNormal, MapCube };
+    enum class Use {
+        Unknown,
+        MapDiffuse,
+        MapSpecular,
+        MapNormal,
+        MapCube,
+        MapPassResult
+    };
     /// @brief Collection of supported texture filtering modes
     enum class Filter { NearestNeighbour, BiLinear };
     /// @brief Collection of possible patterns for sampling textures outside
@@ -29,7 +36,7 @@ class Texture {
          * @brief Texture map configuration
          */
         struct Config {
-            const Texture* texture = nullptr;
+            Texture* texture = nullptr;
 
             Use    use;
             Filter filter_minify;
@@ -39,7 +46,7 @@ class Texture {
             Repeat repeat_w;
         };
 
-        const Texture* texture = nullptr;
+        Texture* texture = nullptr;
 
         Use    use;
         Filter filter_minify;
@@ -190,8 +197,10 @@ class Texture {
     /**
      * @brief Transition render target into readable format. Only useful if this
      * texture is a render target which we want to sample later on.
+     * @param frame_number Frame on which this transition is requested. Only
+     * one transition per frame allowed
      */
-    virtual Outcome transition_render_target() const = 0;
+    virtual Outcome transition_render_target(const uint64 frame_number) = 0;
 
   protected:
     typedef uint8 TextureFlagType;
@@ -213,6 +222,8 @@ class Texture {
     uint32 _mip_levels;
     uint64 _total_size;
     Type   _type;
+
+    uint64 _last_transition_frame_number = -1;
 };
 
 class PackedTexture : public Texture {
@@ -237,10 +248,13 @@ class PackedTexture : public Texture {
         const byte* const data, const uint32 size, const uint32 offset
     ) override;
     virtual Outcome resize(const uint32 width, const uint32 height) override;
-    virtual Outcome transition_render_target() const override;
+    virtual Outcome transition_render_target(const uint64 frame_number
+    ) override;
 
   private:
     Vector<Texture*> _textures {};
+
+    uint8 _currently_used_i = 0;
 };
 
 } // namespace ENGINE_NAMESPACE

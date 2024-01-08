@@ -114,7 +114,7 @@ Outcome VulkanTexture::resize(const uint32 width, const uint32 height) {
     return Outcome::Successful;
 }
 
-Outcome VulkanTexture::transition_render_target() const {
+Outcome VulkanTexture::transition_render_target(const uint64 frame_number) {
     if (!is_render_target()) {
         Logger::error(
             RENDERER_VULKAN_LOG,
@@ -123,6 +123,9 @@ Outcome VulkanTexture::transition_render_target() const {
         );
         return Outcome::Failed;
     }
+
+    if (frame_number == _last_transition_frame_number) return Outcome::Failed;
+    _last_transition_frame_number = frame_number;
 
     const auto depth_format = has_depth_format(_format);
     const auto from =

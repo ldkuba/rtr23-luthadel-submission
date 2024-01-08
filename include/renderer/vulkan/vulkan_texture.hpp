@@ -52,7 +52,7 @@ class VulkanTexture : public Texture {
     ) override;
     Outcome resize(const uint32 width, const uint32 height) override;
 
-    Outcome transition_render_target() const override;
+    Outcome transition_render_target(const uint64 frame_number) override;
 
     vk::Format get_vulkan_format() const;
 
