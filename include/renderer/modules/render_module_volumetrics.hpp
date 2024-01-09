@@ -11,6 +11,7 @@ class RenderModuleVolumetrics : public RenderModuleFullScreen {
     struct Config : public RenderModuleFullScreen::Config {
         String color_texture;
         String depth_texture;
+        String shadow_directional_texture;
     };
 
   public:
@@ -39,10 +40,25 @@ class RenderModuleVolumetrics : public RenderModuleFullScreen {
             Texture::Repeat::ClampToEdge
         );
 
+        _shadow_directional_map = create_texture_map(
+            config.shadow_directional_texture,
+            Texture::Use::MapPassResult,
+            Texture::Filter::BiLinear,
+            Texture::Filter::BiLinear,
+            Texture::Repeat::ClampToEdge,
+            Texture::Repeat::ClampToEdge,
+            Texture::Repeat::ClampToEdge
+        );
+
         SETUP_UNIFORM_INDEX(color_texture);
         SETUP_UNIFORM_INDEX(depth_texture);
+        SETUP_UNIFORM_INDEX(shadow_directional_texture);
         SETUP_UNIFORM_INDEX(projection_inverse);
         SETUP_UNIFORM_INDEX(view_inverse);
+        SETUP_UNIFORM_INDEX(camera_position);
+        SETUP_UNIFORM_INDEX(light_space_directional);
+        SETUP_UNIFORM_INDEX(light_pos_directional);
+        SETUP_UNIFORM_INDEX(light_color_directional);
     }
 
   protected:
@@ -54,24 +70,61 @@ class RenderModuleVolumetrics : public RenderModuleFullScreen {
     void apply_globals() const override {
         _shader->set_sampler(_u_index.color_texture, _color_map);
         _shader->set_sampler(_u_index.depth_texture, _depth_map);
+        _shader->set_sampler(
+            _u_index.shadow_directional_texture, _shadow_directional_map
+        );
 
         _shader->set_uniform(
             _u_index.projection_inverse, &_perspective_view->proj_inv_matrix()
         );
 
-        glm::mat4 view_inverse = glm::inverse(_perspective_view->camera()->view());
+        glm::mat4 view_inverse =
+            glm::inverse(_perspective_view->camera()->view());
         _shader->set_uniform(_u_index.view_inverse, &view_inverse);
+
+        glm::vec4 camera_position =
+            glm::vec4(_perspective_view->camera()->transform.position(), 1.0f);
+        _shader->set_uniform(_u_index.camera_position, &camera_position);
+
+        glm::mat4 light_space_directional =
+            _light_system->get_directional()->get_light_space_matrix(
+                _perspective_view->camera()->transform.position()
+            );
+        _shader->set_uniform(
+            _u_index.light_space_directional, &light_space_directional
+        );
+
+        glm::vec4 light_pos_directional = glm::vec4(
+            _light_system->get_directional()->get_light_camera_position(
+                _perspective_view->camera()->transform.position()
+            )
+        );
+        _shader->set_uniform(
+            _u_index.light_pos_directional, &light_pos_directional
+        );
+
+        glm::vec4 light_color_directional =
+            _light_system->get_directional()->data.color;
+        _shader->set_uniform(
+            _u_index.light_color_directional, &light_color_directional
+        );
     }
 
   private:
-    Texture::Map* _color_map = nullptr;
-    Texture::Map* _depth_map = nullptr;
+    Texture::Map* _color_map              = nullptr;
+    Texture::Map* _depth_map              = nullptr;
+    Texture::Map* _shadow_directional_map = nullptr;
 
     struct UIndex {
-        uint16 color_texture      = -1;
-        uint16 depth_texture      = -1;
-        uint16 projection_inverse = -1;
-        uint16 view_inverse       = -1;
+        uint16 color_texture              = -1;
+        uint16 depth_texture              = -1;
+        uint16 shadow_directional_texture = -1;
+        uint16 projection_inverse         = -1;
+        uint16 view_inverse               = -1;
+        uint16 camera_position            = -1;
+        uint16 light_space_directional    = -1;
+        uint16 light_pos_directional      = -1;
+        uint16 light_color_directional    = -1;
     };
     UIndex _u_index {};
 };

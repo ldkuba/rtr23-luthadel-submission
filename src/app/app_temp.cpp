@@ -556,7 +556,8 @@ void TestApplication::setup_modules() {
           RenderPass::BuiltIn::VolumetricsPass,
           _main_world_view,
           UsedTextures::WorldColorTarget,
-          UsedTextures::DepthPrePassTarget }
+          UsedTextures::DepthPrePassTarget,
+          UsedTextures::DirectionalShadowMapDepthTarget }
     );
     _module.ui = _render_module_system.create<RenderModuleUI>(
         { Shader::BuiltIn::UIShader,

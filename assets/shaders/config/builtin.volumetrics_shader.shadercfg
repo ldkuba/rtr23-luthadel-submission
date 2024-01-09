@@ -36,13 +36,29 @@
                         {
                             "name": "view_inverse",
                             "type": "mat4"
+                        },
+                        {
+                            "name": "camera_position",
+                            "type": "vec4"
+                        },
+                        {
+                            "name": "light_space_directional",
+                            "type": "mat4"
+                        },
+                        {
+                            "name": "light_pos_directional",
+                            "type": "vec4"
+                        },
+                        {
+                            "name": "light_color_directional",
+                            "type": "vec4"
                         }
                     ]
                 },
                 {
                     "type": "sampler",
                     "binding_index": 1,
-                    "count": 2,
+                    "count": 3,
                     "stages": [
                         "fragment"
                     ],
@@ -53,6 +69,10 @@
                         },
                         {
                             "name": "depth_texture",
+                            "type": "sampler2D"
+                        },
+                        {
+                            "name": "shadow_directional_texture",
                             "type": "sampler2D"
                         }
                     ]
