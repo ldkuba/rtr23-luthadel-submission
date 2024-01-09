@@ -19,6 +19,7 @@
 #include "renderer/modules/render_module_post_processing.hpp"
 #include "renderer/modules/render_module_shadowmap_directional.hpp"
 #include "renderer/modules/render_module_shadowmap_sampling.hpp"
+#include "renderer/modules/render_module_volumetrics.hpp"
 
 namespace ENGINE_NAMESPACE {
 
@@ -83,6 +84,7 @@ class TestApplication {
         RenderModuleShadowmapSampling*    shadow_sampling;
         RenderModuleSkybox*               skybox;
         RenderModuleWorld*                world;
+        RenderModuleVolumetrics*          volumetrics;
         RenderModuleUI*                   ui;
     };
     UsedModules _module {};

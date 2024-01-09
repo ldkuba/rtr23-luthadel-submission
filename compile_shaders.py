@@ -20,7 +20,8 @@ shader_list = [
     ("builtin.blur_shader", ["vert", "frag"]),
     ("builtin.shadowmap_directional_shader", ["vert", "frag"]),
     ("builtin.shadowmap_sampling_shader", ["vert", "frag"]),
-    ("builtin.ssr_shader", ["vert", "frag"])
+    ("builtin.ssr_shader", ["vert", "frag"]),
+    ("builtin.volumetrics_shader", ["vert", "frag"])
 ]
 
 for shader, phases in shader_list:

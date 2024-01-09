@@ -78,6 +78,8 @@ class VulkanBackend : public RendererBackend {
     Texture* get_window_attachment(const uint8 index) const override;
     Texture* get_depth_attachment() const override;
     Texture* get_color_attachment() const override;
+    Texture* get_ms_color_attachment() const override;
+    Texture* get_ms_depth_attachment() const override;
 
   private:
     // TODO: Custom allocator

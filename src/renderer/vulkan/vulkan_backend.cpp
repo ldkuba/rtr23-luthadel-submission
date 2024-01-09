@@ -731,6 +731,12 @@ Texture* VulkanBackend::get_depth_attachment() const {
 Texture* VulkanBackend::get_color_attachment() const {
     return _swapchain->get_color_texture();
 }
+Texture* VulkanBackend::get_ms_color_attachment() const {
+    return _swapchain->get_ms_color_texture();
+}
+Texture* VulkanBackend::get_ms_depth_attachment() const {
+    return _swapchain->get_ms_depth_texture();
+}
 
 // /////////////////////////////// //
 // VULKAN RENDERER PRIVATE METHODS //

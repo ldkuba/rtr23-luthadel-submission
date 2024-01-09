@@ -95,4 +95,10 @@ Result<Shader*, RuntimeError> ShaderSystem::acquire(const String name) {
     return it->second;
 }
 
+void ShaderSystem::reload_shaders() {
+    for(auto& shader : _registered_shaders) {
+        shader.second->reload();
+    }
+}
+
 } // namespace ENGINE_NAMESPACE

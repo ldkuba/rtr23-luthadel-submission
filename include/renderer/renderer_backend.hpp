@@ -227,6 +227,9 @@ class RendererBackend {
      */
     virtual Texture* get_color_attachment() const                   = 0;
 
+    virtual Texture* get_ms_color_attachment() const = 0;
+    virtual Texture* get_ms_depth_attachment() const = 0;
+
   private:
     uint64 _frame_number = -1;
 };

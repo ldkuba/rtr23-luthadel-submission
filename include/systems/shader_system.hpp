@@ -50,6 +50,8 @@ class ShaderSystem {
      */
     Result<Shader*, RuntimeError> acquire(const String name);
 
+    void reload_shaders();
+
   private:
     Renderer*       _renderer;
     ResourceSystem* _resource_system;

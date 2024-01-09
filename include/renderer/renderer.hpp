@@ -183,6 +183,9 @@ class Renderer {
      */
     Texture* get_color_texture() const;
 
+    Texture* get_ms_color_texture() const;
+    Texture* get_ms_depth_texture() const;
+
     /**
      * @brief Link renderer with already initialized systems which use it
      * @param texture_system Reference to texture system

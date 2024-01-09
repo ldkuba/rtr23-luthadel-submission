@@ -171,7 +171,7 @@ void TestApplication::setup_input() {
     PressControl(mode_6_c, NUM_6);
     // Other
     PressControl(spin_cube, SPACE);
-    // PressControl(shader_reload, Z); // TODO:
+    PressControl(shader_reload, Z); // TODO:
     PressControl(show_fps, F);
     PressControl(move_directional_light, B);
 
@@ -245,8 +245,11 @@ void TestApplication::setup_input() {
     spin_cube->event +=
         [&](float32, float32) { _cube_rotation = !_cube_rotation; };
     // TODO: Hot reload-able shaders
-    // shader_reload->event +=
-    //     [&](float32, float32) { _app_renderer.material_shader->reload(); };
+    shader_reload->event +=
+        [&](float32, float32) { 
+            Logger::debug("Reloading shaders...");
+            _shader_system.reload_shaders();
+        };
     show_fps->event += [&](float32, float32) { _log_fps = !_log_fps; };
     move_directional_light->event += [&](float32, float32) {
         _move_directional_light_flag = !_move_directional_light_flag;
@@ -334,6 +337,13 @@ void TestApplication::setup_render_passes() {
         false,                                // Depth testing
         false                                 // Multisampling
     });
+    const auto volumetrics_renderpass = _app_renderer.create_render_pass({
+        RenderPass::BuiltIn::VolumetricsPass, // Name
+        glm::vec2 { 0, 0 },                   // Draw offset
+        glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f }, // Clear color
+        false,                                // Depth testing
+        false                                 // Multisampling
+    });
 
     // === Create render target textures ===
     // G buffer
@@ -389,12 +399,17 @@ void TestApplication::setup_render_passes() {
         width,
         height,
         4,
-        Texture::Format::RGBA8Unorm,
+        Texture::Format::BGRA8Srgb,
         true
     );
 
     // === Create render targets ===
-    world_renderpass->add_window_as_render_target();
+    world_renderpass->add_render_target({
+        width,
+        height,
+        { _app_renderer.get_ms_color_texture(), _app_renderer.get_ms_depth_texture(), color_texture },
+        true
+    });
     ui_renderpass->add_window_as_render_target();
     skybox_renderpass->add_window_as_render_target();
     depth_renderpass->add_render_target({ width,
@@ -430,6 +445,7 @@ void TestApplication::setup_render_passes() {
           true }
     );
     ssr_renderpass->add_window_as_render_target();
+    volumetrics_renderpass->add_window_as_render_target();
 
     // === Initialize ===
     RenderPass::start >>
@@ -444,6 +460,8 @@ void TestApplication::setup_render_passes() {
         "C" >> skybox_renderpass >>
         // World
         "DS" >> world_renderpass >>
+        // Post process
+        "CDS" >> volumetrics_renderpass >>
         // UI
         ui_renderpass >>
         // Finish
@@ -531,6 +549,13 @@ void TestApplication::setup_modules() {
           UsedTextures::ShadowmapSampledTarget,
           glm::vec4(0.05f, 0.05f, 0.05f, 1.0f) }
     );
+    _module.volumetrics = _render_module_system.create<RenderModuleVolumetrics>(
+        { Shader::BuiltIn::VolumetricsShader,
+          RenderPass::BuiltIn::VolumetricsPass,
+          _main_world_view,
+          UsedTextures::WorldColorTarget,
+          UsedTextures::DepthPrePassTarget }
+    );
     _module.ui = _render_module_system.create<RenderModuleUI>(
         { Shader::BuiltIn::UIShader,
           RenderPass::BuiltIn::UIPass,
@@ -545,6 +570,7 @@ void TestApplication::setup_modules() {
     _modules.push_back(_module.shadow_sampling);
     _modules.push_back(_module.skybox);
     _modules.push_back(_module.world);
+    _modules.push_back(_module.volumetrics);
     _modules.push_back(_module.ui);
 }
 

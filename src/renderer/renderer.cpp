@@ -198,5 +198,11 @@ Texture* Renderer::get_depth_texture() const {
 Texture* Renderer::get_color_texture() const {
     return _backend->get_color_attachment();
 }
+Texture* Renderer::get_ms_depth_texture() const {
+    return _backend->get_ms_depth_attachment();
+}
+Texture* Renderer::get_ms_color_texture() const {
+    return _backend->get_ms_color_attachment();
+}
 
 } // namespace ENGINE_NAMESPACE
