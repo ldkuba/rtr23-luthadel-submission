@@ -1,5 +1,8 @@
 #version 450
 #extension GL_EXT_scalar_block_layout : require
+#extension GL_GOOGLE_include_directive : require
+
+#include "include/space_transforms.glsl"
 
 // Consts
 const int MAX_KERNEL_SIZE = 64;
@@ -24,11 +27,18 @@ layout(set = 0, binding = 1)uniform sampler2D samplers[2];
 layout(location = 0)in vec2 in_texture_coords;
 layout(location = 0)out vec4 out_color;
 
-// Calculate view position from depth
-vec3 calculate_view_position(vec2 coords);
+vec3 screen_to_view_2(
+    vec2 coords,
+    sampler2D depth_sampler,
+    mat4 projection_inverse
+);
 
 void main() {
-    vec3 view_pos = calculate_view_position(in_texture_coords);
+    vec3 view_pos = screen_to_view_2(
+        in_texture_coords,
+        samplers[depth_normals_i],
+        GlobalUBO.projection_inverse
+    );
     
     vec3 view_normal = texture(samplers[depth_normals_i], in_texture_coords).xyz;
     view_normal = normalize(view_normal);
@@ -60,7 +70,11 @@ void main() {
         
         // this is the geometry's depth i.e. the view_space_geometry_depth
         // this value is negative in my coordinate system
-        float geometry_depth = calculate_view_position(offset.xy).z;
+        float geometry_depth = screen_to_view_2(
+            offset.xy,
+            samplers[depth_normals_i],
+            GlobalUBO.projection_inverse
+        ).z;
         
         float range_check = smoothstep(0.0, 1.0, GlobalUBO.sample_radius / abs(view_pos.z - geometry_depth));
         
@@ -84,24 +98,29 @@ void main() {
     out_color = vec4(visibility_factor, 0, 0, 1);
 }
 
-vec3 calculate_view_position(vec2 coords) {
-    float fragment_depth = texture(samplers[depth_normals_i], coords).w;
+vec3 screen_to_view_2(
+    vec2 coords,
+    sampler2D depth_sampler,
+    mat4 projection_inverse
+) {
+    float fragment_depth = texture(depth_sampler, coords).w;
     
     // Convert coords and fragment_depth to
     // normalized device coordinates (clip space)
     vec4 ndc = vec4(
         coords.x * 2.0 - 1.0,
         coords.y * 2.0 - 1.0,
-        fragment_depth * 2.0 - 1.0,
+        // 1.0 - coords.y * 2.0,
+        // fragment_depth * 2.0 - 1.0,
+        fragment_depth,
         1.0
     );
     
-    // Transform to view space using inverse camera projection matrix.
-    vec4 vs_pos = GlobalUBO.projection_inverse * ndc;
-    
+    // Transform to view space using inverse camera projection
+    vec4 view_pos = projection_inverse * ndc;
     // Since we used a projection transformation (even if it was in inverse)
     // we need to convert our homogen eous coordinates using the perspective divide.
-    vs_pos.xyz = vs_pos.xyz / vs_pos.w;
+    view_pos /= view_pos.w;
     
-    return vs_pos.xyz;
+    return view_pos.xyz;
 }

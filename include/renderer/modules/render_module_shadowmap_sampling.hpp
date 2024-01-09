@@ -1,23 +1,33 @@
 #pragma once
 
-#include "render_module.hpp"
+#include "render_module_full_screen.hpp"
 #include "renderer/views/render_view_perspective.hpp"
 #include "systems/light_system.hpp"
 
 namespace ENGINE_NAMESPACE {
 
-class RenderModuleShadowmapSampling : public RenderModule {
+class RenderModuleShadowmapSampling : public RenderModuleFullScreen {
   public:
-    struct Config : public RenderModule::Config {
-        RenderViewPerspective* perspective_view;
-        String                 directional_shadow_texture;
+    struct Config : public RenderModuleFullScreen::Config {
+        String g_pre_pass_texture;
+        String directional_shadow_texture;
     };
 
   public:
-    using RenderModule::RenderModule;
+    using RenderModuleFullScreen::RenderModuleFullScreen;
 
     void initialize(const Config& config) {
-        _perspective_view       = config.perspective_view;
+        RenderModuleFullScreen::initialize(config);
+        _perspective_view = config.perspective_view;
+        _g_pre_pass_map   = create_texture_map(
+            config.g_pre_pass_texture,
+            Texture::Use::MapPassResult,
+            Texture::Filter::BiLinear,
+            Texture::Filter::BiLinear,
+            Texture::Repeat::ClampToEdge,
+            Texture::Repeat::ClampToEdge,
+            Texture::Repeat::ClampToEdge
+        );
         _directional_shadow_map = create_texture_map(
             config.directional_shadow_texture,
             Texture::Use::MapPassResult,
@@ -28,45 +38,29 @@ class RenderModuleShadowmapSampling : public RenderModule {
             Texture::Repeat::ClampToEdge
         );
 
-        SETUP_UNIFORM_INDEX(projection);
-        SETUP_UNIFORM_INDEX(view);
+        SETUP_UNIFORM_INDEX(projection_inverse);
+        SETUP_UNIFORM_INDEX(view_inverse);
         SETUP_UNIFORM_INDEX(light_space_directional);
-        SETUP_UNIFORM_INDEX(model);
+        SETUP_UNIFORM_INDEX(g_pre_pass_texture);
         SETUP_UNIFORM_INDEX(shadowmap_directional_texture);
     }
 
   protected:
-    void on_render(const ModulePacket* const packet, const uint64 frame_number)
-        override {
-        // Get visible geometries
-        const auto geometry_data =
-            _perspective_view->get_visible_render_data(frame_number);
-
-        // Draw geometries
-        for (const auto& geo_data : geometry_data) {
-            // Apply local
-            _shader->set_uniform(_u_index.model, &geo_data.model);
-
-            // Draw geometry
-            _renderer->draw_geometry(geo_data.geometry);
-        }
-    }
-
     void apply_globals() const override {
         const auto camera = _perspective_view->camera();
-
-        _shader->set_uniform(
-            _u_index.projection, &_perspective_view->proj_matrix()
-        );
-        _shader->set_uniform(_u_index.view, &camera->view());
-
-        glm::mat4 light_space_directional =
+        glm::mat4  light_space_directional =
             _light_system->get_directional()->get_light_space_matrix(
                 camera->transform.position()
             );
+
+        _shader->set_uniform(
+            _u_index.projection_inverse, &_perspective_view->proj_inv_matrix()
+        );
+        _shader->set_uniform(_u_index.view_inverse, &camera->view_inverse());
         _shader->set_uniform(
             _u_index.light_space_directional, &light_space_directional
         );
+        _shader->set_sampler(_u_index.g_pre_pass_texture, _g_pre_pass_map);
         _shader->set_sampler(
             _u_index.shadowmap_directional_texture, _directional_shadow_map
         );
@@ -74,13 +68,14 @@ class RenderModuleShadowmapSampling : public RenderModule {
 
   private:
     RenderViewPerspective* _perspective_view;
+    Texture::Map*          _g_pre_pass_map;
     Texture::Map*          _directional_shadow_map;
 
     struct UIndex {
-        uint16 projection                    = -1;
-        uint16 view                          = -1;
+        uint16 projection_inverse            = -1;
+        uint16 view_inverse                  = -1;
         uint16 light_space_directional       = -1;
-        uint16 model                         = -1;
+        uint16 g_pre_pass_texture            = -1;
         uint16 shadowmap_directional_texture = -1;
     };
     UIndex _u_index {};

@@ -16,13 +16,15 @@ class Camera {
     /// @brief Camera view matrix
     Property<glm::mat4> view {
         GET {
-            if (_is_dirty) {
-                _view = glm::lookAt(
-                    transform.position(), transform.position() + _forward, _up
-                );
-                _is_dirty = false;
-            }
+            if (_is_dirty) update_view_matrix();
             return _view;
+        }
+    };
+    /// @brief Camera view inverse matrix
+    Property<glm::mat4> view_inverse {
+        GET {
+            if (_is_dirty) update_view_matrix();
+            return _view_inverse;
         }
     };
 
@@ -93,6 +95,7 @@ class Camera {
 
   private:
     glm::mat4 _view;
+    glm::mat4 _view_inverse;
     bool      _is_dirty = true;
 
     const glm::vec3 _def_forward { 1, 0, 0 };
@@ -104,6 +107,7 @@ class Camera {
     glm::vec3 _up      = _def_up;
 
     void compute_coord_system();
+    void update_view_matrix();
 };
 
 } // namespace ENGINE_NAMESPACE

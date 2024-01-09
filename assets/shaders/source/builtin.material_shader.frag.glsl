@@ -74,6 +74,7 @@ layout(location = 1)in struct data_transfer_object {
 layout(location = 0)out vec4 out_color;
 
 // Function prototypes
+vec2 screen_position();
 vec4 sample_ssao();
 vec4 calculate_directional_lights(DirectionalLight light, vec3 normal, vec3 view_direction);
 vec4 calculate_point_lights(PointLight light, vec3 normal, vec3 frag_position, vec3 view_direction);
@@ -113,12 +114,16 @@ void main() {
 }
 
 // Functions
+vec2 screen_position() {
+    vec2 ndc_position = InDTO.clip_position.xy / InDTO.clip_position.w;
+    vec2 sp = ndc_position * 0.5 + 0.5;
+    sp.y = 1.0 - sp.y;
+    return sp;
+}
+
 vec4 sample_ssao() {
     if (in_mode == 4)return vec4(1);
-    vec2 ndc_position = InDTO.clip_position.xy / InDTO.clip_position.w;
-    vec2 screen_position = ndc_position * 0.5 + 0.5;
-    screen_position.y = 1.0 - screen_position.y;
-    float vf = texture(GlobalSamplers[ssao_i], screen_position).r;
+    float vf = texture(GlobalSamplers[ssao_i], screen_position()).r;
     return vec4(vec3(vf), 1);
 }
 
@@ -154,10 +159,7 @@ vec4 calculate_directional_lights(DirectionalLight light, vec3 normal, vec3 view
     
     // TODO: this will contain all shadows, not just directional but for now idk how to
     // deal with ambient being different for directional and point lights.
-    vec2 ndc_position = InDTO.clip_position.xy / InDTO.clip_position.w;
-    vec2 screen_position = ndc_position * 0.5 + 0.5;
-    screen_position.y = 1.0 - screen_position.y;
-    float shadow = float(texture(GlobalSamplers[shadow_sampled_i], screen_position));
+    float shadow = float(texture(GlobalSamplers[shadow_sampled_i], screen_position()));
     
     return shadow * (diffuse + specular) + ambient;
 }

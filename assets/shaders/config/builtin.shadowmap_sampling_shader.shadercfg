@@ -6,24 +6,12 @@
         "vertex",
         "fragment"
     ],
-    "cull_mode": "back",
+    "cull_mode": "none",
     "enable_blending": false,
     "attributes": [
         {
             "name": "in_position",
-            "type": "vec3"
-        },
-        {
-            "name": "in_normal",
-            "type": "vec3"
-        },
-        {
-            "name": "in_tangent",
-            "type": "vec3"
-        },
-        {
-            "name": "in_color",
-            "type": "vec4"
+            "type": "vec2"
         },
         {
             "name": "in_texcoord",
@@ -39,15 +27,15 @@
                     "type": "uniform",
                     "binding_index": 0,
                     "stages": [
-                        "vertex"
+                        "fragment"
                     ],
                     "uniforms": [
                         {
-                            "name": "projection",
+                            "name": "projection_inverse",
                             "type": "mat4"
                         },
                         {
-                            "name": "view",
+                            "name": "view_inverse",
                             "type": "mat4"
                         },
                         {
@@ -59,11 +47,15 @@
                 {
                     "type": "sampler",
                     "binding_index": 1,
-                    "count": 1,
+                    "count": 2,
                     "stages": [
                         "fragment"
                     ],
                     "uniforms": [
+                        {
+                            "name": "g_pre_pass_texture",
+                            "type": "sampler2D"
+                        },
                         {
                             "name": "shadowmap_directional_texture",
                             "type": "sampler2D"
@@ -73,10 +65,5 @@
             ]
         }
     ],
-    "push_constants": [
-        {
-            "name": "model",
-            "type": "mat4"
-        }
-    ]
+    "push_constants": []
 }

@@ -72,4 +72,11 @@ void Camera::compute_coord_system() {
     _left    = glm::normalize(_left);
 }
 
+void Camera::update_view_matrix() {
+    _view =
+        glm::lookAt(transform.position(), transform.position() + _forward, _up);
+    _view_inverse = glm::inverse(_view);
+    _is_dirty     = false;
+}
+
 } // namespace ENGINE_NAMESPACE

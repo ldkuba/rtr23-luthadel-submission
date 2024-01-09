@@ -245,11 +245,10 @@ void TestApplication::setup_input() {
     spin_cube->event +=
         [&](float32, float32) { _cube_rotation = !_cube_rotation; };
     // TODO: Hot reload-able shaders
-    shader_reload->event +=
-        [&](float32, float32) { 
-            Logger::debug("Reloading shaders...");
-            _shader_system.reload_shaders();
-        };
+    shader_reload->event += [&](float32, float32) {
+        Logger::debug("Reloading shaders...");
+        _shader_system.reload_shaders();
+    };
     show_fps->event += [&](float32, float32) { _log_fps = !_log_fps; };
     move_directional_light->event += [&](float32, float32) {
         _move_directional_light_flag = !_move_directional_light_flag;
@@ -330,7 +329,7 @@ void TestApplication::setup_render_passes() {
             true,                                       // Depth testing
             false                                       // Multisampling
         });
-    const auto ssr_renderpass = _app_renderer.create_render_pass({
+    const auto ssr_renderpass         = _app_renderer.create_render_pass({
         RenderPass::BuiltIn::SSRPass,         // Name
         glm::vec2 { 0, 0 },                   // Draw offset
         glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f }, // Clear color
@@ -388,7 +387,7 @@ void TestApplication::setup_render_passes() {
         UsedTextures::ShadowmapSampledTarget,
         width,
         height,
-        1,
+        4,
         Texture::Format::RGBA32Sfloat,
         true
     );
@@ -404,12 +403,14 @@ void TestApplication::setup_render_passes() {
     );
 
     // === Create render targets ===
-    world_renderpass->add_render_target({
-        width,
-        height,
-        { _app_renderer.get_ms_color_texture(), _app_renderer.get_ms_depth_texture(), color_texture },
-        true
-    });
+    world_renderpass->add_render_target(
+        { width,
+          height,
+          { _app_renderer.get_ms_color_texture(),
+            _app_renderer.get_ms_depth_texture(),
+            color_texture },
+          true }
+    );
     ui_renderpass->add_window_as_render_target();
     skybox_renderpass->add_window_as_render_target();
     depth_renderpass->add_render_target({ width,
@@ -533,6 +534,7 @@ void TestApplication::setup_modules() {
             { Shader::BuiltIn::ShadowmapSamplingShader,
               RenderPass::BuiltIn::ShadowmapSamplingPass,
               _main_world_view,
+              UsedTextures::DepthPrePassTarget,
               UsedTextures::DirectionalShadowMapDepthTarget }
         );
     _module.skybox = _render_module_system.create<RenderModuleSkybox>(
