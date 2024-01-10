@@ -30,7 +30,23 @@
                     ],
                     "uniforms": [
                         {
+                            "name": "projection",
+                            "type": "mat4"
+                        },
+                        {
                             "name": "projection_inverse",
+                            "type": "mat4"
+                        },
+                        {
+                            "name": "view",
+                            "type": "mat4"
+                        },
+                        {
+                            "name": "view_inverse",
+                            "type": "mat4"
+                        },
+                        {
+                            "name": "view_origin",
                             "type": "mat4"
                         }
                     ]
@@ -48,7 +64,7 @@
                             "type": "sampler2D"
                         },
                         {
-                            "name": "depth_normals_texture",
+                            "name": "g_pre_pass_texture",
                             "type": "sampler2D"
                         }
                     ]

@@ -108,12 +108,12 @@ Geometry* GeometrySystem::generate_ui_rectangle(
 
     // Initialize vertices and indices for a rectangle
     const Vector<Vertex2D> vertices2d {
-        { glm::vec2(0.0f, 0.0f), glm::vec2(0.0f, 0.0f) },
-        { glm::vec2(dim1, dim2), glm::vec2(1.0f, 1.0f) },
-        { glm::vec2(0.0f, dim2), glm::vec2(0.0f, 1.0f) },
-        { glm::vec2(dim1, 0.0f), glm::vec2(1.0f, 0.0f) }
+        { glm::vec2(0.0f, 0.0f), glm::vec2(0.0f, 1.0f) },
+        { glm::vec2(dim1, dim2), glm::vec2(1.0f, 0.0f) },
+        { glm::vec2(0.0f, dim2), glm::vec2(0.0f, 0.0f) },
+        { glm::vec2(dim1, 0.0f), glm::vec2(1.0f, 1.0f) }
     };
-    const Vector<uint32> indices2d { 2, 1, 0, 3, 0, 1 };
+    const Vector<uint32> indices2d { 0, 1, 2, 0, 3, 1 };
 
     // Create AABB
     const AxisAlignedBBox<2> bbox = { glm::vec3(0), glm::vec3(dim1, dim2, 0) };

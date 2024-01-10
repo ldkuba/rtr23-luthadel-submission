@@ -35,12 +35,6 @@ layout(location = 1)out struct data_transfer_object {
     vec4 color;
 }OutDTO;
 
-const mat4 shadow_bias = mat4( 
-	0.5, 0.0, 0.0, 0.0,
-	0.0, 0.5, 0.0, 0.0,
-	0.0, 0.0, 1.0, 0.0,
-	0.5, 0.5, 0.0, 1.0 );
-
 void main() {
     mat3 model_m3 = mat3(PC.model);
     
@@ -54,6 +48,6 @@ void main() {
     
     gl_Position = UBO.projection * UBO.view * PC.model * vec4(in_position, 1.0);
     OutDTO.clip_position = gl_Position;
-
+    
     out_mode = UBO.mode;
 }

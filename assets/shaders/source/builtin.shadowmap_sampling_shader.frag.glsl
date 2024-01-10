@@ -4,7 +4,7 @@
 
 #include "include/space_transforms.glsl"
 
-// Consts
+// Const
 const mat4 shadow_bias_mat = mat4(
 	0.5, 0.0, 0.0, 0.0,
 	0.0, 0.5, 0.0, 0.0,
@@ -58,7 +58,7 @@ float filterPCF(vec4 sc, vec3 world_pos);
 void main() {
 	vec3 world_position = screen_to_world(
 		in_texture_coords,
-		samplers[g_pre_pass_i],
+		texture(samplers[g_pre_pass_i], in_texture_coords).w,
 		GlobalUBO.projection_inverse,
 		GlobalUBO.view_inverse
 	);

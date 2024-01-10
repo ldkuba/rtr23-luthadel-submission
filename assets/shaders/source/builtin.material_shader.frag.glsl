@@ -1,5 +1,8 @@
 #version 450
 #extension GL_EXT_scalar_block_layout : require
+#extension GL_GOOGLE_include_directive : require
+
+#include "include/space_transforms.glsl"
 
 #define MAX_POINT_LIGHTS 10
 
@@ -115,9 +118,8 @@ void main() {
 
 // Functions
 vec2 screen_position() {
-    vec2 ndc_position = InDTO.clip_position.xy / InDTO.clip_position.w;
-    vec2 sp = ndc_position * 0.5 + 0.5;
-    sp.y = 1.0 - sp.y;
+    vec3 ndc_position = InDTO.clip_position.xyz / InDTO.clip_position.w;
+    vec2 sp = clip_to_screen(ndc_position);
     return sp;
 }
 

@@ -16,11 +16,12 @@ layout(location = 2)in vec3 in_tangent;
 layout(location = 3)in vec4 in_color;
 layout(location = 4)in vec2 in_texture_coordinate;
 
-const mat4 shadow_bias = mat4( 
-	0.5, 0.0, 0.0, 0.0,
-	0.0, 0.5, 0.0, 0.0,
-	0.0, 0.0, 1.0, 0.0,
-	0.5, 0.5, 0.0, 1.0 );
+const mat4 shadow_bias = mat4(
+    0.5, 0.0, 0.0, 0.0,
+    0.0, 0.5, 0.0, 0.0,
+    0.0, 0.0, 1.0, 0.0,
+    0.5, 0.5, 0.0, 1.0
+);
 
 void main() {
     gl_Position = (UBO.light_space * PC.model) * vec4(in_position, 1.0);

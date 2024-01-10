@@ -2,7 +2,6 @@
 
 #include "render_module_full_screen.hpp"
 #include "renderer/views/render_view_perspective.hpp"
-#include "systems/geometry_system.hpp"
 
 namespace ENGINE_NAMESPACE {
 

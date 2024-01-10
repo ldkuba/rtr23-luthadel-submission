@@ -4,7 +4,7 @@
 
 #include "include/space_transforms.glsl"
 
-// Consts
+// Const
 const int MAX_KERNEL_SIZE = 64;
 const float INV_MAX_KERNEL_SIZE_F = 1.0 / float(MAX_KERNEL_SIZE);
 const vec2 HALF_2 = vec2(0.5);
@@ -27,18 +27,11 @@ layout(set = 0, binding = 1)uniform sampler2D samplers[2];
 layout(location = 0)in vec2 in_texture_coords;
 layout(location = 0)out vec4 out_color;
 
-vec3 screen_to_view_2(
-    vec2 coords,
-    sampler2D depth_sampler,
-    mat4 projection_inverse
-);
+vec3 stv(vec2 coords);
+vec2 vtc(vec3 coords);
 
 void main() {
-    vec3 view_pos = screen_to_view_2(
-        in_texture_coords,
-        samplers[depth_normals_i],
-        GlobalUBO.projection_inverse
-    );
+    vec3 view_pos = stv(in_texture_coords);
     
     vec3 view_normal = texture(samplers[depth_normals_i], in_texture_coords).xyz;
     view_normal = normalize(view_normal);
@@ -63,18 +56,11 @@ void main() {
         sample_pos = view_pos + sample_pos * GlobalUBO.sample_radius;
         
         // now using the sampling point offset
-        vec4 offset = vec4(sample_pos, 1.0);
-        offset = GlobalUBO.projection * offset;
-        offset.xy /= offset.w;
-        offset.xy = offset.xy * HALF_2 + HALF_2;
+        vec2 offset = vtc(sample_pos);
         
         // this is the geometry's depth i.e. the view_space_geometry_depth
         // this value is negative in my coordinate system
-        float geometry_depth = screen_to_view_2(
-            offset.xy,
-            samplers[depth_normals_i],
-            GlobalUBO.projection_inverse
-        ).z;
+        float geometry_depth = stv(offset.xy).z;
         
         float range_check = smoothstep(0.0, 1.0, GlobalUBO.sample_radius / abs(view_pos.z - geometry_depth));
         
@@ -84,7 +70,7 @@ void main() {
         occlusion_factor += float(geometry_depth >= sample_pos.z + 0.0001) * range_check;
     }
     
-    // we will devide the accmulated occlusion by the number of samples to get the average occlusion value.
+    // We will divide the accumulated occlusion by the number of samples to get the average occlusion value.
     float average_occlusion_factor = occlusion_factor * INV_MAX_KERNEL_SIZE_F;
     
     float visibility_factor = 1.0 - average_occlusion_factor;
@@ -98,29 +84,17 @@ void main() {
     out_color = vec4(visibility_factor, 0, 0, 1);
 }
 
-vec3 screen_to_view_2(
-    vec2 coords,
-    sampler2D depth_sampler,
-    mat4 projection_inverse
-) {
-    float fragment_depth = texture(depth_sampler, coords).w;
-    
-    // Convert coords and fragment_depth to
-    // normalized device coordinates (clip space)
-    vec4 ndc = vec4(
-        coords.x * 2.0 - 1.0,
-        coords.y * 2.0 - 1.0,
-        // 1.0 - coords.y * 2.0,
-        // fragment_depth * 2.0 - 1.0,
-        fragment_depth,
-        1.0
+vec3 stv(vec2 coords) {
+    float depth = texture(samplers[depth_normals_i], coords).w;
+    return screen_to_view(
+        coords,
+        depth,
+        GlobalUBO.projection_inverse
     );
-    
-    // Transform to view space using inverse camera projection
-    vec4 view_pos = projection_inverse * ndc;
-    // Since we used a projection transformation (even if it was in inverse)
-    // we need to convert our homogen eous coordinates using the perspective divide.
-    view_pos /= view_pos.w;
-    
-    return view_pos.xyz;
+}
+vec2 vtc(vec3 coords) {
+    return view_to_screen(
+        coords,
+        GlobalUBO.projection
+    );
 }

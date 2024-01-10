@@ -445,8 +445,8 @@ void TestApplication::setup_render_passes() {
           { shadowmap_sampled_texture, _app_renderer.get_depth_texture() },
           true }
     );
-    ssr_renderpass->add_window_as_render_target();
     volumetrics_renderpass->add_window_as_render_target();
+    ssr_renderpass->add_window_as_render_target();
 
     // === Initialize ===
     RenderPass::start >>
@@ -462,7 +462,8 @@ void TestApplication::setup_render_passes() {
         // World
         "DS" >> world_renderpass >>
         // Post process
-        "CDS" >> volumetrics_renderpass >>
+        // "CDS" >> volumetrics_renderpass >>
+        "C" >> ssr_renderpass >>
         // UI
         ui_renderpass >>
         // Finish
@@ -563,6 +564,13 @@ void TestApplication::setup_modules() {
           RenderPass::BuiltIn::UIPass,
           _main_ui_view }
     );
+    _module.ssr = _render_module_system.create<RenderModuleSSR>(
+        { Shader::BuiltIn::SSRShader,
+          RenderPass::BuiltIn::SSRPass,
+          _main_world_view,
+          UsedTextures::WorldColorTarget,
+          UsedTextures::DepthPrePassTarget }
+    );
 
     // Fill list of render commands
     _modules.push_back(_module.g_pass);
@@ -572,7 +580,8 @@ void TestApplication::setup_modules() {
     _modules.push_back(_module.shadow_sampling);
     _modules.push_back(_module.skybox);
     _modules.push_back(_module.world);
-    _modules.push_back(_module.volumetrics);
+    // _modules.push_back(_module.volumetrics);
+    _modules.push_back(_module.ssr);
     _modules.push_back(_module.ui);
 }
 
