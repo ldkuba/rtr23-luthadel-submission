@@ -3,13 +3,13 @@
 #include "render_module_full_screen.hpp"
 #include "renderer/views/render_view_perspective.hpp"
 #include "systems/geometry_system.hpp"
+#include <chrono>
 
 namespace ENGINE_NAMESPACE {
 
 class RenderModuleVolumetrics : public RenderModuleFullScreen {
   public:
     struct Config : public RenderModuleFullScreen::Config {
-        String color_texture;
         String depth_texture;
         String shadow_directional_texture;
     };
@@ -20,21 +20,13 @@ class RenderModuleVolumetrics : public RenderModuleFullScreen {
     void initialize(const Config& config) {
         RenderModuleFullScreen::initialize(config);
 
-        _color_map = create_texture_map(
-            config.color_texture,
-            Texture::Use::MapPassResult,
-            Texture::Filter::BiLinear,
-            Texture::Filter::BiLinear,
-            Texture::Repeat::ClampToEdge,
-            Texture::Repeat::ClampToEdge,
-            Texture::Repeat::ClampToEdge
-        );
+        _start_time = std::chrono::system_clock::now();
 
         _depth_map = create_texture_map(
             config.depth_texture,
             Texture::Use::MapPassResult,
-            Texture::Filter::BiLinear,
-            Texture::Filter::BiLinear,
+            Texture::Filter::NearestNeighbour,
+            Texture::Filter::NearestNeighbour,
             Texture::Repeat::ClampToEdge,
             Texture::Repeat::ClampToEdge,
             Texture::Repeat::ClampToEdge
@@ -50,7 +42,6 @@ class RenderModuleVolumetrics : public RenderModuleFullScreen {
             Texture::Repeat::ClampToEdge
         );
 
-        SETUP_UNIFORM_INDEX(color_texture);
         SETUP_UNIFORM_INDEX(depth_texture);
         SETUP_UNIFORM_INDEX(shadow_directional_texture);
         SETUP_UNIFORM_INDEX(projection_inverse);
@@ -59,6 +50,7 @@ class RenderModuleVolumetrics : public RenderModuleFullScreen {
         SETUP_UNIFORM_INDEX(light_space_directional);
         SETUP_UNIFORM_INDEX(light_pos_directional);
         SETUP_UNIFORM_INDEX(light_color_directional);
+        SETUP_UNIFORM_INDEX(animation_time);
     }
 
   protected:
@@ -68,7 +60,6 @@ class RenderModuleVolumetrics : public RenderModuleFullScreen {
     }
 
     void apply_globals() const override {
-        _shader->set_sampler(_u_index.color_texture, _color_map);
         _shader->set_sampler(_u_index.depth_texture, _depth_map);
         _shader->set_sampler(
             _u_index.shadow_directional_texture, _shadow_directional_map
@@ -108,15 +99,20 @@ class RenderModuleVolumetrics : public RenderModuleFullScreen {
         _shader->set_uniform(
             _u_index.light_color_directional, &light_color_directional
         );
+
+        auto duration = std::chrono::system_clock::now() - _start_time;
+        float time = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
+        _shader->set_uniform(
+            _u_index.animation_time, &time
+        );
     }
 
   private:
-    Texture::Map* _color_map              = nullptr;
     Texture::Map* _depth_map              = nullptr;
     Texture::Map* _shadow_directional_map = nullptr;
+    std::chrono::system_clock::time_point _start_time;
 
     struct UIndex {
-        uint16 color_texture              = -1;
         uint16 depth_texture              = -1;
         uint16 shadow_directional_texture = -1;
         uint16 projection_inverse         = -1;
@@ -125,6 +121,7 @@ class RenderModuleVolumetrics : public RenderModuleFullScreen {
         uint16 light_space_directional    = -1;
         uint16 light_pos_directional      = -1;
         uint16 light_color_directional    = -1;
+        uint16 animation_time             = -1;
     };
     UIndex _u_index {};
 };

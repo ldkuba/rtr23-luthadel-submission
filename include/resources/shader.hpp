@@ -35,6 +35,7 @@ class Shader {
         StringEnum ShadowmapSamplingShader =
             "builtin.shadowmap_sampling_shader";
         StringEnum VolumetricsShader = "builtin.volumetrics_shader";
+        StringEnum VolumetricsBlurShader = "builtin.volumetrics_blur_shader";
     };
 
     /// @brief Supported shader attribute types

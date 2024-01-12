@@ -12,6 +12,7 @@ class RenderModuleWorld : public RenderModule {
         RenderViewPerspective* perspective_view;
         String                 ssao_texture;
         String                 shadow_texture;
+        String                 volumetrics_texture;
         glm::vec4              ambient_color;
     };
 
@@ -21,7 +22,11 @@ class RenderModuleWorld : public RenderModule {
     void initialize(const Config& config) {
         _perspective_view = config.perspective_view;
         _ambient_color    = config.ambient_color;
-        create_texture_maps(config.ssao_texture, config.shadow_texture);
+        create_texture_maps(
+            config.ssao_texture,
+            config.shadow_texture,
+            config.volumetrics_texture
+        );
 
         SETUP_UNIFORM_INDEX(projection);
         SETUP_UNIFORM_INDEX(view);
@@ -34,6 +39,7 @@ class RenderModuleWorld : public RenderModule {
         SETUP_UNIFORM_INDEX(point_lights);
         SETUP_UNIFORM_INDEX(ssao_texture);
         SETUP_UNIFORM_INDEX(shadowmap_sampled_texture);
+        SETUP_UNIFORM_INDEX(volumetrics_texture);
     }
 
     void set_mode(const DebugViewMode& mode) { _render_mode = mode; }
@@ -76,6 +82,9 @@ class RenderModuleWorld : public RenderModule {
         _shader->set_sampler(
             _u_index.shadowmap_sampled_texture, _shadow_texture_map
         );
+        _shader->set_sampler(
+            _u_index.volumetrics_texture, _volumetrics_texture_map
+        );
 
         // Apply lights
         auto point_light_data  = _light_system->get_point_data();
@@ -90,6 +99,7 @@ class RenderModuleWorld : public RenderModule {
     RenderViewPerspective* _perspective_view;
     Texture::Map*          _ssao_texture_map;
     Texture::Map*          _shadow_texture_map;
+    Texture::Map*          _volumetrics_texture_map;
     glm::vec4              _ambient_color;
 
     DebugViewMode _render_mode = DebugViewMode::Default;
@@ -106,11 +116,14 @@ class RenderModuleWorld : public RenderModule {
         uint16 point_lights              = -1;
         uint16 ssao_texture              = -1;
         uint16 shadowmap_sampled_texture = -1;
+        uint16 volumetrics_texture       = -1;
     };
     UIndex _u_index {};
 
     void create_texture_maps(
-        const String& ssao_texture, const String& shadow_texture
+        const String& ssao_texture,
+        const String& shadow_texture,
+        const String& volumetrics_texture
     ) {
         _ssao_texture_map = create_texture_map(
             ssao_texture,
@@ -123,6 +136,15 @@ class RenderModuleWorld : public RenderModule {
         );
         _shadow_texture_map = create_texture_map(
             shadow_texture,
+            Texture::Use::MapPassResult,
+            Texture::Filter::BiLinear,
+            Texture::Filter::BiLinear,
+            Texture::Repeat::ClampToEdge,
+            Texture::Repeat::ClampToEdge,
+            Texture::Repeat::ClampToEdge
+        );
+        _volumetrics_texture_map = create_texture_map(
+            volumetrics_texture,
             Texture::Use::MapPassResult,
             Texture::Filter::BiLinear,
             Texture::Filter::BiLinear,

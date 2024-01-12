@@ -94,7 +94,7 @@
                 {
                     "type": "sampler",
                     "binding_index": 2,
-                    "count": 2,
+                    "count": 3,
                     "stages": [
                         "fragment"
                     ],
@@ -105,6 +105,10 @@
                         },
                         {
                             "name": "shadowmap_sampled_texture",
+                            "type": "sampler2D"
+                        },
+                        {
+                            "name": "volumetrics_texture",
                             "type": "sampler2D"
                         }
                     ]

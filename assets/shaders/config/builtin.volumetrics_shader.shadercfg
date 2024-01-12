@@ -52,21 +52,21 @@
                         {
                             "name": "light_color_directional",
                             "type": "vec4"
+                        },
+                        {
+                            "name": "animation_time",
+                            "type": "float32"
                         }
                     ]
                 },
                 {
                     "type": "sampler",
                     "binding_index": 1,
-                    "count": 3,
+                    "count": 2,
                     "stages": [
                         "fragment"
                     ],
                     "uniforms": [
-                        {
-                            "name": "color_texture",
-                            "type": "sampler2D"
-                        },
                         {
                             "name": "depth_texture",
                             "type": "sampler2D"

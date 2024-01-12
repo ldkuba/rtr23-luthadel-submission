@@ -42,7 +42,8 @@ layout(std430, set = 0, binding = 1)uniform global_frag_uniform_buffer {
 // Global InstSamplers
 const int ssao_i = 0;
 const int shadow_sampled_i = 1;
-layout(set = 0, binding = 2)uniform sampler2D GlobalSamplers[2];
+const int volumetrics_i = 2;
+layout(set = 0, binding = 2)uniform sampler2D GlobalSamplers[3];
 
 // Instance uniforms
 layout(std430, set = 1, binding = 1)uniform local_uniform_buffer {
@@ -76,6 +77,7 @@ layout(location = 0)out vec4 out_color;
 // Function prototypes
 vec2 screen_position();
 vec4 sample_ssao();
+vec4 sample_volumetrics(vec2 tex_coords);
 vec4 calculate_directional_lights(DirectionalLight light, vec3 normal, vec3 view_direction);
 vec4 calculate_point_lights(PointLight light, vec3 normal, vec3 frag_position, vec3 view_direction);
 
@@ -106,6 +108,9 @@ void main() {
         for(int i = 0; i < min(GlobalUBO.num_point_lights.num, MAX_POINT_LIGHTS); i ++ ) {
             out_color += calculate_point_lights(GlobalUBO.point_lights[i], normal, InDTO.frag_position, view_direction);
         }
+
+        // Blend volumetrics pass results
+        out_color += sample_volumetrics(screen_position());
     } else if (in_mode == 2) {
         out_color = vec4(max(normal, 0), 1.0);
     } else if (in_mode == 3) {
@@ -125,6 +130,10 @@ vec4 sample_ssao() {
     if (in_mode == 4)return vec4(1);
     float vf = texture(GlobalSamplers[ssao_i], screen_position()).r;
     return vec4(vec3(vf), 1);
+}
+
+vec4 sample_volumetrics(vec2 tex_coords) {
+    return texture(GlobalSamplers[volumetrics_i], tex_coords);
 }
 
 vec4 calculate_directional_lights(DirectionalLight light, vec3 normal, vec3 view_direction) {

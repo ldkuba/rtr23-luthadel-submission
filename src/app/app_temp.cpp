@@ -343,6 +343,14 @@ void TestApplication::setup_render_passes() {
         false,                                // Depth testing
         false                                 // Multisampling
     });
+    const auto volumetrics_blur_renderpass =
+        _app_renderer.create_render_pass({
+            RenderPass::BuiltIn::VolumetricsBlurPass, // Name
+            glm::vec2 { 0, 0 },                       // Draw offset
+            glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f },     // Clear color
+            false,                                    // Depth testing
+            false                                     // Multisampling
+        });
 
     // === Create render target textures ===
     // G buffer
@@ -392,6 +400,23 @@ void TestApplication::setup_render_passes() {
         true
     );
 
+    const auto volumetrics_texture = _texture_system.acquire_writable(
+        UsedTextures::VolumetricsTarget,
+        half_width,
+        half_height,
+        4,
+        Texture::Format::BGRA8Srgb,
+        true
+    );
+    const auto volumetrics_blur_texture = _texture_system.acquire_writable(
+        UsedTextures::VolumetricsBlurTarget,
+        half_width,
+        half_height,
+        4,
+        Texture::Format::BGRA8Srgb,
+        true
+    );
+
     // World pass color target
     const auto color_texture = _texture_system.acquire_writable(
         UsedTextures::WorldColorTarget,
@@ -403,14 +428,7 @@ void TestApplication::setup_render_passes() {
     );
 
     // === Create render targets ===
-    world_renderpass->add_render_target(
-        { width,
-          height,
-          { _app_renderer.get_ms_color_texture(),
-            _app_renderer.get_ms_depth_texture(),
-            color_texture },
-          true }
-    );
+    world_renderpass->add_window_as_render_target();
     ui_renderpass->add_window_as_render_target();
     skybox_renderpass->add_window_as_render_target();
     depth_renderpass->add_render_target({ width,
@@ -446,7 +464,14 @@ void TestApplication::setup_render_passes() {
           true }
     );
     ssr_renderpass->add_window_as_render_target();
-    volumetrics_renderpass->add_window_as_render_target();
+    volumetrics_renderpass->add_render_target({half_width, half_height,
+                                               { volumetrics_texture },
+                                               true,
+                                               RenderTarget::SynchMode::HalfResolution });
+    volumetrics_blur_renderpass->add_render_target({half_width, half_height,
+                                                    { volumetrics_blur_texture },
+                                                    true,
+                                                    RenderTarget::SynchMode::HalfResolution });
 
     // === Initialize ===
     RenderPass::start >>
@@ -457,12 +482,12 @@ void TestApplication::setup_render_passes() {
         // Directional Shadow-mapping
         "DS" >> shadowmap_directional_renderpass >> "CDS" >>
         shadowmap_sampling_renderpass >>
+        // Volumetrics
+        "CDS" >> volumetrics_renderpass >> "C" >> volumetrics_blur_renderpass >>
         // Skybox
         "C" >> skybox_renderpass >>
         // World
         "DS" >> world_renderpass >>
-        // Post process
-        "CDS" >> volumetrics_renderpass >>
         // UI
         ui_renderpass >>
         // Finish
@@ -537,6 +562,19 @@ void TestApplication::setup_modules() {
               UsedTextures::DepthPrePassTarget,
               UsedTextures::DirectionalShadowMapDepthTarget }
         );
+    _module.volumetrics = _render_module_system.create<RenderModuleVolumetrics>(
+        { Shader::BuiltIn::VolumetricsShader,
+          RenderPass::BuiltIn::VolumetricsPass,
+          _main_world_view,
+          UsedTextures::DepthPrePassTarget,
+          UsedTextures::DirectionalShadowMapDepthTarget }
+    );
+    _module.volumetrics_blur = _render_module_system.create<RenderModulePostProcessing>(
+        { Shader::BuiltIn::VolumetricsBlurShader,
+          RenderPass::BuiltIn::VolumetricsBlurPass,
+          _main_world_view,
+          UsedTextures::VolumetricsTarget}
+    );
     _module.skybox = _render_module_system.create<RenderModuleSkybox>(
         { Shader::BuiltIn::SkyboxShader,
           RenderPass::BuiltIn::SkyboxPass,
@@ -549,15 +587,8 @@ void TestApplication::setup_modules() {
           _main_world_view,
           UsedTextures::BluredSSAOPassTarget,
           UsedTextures::ShadowmapSampledTarget,
+          UsedTextures::VolumetricsBlurTarget,
           glm::vec4(0.05f, 0.05f, 0.05f, 1.0f) }
-    );
-    _module.volumetrics = _render_module_system.create<RenderModuleVolumetrics>(
-        { Shader::BuiltIn::VolumetricsShader,
-          RenderPass::BuiltIn::VolumetricsPass,
-          _main_world_view,
-          UsedTextures::WorldColorTarget,
-          UsedTextures::DepthPrePassTarget,
-          UsedTextures::DirectionalShadowMapDepthTarget }
     );
     _module.ui = _render_module_system.create<RenderModuleUI>(
         { Shader::BuiltIn::UIShader,
@@ -571,9 +602,10 @@ void TestApplication::setup_modules() {
     _modules.push_back(_module.blur);
     _modules.push_back(_module.shadow_dir);
     _modules.push_back(_module.shadow_sampling);
+    _modules.push_back(_module.volumetrics);
+    _modules.push_back(_module.volumetrics_blur);
     _modules.push_back(_module.skybox);
     _modules.push_back(_module.world);
-    _modules.push_back(_module.volumetrics);
     _modules.push_back(_module.ui);
 }
 
