@@ -22,6 +22,7 @@ shader_list = [
     ("builtin.shadowmap_sampling_shader", ["vert", "frag"]),
     ("builtin.ssr_shader", ["vert", "frag"]),
     ("builtin.volumetrics_shader", ["vert", "frag"]),
+    ("builtin.volumetrics_blur_shader", ["vert", "frag"]),
     ("builtin.post_processing_effects_shader", ["vert", "frag"])
 ]
 

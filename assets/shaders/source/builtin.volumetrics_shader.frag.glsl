@@ -104,7 +104,7 @@ vec4 raymarch_volume(vec3 start_pos, vec3 end_pos, int max_samples, float initia
         
         // Ambient light scattering
         if (shadow == 0.0) {
-            shadow = 0.1;
+            shadow = 0.15;
         }
         
         // Not needed for directional light because it has constant intensity

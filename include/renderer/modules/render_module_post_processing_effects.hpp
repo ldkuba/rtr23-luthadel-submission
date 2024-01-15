@@ -49,7 +49,7 @@ class RenderModulePostProcessingEffects : public RenderModulePostProcessing {
 
   private:
     Texture::Map* _g_pass_map;
-    float32       _exposure = 1.0;
+    float32       _exposure = 0.9;
     float32       _max_blur = 0.6;
     float32       _aperture = 0.05;
     float32       _focus    = 0.985;
