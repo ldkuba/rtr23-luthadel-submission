@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.23.2)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set(CMAKE_EXE_LINKER_FLAGS "-static")
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_GLIBCXX_DEBUG")
 
 project(VulkanEngine)
@@ -92,6 +95,7 @@ target_link_libraries(${PROJECT_NAME}
     TBB::tbb
 )
 
+install(IMPORTED_RUNTIME_ARTIFACTS ${PROJECT_NAME})
 install(TARGETS ${PROJECT_NAME})
 
 # file(GLOB_RECURSE sources ${PROJECT_SOURCE_DIR}/**/*.c)
