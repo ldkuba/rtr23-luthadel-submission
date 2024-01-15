@@ -35,7 +35,7 @@ class TestApplication {
   private:
     // Surface
     Platform::Surface* _app_surface =
-        Platform::Surface::get_instance(800, 600, std::string(APP_NAME));
+        Platform::Surface::get_instance(1920, 1080, std::string(APP_NAME));
 
     // Renderer
     Renderer _app_renderer { RendererBackend::Type::Vulkan, _app_surface };
@@ -87,9 +87,10 @@ class TestApplication {
         RenderModuleSkybox*                skybox;
         RenderModuleWorld*                 world;
         RenderModuleVolumetrics*           volumetrics;
-        RenderModuleUI*                    ui;
+        RenderModulePostProcessing*        volumetrics_blur;
         RenderModuleSSR*                   ssr;
         RenderModulePostProcessingEffects* pp_effects;
+        RenderModuleUI*                    ui;
     };
     UsedModules _module {};
 
@@ -103,10 +104,11 @@ class TestApplication {
         STRING_ENUM(BluredSSAOPassTarget);
         STRING_ENUM(DirectionalShadowMapDepthTarget);
         STRING_ENUM(ShadowmapSampledTarget);
+        STRING_ENUM(VolumetricsTarget);
+        STRING_ENUM(VolumetricsBlurTarget);
         STRING_ENUM(WorldPassTarget);
         STRING_ENUM(WorldPassMSTarget);
-        STRING_ENUM(ColorTarget1);
-        STRING_ENUM(ColorTarget2);
+        STRING_ENUM(SSRTarget);
     };
 
     // Views

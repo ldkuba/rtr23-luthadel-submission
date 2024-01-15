@@ -34,8 +34,9 @@ class Shader {
             "builtin.shadowmap_directional_shader";
         StringEnum ShadowmapSamplingShader =
             "builtin.shadowmap_sampling_shader";
-        StringEnum VolumetricsShader = "builtin.volumetrics_shader";
-        StringEnum SSRShader         = "builtin.ssr_shader";
+        StringEnum VolumetricsShader     = "builtin.volumetrics_shader";
+        StringEnum VolumetricsBlurShader = "builtin.volumetrics_blur_shader";
+        StringEnum SSRShader             = "builtin.ssr_shader";
         StringEnum PostProcessingEffShader =
             "builtin.post_processing_effects_shader";
     };

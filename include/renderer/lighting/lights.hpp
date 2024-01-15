@@ -48,6 +48,7 @@ class DirectionalLight : public Light {
     DirectionalLightData data;
     
     glm::mat4 get_light_space_matrix(const glm::vec3& camera_pos) const;
+    glm::vec4 get_light_camera_position(const glm::vec3& camera_pos) const;
 
   private:
     // Shadow mapping settings

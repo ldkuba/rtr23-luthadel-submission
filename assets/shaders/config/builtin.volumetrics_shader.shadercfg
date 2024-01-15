@@ -36,6 +36,26 @@
                         {
                             "name": "view_inverse",
                             "type": "mat4"
+                        },
+                        {
+                            "name": "camera_position",
+                            "type": "vec4"
+                        },
+                        {
+                            "name": "light_space_directional",
+                            "type": "mat4"
+                        },
+                        {
+                            "name": "light_pos_directional",
+                            "type": "vec4"
+                        },
+                        {
+                            "name": "light_color_directional",
+                            "type": "vec4"
+                        },
+                        {
+                            "name": "animation_time",
+                            "type": "float32"
                         }
                     ]
                 },
@@ -48,11 +68,11 @@
                     ],
                     "uniforms": [
                         {
-                            "name": "color_texture",
+                            "name": "depth_texture",
                             "type": "sampler2D"
                         },
                         {
-                            "name": "depth_texture",
+                            "name": "shadow_directional_texture",
                             "type": "sampler2D"
                         }
                     ]

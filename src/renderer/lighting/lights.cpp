@@ -25,18 +25,32 @@ glm::mat4 DirectionalLight::get_light_space_matrix(const glm::vec3& camera_pos
     );
 
     glm::vec3 up_vector;
-    if(glm::abs(glm::dot(glm::vec3(data.direction), glm::vec3(0.0f, 1.0f, 0.0f))) > 0.99f) {
+    if (glm::abs(
+            glm::dot(glm::vec3(data.direction), glm::vec3(0.0f, 1.0f, 0.0f))
+        ) > 0.99f) {
         up_vector = glm::vec3(0.0f, 0.0f, 1.0f);
     } else {
         up_vector = glm::vec3(0.0f, 1.0f, 0.0f);
     }
 
     const glm::mat4 light_view = glm::lookAt(
-        camera_pos - glm::normalize(glm::vec3(data.direction)) * (_shadowmap_settings.shadowmap_far_plane * 0.5f),
+        camera_pos - glm::normalize(glm::vec3(data.direction)) *
+                         (_shadowmap_settings.shadowmap_far_plane * 0.5f),
         camera_pos,
         up_vector
     );
     return light_projection * light_view;
+}
+
+glm::vec4 DirectionalLight::get_light_camera_position(
+    const glm::vec3& camera_pos
+) const {
+    glm::vec3 light_camera_pos = glm::vec3(
+        camera_pos - glm::normalize(glm::vec3(data.direction)) *
+                         (_shadowmap_settings.shadowmap_far_plane * 0.5f)
+    );
+
+    return glm::vec4(light_camera_pos, 1.0f);
 }
 
 } // namespace ENGINE_NAMESPACE

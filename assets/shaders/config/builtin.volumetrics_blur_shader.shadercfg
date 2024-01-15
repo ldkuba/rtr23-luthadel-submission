@@ -1,0 +1,43 @@
+{
+    "version": 1.0,
+    "name": "builtin.volumetrics_blur_shader",
+    "renderpass": "Renderpass.Builtin.VolumetricsBlur",
+    "stages": [
+        "vertex",
+        "fragment"
+    ],
+    "cull_mode": "none",
+    "attributes": [
+        {
+            "name": "in_position",
+            "type": "vec2"
+        },
+        {
+            "name": "in_texcoord",
+            "type": "vec2"
+        }
+    ],
+    "descriptor_sets": [
+        {
+            "scope": "global",
+            "set_index": 0,
+            "bindings": [
+                {
+                    "type": "sampler",
+                    "binding_index": 0,
+                    "count": 1,
+                    "stages": [
+                        "fragment"
+                    ],
+                    "uniforms": [
+                        {
+                            "name": "color_texture",
+                            "type": "sampler2D"
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "push_constants": []
+}
