@@ -36,14 +36,6 @@ vec4 raymarch_volume(vec3 start_pos, vec3 end_pos, int max_samples, float initia
 const int MAX_SAMPLES = 8;
 
 void main() {
-    // Downsample depth - not helping much. not worth performance
-    // float d1 = textureOffset(samplers[depth_i], in_texture_coords, ivec2(0, 0)).w;
-    // float d2 = textureOffset(samplers[depth_i], in_texture_coords, ivec2(0, 1)).w;
-    // float d3 = textureOffset(samplers[depth_i], in_texture_coords, ivec2(1, 1)).w;
-    // float d4 = textureOffset(samplers[depth_i], in_texture_coords, ivec2(1, 0)).w;
-    
-    // float depth = mix(max(max(d1, d2), max(d3, d4)), min(min(d1, d2), min(d3, d4)), checkerboard(in_texture_coords));
-    
     float ndc_depth = texture(samplers[depth_i], in_texture_coords).w;
     
     vec3 world_pos = screen_to_world(

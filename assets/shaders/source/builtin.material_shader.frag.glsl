@@ -105,7 +105,7 @@ void main() {
         for(int i = 0; i < min(GlobalUBO.num_point_lights.num, MAX_POINT_LIGHTS); i ++ ) {
             out_color += calculate_point_lights(GlobalUBO.point_lights[i], normal, InDTO.frag_position, view_direction);
         }
-
+        
         // Blend volumetrics pass results
         out_color += sample_volumetrics(screen_position());
     } else if (in_mode == 2) {
