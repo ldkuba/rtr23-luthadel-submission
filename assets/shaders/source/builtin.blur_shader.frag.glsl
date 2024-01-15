@@ -17,14 +17,14 @@ vec3 calculate_view_position(vec2 coords);
 
 void main() {
     vec2 texel_size = 1.0 / vec2(textureSize(samplers[target_i], 0));
-    float blurred_target = 0.0;
+    vec3 blurred_target = vec3(0.0);
     for(int t = -2; t < 2; ++ t) {
         for(int s = -2; s < 2; ++ s) {
             vec2 offset = vec2(float(s), float(t)) * texel_size;
             
-            blurred_target += texture(samplers[target_i], in_texture_coords + offset).r;
+            blurred_target += texture(samplers[target_i], in_texture_coords + offset).rgb;
         }
     }
     
-    out_color = vec4(blurred_target * INV_TOTAL_SAMPLES_FACTOR, 0, 0, 1);
+    out_color = vec4(blurred_target * INV_TOTAL_SAMPLES_FACTOR, 1);
 }

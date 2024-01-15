@@ -26,7 +26,9 @@ layout(set = 0, binding = 1)uniform sampler2D samplers[2];
 layout(location = 0)in vec2 in_texture_coords;
 layout(location = 0)out vec4 out_color;
 
+// Helper functions
 vec4 raymarch_volume(vec3 start_pos, vec3 end_pos, int max_samples, float initial_step_size);
+float sample_density(vec3 position);
 
 // float checkerboard(in vec2 uv) {
     //     vec2 pos = floor(uv);
@@ -95,11 +97,7 @@ vec4 raymarch_volume(vec3 start_pos, vec3 end_pos, int max_samples, float initia
     
     int sample_index = 0;
     while(remaining_distance > 0.0 && sample_index < max_samples) {
-        vec3 smoke_move_dir = normalize(vec3(0.0, 0.0, 1.0));
-        float smoke_move_speed = 0.001;
-        vec3 noise_sample_position = pos + smoke_move_speed * smoke_move_dir * GlobalUBO.animation_time;
-        float inv_worley = 1.0 - worley(noise_sample_position * 1.0, 1.7, false).y;
-        float density = exp(1.2 * inv_worley) / 30.0;
+        float density = sample_density(pos);
         
         vec4 pos_lightspace = shadow_bias_mat * GlobalUBO.light_space_directional * vec4(pos, 1.0);
         float shadow = filterPCF(pos_lightspace /= pos_lightspace.w, pos, samplers[shadow_i], false);
@@ -132,4 +130,17 @@ vec4 raymarch_volume(vec3 start_pos, vec3 end_pos, int max_samples, float initia
     }
     
     return ret_color;
+}
+
+float sample_density(vec3 pos) {
+    vec3 smoke_move_dir = normalize(vec3(0.0, 2.0, 1.0));
+    float smoke_move_speed = 0.002;
+    vec3 noise_sample_position = pos + smoke_move_speed * smoke_move_dir * GlobalUBO.animation_time;
+    float jitter_offset = 0.5 * snoise(noise_sample_position);
+    float inv_worley = 1.0 - worley(
+        pos * 1.0, 1.7 + jitter_offset,
+        false
+    ).y;
+    float density = exp(1.2 * inv_worley) / 30.0;
+    return density;
 }
