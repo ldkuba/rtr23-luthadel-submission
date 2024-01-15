@@ -69,13 +69,12 @@ Texture* TextureSystem::acquire(
 
     // Create new texture
     const auto texture = _renderer->create_texture(
-        { name,
-          image->width,
-          image->height,
-          image->channel_count,
-          Texture::Format::RGBA8Unorm,
-          true, // Mipmaping TODO: conf.
-          image->has_transparency() },
+        { .name             = name,
+          .width            = image->width,
+          .height           = image->height,
+          .channel_count    = image->channel_count,
+          .has_transparency = image->has_transparency(),
+          .is_mip_mapped    = true },
         image->pixels
     );
     texture->id = (uint64) texture;
@@ -170,17 +169,11 @@ Texture* TextureSystem::acquire_cube(
 
     // Create new texture cube
     const auto texture = _renderer->create_texture(
-        { name,
-          texture_width,
-          texture_height,
-          texture_channel_count,
-          Texture::Format::RGBA8Unorm,
-          false, // No mipmaping
-          false, // No transparency
-          false, // Not writable
-          false, // Not wrapped
-          false, // Not render target
-          Texture::Type::TCube },
+        { .name          = name,
+          .width         = texture_width,
+          .height        = texture_height,
+          .channel_count = texture_channel_count,
+          .type          = Texture::Type::TCube },
         pixels.data()
     );
     texture->id = (uint64) texture;
@@ -189,55 +182,6 @@ Texture* TextureSystem::acquire_cube(
     _registered_textures[key] = { texture, 1, auto_release };
 
     Logger::trace(TEXTURE_SYS_LOG, "Texture \"", name, "\" (cube) acquired.");
-    return texture;
-}
-
-Texture* TextureSystem::acquire_writable(
-    const String          name,
-    const uint32          width,
-    const uint32          height,
-    const uint8           channel_count,
-    const Texture::Format format,
-    const bool            use_as_render_target,
-    const bool            has_transparency
-) {
-    Logger::trace(
-        TEXTURE_SYS_LOG, "Texture \"", name, "\" (writable) requested."
-    );
-
-    // Check if name is valid
-    const auto name_check_res = name_is_valid(name);
-    if (name_check_res.has_error()) return name_check_res.error();
-
-    // If texture already exists, find it
-    const auto key = name.lower_c();
-    auto       ref = _registered_textures.find(key);
-
-    if (ref != _registered_textures.end()) {
-        ref->second.reference_count++;
-
-        Logger::trace(TEXTURE_SYS_LOG, "Texture \"", name, "\" acquired.");
-        return ref->second.handle;
-    }
-
-    // Texture wasn't found, create new one
-    const auto texture =
-        _renderer->create_writable_texture({ name,
-                                             width,
-                                             height,
-                                             channel_count,
-                                             format,
-                                             false,
-                                             has_transparency,
-                                             true,
-                                             false,
-                                             use_as_render_target });
-    texture->id = (uint64) texture;
-
-    // Create its reference
-    _registered_textures[key] = { texture, 1, false };
-
-    Logger::trace(TEXTURE_SYS_LOG, "Texture \"", name, "\" acquired.");
     return texture;
 }
 
@@ -282,6 +226,12 @@ Texture* TextureSystem::create(
 
     Logger::trace(TEXTURE_SYS_LOG, "Texture \"", config.name, "\" acquired.");
     return texture;
+}
+
+Texture* TextureSystem::create(
+    const Texture::Config& config, const bool auto_release
+) {
+    return create(config, nullptr, auto_release);
 }
 
 void TextureSystem::release(const String name) {
@@ -343,26 +293,22 @@ void TextureSystem::create_default_textures() {
         }
     }
     _default_texture = _renderer->create_texture(
-        { _default_texture_name,
-          texture_dimension,
-          texture_dimension,
-          channels,
-          Texture::Format::RGBA8Unorm,
-          true,
-          false },
+        { .name          = _default_texture_name,
+          .width         = texture_dimension,
+          .height        = texture_dimension,
+          .channel_count = channels,
+          .is_mip_mapped = true },
         pixels
     );
     _default_texture->id = 0;
 
     // Diffuse (All white)
     _default_diffuse_texture = _renderer->create_texture(
-        { _default_diffuse_texture_name,
-          texture_dimension,
-          texture_dimension,
-          channels,
-          Texture::Format::RGBA8Unorm,
-          true,
-          false },
+        { .name          = _default_diffuse_texture_name,
+          .width         = texture_dimension,
+          .height        = texture_dimension,
+          .channel_count = channels,
+          .is_mip_mapped = true },
         pixels
     );
     _default_diffuse_texture->id = 1;
@@ -371,13 +317,11 @@ void TextureSystem::create_default_textures() {
     for (auto& pixel : pixels)
         pixel = 0x0;
     _default_specular_texture = _renderer->create_texture(
-        { _default_specular_texture_name,
-          texture_dimension,
-          texture_dimension,
-          channels,
-          Texture::Format::RGBA8Unorm,
-          true,
-          false },
+        { .name          = _default_specular_texture_name,
+          .width         = texture_dimension,
+          .height        = texture_dimension,
+          .channel_count = channels,
+          .is_mip_mapped = true },
         pixels
     );
     _default_specular_texture->id = 2;
@@ -386,13 +330,11 @@ void TextureSystem::create_default_textures() {
     for (uint32 i = 0; i < pixel_count * channels; i++)
         pixels[i] = (((i / 2) % 2) ? 0xff : 0x80);
     _default_normal_texture = _renderer->create_texture(
-        { _default_normal_texture_name,
-          texture_dimension,
-          texture_dimension,
-          channels,
-          Texture::Format::RGBA8Unorm,
-          true,
-          false },
+        { .name          = _default_normal_texture_name,
+          .width         = texture_dimension,
+          .height        = texture_dimension,
+          .channel_count = channels,
+          .is_mip_mapped = true },
         pixels
     );
     _default_normal_texture->id = 3;

@@ -268,12 +268,6 @@ void VulkanSwapchain::create() {
                 "__internal_vulkan_swapchain_render_texture_", i, "__"
             );
 
-            // Create vulkan image
-            const auto image =
-                new (MemoryTag::GPUTexture) VulkanImage(_device, _allocator);
-            image->create(swapchain_images[i], _extent.width, _extent.height);
-            image->format = _format;
-
             // Get generic texture format
             const auto texture_format =
                 VulkanTexture::parse_format_from_vulkan(_format);
@@ -281,23 +275,27 @@ void VulkanSwapchain::create() {
             // Create new wrapped texture (Not managed by the texture system)
             VulkanTexture* const texture =
                 new (MemoryTag::Texture) VulkanTexture(
-                    {
-                        texture_name,
-                        _extent.width,
-                        _extent.height,
-                        4, // Channel count
-                        texture_format,
-                        false, // Mipmaping
-                        false, // Transparent
-                        true,  // Writable
-                        true   // Wrapped
-                    },
-                    image,
+                    { .name          = texture_name,
+                      .width         = _extent.width,
+                      .height        = _extent.height,
+                      .channel_count = 4, // Channel count
+                      .format        = texture_format,
+                      .is_writable   = true,
+                      .is_wrapped    = true },
+                    _msaa_samples,
                     nullptr,
                     nullptr,
                     _device,
                     _allocator
                 );
+
+            // Create vulkan image
+            const auto image =
+                new (MemoryTag::GPUTexture) VulkanImage(_device, _allocator);
+            image->create(swapchain_images[i], _extent.width, _extent.height);
+            image->format = _format;
+
+            texture->image = image;
 
             // Add this texture
             _render_textures.push_back(texture);
@@ -378,18 +376,14 @@ void VulkanSwapchain::create_color_resource() {
             VulkanTexture::parse_format_from_vulkan(_format);
         // Create new wrapped texture (Not managed by the texture system)
         _color_attachment = new (MemoryTag::Texture) VulkanTexture(
-            {
-                "__default_color_attachment_texture__",
-                _extent.width,
-                _extent.height,
-                4, // Channel count
-                texture_format,
-                false, // Mipmaping
-                false, // Transparent
-                true,  // Writable
-                true   // Wrapped
-            },
-            nullptr,
+            { .name          = "__default_color_attachment_texture__",
+              .width         = _extent.width,
+              .height        = _extent.height,
+              .channel_count = 4, // Channel count
+              .format        = texture_format,
+              .is_writable   = true,
+              .is_wrapped    = true },
+            _msaa_samples,
             nullptr,
             nullptr,
             _device,
@@ -427,18 +421,15 @@ void VulkanSwapchain::create_color_resource() {
             VulkanTexture::parse_format_from_vulkan(_format);
         // Create new wrapped texture (Not managed by the texture system)
         _ms_color_attachment = new (MemoryTag::Texture) VulkanTexture(
-            {
-                "__default_ms_color_attachment_texture__",
-                _extent.width,
-                _extent.height,
-                4, // Channel count
-                texture_format,
-                false, // Mipmaping
-                false, // Transparent
-                true,  // Writable
-                true   // Wrapped
-            },
-            nullptr,
+            { .name            = "__default_ms_color_attachment_texture__",
+              .width           = _extent.width,
+              .height          = _extent.height,
+              .channel_count   = 4, // Channel count
+              .format          = texture_format,
+              .is_writable     = true,
+              .is_multisampled = true,
+              .is_wrapped      = true },
+            _msaa_samples,
             nullptr,
             nullptr,
             _device,
@@ -470,18 +461,14 @@ void VulkanSwapchain::create_depth_resources() {
             VulkanTexture::parse_format_from_vulkan(_depth_format);
         // Create new wrapped texture (Not managed by the texture system)
         _depth_attachment = new (MemoryTag::Texture) VulkanTexture(
-            {
-                "__default_depth_attachment_texture__",
-                _extent.width,
-                _extent.height,
-                _depth_format_channel_count,
-                texture_format,
-                false, // Mipmaping
-                false, // Transparent
-                true,  // Writable
-                true   // Wrapped
-            },
-            nullptr,
+            { .name          = "__default_depth_attachment_texture__",
+              .width         = _extent.width,
+              .height        = _extent.height,
+              .channel_count = _depth_format_channel_count,
+              .format        = texture_format,
+              .is_writable   = true,
+              .is_wrapped    = true },
+            _msaa_samples,
             nullptr,
             nullptr,
             _device,
@@ -517,18 +504,15 @@ void VulkanSwapchain::create_depth_resources() {
             VulkanTexture::parse_format_from_vulkan(_depth_format);
         // Create new wrapped texture (Not managed by the texture system)
         _ms_depth_attachment = new (MemoryTag::Texture) VulkanTexture(
-            {
-                "__default_ms_depth_attachment_texture__",
-                _extent.width,
-                _extent.height,
-                _depth_format_channel_count,
-                texture_format,
-                false, // Mipmaping
-                false, // Transparent
-                true,  // Writable
-                true   // Wrapped
-            },
-            nullptr,
+            { .name            = "__default_ms_depth_attachment_texture__",
+              .width           = _extent.width,
+              .height          = _extent.height,
+              .channel_count   = _depth_format_channel_count,
+              .format          = texture_format,
+              .is_writable     = true,
+              .is_multisampled = true,
+              .is_wrapped      = true },
+            _msaa_samples,
             nullptr,
             nullptr,
             _device,

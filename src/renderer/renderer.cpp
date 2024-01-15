@@ -97,14 +97,6 @@ Texture* Renderer::create_texture(
     Logger::trace(RENDERER_LOG, "Texture created [", texture->name(), "].");
     return texture;
 }
-Texture* Renderer::create_writable_texture(const Texture::Config& config) {
-    Logger::trace(RENDERER_LOG, "Creating writable texture.");
-    const auto texture = _backend->create_writable_texture(config);
-    Logger::trace(
-        RENDERER_LOG, "Writable texture created [`", texture->name(), "`]."
-    );
-    return texture;
-}
 void Renderer::destroy_texture(Texture* texture) {
     _backend->destroy_texture(texture);
     Logger::trace(RENDERER_LOG, "Texture destroyed [`", texture->name(), "`].");

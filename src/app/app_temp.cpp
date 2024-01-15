@@ -343,81 +343,101 @@ void TestApplication::setup_render_passes() {
         false,                                // Depth testing
         false                                 // Multisampling
     });
+    const auto pp_effects_renderpass  = _app_renderer.create_render_pass({
+        RenderPass::BuiltIn::PostProcessingPass, // Name
+        glm::vec2 { 0, 0 },                      // Draw offset
+        glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f },    // Clear color
+        false,                                   // Depth testing
+        false                                    // Multisampling
+    });
 
     // === Create render target textures ===
     // G buffer
-    const auto depth_normals_texture = _texture_system.acquire_writable(
-        UsedTextures::DepthPrePassTarget,
-        width,
-        height,
-        4,
-        Texture::Format::RGBA32Sfloat,
-        true
-    );
+    const auto g_pre_pass_texture =
+        _texture_system.create({ .name          = UsedTextures::GPrePassTarget,
+                                 .width         = width,
+                                 .height        = height,
+                                 .channel_count = 4, // Channel count
+                                 .format        = Texture::Format::RGBA32Sfloat,
+                                 .is_writable   = true,
+                                 .is_render_target = true });
 
     // SSAO
-    const auto ssao_texture = _texture_system.acquire_writable(
-        UsedTextures::SSAOPassTarget,
-        half_width,
-        half_height,
-        1,
-        Texture::Format::RGBA8Unorm,
-        true
-    );
-    const auto blured_ssao_texture = _texture_system.acquire_writable(
-        UsedTextures::BluredSSAOPassTarget,
-        half_width,
-        half_height,
-        1,
-        Texture::Format::RGBA8Unorm,
-        true
-    );
+    const auto ssao_texture =
+        _texture_system.create({ .name          = UsedTextures::SSAOPassTarget,
+                                 .width         = half_width,
+                                 .height        = half_height,
+                                 .channel_count = 1,
+                                 .format        = Texture::Format::RGBA32Sfloat,
+                                 .is_writable   = true,
+                                 .is_render_target = true });
+    const auto blured_ssao_texture =
+        _texture_system.create({ .name   = UsedTextures::BluredSSAOPassTarget,
+                                 .width  = half_width,
+                                 .height = half_height,
+                                 .channel_count    = 1,
+                                 .is_writable      = true,
+                                 .is_render_target = true });
 
     // Shadow maps
-    const auto shadowmap_directional_depth_texture =
-        _texture_system.acquire_writable(
-            UsedTextures::DirectionalShadowMapDepthTarget,
-            shadowmap_directional_size,
-            shadowmap_directional_size,
-            4,
-            Texture::Format::D32,
-            true
-        );
-    const auto shadowmap_sampled_texture = _texture_system.acquire_writable(
-        UsedTextures::ShadowmapSampledTarget,
-        width,
-        height,
-        4,
-        Texture::Format::RGBA32Sfloat,
-        true
+    const auto shadowmap_directional_depth_texture = _texture_system.create(
+        { .name             = UsedTextures::DirectionalShadowMapDepthTarget,
+          .width            = shadowmap_directional_size,
+          .height           = shadowmap_directional_size,
+          .channel_count    = 4,
+          .format           = Texture::Format::D32,
+          .is_writable      = true,
+          .is_render_target = true }
     );
+    const auto shadowmap_sampled_texture =
+        _texture_system.create({ .name   = UsedTextures::ShadowmapSampledTarget,
+                                 .width  = width,
+                                 .height = height,
+                                 .channel_count = 4,
+                                 .format        = Texture::Format::RGBA32Sfloat,
+                                 .is_writable   = true,
+                                 .is_render_target = true });
 
     // World pass color target
-    const auto color_texture = _texture_system.acquire_writable(
-        UsedTextures::WorldColorTarget,
-        width,
-        height,
-        4,
-        Texture::Format::BGRA8Srgb,
-        true
-    );
+    const auto world_pass_texture =
+        _texture_system.create({ .name          = UsedTextures::WorldPassTarget,
+                                 .width         = width,
+                                 .height        = height,
+                                 .channel_count = 4,
+                                 .is_writable   = true,
+                                 .is_render_target = true });
+    const auto world_pass_ms_texture =
+        _texture_system.create({ .name   = UsedTextures::WorldPassMSTarget,
+                                 .width  = width,
+                                 .height = height,
+                                 .channel_count   = 4,
+                                 .is_writable     = true,
+                                 .is_multisampled = true });
+
+    // Post processing targets
+    const auto color_texture_1 =
+        _texture_system.create({ .name             = UsedTextures::ColorTarget1,
+                                 .width            = width,
+                                 .height           = height,
+                                 .channel_count    = 4,
+                                 .is_writable      = true,
+                                 .is_render_target = true });
+    const auto color_texture_2 =
+        _texture_system.create({ .name             = UsedTextures::ColorTarget2,
+                                 .width            = width,
+                                 .height           = height,
+                                 .channel_count    = 4,
+                                 .is_writable      = true,
+                                 .is_render_target = true });
 
     // === Create render targets ===
-    world_renderpass->add_render_target(
-        { width,
-          height,
-          { _app_renderer.get_ms_color_texture(),
-            _app_renderer.get_ms_depth_texture(),
-            color_texture },
-          true }
-    );
-    ui_renderpass->add_window_as_render_target();
-    skybox_renderpass->add_window_as_render_target();
+    // G pre pass
     depth_renderpass->add_render_target({ width,
                                           height,
-                                          { depth_normals_texture,
+                                          { g_pre_pass_texture,
                                             _app_renderer.get_depth_texture() },
                                           true });
+    // AO
     ao_renderpass->add_render_target({ half_width,
                                        half_height,
                                        { ssao_texture },
@@ -431,6 +451,7 @@ void TestApplication::setup_render_passes() {
           true,
           RenderTarget::SynchMode::HalfResolution }
     );
+    // Shadows
     shadowmap_directional_renderpass->add_render_target(
         { shadowmap_directional_size,
           shadowmap_directional_size,
@@ -445,8 +466,28 @@ void TestApplication::setup_render_passes() {
           { shadowmap_sampled_texture, _app_renderer.get_depth_texture() },
           true }
     );
-    volumetrics_renderpass->add_window_as_render_target();
-    ssr_renderpass->add_window_as_render_target();
+    // Main
+    skybox_renderpass->add_render_target(
+        { width, height, { world_pass_ms_texture, world_pass_texture }, true }
+    );
+    world_renderpass->add_render_target(
+        { width,
+          height,
+          { world_pass_ms_texture,
+            _app_renderer.get_ms_depth_texture(),
+            world_pass_texture },
+          true }
+    );
+    // Post processing
+    volumetrics_renderpass->add_render_target(
+        { width, height, { color_texture_1 }, true }
+    );
+    ssr_renderpass->add_render_target(
+        { width, height, { color_texture_2 }, true }
+    );
+    pp_effects_renderpass->add_window_as_render_target();
+    // UI
+    ui_renderpass->add_window_as_render_target();
 
     // === Initialize ===
     RenderPass::start >>
@@ -462,8 +503,8 @@ void TestApplication::setup_render_passes() {
         // World
         "DS" >> world_renderpass >>
         // Post process
-        // "CDS" >> volumetrics_renderpass >>
-        "C" >> ssr_renderpass >>
+        "C" >> volumetrics_renderpass >> "C" >> ssr_renderpass >> "C" >>
+        pp_effects_renderpass >>
         // UI
         ui_renderpass >>
         // Finish
@@ -516,7 +557,7 @@ void TestApplication::setup_modules() {
         { Shader::BuiltIn::AOShader,
           RenderPass::BuiltIn::AOPass,
           _main_world_view,
-          UsedTextures::DepthPrePassTarget }
+          UsedTextures::GPrePassTarget }
     );
     _module.blur = _render_module_system.create<RenderModulePostProcessing>(
         { Shader::BuiltIn::BlurShader,
@@ -535,7 +576,7 @@ void TestApplication::setup_modules() {
             { Shader::BuiltIn::ShadowmapSamplingShader,
               RenderPass::BuiltIn::ShadowmapSamplingPass,
               _main_world_view,
-              UsedTextures::DepthPrePassTarget,
+              UsedTextures::GPrePassTarget,
               UsedTextures::DirectionalShadowMapDepthTarget }
         );
     _module.skybox = _render_module_system.create<RenderModuleSkybox>(
@@ -552,25 +593,33 @@ void TestApplication::setup_modules() {
           UsedTextures::ShadowmapSampledTarget,
           glm::vec4(0.05f, 0.05f, 0.05f, 1.0f) }
     );
-    _module.volumetrics = _render_module_system.create<RenderModuleVolumetrics>(
-        { Shader::BuiltIn::VolumetricsShader,
-          RenderPass::BuiltIn::VolumetricsPass,
-          _main_world_view,
-          UsedTextures::WorldColorTarget,
-          UsedTextures::DepthPrePassTarget }
-    );
     _module.ui = _render_module_system.create<RenderModuleUI>(
         { Shader::BuiltIn::UIShader,
           RenderPass::BuiltIn::UIPass,
           _main_ui_view }
     );
+    _module.volumetrics = _render_module_system.create<RenderModuleVolumetrics>(
+        { Shader::BuiltIn::VolumetricsShader,
+          RenderPass::BuiltIn::VolumetricsPass,
+          _main_world_view,
+          UsedTextures::WorldPassTarget,
+          UsedTextures::GPrePassTarget }
+    );
     _module.ssr = _render_module_system.create<RenderModuleSSR>(
         { Shader::BuiltIn::SSRShader,
           RenderPass::BuiltIn::SSRPass,
           _main_world_view,
-          UsedTextures::WorldColorTarget,
-          UsedTextures::DepthPrePassTarget }
+          UsedTextures::ColorTarget1,
+          UsedTextures::GPrePassTarget }
     );
+    _module.pp_effects =
+        _render_module_system.create<RenderModulePostProcessingEffects>(
+            { Shader::BuiltIn::PostProcessingEffShader,
+              RenderPass::BuiltIn::PostProcessingPass,
+              _main_world_view,
+              UsedTextures::ColorTarget2,
+              UsedTextures::GPrePassTarget }
+        );
 
     // Fill list of render commands
     _modules.push_back(_module.g_pass);
@@ -580,8 +629,9 @@ void TestApplication::setup_modules() {
     _modules.push_back(_module.shadow_sampling);
     _modules.push_back(_module.skybox);
     _modules.push_back(_module.world);
-    // _modules.push_back(_module.volumetrics);
+    _modules.push_back(_module.volumetrics);
     _modules.push_back(_module.ssr);
+    _modules.push_back(_module.pp_effects);
     _modules.push_back(_module.ui);
 }
 

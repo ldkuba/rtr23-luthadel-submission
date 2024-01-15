@@ -28,6 +28,10 @@ class RenderView {
     };
 
   public:
+    /// @brief True if view was updated
+    Property<bool> updated {
+        GET { return _updated; }
+    };
     /// @brief View width in pixels
     Property<uint32> width {
         GET { return _width; }
@@ -35,10 +39,6 @@ class RenderView {
     /// @brief View height in pixels
     Property<uint32> height {
         GET { return _height; }
-    };
-    /// @brief True if view was updated
-    Property<bool> updated {
-        GET { return _updated; }
     };
     /// @brief View projection matrix
     Property<glm::mat4> proj_matrix {
@@ -48,6 +48,9 @@ class RenderView {
     Property<glm::mat4> proj_inv_matrix {
         GET { return _proj_inv_matrix; }
     };
+
+    /// @brief Aspect ratio used
+    float32 aspect_ratio() { return (float32) _width / _height; }
 
     RenderView(const Config& config)
         : _name(config.name), _width(config.width), _height(config.height),

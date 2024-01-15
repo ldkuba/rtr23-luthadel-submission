@@ -37,8 +37,7 @@ class VulkanBackend : public RendererBackend {
     Texture* create_texture(
         const Texture::Config& config, const byte* const data
     ) override;
-    Texture* create_writable_texture(const Texture::Config& config) override;
-    void     destroy_texture(Texture* const texture) override;
+    void destroy_texture(Texture* const texture) override;
 
     // Texture map
     Texture::Map* create_texture_map( //

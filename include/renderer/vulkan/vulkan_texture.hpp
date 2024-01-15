@@ -31,7 +31,7 @@ class VulkanTexture : public Texture {
     /**
      * @brief Construct a new Vulkan Texture object
      * @param config Texture configuration
-     * @param image Vulkan image which holds GPU data of this texture
+     * @param sample_count Sample count used when multisampling
      * @param command_pool Vulkan command pool reference
      * @param command_buffer Main vulkan command buffer used for frame rendering
      * @param device Vulkan device reference
@@ -39,7 +39,7 @@ class VulkanTexture : public Texture {
      */
     VulkanTexture(
         const Config&                        config,
-        VulkanImage* const                   image,
+        const vk::SampleCountFlagBits        sample_count,
         const VulkanCommandPool* const       command_pool,
         const VulkanCommandBuffer* const     command_buffer,
         const VulkanDevice* const            device,
@@ -47,13 +47,17 @@ class VulkanTexture : public Texture {
     );
     virtual ~VulkanTexture();
 
+    // Overrides
     Outcome write(
         const byte* const data, const uint32 size, const uint32 offset
     ) override;
     Outcome resize(const uint32 width, const uint32 height) override;
-
     Outcome transition_render_target(const uint64 frame_number) override;
 
+    // Image creation
+    void create_image();
+
+    // Format
     vk::Format get_vulkan_format() const;
 
     static vk::Format parse_format_for_vulkan(
@@ -62,7 +66,8 @@ class VulkanTexture : public Texture {
     static Format parse_format_from_vulkan(const vk::Format format);
 
   private:
-    VulkanImage*                         _image;
+    VulkanImage*                         _image = nullptr;
+    const vk::SampleCountFlagBits        _sample_count;
     const VulkanCommandPool* const       _command_pool;
     const VulkanCommandBuffer* const     _command_buffer;
     const VulkanDevice*                  _device;

@@ -6,39 +6,21 @@ namespace ENGINE_NAMESPACE {
 #define TEXTURE_LOG "Texture :: "
 
 // Constructor & Destructor
-Texture::Config::Config(
-    const String name,
-    const uint32 width,
-    const uint32 height,
-    const uint32 channel_count,
-    const Format format,
-    const bool   mip_mapping,
-    const bool   has_transparency,
-    const bool   is_writable,
-    const bool   is_wrapped,
-    const bool   is_render_target,
-    const Type   type
-)
-    : name(name), width(width), height(height), channel_count(channel_count),
-      format(format), has_transparency(has_transparency),
-      is_writable(is_writable), is_wrapped(is_wrapped),
-      is_render_target(is_render_target), type(type),
-      mip_level_count(
-          (mip_mapping)
-              ? (uint8) std::floor(std::log2(std::max(width, height))) + 1
-              : 1
-      ) {}
-
 Texture::Texture(const Config& config)
     : _name(config.name), _width(config.width), _height(config.height),
       _channel_count(config.channel_count), _format(config.format),
-      _mip_levels(config.mip_level_count), _type(config.type), _flags(0) {
+      _type(config.type), _flags(0) {
     _total_size = width * height * channel_count;
+    _mip_levels =
+        config.is_mip_mapped
+            ? (uint8) std::floor(std::log2(std::max(_width, _height))) + 1
+            : 1;
     if (_type == Type::TCube) _total_size *= 6;
     if (config.has_transparency) _flags |= HasTransparency;
     if (config.is_writable) _flags |= IsWritable;
     if (config.is_wrapped) _flags |= IsWrapped;
     if (config.is_render_target) _flags |= IsRenderTarget;
+    if (config.is_multisampled) _flags |= IsMultisampled;
 }
 
 // ////////////////////// //

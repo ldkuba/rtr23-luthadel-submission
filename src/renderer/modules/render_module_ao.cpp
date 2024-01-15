@@ -68,19 +68,14 @@ void RenderModuleAO::setup_texture_maps(const String& g_pre_pass_texture) {
     }
 
     const auto noise_texture = _texture_system->create(
-        { "SSAO_noise",
-          4, // Width
-          4, // Height
-          4, // Channel count
-          Texture::Format::RGBA8Unorm,
-          false, // Mip-mapped
-          false, // Transparency
-          false, // Writable
-          false, // Wrapped
-          false, // Render target
-          Texture::Type::T2D },
-        (byte*) texture_data,
-        true
+        {
+            .name          = "SSAO_noise",
+            .width         = 4,    // Width
+            .height        = 4,    // Height
+            .channel_count = 4,    // Channel count
+            .is_wrapped    = true, // Writable
+        },
+        (byte*) texture_data
     );
 
     // Create maps

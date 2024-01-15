@@ -7,17 +7,20 @@ namespace ENGINE_NAMESPACE {
 // Constructor & Destructor
 VulkanTexture::VulkanTexture(
     const Config&                        config,
-    VulkanImage* const                   image,
+    const vk::SampleCountFlagBits        sample_count,
     const VulkanCommandPool* const       command_pool,
     const VulkanCommandBuffer* const     command_buffer,
     const VulkanDevice* const            device,
     const vk::AllocationCallbacks* const allocator
 )
-    : Texture(config), _image(image), _command_pool(command_pool),
+    : Texture(config), _sample_count(sample_count), _command_pool(command_pool),
       _command_buffer(command_buffer), _device(device), _allocator(allocator) {}
 
 VulkanTexture::~VulkanTexture() {
-    if (_image) del(_image);
+    if (_image) {
+        del(_image);
+        _image = nullptr;
+    }
 }
 
 // ///////////////////////////// //
@@ -27,6 +30,12 @@ VulkanTexture::~VulkanTexture() {
 Outcome VulkanTexture::write(
     const byte* const data, const uint32 size, const uint32 offset
 ) {
+    if (!_image) {
+        Logger::error(
+            RENDERER_VULKAN_LOG, "Write called before image creation."
+        );
+        return Outcome::Failed;
+    }
     if (Texture::write(data, size, offset).failed()) return Outcome::Failed;
 
     // Create staging buffer
@@ -70,56 +79,39 @@ Outcome VulkanTexture::write(
 }
 
 Outcome VulkanTexture::resize(const uint32 width, const uint32 height) {
+    if (is_wrapped()) return Texture::resize(width, height);
+    if (!_image) {
+        Logger::error(
+            RENDERER_VULKAN_LOG, "Resize called before image creation."
+        );
+        return Outcome::Failed;
+    }
     if (Texture::resize(width, height).failed()) return Outcome::Failed;
-    if (is_wrapped()) return Outcome::Successful;
 
     // Destroy old image
     del(_image);
-
-    // Get format
-    const auto texture_format = get_vulkan_format();
-
-    // Get usage flags
-    vk::ImageUsageFlagBits  usage_flags;
-    vk::ImageAspectFlagBits aspect_flags;
-    if (Texture::has_depth_format(_format)) {
-        usage_flags  = vk::ImageUsageFlagBits::eDepthStencilAttachment;
-        aspect_flags = vk::ImageAspectFlagBits::eDepth;
-    } else {
-        usage_flags  = vk::ImageUsageFlagBits::eColorAttachment;
-        aspect_flags = vk::ImageAspectFlagBits::eColor;
-    }
+    _image = nullptr;
 
     // Create new image
-    auto texture_image =
-        new (MemoryTag::GPUTexture) VulkanImage(_device, _allocator);
-    texture_image->create_2d(
-        width,
-        height,
-        mip_level_count,
-        vk::SampleCountFlagBits::e1,
-        texture_format,
-        vk::ImageTiling::eOptimal,
-        is_render_target() ? usage_flags | vk::ImageUsageFlagBits::eSampled
-                           : vk::ImageUsageFlagBits::eTransferSrc |
-                                 vk::ImageUsageFlagBits::eTransferDst |
-                                 vk::ImageUsageFlagBits::eSampled | usage_flags,
-        vk::MemoryPropertyFlagBits::eDeviceLocal,
-        aspect_flags
-    );
-
-    // Assign
-    _image = texture_image;
+    create_image();
 
     return Outcome::Successful;
 }
 
 Outcome VulkanTexture::transition_render_target(const uint64 frame_number) {
+    if (!_image) {
+        Logger::error(
+            RENDERER_VULKAN_LOG,
+            "Texture transition for render target texture attempted, but "
+            "given texture image isn't created. Operation failed."
+        );
+        return Outcome::Failed;
+    }
     if (!is_render_target()) {
         Logger::error(
             RENDERER_VULKAN_LOG,
-            "Texture transition for render target texture attempted, but given "
-            "texture isn't marked as render target. Operation failed."
+            "Texture transition for render target texture attempted, but "
+            "given texture isn't marked as render target. Operation failed."
         );
         return Outcome::Failed;
     }
@@ -150,6 +142,76 @@ Outcome VulkanTexture::transition_render_target(const uint64 frame_number) {
         return Outcome::Failed;
     }
     return Outcome::Successful;
+}
+
+void VulkanTexture::create_image() {
+    if (_image != nullptr) {
+        Logger::warning(
+            RENDERER_VULKAN_LOG,
+            "Create image called for texture with pre-existing image. "
+            "Operation failed."
+        );
+        return;
+    }
+
+    // Get format
+    const auto texture_format = get_vulkan_format();
+
+    // Get sample count
+    const auto sample_cout =
+        is_multisampled() ? _sample_count : vk::SampleCountFlagBits::e1;
+
+    // Get usage flags
+    vk::ImageUsageFlags usage_flags;
+    // All textures are considered sample-able TODO:
+    usage_flags |= vk::ImageUsageFlagBits::eSampled;
+    if (is_writable()) {
+        // Writable textures can be used as render target attachments
+        usage_flags |= has_depth_format(_format)
+                           ? vk::ImageUsageFlagBits::eDepthStencilAttachment
+                           : vk::ImageUsageFlagBits::eColorAttachment;
+    }
+    // Only non packed textures can be used as transfer src / dest
+    if (!is_render_target())
+        usage_flags |= vk::ImageUsageFlagBits::eTransferSrc |
+                       vk::ImageUsageFlagBits::eTransferDst;
+
+    // Get aspect flags
+    vk::ImageAspectFlags aspect_flags;
+    aspect_flags |= has_depth_format(_format) ? vk::ImageAspectFlagBits::eDepth
+                                              : vk::ImageAspectFlagBits::eColor;
+
+    // Create new image
+    auto texture_image =
+        new (MemoryTag::GPUTexture) VulkanImage(_device, _allocator);
+    if (_type == Texture::Type::T2D) {
+        texture_image->create_2d(
+            width,
+            height,
+            mip_level_count,
+            sample_cout,
+            texture_format,
+            vk::ImageTiling::eOptimal,
+            usage_flags,
+            vk::MemoryPropertyFlagBits::eDeviceLocal,
+            aspect_flags
+        );
+    } else if (_type == Texture::Type::TCube) {
+        texture_image->create_cube(
+            width,
+            height,
+            mip_level_count,
+            sample_cout,
+            texture_format,
+            vk::ImageTiling::eOptimal,
+            usage_flags,
+            vk::MemoryPropertyFlagBits::eDeviceLocal,
+            aspect_flags
+        );
+    }
+
+    // Assign
+    _image = texture_image;
 }
 
 vk::Format VulkanTexture::get_vulkan_format() const {

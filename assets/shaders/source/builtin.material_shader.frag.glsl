@@ -15,7 +15,7 @@ struct PointLight {
     vec4 position;
     vec4 color;
     
-    // Fallof factors:
+    // Falloff factors:
     float constant; // Must be >= 1
     float linear;
     float quadratic;
@@ -23,12 +23,6 @@ struct PointLight {
 };
 struct NumPointLights {
     uint num; // For some reason always padded to 16
-};
-
-struct PhongProperties {
-    vec4 diffuse_colour;
-    vec3 padding;
-    float shininess;
 };
 
 // Tangent bi-tangent normal
@@ -132,16 +126,16 @@ vec4 sample_ssao() {
 vec4 calculate_directional_lights(DirectionalLight light, vec3 normal, vec3 view_direction) {
     // Diffuse color
     float diffuse_factor = max(dot(normal, - light.direction.xyz), 0.0);
-    vec4 diffuse_samp = texture(InstSamplers[diffuse_i], InDTO.texture_coordinate);
+    vec4 diffuse_sample = texture(InstSamplers[diffuse_i], InDTO.texture_coordinate);
     
     vec4 diffuse = vec4(
-        vec3(light.color * diffuse_factor), diffuse_samp.a
+        vec3(light.color * diffuse_factor), diffuse_sample.a
     );
     
     // Ambient color
     vec4 visibility_factor = sample_ssao();
     vec4 ambient = visibility_factor * vec4(
-        vec3(InDTO.ambient_color * UBO.diffuse_color), diffuse_samp.a
+        vec3(InDTO.ambient_color * UBO.diffuse_color), diffuse_sample.a
     );
     
     // Specular highlight
@@ -149,13 +143,13 @@ vec4 calculate_directional_lights(DirectionalLight light, vec3 normal, vec3 view
     float specular_factor = pow(max(0.0, dot(normal, half_direction)), UBO.shininess);
     
     vec4 specular = vec4(
-        vec3(light.color * specular_factor), diffuse_samp.a
+        vec3(light.color * specular_factor), diffuse_sample.a
     );
     
     // Add texture info
     if (in_mode == 0 || in_mode == 4) {
-        diffuse *= diffuse_samp;
-        ambient *= diffuse_samp;
+        diffuse *= diffuse_sample;
+        ambient *= diffuse_sample;
         specular *= vec4(texture(InstSamplers[specular_i], InDTO.texture_coordinate).rgb, diffuse.a);
     }
     
@@ -176,7 +170,7 @@ vec4 calculate_point_lights(PointLight light, vec3 normal, vec3 frag_position, v
     // Account for SSAO
     vec4 visibility_factor = sample_ssao();
     
-    // Callculate falloff with distance (Attenuation)
+    // Calculate falloff with distance (Attenuation)
     float l_distance = length(light.position.xyz - frag_position);
     float attenuation = 1.0 / (light.constant + light.linear * l_distance + light.quadratic * l_distance * l_distance);
     
@@ -186,9 +180,9 @@ vec4 calculate_point_lights(PointLight light, vec3 normal, vec3 frag_position, v
     
     // Apply texture
     if (in_mode == 0 || in_mode == 4) {
-        vec4 diffuse_samp = texture(InstSamplers[diffuse_i], InDTO.texture_coordinate);
-        diffuse *= diffuse_samp;
-        ambient *= diffuse_samp;
+        vec4 diffuse_sample = texture(InstSamplers[diffuse_i], InDTO.texture_coordinate);
+        diffuse *= diffuse_sample;
+        ambient *= diffuse_sample;
         specular *= vec4(texture(InstSamplers[specular_i], InDTO.texture_coordinate).rgb, diffuse.a);
     }
     

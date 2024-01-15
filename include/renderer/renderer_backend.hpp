@@ -99,18 +99,12 @@ class RendererBackend {
      */
     virtual Texture* create_texture(
         const Texture::Config& config, const byte* const data
-    )                                                                       = 0;
-    /**
-     * @brief Create a writable texture object with no initial data.
-     * @param config Texture configuration under which texture will be created
-     * @return Texture* Created texture
-     */
-    virtual Texture* create_writable_texture(const Texture::Config& config) = 0;
+    )                                                    = 0;
     /**
      * @brief Destroy a texture and free its corresponding GPU resources
      * @param texture Texture to be destroy
      */
-    virtual void     destroy_texture(Texture* const texture)                = 0;
+    virtual void destroy_texture(Texture* const texture) = 0;
 
     /**
      * @brief Create a texture map according to provided configuration

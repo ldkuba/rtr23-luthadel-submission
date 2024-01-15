@@ -21,6 +21,7 @@
 #include "renderer/modules/render_module_shadowmap_sampling.hpp"
 #include "renderer/modules/render_module_volumetrics.hpp"
 #include "renderer/modules/render_module_ssr.hpp"
+#include "renderer/modules/render_module_post_processing_effects.hpp"
 
 namespace ENGINE_NAMESPACE {
 
@@ -78,16 +79,17 @@ class TestApplication {
 
     // Modules
     struct UsedModules {
-        RenderModuleGPrepass*             g_pass;
-        RenderModuleAO*                   ao;
-        RenderModulePostProcessing*       blur;
-        RenderModuleShadowmapDirectional* shadow_dir;
-        RenderModuleShadowmapSampling*    shadow_sampling;
-        RenderModuleSkybox*               skybox;
-        RenderModuleWorld*                world;
-        RenderModuleVolumetrics*          volumetrics;
-        RenderModuleUI*                   ui;
-        RenderModuleSSR*                  ssr;
+        RenderModuleGPrepass*              g_pass;
+        RenderModuleAO*                    ao;
+        RenderModulePostProcessing*        blur;
+        RenderModuleShadowmapDirectional*  shadow_dir;
+        RenderModuleShadowmapSampling*     shadow_sampling;
+        RenderModuleSkybox*                skybox;
+        RenderModuleWorld*                 world;
+        RenderModuleVolumetrics*           volumetrics;
+        RenderModuleUI*                    ui;
+        RenderModuleSSR*                   ssr;
+        RenderModulePostProcessingEffects* pp_effects;
     };
     UsedModules _module {};
 
@@ -95,13 +97,16 @@ class TestApplication {
 
     // Textures
     struct UsedTextures {
-        STRING_ENUM(DepthPrePassTarget);
+        STRING_ENUM(GPrePassTarget);
         STRING_ENUM(LowResDepthTarget);
         STRING_ENUM(SSAOPassTarget);
         STRING_ENUM(BluredSSAOPassTarget);
         STRING_ENUM(DirectionalShadowMapDepthTarget);
         STRING_ENUM(ShadowmapSampledTarget);
-        STRING_ENUM(WorldColorTarget);
+        STRING_ENUM(WorldPassTarget);
+        STRING_ENUM(WorldPassMSTarget);
+        STRING_ENUM(ColorTarget1);
+        STRING_ENUM(ColorTarget2);
     };
 
     // Views

@@ -1,0 +1,76 @@
+{
+    "version": 1.0,
+    "name": "builtin.post_processing_effects_shader",
+    "renderpass": "Renderpass.Builtin.PostProcessingEffects",
+    "stages": [
+        "vertex",
+        "fragment"
+    ],
+    "cull_mode": "none",
+    "attributes": [
+        {
+            "name": "in_position",
+            "type": "vec2"
+        },
+        {
+            "name": "in_texcoord",
+            "type": "vec2"
+        }
+    ],
+    "descriptor_sets": [
+        {
+            "scope": "global",
+            "set_index": 0,
+            "bindings": [
+                {
+                    "type": "uniform",
+                    "binding_index": 0,
+                    "stages": [
+                        "fragment"
+                    ],
+                    "uniforms": [
+                        {
+                            "name": "exposure",
+                            "type": "float32"
+                        },
+                        {
+                            "name": "max_blur",
+                            "type": "float32"
+                        },
+                        {
+                            "name": "aperture",
+                            "type": "float32"
+                        },
+                        {
+                            "name": "focus",
+                            "type": "float32"
+                        },
+                        {
+                            "name": "aspect",
+                            "type": "float32"
+                        }
+                    ]
+                },
+                {
+                    "type": "sampler",
+                    "binding_index": 1,
+                    "count": 2,
+                    "stages": [
+                        "fragment"
+                    ],
+                    "uniforms": [
+                        {
+                            "name": "color_texture",
+                            "type": "sampler2D"
+                        },
+                        {
+                            "name": "g_pre_pass_texture",
+                            "type": "sampler2D"
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "push_constants": []
+}

@@ -99,16 +99,10 @@ class Renderer {
         const Texture::Config& config, const byte* const data
     );
     /**
-     * @brief Create a writable texture object with no initial data.
-     * @param config Texture configuration under which texture will be created
-     * @return Texture* Created texture
-     */
-    Texture* create_writable_texture(const Texture::Config& texture);
-    /**
      * @brief Destroy a texture and free its corresponding GPU resources
      * @param texture Texture to be destroy
      */
-    void     destroy_texture(Texture* texture);
+    void destroy_texture(Texture* texture);
 
     /**
      * @brief Create a texture map according to provided configuration

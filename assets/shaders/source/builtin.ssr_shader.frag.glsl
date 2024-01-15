@@ -44,7 +44,7 @@ void main() {
     vec3 ray_dir = normalize(reflect(look_dir, world_normal));
     
     // Setup parameters
-    float smoothness = 0.9; // TODO:
+    float smoothness = 0.95; // TODO:
     float visibility = 1.0;
     
     // Jitter ray direction based on smoothness

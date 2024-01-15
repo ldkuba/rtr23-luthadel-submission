@@ -79,31 +79,18 @@ class Texture {
      * @brief Texture configuration used during initialization
      */
     struct Config {
-        const String name             = {};
-        const uint32 width            = 0;
-        const uint32 height           = 0;
-        const uint32 channel_count    = 0;
+        const String name;
+        const uint32 width;
+        const uint32 height;
+        const uint32 channel_count;
         const Format format           = Format::RGBA8Unorm;
-        const uint32 mip_level_count  = 0;
-        const bool   has_transparency = false;
-        const bool   is_writable      = false;
-        const bool   is_wrapped       = false;
-        const bool   is_render_target = false;
         const Type   type             = Type::T2D;
-
-        Config(
-            const String name,
-            const uint32 width,
-            const uint32 height,
-            const uint32 channel_count,
-            const Format format,
-            const bool   mip_mapping,
-            const bool   has_transparency,
-            const bool   is_writable      = false,
-            const bool   is_wrapped       = false,
-            const bool   is_render_target = false,
-            const Type   type             = Type::T2D
-        );
+        const bool   has_transparency = false;
+        const bool   is_mip_mapped    = false;
+        const bool   is_writable      = false;
+        const bool   is_render_target = false;
+        const bool   is_multisampled  = false;
+        const bool   is_wrapped       = false;
     };
 
   public:
@@ -157,6 +144,8 @@ class Texture {
     bool is_wrapped() const { return _flags & IsWrapped; }
     /// @brief True if image is used as render target
     bool is_render_target() const { return _flags & IsRenderTarget; }
+    /// @brief True if image is multisampled
+    bool is_multisampled() const { return _flags & IsMultisampled; }
 
     /// @brief True if any render pass utilizes this texture as an attachment
     bool used_in_render_pass() const { return _flags & UsedInPass; }
@@ -205,11 +194,12 @@ class Texture {
   protected:
     typedef uint8 TextureFlagType;
     enum TextureFlag : TextureFlagType {
-        HasTransparency = 0b00001,
-        IsWritable      = 0b00010,
-        IsWrapped       = 0b00100,
-        IsRenderTarget  = 0b01000,
-        UsedInPass      = 0b10000
+        HasTransparency = 0b000001,
+        IsWritable      = 0b000010,
+        IsWrapped       = 0b000100,
+        IsRenderTarget  = 0b001000,
+        IsMultisampled  = 0b010000,
+        UsedInPass      = 0b100000
     };
 
     TextureFlagType _flags;

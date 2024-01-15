@@ -64,32 +64,6 @@ class TextureSystem {
         const bool     auto_release,
         Texture* const default_fallback = nullptr
     );
-
-    /**
-     * @brief Attempts to acquire a writable texture with a given name. This
-     * wont load resources of the disk. Won't be auto_release.
-     *
-     * @param name Name of the requested texture
-     * @param width Texture width in pixels
-     * @param height Texture height in pixels
-     * @param channel_count Number of channels per pixel
-     * @param format Format of texture channels
-     * @param use_as_render_target Indicates whether the texture will be used as
-     * render target by a render pass
-     * @param has_transparency Indicates whether the texture will have
-     * transparency
-     * @return Texture* Requested texture resource
-     */
-    Texture* acquire_writable(
-        const String          name,
-        const uint32          width,
-        const uint32          height,
-        const uint8           channel_count,
-        const Texture::Format format,
-        const bool            use_as_render_target = false,
-        const bool            has_transparency     = false
-    );
-
     /**
      * @brief Acquire texture cube resource from texture system. Texture system
      * will load the texture from the appropriate location if it's unavailable.
@@ -98,9 +72,9 @@ class TextureSystem {
      * @param auto_release If enabled texture system will automaticaly release
      * the texture resource from memory if no references to the texture are
      * detected. Can only be set if the texture resource isn't loaded yet.
-     * @return Texture*
+     * @return Texture* Requested texture resource
      */
-    Texture* acquire_cube(const String name, const bool auto_release);
+    Texture* acquire_cube(const String name, const bool auto_release = true);
 
     /**
      * @brief Create new texture with provided configuration. If the texture
@@ -110,12 +84,26 @@ class TextureSystem {
      * @param auto_release If enabled texture system will automaticaly release
      * the texture resource from memory if no references to the texture are
      * detected. Can only be set if the texture resource isn't loaded yet.
-     * @return Texture*
+     * @return Texture* Created texture resource
      */
     Texture* create(
         const Texture::Config& config,
         const byte* const      data,
-        const bool             auto_release
+        const bool             auto_release = true
+    );
+    /**
+     * @brief Create new texture with provided configuration. If the texture
+     * with provided @p config.name already exists it will be overriden.
+     * Creation of textures without accompanying image data is usually reserved
+     * for creation of writeable textures and render targets.
+     * @param config Texture configuration
+     * @param auto_release If enabled texture system will automaticaly release
+     * the texture resource from memory if no references to the texture are
+     * detected. Can only be set if the texture resource isn't loaded yet.
+     * @return Texture* Created texture resource
+     */
+    Texture* create(
+        const Texture::Config& config, const bool auto_release = true
     );
 
     /// @brief Releases texture resource. Texture system will automatically

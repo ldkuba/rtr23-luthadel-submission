@@ -24,8 +24,10 @@ class RenderPass {
             "Renderpass.Builtin.ShadowmapDirectional";
         StringEnum ShadowmapSamplingPass =
             "Renderpass.Builtin.ShadowmapSampling";
-        StringEnum SSRPass = "Renderpass.Builtin.SSR";
+        StringEnum SSRPass         = "Renderpass.Builtin.SSR";
         StringEnum VolumetricsPass = "Renderpass.Builtin.Volumetrics";
+        StringEnum PostProcessingPass =
+            "Renderpass.Builtin.PostProcessingEffects";
     };
 
     /// @brief Type used by clear flags
