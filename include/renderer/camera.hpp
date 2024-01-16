@@ -52,6 +52,9 @@ class Camera {
      */
     void reset();
 
+    void move_to(const glm::vec3& position);
+    void set_rotation(const glm::quat& rotation);
+
     /**
      * @brief Move camera in forwards direction
      * @param amount Amount of movement in std units

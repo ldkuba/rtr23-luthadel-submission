@@ -4,6 +4,8 @@
 #include "timer.hpp"
 #include <chrono>
 
+#include "app/path.hpp"
+
 namespace ENGINE_NAMESPACE {
 
 // Constructor & Destructor
@@ -25,6 +27,25 @@ void TestApplication::run() {
     setup_scene_geometry(2);
     setup_lights();
 
+    // === Path ===
+    // Setup path
+    Path path {};
+    path.set_camera(_main_camera);
+    path.set_movement_speed(2.0f);
+    path.set_rotation_speed(0.05f);
+
+    // Add path frames
+    path.add_frame({ glm::vec3(0.0f, 0.0f, 2.0f) });
+    path.add_frame({ glm::vec3(60.0f, 0.0f, 2.0f),
+                     glm::quat(glm::vec3(0.0f, 0.0f, 0.0f)) });
+    path.add_frame({ glm::vec3(60.0f, 20.0f, 30.0f),
+                     glm::quat(glm::vec3(0.0f, 0.0f, 0.5f)) });
+    path.add_frame({ glm::vec3(-30.0f, 110.0f, 80.0f),
+                     glm::quat(glm::vec3(0.0f, 0.2f, 0.9f)) });
+
+    // Start path
+    path.start();
+
     // === Performance meter ===
     Timer& timer = Timer::global_timer;
 
@@ -32,6 +53,9 @@ void TestApplication::run() {
     while (!_app_surface->should_close() && _app_should_close == false) {
         const auto delta_time   = calculate_delta_time();
         const auto elapsed_time = calculate_elapsed_time();
+
+        // Update path
+        path.update(delta_time);
 
         // FPS COUNTER
         static float64 last_print  = 0;
@@ -584,7 +608,7 @@ void TestApplication::setup_modules() {
         { Shader::BuiltIn::SkyboxShader,
           RenderPass::BuiltIn::SkyboxPass,
           _main_world_view,
-          "skybox/skybox" }
+          "skybox/Sky_PreludeOvercast" }
     );
     _module.world = _render_module_system.create<RenderModuleWorld>(
         { Shader::BuiltIn::MaterialShader,

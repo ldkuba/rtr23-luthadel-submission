@@ -115,7 +115,7 @@ class VulkanSettings {
     constexpr static uint32 max_frames_in_flight = 3;
 
     // Anti-aliasing
-    constexpr static auto max_msaa_samples = vk::SampleCountFlagBits::e16;
+    constexpr static auto max_msaa_samples = vk::SampleCountFlagBits::e4;
 
     // Maximum object counts // TODO: Make configurable
     constexpr static uint32 max_material_count = 1024;

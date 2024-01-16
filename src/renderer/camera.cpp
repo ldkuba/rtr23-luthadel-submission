@@ -17,6 +17,18 @@ void Camera::reset() {
     _up       = _def_up;
     _is_dirty = true;
 }
+
+void Camera::move_to(const glm::vec3& position) {
+    transform.position = position;
+    _is_dirty          = true;
+}
+
+void Camera::set_rotation(const glm::quat& rotation) {
+    transform.rotation = rotation;
+    compute_coord_system();
+    _is_dirty = true;
+}
+
 void Camera::move_forwards(const float32 amount) {
     transform.translate_by(_forward * amount);
     _is_dirty = true;
