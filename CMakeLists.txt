@@ -6,6 +6,10 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_GLIBCXX_DEBUG")
 
 project(VulkanEngine)
 
+# Set for oneTBB
+include(ExternalProject)
+set(ONE_TBB_VERSION "2021.11.0" CACHE STRING "oneTBB version")
+
 # add sources
 file(GLOB_RECURSE SOURCES 
     ${PROJECT_SOURCE_DIR}/src/*.cpp
@@ -33,6 +37,18 @@ if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
 
 endif()
 
+# Get oneTBB specifically
+ExternalProject_Add(
+    oneTBB
+    PREFIX ${CMAKE_BINARY_DIR}/oneTBB
+    GIT_REPOSITORY https://github.com/oneapi-src/oneTBB.git
+    GIT_TAG v${ONE_TBB_VERSION}
+    TIMEOUT 10
+    UPDATE_DISCONNECTED 1
+    CMAKE_ARGS
+        -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+)
+
 # CHECK ALL SUBMODULES
 if(NOT EXISTS "${PROJECT_SOURCE_DIR}/external/glfw/CMakeLists.txt")
     message(FATAL_ERROR "GLFW not downloaded.")
@@ -48,7 +64,7 @@ endif()
 
 # Find packages
 find_package(Vulkan REQUIRED)
-find_package(TBB REQUIRED)
+# find_package(TBB REQUIRED)
 
 # include subdirectories
 add_subdirectory(external/vulkan)
@@ -70,6 +86,7 @@ target_include_directories(${PROJECT_NAME}
     external/stb
     external/tinyobjloader
     external/json/include
+    ${CMAKE_BINARY_DIR}/oneTBB/include
 )
 
 # link
@@ -80,6 +97,7 @@ target_link_directories(${PROJECT_NAME}
     external/vulkan/glm
     external/stb
     external/tinyobjloader
+    ${CMAKE_BINARY_DIR}/oneTBB/lib
 )
 
 target_link_libraries(${PROJECT_NAME}
@@ -89,7 +107,7 @@ target_link_libraries(${PROJECT_NAME}
     tinyobjloader
     Vulkan::Vulkan
     nlohmann_json::nlohmann_json
-    TBB::tbb
+    tbb
 )
 
 install(TARGETS ${PROJECT_NAME})
