@@ -38,11 +38,11 @@ float sample_density(vec3 position);
 const int MAX_SAMPLES = 8;
 
 void main() {
-    float ndc_depth = texture(samplers[depth_i], in_texture_coords).w;
+    float depth = texture(samplers[depth_i], in_texture_coords).r;
     
     vec3 world_pos = screen_to_world(
         in_texture_coords,
-        ndc_depth,
+        depth,
         GlobalUBO.projection_inverse,
         GlobalUBO.view_inverse
     );

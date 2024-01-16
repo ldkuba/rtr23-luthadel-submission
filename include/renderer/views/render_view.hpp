@@ -81,6 +81,13 @@ class RenderView {
     }
 
     /**
+     * @brief Get all render data of all geometries that could potentially be
+     * visible.
+     * @return Vector<GeometryRenderData>& All render data
+     */
+    virtual Vector<GeometryRenderData>& get_all_render_data() = 0;
+
+    /**
      * @brief Get render data of geometries that are currently within view.
      * Represents a subset of all potentially visible geometries.
      * @param frame_number Index of the current frame. Internally values wont be
@@ -102,6 +109,7 @@ class RenderView {
 
     Vector<Mesh*>              _potentially_visible_meshes {};
     Vector<GeometryRenderData> _visible_render_data {};
+    Vector<GeometryRenderData> _all_render_data {};
 
     bool _updated;
 };

@@ -55,11 +55,15 @@
                 {
                     "type": "sampler",
                     "binding_index": 1,
-                    "count": 2,
+                    "count": 3,
                     "stages": [
                         "fragment"
                     ],
                     "uniforms": [
+                        {
+                            "name": "g_pre_pass_texture",
+                            "type": "sampler2D"
+                        },
                         {
                             "name": "depth_texture",
                             "type": "sampler2D"

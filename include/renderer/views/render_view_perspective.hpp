@@ -24,6 +24,7 @@ class RenderViewPerspective : public RenderView {
 
     virtual void on_resize(const uint32 width, const uint32 height) override;
 
+    Vector<GeometryRenderData>& get_all_render_data() override;
     Vector<GeometryRenderData>& get_visible_render_data(
         const uint32 frame_number
     ) override;

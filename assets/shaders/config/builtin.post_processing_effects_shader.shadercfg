@@ -64,7 +64,7 @@
                             "type": "sampler2D"
                         },
                         {
-                            "name": "g_pre_pass_texture",
+                            "name": "depth_texture",
                             "type": "sampler2D"
                         }
                     ]

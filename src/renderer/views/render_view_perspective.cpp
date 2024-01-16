@@ -34,6 +34,20 @@ void RenderViewPerspective::on_resize(const uint32 width, const uint32 height) {
     _proj_inv_matrix = glm::inverse(_proj_matrix);
 }
 
+Vector<GeometryRenderData>& RenderViewPerspective::get_all_render_data() {
+    if (_all_render_data.size() == 0) {
+        for (const auto& mesh : _potentially_visible_meshes) {
+            const auto model_matrix = mesh->transform.world();
+            for (const auto& geo : mesh->geometries()) {
+                _all_render_data.push_back( //
+                    { geo, geo->material, model_matrix }
+                );
+            }
+        }
+    }
+    return _all_render_data;
+}
+
 Vector<GeometryRenderData>& RenderViewPerspective::get_visible_render_data(
     const uint32 frame_number
 ) {

@@ -27,7 +27,7 @@ class Shader {
         StringEnum MaterialShader = "builtin.material_shader";
         StringEnum UIShader       = "builtin.ui_shader";
         StringEnum SkyboxShader   = "builtin.skybox_shader";
-        StringEnum DepthShader    = "builtin.depth_shader";
+        StringEnum GPrePassShader = "builtin.g_pre_pass_shader";
         StringEnum AOShader       = "builtin.ao_shader";
         StringEnum BlurShader     = "builtin.blur_shader";
         StringEnum ShadowmapDirectionalShader =

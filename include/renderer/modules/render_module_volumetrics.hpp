@@ -100,16 +100,16 @@ class RenderModuleVolumetrics : public RenderModuleFullScreen {
             _u_index.light_color_directional, &light_color_directional
         );
 
-        auto duration = std::chrono::system_clock::now() - _start_time;
-        float time = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
-        _shader->set_uniform(
-            _u_index.animation_time, &time
-        );
+        auto  duration = std::chrono::system_clock::now() - _start_time;
+        float time =
+            std::chrono::duration_cast<std::chrono::milliseconds>(duration)
+                .count();
+        _shader->set_uniform(_u_index.animation_time, &time);
     }
 
   private:
-    Texture::Map* _depth_map              = nullptr;
-    Texture::Map* _shadow_directional_map = nullptr;
+    Texture::Map*                         _depth_map              = nullptr;
+    Texture::Map*                         _shadow_directional_map = nullptr;
     std::chrono::system_clock::time_point _start_time;
 
     struct UIndex {

@@ -15,7 +15,7 @@ layout(std430, set = 0, binding = 0)uniform global_frag_uniform_buffer {
 
 // Samplers
 const int target_i = 0;
-const int g_pre_pass_i = 1;
+const int depth_i = 1;
 layout(set = 0, binding = 1)uniform sampler2D samplers[2];
 
 // IO
@@ -61,7 +61,7 @@ vec4 compute_depth_of_field(
     float zNear = 0.1;
     float zFar = 1000.0;
     
-    float depth = texture(samplers[g_pre_pass_i], vUv).w;
+    float depth = texture(samplers[depth_i], vUv).r;
     // depth = (2.0 * zNear * zFar) / (zFar + zNear - depth * (zFar - zNear));
     
     float factor = depth - focus;

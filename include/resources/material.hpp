@@ -60,9 +60,14 @@ class Material {
     Property<glm::vec4> diffuse_color {
         GET { return _diffuse_color; }
     };
-    /// @brief Materials shininess. Controls concentration of specular light
+    /// @brief Materials shininess. Controls concentration of specular light.
     Property<float32> shininess {
         GET { return _shininess; }
+    };
+    /// @brief Materials smoothness. Controls reflectivity.
+    Property<float32> smoothness {
+        GET { return _smoothness; }
+        SET { _smoothness = value; }
     };
     /// @brief Material's diffuse map
     Property<Texture::Map*> diffuse_map {
@@ -132,6 +137,7 @@ class Material {
     Texture::Map* _normal_map   = nullptr;
     glm::vec4     _diffuse_color;
     float32       _shininess;
+    float32       _smoothness      = 0.0f;
     bool          _update_required = true;
 };
 

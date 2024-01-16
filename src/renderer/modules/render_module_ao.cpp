@@ -12,7 +12,7 @@ void RenderModuleAO::initialize(const Config& config) {
     RenderModuleFullScreen::initialize(config);
     _sample_radius = config.sample_radius;
 
-    setup_texture_maps(config.g_pre_pass_texture);
+    setup_texture_maps(config.g_pre_pass_texture, config.depth_texture);
     compute_noise_scale();
     generate_kernel();
 
@@ -21,6 +21,7 @@ void RenderModuleAO::initialize(const Config& config) {
     SETUP_UNIFORM_INDEX(noise_scale);
     SETUP_UNIFORM_INDEX(sample_radius);
     SETUP_UNIFORM_INDEX(kernel);
+    SETUP_UNIFORM_INDEX(g_pre_pass_texture);
     SETUP_UNIFORM_INDEX(depth_texture);
     SETUP_UNIFORM_INDEX(noise_texture);
 }
@@ -49,7 +50,8 @@ void RenderModuleAO::apply_globals() const {
     _shader->set_uniform(_u_index.noise_scale, &_noise_scale);
     _shader->set_uniform(_u_index.sample_radius, &_sample_radius);
     _shader->set_uniform(_u_index.kernel, &_kernel);
-    _shader->set_sampler(_u_index.depth_texture, _g_map);
+    _shader->set_sampler(_u_index.g_pre_pass_texture, _g_map);
+    _shader->set_sampler(_u_index.depth_texture, _depth_map);
     _shader->set_sampler(_u_index.noise_texture, _noise_map);
 }
 
@@ -57,7 +59,9 @@ void RenderModuleAO::apply_globals() const {
 // RENDER MODULE AO PRIVATE METHODS //
 // //////////////////////////////// //
 
-void RenderModuleAO::setup_texture_maps(const String& g_pre_pass_texture) {
+void RenderModuleAO::setup_texture_maps(
+    const String& g_pre_pass_texture, const String& depth_texture
+) {
     // Create noise texture
     ubyte* const texture_data = new (MemoryTag::Temp) ubyte[16 * 4];
     for (uint8 i = 0; i < 16; i++) {
@@ -81,6 +85,15 @@ void RenderModuleAO::setup_texture_maps(const String& g_pre_pass_texture) {
     // Create maps
     _g_map = create_texture_map(
         g_pre_pass_texture,
+        Texture::Use::MapPassResult,
+        Texture::Filter::NearestNeighbour,
+        Texture::Filter::NearestNeighbour,
+        Texture::Repeat::ClampToEdge,
+        Texture::Repeat::ClampToEdge,
+        Texture::Repeat::ClampToEdge
+    );
+    _depth_map = create_texture_map(
+        depth_texture,
         Texture::Use::MapPassResult,
         Texture::Filter::BiLinear,
         Texture::Filter::BiLinear,

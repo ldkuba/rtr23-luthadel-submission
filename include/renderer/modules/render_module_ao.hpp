@@ -8,6 +8,7 @@ class RenderModuleAO : public RenderModuleFullScreen {
   public:
     struct Config : public RenderModuleFullScreen::Config {
         String  g_pre_pass_texture;
+        String  depth_texture;
         float32 sample_radius = 1.5f;
     };
 
@@ -23,6 +24,7 @@ class RenderModuleAO : public RenderModuleFullScreen {
 
   private:
     Texture::Map* _g_map     = nullptr;
+    Texture::Map* _depth_map = nullptr;
     Texture::Map* _noise_map = nullptr;
     glm::vec2     _noise_scale;
     float32       _sample_radius;
@@ -36,12 +38,15 @@ class RenderModuleAO : public RenderModuleFullScreen {
         uint16 noise_scale        = -1;
         uint16 sample_radius      = -1;
         uint16 kernel             = -1;
+        uint16 g_pre_pass_texture = -1;
         uint16 depth_texture      = -1;
         uint16 noise_texture      = -1;
     };
     UIndex _u_index {};
 
-    void setup_texture_maps(const String& g_pre_pass_texture);
+    void setup_texture_maps(
+        const String& g_pre_pass_texture, const String& depth_texture
+    );
     void generate_kernel();
     void compute_noise_scale();
 };

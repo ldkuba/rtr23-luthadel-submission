@@ -1,7 +1,7 @@
 {
     "version": 1.0,
-    "name": "builtin.depth_shader",
-    "renderpass": "Renderpass.Builtin.Depth",
+    "name": "builtin.g_pre_pass_shader",
+    "renderpass": "Renderpass.Builtin.GPrePass",
     "stages": [
         "vertex",
         "fragment"
@@ -49,6 +49,25 @@
                         {
                             "name": "view",
                             "type": "mat4"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "scope": "instance",
+            "set_index": 1,
+            "bindings": [
+                {
+                    "type": "uniform",
+                    "binding_index": 0,
+                    "stages": [
+                        "fragment"
+                    ],
+                    "uniforms": [
+                        {
+                            "name": "smoothness",
+                            "type": "float32"
                         }
                     ]
                 }

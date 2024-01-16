@@ -19,9 +19,10 @@ layout(std430, set = 0, binding = 0)uniform global_frag_uniform_buffer {
 }GlobalUBO;
 
 // Samplers
-const int depth_normals_i = 0;
-const int noise_i = 1;
-layout(set = 0, binding = 1)uniform sampler2D samplers[2];
+const int g_pre_pass_i = 0;
+const int depth_i = 1;
+const int noise_i = 2;
+layout(set = 0, binding = 1)uniform sampler2D samplers[3];
 
 // IO
 layout(location = 0)in vec2 in_texture_coords;
@@ -33,7 +34,7 @@ vec2 vtc(vec3 coords);
 void main() {
     vec3 view_pos = stv(in_texture_coords);
     
-    vec3 view_normal = texture(samplers[depth_normals_i], in_texture_coords).xyz;
+    vec3 view_normal = texture(samplers[g_pre_pass_i], in_texture_coords).xyz;
     view_normal = normalize(view_normal);
     // vec3 view_normal = cross(dFdy(view_pos.xyz), dFdx(view_pos.xyz));
     // view_normal = normalize(view_normal * -1.0);
@@ -85,7 +86,7 @@ void main() {
 }
 
 vec3 stv(vec2 coords) {
-    float depth = texture(samplers[depth_normals_i], coords).w;
+    float depth = texture(samplers[depth_i], coords).r;
     return screen_to_view(
         coords,
         depth,

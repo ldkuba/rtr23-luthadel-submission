@@ -18,12 +18,14 @@ layout(std430, set = 0, binding = 0)uniform global_frag_uniform_buffer {
     mat4 view;
     mat4 view_inverse;
     vec3 view_origin;
+    float enabled;
 }GlobalUBO;
 
 // Samplers
 const int color_i = 0;
 const int g_pre_pass_i = 1;
-layout(set = 0, binding = 1)uniform sampler2D samplers[2];
+const int depth_i = 2;
+layout(set = 0, binding = 1)uniform sampler2D samplers[3];
 
 // IO
 layout(location = 0)in vec2 in_texture_coords;
@@ -36,6 +38,16 @@ float vignette(vec2 uv);
 vec3 hash33(vec3 point);
 
 void main() {
+    vec3 color = texture(samplers[color_i], in_texture_coords).rgb;
+    
+    // If SSR is disabled just leave
+    // If we are looking at an object which is not sufficiently smooth: bail
+    float smoothness = texture(samplers[g_pre_pass_i], in_texture_coords).w;
+    if (GlobalUBO.enabled == 0 || smoothness < 0.7 || smoothness > 1.0) {
+        out_color = vec4(color, 1);
+        return;
+    }
+    
     // Gather needed data
     vec3 camera_pos = GlobalUBO.view_origin;
     vec3 world_position = stw(in_texture_coords);
@@ -44,7 +56,6 @@ void main() {
     vec3 ray_dir = normalize(reflect(look_dir, world_normal));
     
     // Setup parameters
-    float smoothness = 0.95; // TODO:
     float visibility = 1.0;
     
     // Jitter ray direction based on smoothness
@@ -101,7 +112,6 @@ void main() {
     visibility = clamp(visibility, 0, 1);
     
     // Compute final color
-    vec3 color = texture(samplers[color_i], in_texture_coords).rgb;
     vec3 reflect_color = texture(samplers[color_i], res_uv).rgb * reflected;
     vec3 final_color = mix(color, reflect_color, visibility);
     if (reflected == 0)final_color = color;
@@ -112,7 +122,7 @@ void main() {
 vec3 stw(vec2 coords) {
     return screen_to_world(
         coords,
-        texture(samplers[g_pre_pass_i], coords).w,
+        texture(samplers[depth_i], coords).r,
         GlobalUBO.projection_inverse,
         GlobalUBO.view_inverse
     );

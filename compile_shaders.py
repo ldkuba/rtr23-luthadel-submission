@@ -15,7 +15,7 @@ shader_list = [
     ("builtin.material_shader", ["vert", "frag"]),
     ("builtin.ui_shader", ["vert", "frag"]),
     ("builtin.skybox_shader", ["vert", "frag"]),
-    ("builtin.depth_shader", ["vert", "frag"]),
+    ("builtin.g_pre_pass_shader", ["vert", "frag"]),
     ("builtin.ao_shader", ["vert", "frag"]),
     ("builtin.blur_shader", ["vert", "frag"]),
     ("builtin.shadowmap_directional_shader", ["vert", "frag"]),

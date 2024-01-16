@@ -13,7 +13,7 @@ layout(std430, set = 0, binding = 0)uniform global_frag_uniform_buffer {
 }GlobalUBO;
 
 // Samplers
-const int g_pre_pass_i = 0;
+const int depth_i = 0;
 const int dir_shadows_i = 1;
 layout(set = 0, binding = 1)uniform sampler2D samplers[2];
 
@@ -28,7 +28,7 @@ vec4 get_shadow_coords(vec3 world_pos);
 void main() {
 	vec3 world_position = screen_to_world(
 		in_texture_coords,
-		texture(samplers[g_pre_pass_i], in_texture_coords).w,
+		texture(samplers[depth_i], in_texture_coords).r,
 		GlobalUBO.projection_inverse,
 		GlobalUBO.view_inverse
 	);

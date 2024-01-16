@@ -7,7 +7,7 @@ namespace ENGINE_NAMESPACE {
 class RenderModulePostProcessingEffects : public RenderModulePostProcessing {
   public:
     struct Config : public RenderModulePostProcessing::Config {
-        String g_pre_pass_texture;
+        String depth_texture;
     };
 
   public:
@@ -15,11 +15,11 @@ class RenderModulePostProcessingEffects : public RenderModulePostProcessing {
 
     void initialize(const Config& config) {
         RenderModulePostProcessing::initialize(config);
-        _g_pass_map = create_texture_map(
-            config.g_pre_pass_texture,
+        _depth_map = create_texture_map(
+            config.depth_texture,
             Texture::Use::MapPassResult,
-            Texture::Filter::NearestNeighbour,
-            Texture::Filter::NearestNeighbour,
+            Texture::Filter::BiLinear,
+            Texture::Filter::BiLinear,
             Texture::Repeat::ClampToEdge,
             Texture::Repeat::ClampToEdge,
             Texture::Repeat::ClampToEdge
@@ -30,7 +30,7 @@ class RenderModulePostProcessingEffects : public RenderModulePostProcessing {
         SETUP_UNIFORM_INDEX(aperture);
         SETUP_UNIFORM_INDEX(focus);
         SETUP_UNIFORM_INDEX(aspect);
-        SETUP_UNIFORM_INDEX(g_pre_pass_texture);
+        SETUP_UNIFORM_INDEX(depth_texture);
     }
 
   protected:
@@ -44,23 +44,23 @@ class RenderModulePostProcessingEffects : public RenderModulePostProcessing {
         _shader->set_uniform(_u_index.aperture, &_aperture);
         _shader->set_uniform(_u_index.focus, &_focus);
         _shader->set_uniform(_u_index.aspect, &aspect);
-        _shader->set_sampler(_u_index.g_pre_pass_texture, _g_pass_map);
+        _shader->set_sampler(_u_index.depth_texture, _depth_map);
     }
 
   private:
-    Texture::Map* _g_pass_map;
+    Texture::Map* _depth_map;
     float32       _exposure = 0.9;
     float32       _max_blur = 0.6;
     float32       _aperture = 0.05;
     float32       _focus    = 0.985;
 
     struct UIndex {
-        uint16 g_pre_pass_texture = -1;
-        uint16 exposure           = -1;
-        uint16 max_blur           = -1;
-        uint16 aperture           = -1;
-        uint16 focus              = -1;
-        uint16 aspect             = -1;
+        uint16 depth_texture = -1;
+        uint16 exposure      = -1;
+        uint16 max_blur      = -1;
+        uint16 aperture      = -1;
+        uint16 focus         = -1;
+        uint16 aspect        = -1;
     };
     UIndex _u_index {};
 };

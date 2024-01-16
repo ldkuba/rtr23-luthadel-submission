@@ -99,7 +99,7 @@ class TestApplication {
     // Textures
     struct UsedTextures {
         STRING_ENUM(GPrePassTarget);
-        STRING_ENUM(LowResDepthTarget);
+        STRING_ENUM(DepthTarget);
         STRING_ENUM(SSAOPassTarget);
         STRING_ENUM(BluredSSAOPassTarget);
         STRING_ENUM(DirectionalShadowMapDepthTarget);

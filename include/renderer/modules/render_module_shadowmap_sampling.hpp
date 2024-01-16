@@ -9,7 +9,7 @@ namespace ENGINE_NAMESPACE {
 class RenderModuleShadowmapSampling : public RenderModuleFullScreen {
   public:
     struct Config : public RenderModuleFullScreen::Config {
-        String g_pre_pass_texture;
+        String depth_texture;
         String directional_shadow_texture;
     };
 
@@ -19,8 +19,8 @@ class RenderModuleShadowmapSampling : public RenderModuleFullScreen {
     void initialize(const Config& config) {
         RenderModuleFullScreen::initialize(config);
         _perspective_view = config.perspective_view;
-        _g_pre_pass_map   = create_texture_map(
-            config.g_pre_pass_texture,
+        _depth_map        = create_texture_map(
+            config.depth_texture,
             Texture::Use::MapPassResult,
             Texture::Filter::BiLinear,
             Texture::Filter::BiLinear,
@@ -41,7 +41,7 @@ class RenderModuleShadowmapSampling : public RenderModuleFullScreen {
         SETUP_UNIFORM_INDEX(projection_inverse);
         SETUP_UNIFORM_INDEX(view_inverse);
         SETUP_UNIFORM_INDEX(light_space_directional);
-        SETUP_UNIFORM_INDEX(g_pre_pass_texture);
+        SETUP_UNIFORM_INDEX(depth_texture);
         SETUP_UNIFORM_INDEX(shadowmap_directional_texture);
     }
 
@@ -60,7 +60,7 @@ class RenderModuleShadowmapSampling : public RenderModuleFullScreen {
         _shader->set_uniform(
             _u_index.light_space_directional, &light_space_directional
         );
-        _shader->set_sampler(_u_index.g_pre_pass_texture, _g_pre_pass_map);
+        _shader->set_sampler(_u_index.depth_texture, _depth_map);
         _shader->set_sampler(
             _u_index.shadowmap_directional_texture, _directional_shadow_map
         );
@@ -68,14 +68,14 @@ class RenderModuleShadowmapSampling : public RenderModuleFullScreen {
 
   private:
     RenderViewPerspective* _perspective_view;
-    Texture::Map*          _g_pre_pass_map;
+    Texture::Map*          _depth_map;
     Texture::Map*          _directional_shadow_map;
 
     struct UIndex {
         uint16 projection_inverse            = -1;
         uint16 view_inverse                  = -1;
         uint16 light_space_directional       = -1;
-        uint16 g_pre_pass_texture            = -1;
+        uint16 depth_texture                 = -1;
         uint16 shadowmap_directional_texture = -1;
     };
     UIndex _u_index {};

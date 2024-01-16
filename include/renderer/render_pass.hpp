@@ -18,7 +18,7 @@ class RenderPass {
         StringEnum UIPass     = "Renderpass.Builtin.UI";
         StringEnum SkyboxPass = "Renderpass.Builtin.Skybox";
         StringEnum AOPass     = "Renderpass.Builtin.AO";
-        StringEnum DepthPass  = "Renderpass.Builtin.Depth";
+        StringEnum GPrePass   = "Renderpass.Builtin.GPrePass";
         StringEnum BlurPass   = "Renderpass.Builtin.Blur";
         StringEnum ShadowmapDirectionalPass =
             "Renderpass.Builtin.ShadowmapDirectional";
@@ -52,10 +52,10 @@ class RenderPass {
      */
     struct Config {
         String    name;
-        glm::vec2 render_offset;
-        glm::vec4 clear_color;
-        bool      depth_testing;
-        bool      multisampling;
+        glm::vec2 render_offset = glm::vec2 { 0, 0 };
+        glm::vec4 clear_color   = glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f };
+        bool      depth_testing = false;
+        bool      multisampling = false;
     };
 
   public:

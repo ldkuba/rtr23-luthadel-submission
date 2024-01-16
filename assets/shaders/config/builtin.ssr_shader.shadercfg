@@ -47,14 +47,18 @@
                         },
                         {
                             "name": "view_origin",
-                            "type": "mat4"
+                            "type": "vec3"
+                        },
+                        {
+                            "name": "enabled",
+                            "type": "float32"
                         }
                     ]
                 },
                 {
                     "type": "sampler",
                     "binding_index": 1,
-                    "count": 2,
+                    "count": 3,
                     "stages": [
                         "fragment"
                     ],
@@ -65,6 +69,10 @@
                         },
                         {
                             "name": "g_pre_pass_texture",
+                            "type": "sampler2D"
+                        },
+                        {
+                            "name": "depth_texture",
                             "type": "sampler2D"
                         }
                     ]

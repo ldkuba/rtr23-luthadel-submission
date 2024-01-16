@@ -172,6 +172,7 @@ void TestApplication::setup_input() {
     // Other
     PressControl(spin_cube, SPACE);
     PressControl(shader_reload, Z); // TODO:
+    PressControl(toggle_ssr, X);
     PressControl(show_fps, F);
     PressControl(move_directional_light, B);
 
@@ -249,6 +250,7 @@ void TestApplication::setup_input() {
         Logger::debug("Reloading shaders...");
         _shader_system.reload_shaders();
     };
+    toggle_ssr->event += [&](float32, float32) { _module.ssr->toggle(); };
     show_fps->event += [&](float32, float32) { _log_fps = !_log_fps; };
     move_directional_light->event += [&](float32, float32) {
         _move_directional_light_flag = !_move_directional_light_flag;
@@ -269,94 +271,45 @@ void TestApplication::setup_render_passes() {
     const auto shadowmap_directional_size = 4096;
 
     // Create render passes
-    const auto world_renderpass = _app_renderer.create_render_pass({
-        RenderPass::BuiltIn::WorldPass,       // Name
-        glm::vec2 { 0, 0 },                   // Draw offset
-        glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f }, // Clear color
-        true,                                 // Depth testing
-        true                                  // Multisampling
+    const auto g_renderpass = _app_renderer.create_render_pass({
+        .name          = RenderPass::BuiltIn::GPrePass,
+        .depth_testing = true,
     });
-    _app_renderer.get_renderpass(RenderPass::BuiltIn::WorldPass)
-        .expect("World pass somehow absent.");
-    const auto depth_renderpass  = _app_renderer.create_render_pass({
-        RenderPass::BuiltIn::DepthPass,       // Name
-        glm::vec2 { 0, 0 },                   // Draw offset
-        glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f }, // Clear color
-        true,                                 // Depth testing
-        false                                 // Multisampling
-    });
-    const auto ao_renderpass     = _app_renderer.create_render_pass({
-        RenderPass::BuiltIn::AOPass,          // Name
-        glm::vec2 { 0, 0 },                   // Draw offset
-        glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f }, // Clear color
-        false,                                // Depth testing
-        false                                 // Multisampling
-    });
-    const auto blur_renderpass   = _app_renderer.create_render_pass({
-        RenderPass::BuiltIn::BlurPass,        // Name
-        glm::vec2 { 0, 0 },                   // Draw offset
-        glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f }, // Clear color
-        false,                                // Depth testing
-        false                                 // Multisampling
-    });
-    const auto skybox_renderpass = _app_renderer.create_render_pass({
-        RenderPass::BuiltIn::SkyboxPass,      // Name
-        glm::vec2 { 0, 0 },                   // Draw offset
-        glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f }, // Clear color
-        false,                                // Depth testing
-        true                                  // Multisampling
-    });
-    const auto ui_renderpass     = _app_renderer.create_render_pass({
-        RenderPass::BuiltIn::UIPass,          // Name
-        glm::vec2 { 0, 0 },                   // Draw offset
-        glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f }, // Clear color
-        false,                                // Depth testing
-        false                                 // Multisampling
-    });
+    const auto ao_renderpass =
+        _app_renderer.create_render_pass({ RenderPass::BuiltIn::AOPass });
+    const auto blur_renderpass =
+        _app_renderer.create_render_pass({ RenderPass::BuiltIn::BlurPass });
+    const auto skybox_renderpass = _app_renderer.create_render_pass(
+        { .name = RenderPass::BuiltIn::SkyboxPass, .multisampling = true }
+    );
+    const auto world_renderpass =
+        _app_renderer.create_render_pass({ .name =
+                                               RenderPass::BuiltIn::WorldPass,
+                                           .depth_testing = true,
+                                           .multisampling = true });
+    const auto ui_renderpass =
+        _app_renderer.create_render_pass({ RenderPass::BuiltIn::UIPass });
     const auto shadowmap_directional_renderpass =
-        _app_renderer.create_render_pass({
-            RenderPass::BuiltIn::ShadowmapDirectionalPass, // Name
-            glm::vec2 { 0, 0 },                            // Draw offset
-            glm::vec4 { 1.0f, 1.0f, 1.0f, 1.0f },          // Clear color
-            true,                                          // Depth testing
-            false                                          // Multisampling
-        });
-    const auto shadowmap_sampling_renderpass =
-        _app_renderer.create_render_pass({
-            RenderPass::BuiltIn::ShadowmapSamplingPass, // Name
-            glm::vec2 { 0, 0 },                         // Draw offset
-            glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f },       // Clear color
-            true,                                       // Depth testing
-            false                                       // Multisampling
-        });
-    const auto ssr_renderpass              = _app_renderer.create_render_pass({
-        RenderPass::BuiltIn::SSRPass,         // Name
-        glm::vec2 { 0, 0 },                   // Draw offset
-        glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f }, // Clear color
-        false,                                // Depth testing
-        false                                 // Multisampling
-    });
-    const auto volumetrics_renderpass      = _app_renderer.create_render_pass({
-        RenderPass::BuiltIn::VolumetricsPass, // Name
-        glm::vec2 { 0, 0 },                   // Draw offset
-        glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f }, // Clear color
-        false,                                // Depth testing
-        false                                 // Multisampling
-    });
-    const auto volumetrics_blur_renderpass = _app_renderer.create_render_pass({
-        RenderPass::BuiltIn::VolumetricsBlurPass, // Name
-        glm::vec2 { 0, 0 },                       // Draw offset
-        glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f },     // Clear color
-        false,                                    // Depth testing
-        false                                     // Multisampling
-    });
-    const auto pp_effects_renderpass       = _app_renderer.create_render_pass({
-        RenderPass::BuiltIn::PostProcessingPass, // Name
-        glm::vec2 { 0, 0 },                      // Draw offset
-        glm::vec4 { 0.0f, 0.0f, 0.0f, 1.0f },    // Clear color
-        false,                                   // Depth testing
-        false                                    // Multisampling
-    });
+        _app_renderer.create_render_pass(
+            { .name          = RenderPass::BuiltIn::ShadowmapDirectionalPass,
+              .clear_color   = glm::vec4(1.0f),
+              .depth_testing = true }
+        );
+    const auto shadowmap_sampling_renderpass = _app_renderer.create_render_pass(
+        { .name          = RenderPass::BuiltIn::ShadowmapSamplingPass,
+          .depth_testing = true }
+    );
+    const auto ssr_renderpass =
+        _app_renderer.create_render_pass({ RenderPass::BuiltIn::SSRPass });
+    const auto volumetrics_renderpass = _app_renderer.create_render_pass(
+        { RenderPass::BuiltIn::VolumetricsPass }
+    );
+    const auto volumetrics_blur_renderpass = _app_renderer.create_render_pass(
+        { RenderPass::BuiltIn::VolumetricsBlurPass }
+    );
+    const auto pp_effects_renderpass = _app_renderer.create_render_pass(
+        { RenderPass::BuiltIn::PostProcessingPass }
+    );
 
     // === Create render target textures ===
     // G buffer
@@ -367,6 +320,14 @@ void TestApplication::setup_render_passes() {
                                  .channel_count = 4, // Channel count
                                  .format        = Texture::Format::RGBA32Sfloat,
                                  .is_writable   = true,
+                                 .is_render_target = true });
+    const auto depth_texture =
+        _texture_system.create({ .name             = UsedTextures::DepthTarget,
+                                 .width            = width,
+                                 .height           = height,
+                                 .channel_count    = 4,
+                                 .format           = Texture::Format::D32,
+                                 .is_writable      = true,
                                  .is_render_target = true });
 
     // SSAO
@@ -448,11 +409,9 @@ void TestApplication::setup_render_passes() {
 
     // === Create render targets ===
     // G pre pass
-    depth_renderpass->add_render_target({ width,
-                                          height,
-                                          { g_pre_pass_texture,
-                                            _app_renderer.get_depth_texture() },
-                                          true });
+    g_renderpass->add_render_target(
+        { width, height, { g_pre_pass_texture, depth_texture }, true }
+    );
     // AO
     ao_renderpass->add_render_target({ half_width,
                                        half_height,
@@ -518,7 +477,7 @@ void TestApplication::setup_render_passes() {
     // === Initialize ===
     RenderPass::start >>
         // Depth normals
-        "CDS" >> depth_renderpass >>
+        "CDS" >> g_renderpass >>
         // SSAO
         "C" >> ao_renderpass >> "C" >> blur_renderpass >>
         // Directional Shadow-mapping
@@ -576,15 +535,16 @@ void TestApplication::setup_views() {
 void TestApplication::setup_modules() {
     // Create render modules
     _module.g_pass = _render_module_system.create<RenderModuleGPrepass>(
-        { Shader::BuiltIn::DepthShader,
-          RenderPass::BuiltIn::DepthPass,
+        { Shader::BuiltIn::GPrePassShader,
+          RenderPass::BuiltIn::GPrePass,
           _main_world_view }
     );
     _module.ao = _render_module_system.create<RenderModuleAO>(
         { Shader::BuiltIn::AOShader,
           RenderPass::BuiltIn::AOPass,
           _main_world_view,
-          UsedTextures::GPrePassTarget }
+          UsedTextures::GPrePassTarget,
+          UsedTextures::DepthTarget }
     );
     _module.blur = _render_module_system.create<RenderModulePostProcessing>(
         { Shader::BuiltIn::BlurShader,
@@ -603,14 +563,14 @@ void TestApplication::setup_modules() {
             { Shader::BuiltIn::ShadowmapSamplingShader,
               RenderPass::BuiltIn::ShadowmapSamplingPass,
               _main_world_view,
-              UsedTextures::GPrePassTarget,
+              UsedTextures::DepthTarget,
               UsedTextures::DirectionalShadowMapDepthTarget }
         );
     _module.volumetrics = _render_module_system.create<RenderModuleVolumetrics>(
         { Shader::BuiltIn::VolumetricsShader,
           RenderPass::BuiltIn::VolumetricsPass,
           _main_world_view,
-          UsedTextures::GPrePassTarget,
+          UsedTextures::DepthTarget,
           UsedTextures::DirectionalShadowMapDepthTarget }
     );
     _module.volumetrics_blur =
@@ -645,7 +605,8 @@ void TestApplication::setup_modules() {
           RenderPass::BuiltIn::SSRPass,
           _main_world_view,
           UsedTextures::WorldPassTarget,
-          UsedTextures::GPrePassTarget }
+          UsedTextures::GPrePassTarget,
+          UsedTextures::DepthTarget }
     );
     _module.pp_effects =
         _render_module_system.create<RenderModulePostProcessingEffects>(
@@ -653,7 +614,7 @@ void TestApplication::setup_modules() {
               RenderPass::BuiltIn::PostProcessingPass,
               _main_world_view,
               UsedTextures::SSRTarget,
-              UsedTextures::GPrePassTarget }
+              UsedTextures::DepthTarget }
         );
 
     // Fill list of render commands
@@ -760,6 +721,9 @@ void TestApplication::setup_scene_geometry(const uint32 scene_id) {
     _main_world_view->set_visible_meshes(_world_mesh_data.meshes);
     _main_ui_view->set_visible_meshes(_ui_mesh_data.meshes);
     _dir_light_view->set_visible_meshes(_world_mesh_data.meshes);
+
+    // TODO: TEMP
+    _module.g_pass->initialize_shader_data();
 }
 
 void TestApplication::setup_lights() {
