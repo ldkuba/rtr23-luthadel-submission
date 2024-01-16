@@ -4,8 +4,6 @@
 #include "timer.hpp"
 #include <chrono>
 
-#include "app/path.hpp"
-
 namespace ENGINE_NAMESPACE {
 
 // Constructor & Destructor
@@ -27,24 +25,26 @@ void TestApplication::run() {
     setup_scene_geometry(2);
     setup_lights();
 
+    _material_system.acquire("water_mat")->smoothness = 1.0f;
+
     // === Path ===
     // Setup path
-    Path path {};
-    path.set_camera(_main_camera);
-    path.set_movement_speed(2.0f);
-    path.set_rotation_speed(0.05f);
+    _path.set_camera(_main_camera);
 
     // Add path frames
-    path.add_frame({ glm::vec3(0.0f, 0.0f, 2.0f) });
-    path.add_frame({ glm::vec3(60.0f, 0.0f, 2.0f),
-                     glm::quat(glm::vec3(0.0f, 0.0f, 0.0f)) });
-    path.add_frame({ glm::vec3(60.0f, 20.0f, 30.0f),
-                     glm::quat(glm::vec3(0.0f, 0.0f, 0.5f)) });
-    path.add_frame({ glm::vec3(-30.0f, 110.0f, 80.0f),
-                     glm::quat(glm::vec3(0.0f, 0.2f, 0.9f)) });
+    _path.add_frame({{ glm::vec3(0.0f, 57.4428f, 1.20992f), glm::quat(glm::vec3(0.0f, 0.0f, glm::radians(-90.0f))) }, 1.3f, 0.5f});
+    _path.add_frame({{ glm::vec3(0.0f, 36.6059f, 1.20992f), glm::quat(glm::vec3(0.0f, 0.0f, glm::radians(-90.0f))) }, 1.3f, 0.5f});
+    _path.add_frame({{ glm::vec3(-4.43142f, 14.7225f, 1.20992f), glm::quat(glm::vec3(0.0f, 0.0f, glm::radians(-90.0f))) }, 1.3f, 0.5f});
+    _path.add_frame({{ glm::vec3(0.0f, -2.73676f, 1.20992f), glm::quat(glm::vec3(0.0f, 0.0f, glm::radians(-90.0f))) }, 1.3f, 0.5f});
+    _path.add_frame({{ glm::vec3(-0.5f, -4.73676f, 1.20992f), glm::quat(glm::vec3(0.0f, 0.0f, glm::radians(-100.0f))) }, 1.3f, 1.0f});
+    _path.add_frame({{ glm::vec3(-5.0f, -9.2f, 1.20992f), glm::quat(glm::vec3(0.0f, 0.0f, glm::radians(-130.0f))) }, 1.3f, 1.5f});
+    _path.add_frame({{ glm::vec3(-14.6651f, -13.1327f, 1.20992f), glm::quat(glm::vec3(0.0f, 0.0f, glm::radians(-150.0f))) }, 1.3f, 0.5f});
+    _path.add_frame({{ glm::vec3(-19.8037f, -13.9951f, 1.20992f), glm::quat(glm::vec3(0.0f, glm::radians(-20.0f), glm::radians(-170.0f))) }, 1.3f, 1.0f});
+    _path.add_frame({{ glm::vec3(-26.6112f, -13.9951f, 1.20992f), glm::quat(glm::vec3(0.0f, glm::radians(-25.0f), glm::radians(-180.0f))) }, 1.3f, 0.5f});
+    _path.add_frame({{ glm::vec3(-33.9108f, -13.9951f, 18.1147f), glm::quat(glm::vec3(0.0f, glm::radians(-85.0f), glm::radians(-180.0f))) }, 1.3f, 1.0f});
 
     // Start path
-    path.start();
+    _path.start();
 
     // === Performance meter ===
     Timer& timer = Timer::global_timer;
@@ -55,7 +55,7 @@ void TestApplication::run() {
         const auto elapsed_time = calculate_elapsed_time();
 
         // Update path
-        path.update(delta_time);
+        _path.update(delta_time);
 
         // FPS COUNTER
         static float64 last_print  = 0;
@@ -100,10 +100,10 @@ void TestApplication::run() {
 
         if (_move_directional_light_flag) {
             const_cast<DirectionalLight*>(_light_system.get_directional())
-                ->data.direction.x = oscillating_value(0.1f, 0.2f);
+                ->data.direction.x = oscillating_value(0.1f, 0.6f);
             const_cast<DirectionalLight*>(_light_system.get_directional())
                 ->data.direction.y =
-                oscillating_value(0.1f, 0.05f, M_PI / 2.0f) + 0.1f;
+                oscillating_value(0.1f, 0.4f, M_PI / 2.0f) + 0.1f;
         }
 
         timer.time("Events processed in ");
@@ -199,6 +199,7 @@ void TestApplication::setup_input() {
     PressControl(toggle_ssr, X);
     PressControl(show_fps, F);
     PressControl(move_directional_light, B);
+    PressControl(start_path, P);
 
     // === Events ===
     // Application controls
@@ -279,6 +280,7 @@ void TestApplication::setup_input() {
     move_directional_light->event += [&](float32, float32) {
         _move_directional_light_flag = !_move_directional_light_flag;
     };
+    start_path->event += [&](float32, float32) { _path.start(); };
 }
 
 void TestApplication::setup_render_passes() {
@@ -291,6 +293,10 @@ void TestApplication::setup_render_passes() {
     const auto height      = _app_surface->get_height_in_pixels();
     const auto half_width  = width / 2;
     const auto half_height = height / 2;
+    
+    // Temp for volumetrics
+    const auto volumetrics_width  = width / 2;
+    const auto volumetrics_height = height / 2;
 
     const auto shadowmap_directional_size = 4096;
 
@@ -393,15 +399,15 @@ void TestApplication::setup_render_passes() {
     // Volumetrics
     const auto volumetrics_texture =
         _texture_system.create({ .name   = UsedTextures::VolumetricsTarget,
-                                 .width  = half_width,
-                                 .height = half_height,
+                                 .width  = volumetrics_width,
+                                 .height = volumetrics_height,
                                  .channel_count    = 4,
                                  .is_writable      = true,
                                  .is_render_target = true });
     const auto volumetrics_blur_texture =
         _texture_system.create({ .name   = UsedTextures::VolumetricsBlurTarget,
-                                 .width  = half_width,
-                                 .height = half_height,
+                                 .width  = volumetrics_width,
+                                 .height = volumetrics_height,
                                  .channel_count    = 4,
                                  .is_writable      = true,
                                  .is_render_target = true });
@@ -467,15 +473,15 @@ void TestApplication::setup_render_passes() {
     );
     // Volumetrics
     volumetrics_renderpass->add_render_target(
-        { half_width,
-          half_height,
+        { volumetrics_width,
+          volumetrics_height,
           { volumetrics_texture },
           true,
           RenderTarget::SynchMode::HalfResolution }
     );
     volumetrics_blur_renderpass->add_render_target(
-        { half_width,
-          half_height,
+        { volumetrics_width,
+          volumetrics_height,
           { volumetrics_blur_texture },
           true,
           RenderTarget::SynchMode::HalfResolution }
@@ -496,7 +502,7 @@ void TestApplication::setup_render_passes() {
     ssr_renderpass->add_render_target({ width, height, { ssr_texture }, true });
     pp_effects_renderpass->add_window_as_render_target();
     // UI
-    ui_renderpass->add_window_as_render_target();
+    // ui_renderpass->add_window_as_render_target();
 
     // === Initialize ===
     RenderPass::start >>
@@ -516,7 +522,7 @@ void TestApplication::setup_render_passes() {
         // Post process
         "C" >> ssr_renderpass >> "C" >> pp_effects_renderpass >>
         // UI
-        ui_renderpass >>
+        // ui_renderpass >>
         // Finish
         RenderPass::finish;
 }
@@ -617,13 +623,13 @@ void TestApplication::setup_modules() {
           UsedTextures::BluredSSAOPassTarget,
           UsedTextures::ShadowmapSampledTarget,
           UsedTextures::VolumetricsBlurTarget,
-          glm::vec4(0.05f, 0.05f, 0.05f, 1.0f) }
+          glm::vec4(0.01f, 0.01f, 0.01f, 1.0f) }
     );
-    _module.ui = _render_module_system.create<RenderModuleUI>(
-        { Shader::BuiltIn::UIShader,
-          RenderPass::BuiltIn::UIPass,
-          _main_ui_view }
-    );
+    // _module.ui = _render_module_system.create<RenderModuleUI>(
+    //     { Shader::BuiltIn::UIShader,
+    //       RenderPass::BuiltIn::UIPass,
+    //       _main_ui_view }
+    // );
     _module.ssr = _render_module_system.create<RenderModuleSSR>(
         { Shader::BuiltIn::SSRShader,
           RenderPass::BuiltIn::SSRPass,
@@ -653,7 +659,7 @@ void TestApplication::setup_modules() {
     _modules.push_back(_module.world);
     _modules.push_back(_module.ssr);
     _modules.push_back(_module.pp_effects);
-    _modules.push_back(_module.ui);
+    // _modules.push_back(_module.ui);
 }
 
 void TestApplication::setup_scene_geometry(const uint32 scene_id) {
@@ -692,7 +698,7 @@ void TestApplication::setup_scene_geometry(const uint32 scene_id) {
         meshes.push_back(mesh_3);
     } else {
         const auto obj_name = (scene_id == 1)   ? "falcon"
-                              : (scene_id == 2) ? "sponza"
+                              : (scene_id == 2) ? "luthadel-scene"
                                                 : "viking_room";
 
         /// Load MESH TEST
@@ -718,7 +724,7 @@ void TestApplication::setup_scene_geometry(const uint32 scene_id) {
         // Transform mesh as needed
         switch (scene_id) {
         case 2:
-            mesh->transform.scale_by(0.02f);
+            // mesh->transform.scale_by(0.02f);
             mesh->transform.translate_by(glm::vec3(0, -1, 0));
         case 1: //
             mesh->transform.rotate_by_deg(glm::vec3(1, 0, 0), 90.f);
@@ -728,22 +734,22 @@ void TestApplication::setup_scene_geometry(const uint32 scene_id) {
 
     /// Load GUI TEST
     // Create geometry
-    const auto geom_2d = _geometry_system.generate_ui_rectangle(
-        "ui", 128, 128, "test_ui_material"
-    );
+    // const auto geom_2d = _geometry_system.generate_ui_rectangle(
+    //     "ui", 128, 128, "test_ui_material"
+    // );
 
     // === Mesh render data ===
     // Create mesh
-    Mesh* mesh_ui = new (MemoryTag::Geometry) Mesh(geom_2d);
-    ui_meshes.push_back(mesh_ui);
+    // Mesh* mesh_ui = new (MemoryTag::Geometry) Mesh(geom_2d);
+    // ui_meshes.push_back(mesh_ui);
 
     // Create mesh data
     _world_mesh_data = { meshes };
-    _ui_mesh_data    = { ui_meshes };
+    // _ui_mesh_data    = { ui_meshes };
 
     // Set mesh data
     _main_world_view->set_visible_meshes(_world_mesh_data.meshes);
-    _main_ui_view->set_visible_meshes(_ui_mesh_data.meshes);
+    // _main_ui_view->set_visible_meshes(_ui_mesh_data.meshes);
     _dir_light_view->set_visible_meshes(_world_mesh_data.meshes);
 
     // TODO: TEMP
@@ -753,28 +759,81 @@ void TestApplication::setup_scene_geometry(const uint32 scene_id) {
 void TestApplication::setup_lights() {
     const auto directional_light = new (MemoryTag::Scene)
         DirectionalLight { "dir_light",
-                           { glm::vec4(0.0f, 0.2f, -1.0, 1.0),
-                             glm::vec4(0.5, 0.5, 0.5, 1.0) } };
+                           { glm::vec4(0.4f, 0.6f, -1.0, 1.0),
+                             glm::vec4(0.05, 0.05, 0.05, 1.0) } };
     _light_system.add_directional(directional_light);
 
+    glm::vec3 yellow_light(0.859, 0.682, 0.267);
+
     const auto pl0 =
-        new (MemoryTag::Scene) PointLight { "pl0",
-                                            { glm::vec4(1.0, 1.0, 2.0, 1.0),
-                                              glm::vec4(0.0, 5.0, 0.0, 1.0),
+        new (MemoryTag::Scene) PointLight { "candle",
+                                            { glm::vec4(-3.4, 43.659, 0.90165, 1.0),
+                                              glm::vec4(yellow_light.x * 2, yellow_light.y * 2, yellow_light.z * 2, 1.0),
                                               1.0,
                                               0.35,
                                               0.44,
                                               0.0 } };
     const auto pl1 =
-        new (MemoryTag::Scene) PointLight { "pl1",
-                                            { glm::vec4(5.0, 1.0, 2.0, 1.0),
-                                              glm::vec4(5.0, 0.0, 0.0, 1.0),
+        new (MemoryTag::Scene) PointLight { "window_1",
+                                            { glm::vec4(7.58027, 19.9712, 6.70104, 1.0),
+                                              glm::vec4(yellow_light.x * 3, yellow_light.y * 3, yellow_light.z * 3, 1.0),
                                               1.0,
                                               0.35,
                                               0.44,
                                               0.0 } };
+
+    const auto pl2 =
+        new (MemoryTag::Scene) PointLight { "window_2",
+                                            { glm::vec4(7.58027, 12.9889, 6.70104, 1.0),
+                                              glm::vec4(yellow_light.x * 3, yellow_light.y * 3, yellow_light.z * 3, 1.0),
+                                              1.0,
+                                              0.35,
+                                              0.44,
+                                              0.0 } };
+
+    const auto pl3 =
+        new (MemoryTag::Scene) PointLight { "window_blacksmith",
+                                            { glm::vec4(-7.02948, 20.0852, 1.70184, 1.0),
+                                              glm::vec4(yellow_light.x * 2.5, yellow_light.y * 2.5, yellow_light.z * 2.5, 1.0),
+                                              1.0,
+                                              0.35,
+                                              0.44,
+                                              0.0 } };
+
+    const auto pl4 =
+        new (MemoryTag::Scene) PointLight { "church_1",
+                                            { glm::vec4(2.42601, -14.393, 3.07342, 1.0),
+                                              glm::vec4(yellow_light.x * 3, yellow_light.y * 3, yellow_light.z * 3, 1.0),
+                                              1.0,
+                                              0.35,
+                                              0.44,
+                                              0.0 } };
+
+    const auto pl5 =
+        new (MemoryTag::Scene) PointLight { "church_2",
+                                            { glm::vec4(0.068624, -18.5387, 1.70184, 1.0),
+                                              glm::vec4(yellow_light.x * 3, yellow_light.y * 3, yellow_light.z * 3, 1.0),
+                                              1.0,
+                                              0.35,
+                                              0.44,
+                                              0.0 } };
+
+    const auto pl6 =
+        new (MemoryTag::Scene) PointLight { "gate",
+                                            { glm::vec4(-17.157, -26.4123, 6.55869, 1.0),
+                                              glm::vec4(yellow_light.x * 2, yellow_light.y * 2, yellow_light.z * 2, 1.0),
+                                              1.0,
+                                              0.35,
+                                              0.44,
+                                              0.0 } };
+
     _light_system.add_point(pl0);
     _light_system.add_point(pl1);
+    _light_system.add_point(pl2);
+    _light_system.add_point(pl3);
+    _light_system.add_point(pl4);
+    _light_system.add_point(pl5);
+    _light_system.add_point(pl6);
 }
 
 } // namespace ENGINE_NAMESPACE

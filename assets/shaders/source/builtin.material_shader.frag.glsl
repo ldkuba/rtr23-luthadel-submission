@@ -107,7 +107,7 @@ void main() {
         }
         
         // Blend volumetrics pass results
-        out_color += sample_volumetrics(screen_position());
+        out_color.xyz += sample_volumetrics(screen_position()).xyz;
     } else if (in_mode == 2) {
         out_color = vec4(max(normal, 0), 1.0);
     } else if (in_mode == 3) {

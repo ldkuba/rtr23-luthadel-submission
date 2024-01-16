@@ -5,6 +5,12 @@
 
 namespace ENGINE_NAMESPACE {
 
+struct MovementFrame {
+    Transform transform;
+    float32 speed;
+    float32 rotation_speed;
+};
+
 class Path {
   public:
     Path();
@@ -12,9 +18,7 @@ class Path {
 
     // Initialization
     void set_camera(Camera* const camera);
-    void set_movement_speed(float32 speed);
-    void set_rotation_speed(float32 speed);
-    void add_frame(const Transform& transform);
+    void add_frame(const MovementFrame& frame);
 
     // Process
     void start();
@@ -27,14 +31,14 @@ class Path {
     float32 _path_length = 0;
     bool    _started     = false;
 
-    Vector<Transform> _frames;
+    Vector<MovementFrame> _frames;
 
     glm::vec3 _velocity;
     glm::vec3 _angular_velocity;
 
     uint32 _current_frame;
-    uint32 _step_count;
-    uint32 _steps_taken;
+    float32 _remaining_distance;
+    float32 _current_segment_distance;
 };
 
 } // namespace ENGINE_NAMESPACE

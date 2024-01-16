@@ -5,7 +5,7 @@
 #include "include/space_transforms.glsl"
 
 // Const
-const uint MAX_STEPS = 50;
+const uint MAX_STEPS = 200;
 const uint BINARY_SEARCH_STEPS = 5;
 const float STEP_SIZE = 0.06;
 const float MAX_DISTANCE = 100;
@@ -106,7 +106,7 @@ void main() {
     // Compute visibility
     visibility *= vignette(in_texture_coords);
     visibility *= clamp(dot(ray_dir, look_dir), 0, 1);
-    visibility *= 1.0 - clamp(0.25 * length(stw(res_uv) - world_position), 0, 1); // Fade with distance
+    visibility *= 1.0 - clamp(0.01 * length(stw(res_uv) - world_position), 0, 1); // Fade with distance
     visibility *= smoothness;
     visibility *= (res_uv.x < 0 || res_uv.x > 1 ? 0 : 1) * (res_uv.y < 0 || res_uv.y > 1 ? 0 : 1);
     visibility = clamp(visibility, 0, 1);

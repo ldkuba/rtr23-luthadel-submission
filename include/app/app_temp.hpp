@@ -23,6 +23,8 @@
 #include "renderer/modules/render_module_ssr.hpp"
 #include "renderer/modules/render_module_post_processing_effects.hpp"
 
+#include "app/path.hpp"
+
 namespace ENGINE_NAMESPACE {
 
 class TestApplication {
@@ -42,6 +44,8 @@ class TestApplication {
 
     // Main camera
     Camera* _main_camera {};
+
+    Path _path {};
 
     // Systems
     InputSystem      _input_system {};

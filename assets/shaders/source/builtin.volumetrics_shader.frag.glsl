@@ -104,7 +104,7 @@ vec4 raymarch_volume(vec3 start_pos, vec3 end_pos, int max_samples, float initia
         
         // Ambient light scattering
         if (shadow == 0.0) {
-            shadow = 0.15;
+            shadow = 0.05;
         }
         
         // Not needed for directional light because it has constant intensity
@@ -116,7 +116,7 @@ vec4 raymarch_volume(vec3 start_pos, vec3 end_pos, int max_samples, float initia
         float scattering = rayleigh(cos_theta);
         
         // Calculate light change
-        ret_color += (density * 180.0) * // Probability of collision (density)
+        ret_color += (density * 400.0) * // Probability of collision (density)
         shadow * // Shadow strength
         scattering * GlobalUBO.light_color_directional * // scattering function
         exp(-density * light_distance) * // This controlls how fast light influence decays (smoke color)
@@ -141,6 +141,6 @@ float sample_density(vec3 pos) {
         pos * 1.0, 1.7 + jitter_offset,
         false
     ).y;
-    float density = exp(1.2 * inv_worley) / 30.0;
+    float density = exp(2.0 * inv_worley) / 30.0;
     return density;
 }

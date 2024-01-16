@@ -95,7 +95,8 @@ target_link_libraries(${PROJECT_NAME}
     TBB::tbb
 )
 
-install(IMPORTED_RUNTIME_ARTIFACTS ${PROJECT_NAME})
+install(IMPORTED_RUNTIME_ARTIFACTS ${PROJECT_NAME} TBB::tbb)
+install(FILES ${TBB_IMPORTED_TARGETS})
 install(TARGETS ${PROJECT_NAME})
 
 # file(GLOB_RECURSE sources ${PROJECT_SOURCE_DIR}/**/*.c)
