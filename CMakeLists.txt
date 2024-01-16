@@ -10,6 +10,18 @@ project(VulkanEngine)
 include(ExternalProject)
 set(ONE_TBB_VERSION "2021.11.0" CACHE STRING "oneTBB version")
 
+# Get oneTBB specifically
+ExternalProject_Add(
+    oneTBB
+    PREFIX ${CMAKE_BINARY_DIR}/oneTBB
+    GIT_REPOSITORY https://github.com/oneapi-src/oneTBB.git
+    GIT_TAG v${ONE_TBB_VERSION}
+    TIMEOUT 10
+    UPDATE_DISCONNECTED 1
+    CMAKE_ARGS
+        -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+)
+
 # add sources
 file(GLOB_RECURSE SOURCES 
     ${PROJECT_SOURCE_DIR}/src/*.cpp
@@ -20,6 +32,9 @@ file(GLOB_RECURSE SOURCES
     ${PROJECT_SOURCE_DIR}/include/**/*.hpp)
 add_executable(${PROJECT_NAME}
     ${SOURCES})
+
+# Add dependencies
+add_dependencies(${PROJECT_NAME} oneTBB)
 
 # DOWNLOAD ALL SUBMODULES
 find_package(Git QUIET)
@@ -36,18 +51,6 @@ if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
     endif()
 
 endif()
-
-# Get oneTBB specifically
-ExternalProject_Add(
-    oneTBB
-    PREFIX ${CMAKE_BINARY_DIR}/oneTBB
-    GIT_REPOSITORY https://github.com/oneapi-src/oneTBB.git
-    GIT_TAG v${ONE_TBB_VERSION}
-    TIMEOUT 10
-    UPDATE_DISCONNECTED 1
-    CMAKE_ARGS
-        -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
-)
 
 # CHECK ALL SUBMODULES
 if(NOT EXISTS "${PROJECT_SOURCE_DIR}/external/glfw/CMakeLists.txt")
@@ -77,6 +80,7 @@ add_subdirectory(external/json)
 # include directories
 target_include_directories(${PROJECT_NAME}
     PUBLIC
+    ${CMAKE_BINARY_DIR}/oneTBB/include
     include
     include/common
     include/containers
@@ -86,28 +90,27 @@ target_include_directories(${PROJECT_NAME}
     external/stb
     external/tinyobjloader
     external/json/include
-    ${CMAKE_BINARY_DIR}/oneTBB/include
 )
 
 # link
 target_link_directories(${PROJECT_NAME}
     PRIVATE
     src
+    ${CMAKE_BINARY_DIR}/oneTBB/lib
     external/vulkan/glfw/src
     external/vulkan/glm
     external/stb
     external/tinyobjloader
-    ${CMAKE_BINARY_DIR}/oneTBB/lib
 )
 
 target_link_libraries(${PROJECT_NAME}
+    tbb
     glfw
     glm
     # stb
     tinyobjloader
     Vulkan::Vulkan
     nlohmann_json::nlohmann_json
-    tbb
 )
 
 install(TARGETS ${PROJECT_NAME})
