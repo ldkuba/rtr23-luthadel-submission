@@ -32,6 +32,7 @@ class Shader {
         StringEnum BlurShader     = "builtin.blur_shader";
         StringEnum ShadowmapDirectionalShader =
             "builtin.shadowmap_directional_shader";
+        StringEnum ShadowmapPointShader = "builtin.shadowmap_point_shader";
         StringEnum ShadowmapSamplingShader =
             "builtin.shadowmap_sampling_shader";
         StringEnum VolumetricsShader     = "builtin.volumetrics_shader";
@@ -206,6 +207,10 @@ class Shader {
               push_constants(push_constants), cull_mode(cull_mode),
               enable_blending(enable_blending) {}
         ~Config() {}
+
+        void set_renderpass_name(const String& name) {
+            const_cast<String&>(render_pass_name) = name;
+        }
     };
 
   public:

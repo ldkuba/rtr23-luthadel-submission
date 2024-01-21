@@ -43,7 +43,7 @@ float random(vec3 seed, int i){
 
 float textureProj(vec4 shadow_coord, vec2 offset, sampler2D shadow_texture)
 {
-    shadow_coord.y = 1.0 - shadow_coord.y;
+	shadow_coord.y = 1.0 - shadow_coord.y;
 
 	float shadow = 1.0;
 	if ( shadow_coord.z > -1.0 && shadow_coord.z < 1.0 ) 

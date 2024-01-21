@@ -39,15 +39,20 @@
                             "type": "mat4"
                         },
                         {
-                            "name": "light_space_directional",
-                            "type": "mat4"
+                            "name": "light_spaces_directional",
+                            "type": "custom",
+                            "size": 256
+                        },
+                        {
+                            "name": "num_directional_cascades",
+                            "type": "uint32"
                         }
                     ]
                 },
                 {
                     "type": "sampler",
                     "binding_index": 1,
-                    "count": 2,
+                    "count": 1,
                     "stages": [
                         "fragment"
                     ],
@@ -55,9 +60,31 @@
                         {
                             "name": "depth_texture",
                             "type": "sampler2D"
+                        }
+                    ]
+                },
+                {
+                    "type": "sampler",
+                    "binding_index": 2,
+                    "count": 4,
+                    "stages": [
+                        "fragment"
+                    ],
+                    "uniforms": [
+                        {
+                            "name": "shadowmap_directional_texture0",
+                            "type": "sampler2D"
                         },
                         {
-                            "name": "shadowmap_directional_texture",
+                            "name": "shadowmap_directional_texture1",
+                            "type": "sampler2D"
+                        },
+                        {
+                            "name": "shadowmap_directional_texture2",
+                            "type": "sampler2D"
+                        },
+                        {
+                            "name": "shadowmap_directional_texture3",
                             "type": "sampler2D"
                         }
                     ]

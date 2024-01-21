@@ -15,7 +15,7 @@ class RenderView {
     /**
      * @brief Render view known types. They have logic associated.
      */
-    enum class Type { DefaultPerspective, DefaultOrthographic, Custom };
+    enum class Type { DefaultPerspective, DefaultOrthographic, DirectionalShadow, Custom };
 
     /**
      * @brief Configuration for creation of generic render view

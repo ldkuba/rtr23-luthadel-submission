@@ -9,6 +9,15 @@ class RenderModulePostProcessing : public RenderModuleFullScreen {
   public:
     struct Config : public RenderModuleFullScreen::Config {
         String color_texture;
+
+        Config(
+            Vector<RenderModule::PassConfig> passes,
+            RenderViewPerspective*           perspective_view,
+            String                           color_texture
+        )
+            : RenderModuleFullScreen::Config(passes, perspective_view),
+              color_texture(color_texture) {
+        }
     };
 
   public:
@@ -25,26 +34,27 @@ class RenderModulePostProcessing : public RenderModuleFullScreen {
             Texture::Repeat::ClampToEdge,
             Texture::Repeat::ClampToEdge
         );
-        SETUP_UNIFORM_INDEX(color_texture);
+        setup_uniform_indices(_u_names.color_texture);
     }
 
   protected:
-    void on_render(const ModulePacket* const packet, const uint64 frame_number)
+    void on_render(const ModulePacket* const packet, const uint64 frame_number, uint32 rp_index)
         override {
-        RenderModuleFullScreen::on_render(packet, frame_number);
+        RenderModuleFullScreen::on_render(packet, frame_number, rp_index);
     }
 
-    void apply_globals() const override {
-        _shader->set_sampler(_u_index.color_texture, _color_map);
+    void apply_globals(uint32 rp_index) const override {
+        auto shader = _renderpasses.at(rp_index).shader;
+        shader->set_sampler(UNIFORM_ID(color_texture), _color_map);
     }
 
   private:
     Texture::Map* _color_map;
 
-    struct UIndex {
-        uint16 color_texture = -1;
+    struct Uniforms {
+        UNIFORM_NAME(color_texture);
     };
-    UIndex _u_index {};
+    Uniforms _u_names {};
 };
 
 } // namespace ENGINE_NAMESPACE

@@ -8,6 +8,17 @@ class RenderModulePostProcessingEffects : public RenderModulePostProcessing {
   public:
     struct Config : public RenderModulePostProcessing::Config {
         String depth_texture;
+
+        Config(
+            Vector<RenderModule::PassConfig> passes,
+            RenderViewPerspective*           perspective_view,
+            String                           color_texture,
+            String                           depth_texture
+        )
+            : RenderModulePostProcessing::Config(
+                  passes, perspective_view, color_texture
+              ),
+              depth_texture(depth_texture) {}
     };
 
   public:
@@ -25,26 +36,28 @@ class RenderModulePostProcessingEffects : public RenderModulePostProcessing {
             Texture::Repeat::ClampToEdge
         );
 
-        SETUP_UNIFORM_INDEX(exposure);
-        SETUP_UNIFORM_INDEX(max_blur);
-        SETUP_UNIFORM_INDEX(aperture);
-        SETUP_UNIFORM_INDEX(focus);
-        SETUP_UNIFORM_INDEX(aspect);
-        SETUP_UNIFORM_INDEX(depth_texture);
+        setup_uniform_indices(_u_names.exposure);
+        setup_uniform_indices(_u_names.max_blur);
+        setup_uniform_indices(_u_names.aperture);
+        setup_uniform_indices(_u_names.focus);
+        setup_uniform_indices(_u_names.aspect);
+        setup_uniform_indices(_u_names.depth_texture);
     }
 
   protected:
-    void apply_globals() const override {
-        RenderModulePostProcessing::apply_globals();
+    void apply_globals(uint32 rp_index) const override {
+        RenderModulePostProcessing::apply_globals(rp_index);
         const auto camera = _perspective_view->camera();
         float32    aspect = _perspective_view->aspect_ratio();
 
-        _shader->set_uniform(_u_index.exposure, &_exposure);
-        _shader->set_uniform(_u_index.max_blur, &_max_blur);
-        _shader->set_uniform(_u_index.aperture, &_aperture);
-        _shader->set_uniform(_u_index.focus, &_focus);
-        _shader->set_uniform(_u_index.aspect, &aspect);
-        _shader->set_sampler(_u_index.depth_texture, _depth_map);
+        auto shader = _renderpasses.at(rp_index).shader;
+
+        shader->set_uniform(UNIFORM_ID(exposure), &_exposure);
+        shader->set_uniform(UNIFORM_ID(max_blur), &_max_blur);
+        shader->set_uniform(UNIFORM_ID(aperture), &_aperture);
+        shader->set_uniform(UNIFORM_ID(focus), &_focus);
+        shader->set_uniform(UNIFORM_ID(aspect), &aspect);
+        shader->set_sampler(UNIFORM_ID(depth_texture), _depth_map);
     }
 
   private:
@@ -54,15 +67,15 @@ class RenderModulePostProcessingEffects : public RenderModulePostProcessing {
     float32       _aperture = 0.05;
     float32       _focus    = 0.985;
 
-    struct UIndex {
-        uint16 depth_texture = -1;
-        uint16 exposure      = -1;
-        uint16 max_blur      = -1;
-        uint16 aperture      = -1;
-        uint16 focus         = -1;
-        uint16 aspect        = -1;
+    struct Uniforms {
+        UNIFORM_NAME(depth_texture);
+        UNIFORM_NAME(exposure);
+        UNIFORM_NAME(max_blur);
+        UNIFORM_NAME(aperture);
+        UNIFORM_NAME(focus);
+        UNIFORM_NAME(aspect);
     };
-    UIndex _u_index {};
+    Uniforms _u_names {};
 };
 
 } // namespace ENGINE_NAMESPACE

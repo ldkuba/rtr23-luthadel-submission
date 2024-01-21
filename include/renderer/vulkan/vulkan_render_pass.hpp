@@ -61,9 +61,11 @@ class VulkanRenderPass : public RenderPass {
 
     /// @brief Begin render pass
     void begin() override;
+    void begin(glm::vec4 rect) override;
     /// @brief Begin render pass
     /// @param render_target Targeted to be used
     void begin(RenderTarget* const render_target) override;
+    void begin(RenderTarget* const render_target, glm::vec4 rect) override;
     /// @brief End render pass
     void end() override;
 
@@ -73,6 +75,9 @@ class VulkanRenderPass : public RenderPass {
     uint8 get_color_index() override;
     uint8 get_depth_index() override;
     uint8 get_resolve_index() override;
+
+    void set_viewport(glm::vec4 rect) const override;
+    void set_scissors(glm::vec4 rect) const override;
 
   protected:
     void initialize() override;
@@ -106,9 +111,6 @@ class VulkanRenderPass : public RenderPass {
     vk::AttachmentDescription get_color_attachment();
     vk::AttachmentDescription get_depth_attachment();
     vk::AttachmentDescription get_resolve_attachment();
-
-    void set_viewport(glm::vec4 rect) const;
-    void set_scissors(glm::vec4 rect) const;
 };
 
 } // namespace ENGINE_NAMESPACE

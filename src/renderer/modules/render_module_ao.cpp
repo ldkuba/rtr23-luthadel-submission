@@ -16,14 +16,14 @@ void RenderModuleAO::initialize(const Config& config) {
     compute_noise_scale();
     generate_kernel();
 
-    SETUP_UNIFORM_INDEX(projection);
-    SETUP_UNIFORM_INDEX(projection_inverse);
-    SETUP_UNIFORM_INDEX(noise_scale);
-    SETUP_UNIFORM_INDEX(sample_radius);
-    SETUP_UNIFORM_INDEX(kernel);
-    SETUP_UNIFORM_INDEX(g_pre_pass_texture);
-    SETUP_UNIFORM_INDEX(depth_texture);
-    SETUP_UNIFORM_INDEX(noise_texture);
+    setup_uniform_indices(_u_names.projection);
+    setup_uniform_indices(_u_names.projection_inverse);
+    setup_uniform_indices(_u_names.noise_scale);
+    setup_uniform_indices(_u_names.sample_radius);
+    setup_uniform_indices(_u_names.kernel);
+    setup_uniform_indices(_u_names.g_pre_pass_texture);
+    setup_uniform_indices(_u_names.depth_texture);
+    setup_uniform_indices(_u_names.noise_texture);
 }
 
 // ////////////////////////////////// //
@@ -31,28 +31,30 @@ void RenderModuleAO::initialize(const Config& config) {
 // ////////////////////////////////// //
 
 void RenderModuleAO::on_render(
-    const ModulePacket* const packet, const uint64 frame_number
+    const ModulePacket* const packet, const uint64 frame_number, uint32 rp_index
 ) {
     // Update noise scale if resolution changed
     if (_perspective_view->updated()) compute_noise_scale();
 
     // Perform default full screen render
-    RenderModuleFullScreen::on_render(packet, frame_number);
+    RenderModuleFullScreen::on_render(packet, frame_number, rp_index);
 }
 
-void RenderModuleAO::apply_globals() const {
-    _shader->set_uniform(
-        _u_index.projection, &_perspective_view->proj_matrix()
+void RenderModuleAO::apply_globals(uint32 rp_index) const {
+    auto shader = _renderpasses.at(rp_index).shader;
+
+    shader->set_uniform(
+        UNIFORM_ID(projection), &_perspective_view->proj_matrix()
     );
-    _shader->set_uniform(
-        _u_index.projection_inverse, &_perspective_view->proj_inv_matrix()
+    shader->set_uniform(
+        UNIFORM_ID(projection_inverse), &_perspective_view->proj_inv_matrix()
     );
-    _shader->set_uniform(_u_index.noise_scale, &_noise_scale);
-    _shader->set_uniform(_u_index.sample_radius, &_sample_radius);
-    _shader->set_uniform(_u_index.kernel, &_kernel);
-    _shader->set_sampler(_u_index.g_pre_pass_texture, _g_map);
-    _shader->set_sampler(_u_index.depth_texture, _depth_map);
-    _shader->set_sampler(_u_index.noise_texture, _noise_map);
+    shader->set_uniform(UNIFORM_ID(noise_scale), &_noise_scale);
+    shader->set_uniform(UNIFORM_ID(sample_radius), &_sample_radius);
+    shader->set_uniform(UNIFORM_ID(kernel), &_kernel);
+    shader->set_sampler(UNIFORM_ID(g_pre_pass_texture), _g_map);
+    shader->set_sampler(UNIFORM_ID(depth_texture), _depth_map);
+    shader->set_sampler(UNIFORM_ID(noise_texture), _noise_map);
 }
 
 // //////////////////////////////// //

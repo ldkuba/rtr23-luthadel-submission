@@ -115,7 +115,7 @@ bool CameraSystem::name_is_valid(const String& name) {
         );
         return false;
     }
-    if (name.compare_ci(_default_camera_name)) {
+    if (name.compare_ci(_default_camera_name) == 0) {
         Logger::warning(
             CAMERA_SYS_LOG,
             "To acquire the default camera from camera system use "

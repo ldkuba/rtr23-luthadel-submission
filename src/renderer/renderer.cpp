@@ -49,8 +49,9 @@ Result<void, RuntimeError> Renderer::draw_frame(
     timer.time("Frame begun in ");
 
     // Render each module
-    for (const auto& data : render_data->module_data)
+    for (const auto& data : render_data->module_data) {
         data->module->render(data, _backend->get_current_frame());
+    }
 
     // Clear render module packets in reverse order
     for (int32 i = render_data->module_data.size() - 1; i >= 0; i--)

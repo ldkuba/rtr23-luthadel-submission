@@ -185,7 +185,7 @@ void MaterialSystem::release(const String name) {
 
 void MaterialSystem::create_default_material() {
     // Get shader
-    auto shader = _shader_system->acquire(Shader::BuiltIn::MaterialShader)
+    auto shader = _shader_system->acquire({Shader::BuiltIn::MaterialShader})
                       .value_or(nullptr);
     if (shader == nullptr)
         Logger::fatal(

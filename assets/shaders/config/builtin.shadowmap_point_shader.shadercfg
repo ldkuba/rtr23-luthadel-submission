@@ -1,7 +1,7 @@
 {
     "version": 1.0,
-    "name": "builtin.shadowmap_directional_shader",
-    "renderpass": "Renderpass.Builtin.ShadowmapDirectional",
+    "name": "builtin.shadowmap_point_shader",
+    "renderpass": "Renderpass.Builtin.ShadowmapPoint",
     "stages": [
         "vertex"
     ],
@@ -41,6 +41,14 @@
                         "vertex"
                     ],
                     "uniforms": [
+                        {
+                            "name": "texture_index",
+                            "type": "uint32"
+                        },
+                        {
+                            "name": "padding",
+                            "type": "vec3"
+                        },
                         {
                             "name": "light_space",
                             "type": "mat4"

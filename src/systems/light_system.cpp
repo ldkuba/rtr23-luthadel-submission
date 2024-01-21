@@ -1,4 +1,6 @@
 #include "systems/light_system.hpp"
+#include "systems/render_view_system.hpp"
+#include "systems/camera_system.hpp"
 
 namespace ENGINE_NAMESPACE {
 

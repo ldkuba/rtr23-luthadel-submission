@@ -9,6 +9,19 @@ class RenderModuleSSR : public RenderModulePostProcessing {
     struct Config : public RenderModulePostProcessing::Config {
         String g_pre_pass_texture;
         String depth_texture;
+
+        Config(
+            Vector<RenderModule::PassConfig> passes,
+            RenderViewPerspective*           perspective_view,
+            String                           color_texture,
+            String                           g_pre_pass_texture,
+            String                           depth_texture
+        )
+            : RenderModulePostProcessing::Config(
+                  passes, perspective_view, color_texture
+              ),
+              g_pre_pass_texture(g_pre_pass_texture),
+              depth_texture(depth_texture) {}
     };
 
   public:
@@ -35,38 +48,40 @@ class RenderModuleSSR : public RenderModulePostProcessing {
             Texture::Repeat::ClampToEdge
         );
 
-        SETUP_UNIFORM_INDEX(projection);
-        SETUP_UNIFORM_INDEX(projection_inverse);
-        SETUP_UNIFORM_INDEX(view);
-        SETUP_UNIFORM_INDEX(view_inverse);
-        SETUP_UNIFORM_INDEX(g_pre_pass_texture);
-        SETUP_UNIFORM_INDEX(depth_texture);
-        SETUP_UNIFORM_INDEX(view_origin);
-        SETUP_UNIFORM_INDEX(enabled);
+        setup_uniform_indices(_u_names.projection);
+        setup_uniform_indices(_u_names.projection_inverse);
+        setup_uniform_indices(_u_names.view);
+        setup_uniform_indices(_u_names.view_inverse);
+        setup_uniform_indices(_u_names.g_pre_pass_texture);
+        setup_uniform_indices(_u_names.depth_texture);
+        setup_uniform_indices(_u_names.view_origin);
+        setup_uniform_indices(_u_names.enabled);
     }
 
     void toggle() { _enabled = 1.0 - _enabled; }
 
   protected:
-    void apply_globals() const override {
-        RenderModulePostProcessing::apply_globals();
+    void apply_globals(uint32 rp_index) const override {
+        RenderModulePostProcessing::apply_globals(rp_index);
 
+        auto       shader = _renderpasses.at(rp_index).shader;
         const auto camera = _perspective_view->camera();
 
-        _shader->set_uniform(
-            _u_index.projection, &_perspective_view->proj_matrix()
+        shader->set_uniform(
+            UNIFORM_ID(projection), &_perspective_view->proj_matrix()
         );
-        _shader->set_uniform(
-            _u_index.projection_inverse, &_perspective_view->proj_inv_matrix()
+        shader->set_uniform(
+            UNIFORM_ID(projection_inverse),
+            &_perspective_view->proj_inv_matrix()
         );
-        _shader->set_uniform(_u_index.view, &camera->view());
-        _shader->set_uniform(_u_index.view_inverse, &camera->view_inverse());
-        _shader->set_uniform(
-            _u_index.view_origin, &camera->transform.position()
+        shader->set_uniform(UNIFORM_ID(view), &camera->view());
+        shader->set_uniform(UNIFORM_ID(view_inverse), &camera->view_inverse());
+        shader->set_uniform(
+            UNIFORM_ID(view_origin), &camera->transform.position()
         );
-        _shader->set_uniform(_u_index.enabled, &_enabled);
-        _shader->set_sampler(_u_index.g_pre_pass_texture, _g_pass_map);
-        _shader->set_sampler(_u_index.depth_texture, _depth_map);
+        shader->set_uniform(UNIFORM_ID(enabled), &_enabled);
+        shader->set_sampler(UNIFORM_ID(g_pre_pass_texture), _g_pass_map);
+        shader->set_sampler(UNIFORM_ID(depth_texture), _depth_map);
     }
 
   private:
@@ -74,17 +89,17 @@ class RenderModuleSSR : public RenderModulePostProcessing {
     Texture::Map* _depth_map;
     float32       _enabled = 1.0;
 
-    struct UIndex {
-        uint16 g_pre_pass_texture = -1;
-        uint16 depth_texture      = -1;
-        uint16 projection         = -1;
-        uint16 projection_inverse = -1;
-        uint16 view               = -1;
-        uint16 view_inverse       = -1;
-        uint16 view_origin        = -1;
-        uint16 enabled            = -1;
+    struct Uniforms {
+        UNIFORM_NAME(g_pre_pass_texture);
+        UNIFORM_NAME(depth_texture);
+        UNIFORM_NAME(projection);
+        UNIFORM_NAME(projection_inverse);
+        UNIFORM_NAME(view);
+        UNIFORM_NAME(view_inverse);
+        UNIFORM_NAME(view_origin);
+        UNIFORM_NAME(enabled);
     };
-    UIndex _u_index {};
+    Uniforms _u_names {};
 };
 
 } // namespace ENGINE_NAMESPACE

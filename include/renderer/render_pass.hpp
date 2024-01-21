@@ -20,6 +20,7 @@ class RenderPass {
         StringEnum AOPass     = "Renderpass.Builtin.AO";
         StringEnum GPrePass   = "Renderpass.Builtin.GPrePass";
         StringEnum BlurPass   = "Renderpass.Builtin.Blur";
+        StringEnum ShadowmapPointPass = "Renderpass.Builtin.ShadowmapPoint";
         StringEnum ShadowmapDirectionalPass =
             "Renderpass.Builtin.ShadowmapDirectional";
         StringEnum ShadowmapSamplingPass =
@@ -103,6 +104,7 @@ class RenderPass {
      * @brief Start recording of render pass commands for next available target
      */
     virtual void begin() = 0;
+    virtual void begin(glm::vec4 rect) = 0;
 
     /**
      * @brief Start recording of render pass commands for a specific target
@@ -125,6 +127,7 @@ class RenderPass {
      * @param target Render target to be used
      */
     virtual void begin(RenderTarget* const render_target) = 0;
+    virtual void begin(RenderTarget* const render_target, glm::vec4 rect) = 0;
     /**
      * @brief End recording of render pass commands
      */
@@ -159,6 +162,9 @@ class RenderPass {
      * initialization. This function does nothing after initialization.
      */
     void disable_color_output() { _color_output = false; }
+
+    virtual void set_viewport(glm::vec4 rect) const = 0;
+    virtual void set_scissors(glm::vec4 rect) const = 0;
 
     /// @brief Get color attachment index
     virtual uint8 get_color_index()   = 0;

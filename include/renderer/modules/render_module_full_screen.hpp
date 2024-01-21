@@ -10,6 +10,13 @@ class RenderModuleFullScreen : public RenderModule {
   public:
     struct Config : public RenderModule::Config {
         RenderViewPerspective* perspective_view;
+
+        Config(
+            Vector<RenderModule::PassConfig> passes,
+            RenderViewPerspective*           perspective_view
+        )
+            : RenderModule::Config(passes), perspective_view(perspective_view) {
+        }
     };
 
   public:
@@ -26,8 +33,11 @@ class RenderModuleFullScreen : public RenderModule {
 
   protected:
     RenderViewPerspective* _perspective_view;
-    void on_render(const ModulePacket* const packet, const uint64 frame_number)
-        override {
+    void                   on_render(
+                          const ModulePacket* const packet,
+                          const uint64              frame_number,
+                          uint32                    rp_index
+                      ) override {
         // Draw 1 geometry
         _renderer->draw_geometry(_full_screen_geometry);
     }

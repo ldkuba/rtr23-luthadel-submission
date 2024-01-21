@@ -17,14 +17,15 @@ class RenderModuleUI : public RenderModule {
     void initialize(const Config& config) {
         _orthographic_view = config.orthographic_view;
 
-        SETUP_UNIFORM_INDEX(projection);
-        SETUP_UNIFORM_INDEX(view);
-        SETUP_UNIFORM_INDEX(model);
+        setup_uniform_indices(_u_names.projection);
+        setup_uniform_indices(_u_names.view);
+        setup_uniform_indices(_u_names.model);
     }
 
   protected:
-    void on_render(const ModulePacket* const packet, const uint64 frame_number)
+    void on_render(const ModulePacket* const packet, const uint64 frame_number, uint32 rp_index)
         override {
+        auto shader = _renderpasses.at(rp_index).shader;
         // Get visible geometries
         const auto geometry_data =
             _orthographic_view->get_visible_render_data(frame_number);
@@ -35,30 +36,31 @@ class RenderModuleUI : public RenderModule {
             geo_data.material->apply_instance();
 
             // Apply local
-            _shader->set_uniform(_u_index.model, &geo_data.model);
+            shader->set_uniform(UNIFORM_ID(model), &geo_data.model);
 
             // Draw geometry
             _renderer->draw_geometry(geo_data.geometry);
         }
     }
 
-    void apply_globals() const override {
-        _shader->set_uniform(
-            _u_index.projection, &_orthographic_view->proj_matrix()
+    void apply_globals(uint32 rp_index) const override {
+        auto shader = _renderpasses.at(rp_index).shader;
+        shader->set_uniform(
+            UNIFORM_ID(projection), &_orthographic_view->proj_matrix()
         );
-        _shader->set_uniform(_u_index.view, &_view_matrix);
+        shader->set_uniform(UNIFORM_ID(view), &_view_matrix);
     }
 
   private:
     RenderViewOrthographic* _orthographic_view;
     glm::mat4               _view_matrix = glm::identity<glm::mat4>();
 
-    struct UIndex {
-        uint16 projection = -1;
-        uint16 view       = -1;
-        uint16 model      = -1;
+    struct Uniforms {
+        UNIFORM_NAME(projection);
+        UNIFORM_NAME(view);
+        UNIFORM_NAME(model);
     };
-    UIndex _u_index {};
+    Uniforms _u_names {};
 };
 
 } // namespace ENGINE_NAMESPACE

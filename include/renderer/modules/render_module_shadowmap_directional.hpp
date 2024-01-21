@@ -1,60 +1,62 @@
 #pragma once
 
 #include "render_module.hpp"
-#include "renderer/views/render_view_orthographic.hpp"
+#include "renderer/views/render_view_directional_shadow.hpp"
 #include "systems/light_system.hpp"
 
 namespace ENGINE_NAMESPACE {
 
 class RenderModuleShadowmapDirectional : public RenderModule {
   public:
-    struct Config : public RenderModule::Config {
-        RenderViewOrthographic* orthographic_view;
-    };
+    struct Config : public RenderModule::Config {};
 
   public:
     using RenderModule::RenderModule;
 
     void initialize(const Config& config) {
-        _orthographic_view = config.orthographic_view;
-
-        SETUP_UNIFORM_INDEX(light_space);
-        SETUP_UNIFORM_INDEX(model);
+        setup_uniform_indices(_u_names.light_space);
+        setup_uniform_indices(_u_names.model);
     }
 
   protected:
-    void on_render(const ModulePacket* const packet, const uint64 frame_number)
-        override {
+    void on_render(
+        const ModulePacket* const packet,
+        const uint64              frame_number,
+        uint32                    rp_index
+    ) override {
+
+        auto shader = _renderpasses.at(rp_index).shader;
+
         // Get visible geometries
-        const auto geometry_data =
-            _orthographic_view->get_visible_render_data(frame_number);
+        const auto geometry_data = _light_system->get_directional()
+                                       ->get_render_views()
+                                       .at(rp_index)
+                                       ->get_visible_render_data(frame_number);
 
         // Draw geometries
         for (const auto& geo_data : geometry_data) {
             // Apply local
-            _shader->set_uniform(_u_index.model, &geo_data.model);
+            shader->set_uniform(UNIFORM_ID(model), &geo_data.model);
 
             // Draw geometry
             _renderer->draw_geometry(geo_data.geometry);
         }
     }
 
-    void apply_globals() const override {
+    void apply_globals(uint32 rp_index) const override {
+        auto shader = _renderpasses.at(rp_index).shader;
+
         glm::mat4 light_space =
-            _light_system->get_directional()->get_light_space_matrix(
-                _orthographic_view->camera()->transform.position()
-            );
-        _shader->set_uniform(_u_index.light_space, &light_space);
+            _light_system->get_directional()->get_light_space_matrix(rp_index);
+        shader->set_uniform(UNIFORM_ID(light_space), &light_space);
     }
 
   private:
-    RenderViewOrthographic* _orthographic_view;
 
-    struct UIndex {
-        uint16 light_space = -1;
-        uint16 model       = -1;
-    };
-    UIndex _u_index {};
+    struct Uniforms {
+        UNIFORM_NAME(light_space);
+        UNIFORM_NAME(model);
+    } _u_names;
 };
 
 } // namespace ENGINE_NAMESPACE

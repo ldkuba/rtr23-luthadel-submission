@@ -12,6 +12,19 @@ class RenderModuleVolumetrics : public RenderModuleFullScreen {
     struct Config : public RenderModuleFullScreen::Config {
         String depth_texture;
         String shadow_directional_texture;
+        uint32 num_directional_cascades;
+
+        Config(
+            Vector<RenderModule::PassConfig> passes,
+            RenderViewPerspective*           perspective_view,
+            String                           depth_texture,
+            String                           shadow_directional_texture,
+            uint32                           num_directional_cascades
+        )
+            : RenderModuleFullScreen::Config(passes, perspective_view),
+              depth_texture(depth_texture),
+              shadow_directional_texture(shadow_directional_texture),
+              num_directional_cascades(num_directional_cascades) {}
     };
 
   public:
@@ -32,98 +45,119 @@ class RenderModuleVolumetrics : public RenderModuleFullScreen {
             Texture::Repeat::ClampToEdge
         );
 
-        _shadow_directional_map = create_texture_map(
-            config.shadow_directional_texture,
-            Texture::Use::MapPassResult,
-            Texture::Filter::BiLinear,
-            Texture::Filter::BiLinear,
-            Texture::Repeat::ClampToEdge,
-            Texture::Repeat::ClampToEdge,
-            Texture::Repeat::ClampToEdge
-        );
+        _num_directional_cascades = config.num_directional_cascades;
+        for (int i = 0; i < _num_directional_cascades; i++) {
+            _directional_shadow_maps.push_back(create_texture_map(
+                config.shadow_directional_texture + std::to_string(i),
+                Texture::Use::MapPassResult,
+                Texture::Filter::BiLinear,
+                Texture::Filter::BiLinear,
+                Texture::Repeat::ClampToEdge,
+                Texture::Repeat::ClampToEdge,
+                Texture::Repeat::ClampToEdge
+            ));
+            setup_uniform_indices(_u_names.shadowmap_directional_textures.at(i)
+            );
+        }
 
-        SETUP_UNIFORM_INDEX(depth_texture);
-        SETUP_UNIFORM_INDEX(shadow_directional_texture);
-        SETUP_UNIFORM_INDEX(projection_inverse);
-        SETUP_UNIFORM_INDEX(view_inverse);
-        SETUP_UNIFORM_INDEX(camera_position);
-        SETUP_UNIFORM_INDEX(light_space_directional);
-        SETUP_UNIFORM_INDEX(light_pos_directional);
-        SETUP_UNIFORM_INDEX(light_color_directional);
-        SETUP_UNIFORM_INDEX(animation_time);
+        setup_uniform_indices(_u_names.depth_texture);
+        setup_uniform_indices(_u_names.projection_inverse);
+        setup_uniform_indices(_u_names.view_inverse);
+        setup_uniform_indices(_u_names.camera_position);
+        setup_uniform_indices(_u_names.light_spaces_directional);
+        setup_uniform_indices(_u_names.light_pos_directional);
+        setup_uniform_indices(_u_names.light_color_directional);
+        setup_uniform_indices(_u_names.animation_time);
+        setup_uniform_indices(_u_names.num_directional_cascades);
     }
 
   protected:
-    void on_render(const ModulePacket* const packet, const uint64 frame_number)
-        override {
-        RenderModuleFullScreen::on_render(packet, frame_number);
+    void on_render(
+        const ModulePacket* const packet,
+        const uint64              frame_number,
+        uint32                    rp_index
+    ) override {
+        RenderModuleFullScreen::on_render(packet, frame_number, rp_index);
     }
 
-    void apply_globals() const override {
-        _shader->set_sampler(_u_index.depth_texture, _depth_map);
-        _shader->set_sampler(
-            _u_index.shadow_directional_texture, _shadow_directional_map
+    void apply_globals(uint32 rp_index) const override {
+        auto shader = _renderpasses.at(rp_index).shader;
+        shader->set_sampler(UNIFORM_ID(depth_texture), _depth_map);
+
+        // Directional shadow maps (cascades)
+        for (int i = 0; i < _num_directional_cascades; i++) {
+            shader->set_sampler(
+                UNIFORM_ID(shadowmap_directional_textures.at(i)),
+                _directional_shadow_maps.at(i)
+            );
+        }
+        shader->set_uniform(
+            UNIFORM_ID(num_directional_cascades), &_num_directional_cascades
         );
 
-        _shader->set_uniform(
-            _u_index.projection_inverse, &_perspective_view->proj_inv_matrix()
+        shader->set_uniform(
+            UNIFORM_ID(projection_inverse),
+            &_perspective_view->proj_inv_matrix()
         );
 
         glm::mat4 view_inverse =
             glm::inverse(_perspective_view->camera()->view());
-        _shader->set_uniform(_u_index.view_inverse, &view_inverse);
+        shader->set_uniform(UNIFORM_ID(view_inverse), &view_inverse);
 
         glm::vec4 camera_position =
             glm::vec4(_perspective_view->camera()->transform.position(), 1.0f);
-        _shader->set_uniform(_u_index.camera_position, &camera_position);
+        shader->set_uniform(UNIFORM_ID(camera_position), &camera_position);
 
-        glm::mat4 light_space_directional =
-            _light_system->get_directional()->get_light_space_matrix(
-                _perspective_view->camera()->transform.position()
-            );
-        _shader->set_uniform(
-            _u_index.light_space_directional, &light_space_directional
+        Vector<glm::mat4> light_spaces_directional =
+            _light_system->get_directional()->get_light_space_matrices();
+        shader->set_uniform(
+            UNIFORM_ID(light_spaces_directional), light_spaces_directional.data()
         );
 
-        glm::vec4 light_pos_directional = glm::vec4(
-            _light_system->get_directional()->get_light_camera_position(
-                _perspective_view->camera()->transform.position()
-            )
-        );
-        _shader->set_uniform(
-            _u_index.light_pos_directional, &light_pos_directional
+        glm::vec4 light_pos_directional =
+            _light_system->get_directional()->get_light_camera_position();
+        shader->set_uniform(
+            UNIFORM_ID(light_pos_directional), &light_pos_directional
         );
 
         glm::vec4 light_color_directional =
             _light_system->get_directional()->data.color;
-        _shader->set_uniform(
-            _u_index.light_color_directional, &light_color_directional
+        shader->set_uniform(
+            UNIFORM_ID(light_color_directional), &light_color_directional
         );
 
         auto  duration = std::chrono::system_clock::now() - _start_time;
         float time =
             std::chrono::duration_cast<std::chrono::milliseconds>(duration)
                 .count();
-        _shader->set_uniform(_u_index.animation_time, &time);
+        shader->set_uniform(UNIFORM_ID(animation_time), &time);
     }
 
   private:
-    Texture::Map*                         _depth_map              = nullptr;
-    Texture::Map*                         _shadow_directional_map = nullptr;
+    uint32                                _num_directional_cascades;
+    Texture::Map*                         _depth_map = nullptr;
+    Vector<Texture::Map*>                 _directional_shadow_maps;
     std::chrono::system_clock::time_point _start_time;
 
-    struct UIndex {
-        uint16 depth_texture              = -1;
-        uint16 shadow_directional_texture = -1;
-        uint16 projection_inverse         = -1;
-        uint16 view_inverse               = -1;
-        uint16 camera_position            = -1;
-        uint16 light_space_directional    = -1;
-        uint16 light_pos_directional      = -1;
-        uint16 light_color_directional    = -1;
-        uint16 animation_time             = -1;
+    struct Uniforms {
+        UNIFORM_NAME(depth_texture);
+        // Max 4 cascades
+        Vector<String> shadowmap_directional_textures {
+            "shadowmap_directional_texture0",
+            "shadowmap_directional_texture1",
+            "shadowmap_directional_texture2",
+            "shadowmap_directional_texture3",
+        };
+        UNIFORM_NAME(projection_inverse);
+        UNIFORM_NAME(view_inverse);
+        UNIFORM_NAME(camera_position);
+        UNIFORM_NAME(light_spaces_directional);
+        UNIFORM_NAME(light_pos_directional);
+        UNIFORM_NAME(light_color_directional);
+        UNIFORM_NAME(animation_time);
+        UNIFORM_NAME(num_directional_cascades);
     };
-    UIndex _u_index {};
+    Uniforms _u_names {};
 };
 
 } // namespace ENGINE_NAMESPACE

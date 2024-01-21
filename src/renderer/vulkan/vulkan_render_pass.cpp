@@ -41,6 +41,19 @@ void VulkanRenderPass::begin() {
     begin(_render_targets[index]);
 }
 
+void VulkanRenderPass::begin(glm::vec4 rect) {
+    // Compute next index
+    uint8 index;
+    switch (_target_redundancy) {
+    case PerFrame: index = 0; break;
+    case PerSwapchainImage: index = _swapchain->get_current_index(); break;
+    case PerFrameInFlight: index = _command_buffer->current_frame; break;
+    }
+
+    // Begin pass proper
+    begin(_render_targets[index], rect);
+}
+
 void VulkanRenderPass::begin(RenderTarget* const render_target) {
     // Set viewport and scissors
     // TODO: Maybe shouldn't be done here
@@ -65,6 +78,31 @@ void VulkanRenderPass::begin(RenderTarget* const render_target) {
                                                   (int32) _render_offset.y });
     render_pass_begin_info.renderArea.setExtent({ render_target->width(),
                                                   render_target->height() });
+
+    _command_buffer->handle->beginRenderPass(
+        render_pass_begin_info, vk::SubpassContents::eInline
+    );
+}
+
+void VulkanRenderPass::begin(RenderTarget* const render_target, glm::vec4 rect) {
+    // Set viewport and scissors
+    set_viewport(rect);
+    set_scissors(rect);
+
+    // Get relevant framebuffer
+    const auto framebuffer =
+        dynamic_cast<VulkanFramebuffer*>(render_target->framebuffer());
+
+    // Begin render pass
+    vk::RenderPassBeginInfo render_pass_begin_info {};
+    render_pass_begin_info.setRenderPass(_handle);
+    render_pass_begin_info.setFramebuffer(framebuffer->handle());
+    render_pass_begin_info.setClearValues(_clear_values);
+    // Area of the surface to render to (here full surface)
+    render_pass_begin_info.renderArea.setOffset({ (int32) rect.x,
+                                                  (int32) rect.y });
+    render_pass_begin_info.renderArea.setExtent({ rect.z,
+                                                  rect.w });
 
     _command_buffer->handle->beginRenderPass(
         render_pass_begin_info, vk::SubpassContents::eInline

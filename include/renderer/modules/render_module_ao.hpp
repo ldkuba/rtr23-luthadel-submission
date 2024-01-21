@@ -10,6 +10,17 @@ class RenderModuleAO : public RenderModuleFullScreen {
         String  g_pre_pass_texture;
         String  depth_texture;
         float32 sample_radius = 1.5f;
+
+        Config(
+            Vector<RenderModule::PassConfig> passes,
+            RenderViewPerspective*           perspective_view,
+            String                           g_pre_pass_texture,
+            String                           depth_texture
+        )
+            : RenderModuleFullScreen::Config(passes, perspective_view),
+              g_pre_pass_texture(g_pre_pass_texture),
+              depth_texture(depth_texture) {
+        }
     };
 
   public:
@@ -18,9 +29,12 @@ class RenderModuleAO : public RenderModuleFullScreen {
     void initialize(const Config& config);
 
   protected:
-    void on_render(const ModulePacket* const packet, const uint64 frame_number)
-        override;
-    void apply_globals() const override;
+    void on_render(
+        const ModulePacket* const packet,
+        const uint64              frame_number,
+        uint32                    rp_index
+    ) override;
+    void apply_globals(uint32 rp_index) const override;
 
   private:
     Texture::Map* _g_map     = nullptr;
@@ -32,17 +46,17 @@ class RenderModuleAO : public RenderModuleFullScreen {
     const static uint8                  _kernel_size = 64;
     std::array<glm::vec3, _kernel_size> _kernel;
 
-    struct UIndex {
-        uint16 projection         = -1;
-        uint16 projection_inverse = -1;
-        uint16 noise_scale        = -1;
-        uint16 sample_radius      = -1;
-        uint16 kernel             = -1;
-        uint16 g_pre_pass_texture = -1;
-        uint16 depth_texture      = -1;
-        uint16 noise_texture      = -1;
+    struct Uniforms {
+        UNIFORM_NAME(projection);
+        UNIFORM_NAME(projection_inverse);
+        UNIFORM_NAME(noise_scale);
+        UNIFORM_NAME(sample_radius);
+        UNIFORM_NAME(kernel);
+        UNIFORM_NAME(g_pre_pass_texture);
+        UNIFORM_NAME(depth_texture);
+        UNIFORM_NAME(noise_texture);
     };
-    UIndex _u_index {};
+    Uniforms _u_names {};
 
     void setup_texture_maps(
         const String& g_pre_pass_texture, const String& depth_texture

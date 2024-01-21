@@ -7,6 +7,9 @@
 
 namespace ENGINE_NAMESPACE {
 
+class RenderViewSystem;
+class CameraSystem;
+
 class LightSystem {
   public:
     LightSystem(size_t max_point);

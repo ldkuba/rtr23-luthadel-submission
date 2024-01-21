@@ -2,6 +2,7 @@
 
 #include "renderer/views/render_view_perspective.hpp"
 #include "renderer/views/render_view_orthographic.hpp"
+#include "renderer/views/render_view_directional_shadow.hpp"
 
 namespace ENGINE_NAMESPACE {
 
@@ -59,6 +60,9 @@ Result<RenderView*, RuntimeError> RenderViewSystem::create(
     case RenderView::Type::DefaultOrthographic:
         // TODO: temp just default camera
         view = new (MemoryTag::RenderView) RenderViewOrthographic(config);
+        break;
+    case RenderView::Type::DirectionalShadow:
+        view = new (MemoryTag::RenderView) RenderViewDirectionalShadow(config);
         break;
     default:
         const auto error_message = String::build(

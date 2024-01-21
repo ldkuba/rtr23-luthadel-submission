@@ -18,6 +18,7 @@
 #include "renderer/modules/render_module_ao.hpp"
 #include "renderer/modules/render_module_post_processing.hpp"
 #include "renderer/modules/render_module_shadowmap_directional.hpp"
+#include "renderer/modules/render_module_shadowmap_point.hpp"
 #include "renderer/modules/render_module_shadowmap_sampling.hpp"
 #include "renderer/modules/render_module_volumetrics.hpp"
 #include "renderer/modules/render_module_ssr.hpp"
@@ -87,6 +88,7 @@ class TestApplication {
         RenderModuleAO*                    ao;
         RenderModulePostProcessing*        blur;
         RenderModuleShadowmapDirectional*  shadow_dir;
+        RenderModuleShadowmapPoint*        shadow_point;
         RenderModuleShadowmapSampling*     shadow_sampling;
         RenderModuleSkybox*                skybox;
         RenderModuleWorld*                 world;
@@ -107,6 +109,7 @@ class TestApplication {
         STRING_ENUM(SSAOPassTarget);
         STRING_ENUM(BluredSSAOPassTarget);
         STRING_ENUM(DirectionalShadowMapDepthTarget);
+        STRING_ENUM(PointShadowMapDepthTarget);
         STRING_ENUM(ShadowmapSampledTarget);
         STRING_ENUM(VolumetricsTarget);
         STRING_ENUM(VolumetricsBlurTarget);
@@ -119,6 +122,8 @@ class TestApplication {
     RenderViewPerspective*  _main_world_view;
     RenderViewOrthographic* _main_ui_view;
     RenderViewOrthographic* _dir_light_view;
+
+    uint32 _num_shadow_cascades = 2;
 
     void setup_camera();
     void setup_input();

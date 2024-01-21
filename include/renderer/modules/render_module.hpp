@@ -4,6 +4,7 @@
 #include "systems/geometry_system.hpp"
 #include "systems/light_system.hpp"
 #include "systems/shader_system.hpp"
+#include "containers/unordered_map.hpp"
 
 namespace ENGINE_NAMESPACE {
 
@@ -11,9 +12,25 @@ class RenderModule {
   public:
     enum class Update {};
 
+    struct PassConfig {
+        String shader_instance {};
+        String shader {};
+        String render_pass {};
+
+        PassConfig() = delete;
+
+        PassConfig(String shader_instance, String shader, String render_pass)
+            : shader_instance(shader_instance),
+              shader(shader),
+              render_pass(render_pass) {}
+
+        PassConfig(String shader, String render_pass) : PassConfig(shader, shader, render_pass) {}
+    };
+
     struct Config {
-        const String shader;
-        const String render_pass;
+        Vector<PassConfig> passes;
+
+        Config(Vector<PassConfig> passes) : passes(passes) {}
     };
 
   public:
@@ -42,9 +59,9 @@ class RenderModule {
      * @param frame_number Current frame index. Used for internal
      * synchronization.
      */
-    void render(const ModulePacket* const packet, const uint64 frame_number);
-
-    virtual void initialize(const Config& config) {};
+    virtual void render(
+        const ModulePacket* const packet, const uint64 frame_number
+    );
 
   protected:
     Renderer* const       _renderer;
@@ -53,8 +70,17 @@ class RenderModule {
     GeometrySystem* const _geometry_system;
     LightSystem* const    _light_system;
 
-    RenderPass* _renderpass;
-    Shader*     _shader;
+    struct PassInfo {
+        Shader*                      shader;
+        RenderPass*                  renderpass;
+        UnorderedMap<String, uint16> u_index;
+    };
+    Vector<PassInfo> _renderpasses {};
+
+    void initialize_passes(const Config& config);
+
+    void setup_uniform_index(String uniform, uint32 rp_index);
+    void setup_uniform_indices(String uniform);
 
     /**
      * @brief Build render packet and update internal state.
@@ -70,10 +96,12 @@ class RenderModule {
      * synchronization.
      */
     virtual void on_render(
-        const ModulePacket* const packet, const uint64 frame_number
+        const ModulePacket* const packet,
+        const uint64              frame_number,
+        uint32                    rp_index
     ) = 0;
 
-    virtual void apply_globals() const {}
+    virtual void apply_globals(uint32 rp_index) const {}
 
     Texture::Map* create_texture_map(
         const String&          texture,
@@ -85,11 +113,12 @@ class RenderModule {
         const Texture::Repeat& repeat_w
     );
 
-  private:
-    void apply_globals(uint64 frame_number) const;
-
-    Vector<Texture*>      _own_textures {};
     Vector<Texture::Map*> _own_maps {};
+
+  private:
+    void apply_globals(uint64 frame_number, uint32 rp_index) const;
+
+    Vector<Texture*> _own_textures {};
 };
 
 /**
@@ -100,10 +129,8 @@ struct ModulePacket {
     RenderModule* const module;
 };
 
-#define SETUP_UNIFORM_INDEX(uniform)                                           \
-    auto _u_##uniform##_id = _shader->get_uniform_index(#uniform);             \
-    if (_u_##uniform##_id.has_error())                                         \
-        Logger::error("ShaderModule :: ", _u_##uniform##_id.error().what());   \
-    else _u_index.uniform = _u_##uniform##_id.value()
+#define UNIFORM_ID(uniform) _renderpasses.at(rp_index).u_index.at(_u_names.uniform)
+
+#define UNIFORM_NAME(uniform) const String uniform = #uniform
 
 } // namespace ENGINE_NAMESPACE

@@ -16,17 +16,8 @@ RenderModule::RenderModule(
     : _renderer(renderer), _shader_system(shader_system),
       _texture_system(texture_system), _geometry_system(geometry_system),
       _light_system(light_system) {
-    // Get render pass
-    const auto rp_res = _renderer->get_renderpass(config.render_pass);
-    if (rp_res.has_error())
-        Logger::fatal(RENDER_MODULE_LOG, rp_res.error().what());
-    _renderpass = rp_res.value();
-
-    // Get shader
-    const auto sh_res = _shader_system->acquire(config.shader);
-    if (sh_res.has_error())
-        Logger::fatal(RENDER_MODULE_LOG, sh_res.error().what());
-    _shader = sh_res.value();
+    
+    initialize_passes(config);
 }
 RenderModule::~RenderModule() {
     for (const auto map : _own_maps)
@@ -49,25 +40,58 @@ void RenderModule::render(
         if (map->texture->is_render_target())
             map->texture->transition_render_target(frame_number);
 
-    // Start render pas
-    _renderpass->begin();
+    uint32 rp_index = 0;
+    for(auto [shader, renderpass, _] : _renderpasses) {
+        // Setup shader
+        shader->use();
 
-    // Setup shader
-    _shader->use();
+        // Start render pas
+        renderpass->begin();
 
-    // Apply globals
-    apply_globals(frame_number);
+        // Apply globals
+        apply_globals(frame_number, rp_index);
 
-    // Perform all calls
-    on_render(packet, frame_number);
+        // Perform all calls
+        on_render(packet, frame_number, rp_index);
 
-    // End render pass
-    _renderpass->end();
+        // End render pass
+        renderpass->end();
+        rp_index++;
+    }
 }
 
 // /////////////////////////////// //
 // RENDER MODULE PROTECTED METHODS //
 // /////////////////////////////// //
+
+void RenderModule::initialize_passes(const Config& config) {
+
+    for(const auto& pass : config.passes) {
+        // Get render pass
+        const auto rp_res = _renderer->get_renderpass(pass.render_pass);
+        if (rp_res.has_error())
+            Logger::fatal(RENDER_MODULE_LOG, rp_res.error().what());
+
+        // Get shader
+        const auto sh_res = _shader_system->acquire({pass.shader_instance, pass.shader, pass.render_pass});
+        if (sh_res.has_error())
+            Logger::fatal(RENDER_MODULE_LOG, sh_res.error().what());
+        
+        _renderpasses.push_back({.shader = sh_res.value(), .renderpass = rp_res.value(), .u_index = {}});
+    }
+}
+
+void RenderModule::setup_uniform_index(String uniform, uint32 rp_index) {
+    auto uniform_id = _renderpasses.at(rp_index).shader->get_uniform_index(uniform);
+    if (uniform_id.has_error())
+        Logger::error("ShaderModule :: ", uniform_id.error().what());
+    else _renderpasses.at(rp_index).u_index[uniform] = uniform_id.value();
+}
+
+void RenderModule::setup_uniform_indices(String uniform) {
+    for (int i = 0; i < _renderpasses.size(); i++)
+        setup_uniform_index(uniform, i);
+}
 
 ModulePacket* RenderModule::on_build_pocket() {
     return new (MemoryTag::Temp) ModulePacket { this };
@@ -77,18 +101,20 @@ ModulePacket* RenderModule::on_build_pocket() {
 // RENDER MODULE PRIVATE METHODS //
 // ///////////////////////////// //
 
-void RenderModule::apply_globals(uint64 frame_number) const {
+void RenderModule::apply_globals(uint64 frame_number, uint32 rp_index) const {
+    auto shader = _renderpasses.at(rp_index).shader;
+    
     // Globals can be updated only once per frame
-    if (frame_number == _shader->rendered_frame_number) return;
+    if (frame_number == shader->rendered_frame_number) return;
 
     // Apply individual global uniforms
-    apply_globals();
+    apply_globals(rp_index);
 
     // Apply globals
-    _shader->apply_global();
+    shader->apply_global();
 
     // Update render frame number
-    _shader->rendered_frame_number = frame_number;
+    shader->rendered_frame_number = frame_number;
 }
 
 Texture::Map* RenderModule::create_texture_map(
