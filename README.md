@@ -1,6 +1,8 @@
 # Luthadel - Realtime Rendering 2023
 Made by Jakub Nawrocki and Dejan Belic
 
+![screenshot-group17](https://github.com/ldkuba/rtr23-luthadel-submission/assets/7431324/b9a17d31-5966-4c23-8b4c-208c6220785b)
+
 ## Youtube link
 The final demo can be seen on [youtube](https://www.youtube.com/watch?v=wsAZ9a1SrgA)
 
